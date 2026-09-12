@@ -1,0 +1,9 @@
+﻿_design/
+.env
+.env.*
+node_modules/
+vendor/
+storage/
+bootstrap/cache/
+public/uploads/
+*.sqlite
