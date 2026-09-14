@@ -28,9 +28,11 @@ use App\Models\ReferencePreset;
 use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\Staff;
+use App\Models\SupportTicket;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\Transaction;
+use App\Models\TravellerDocument;
 use App\Services\Notifications\Sms\BulkSmsBdGateway;
 use App\Services\Notifications\Sms\DisabledSmsGateway;
 use App\Services\Notifications\Sms\FakeSmsGateway;
@@ -165,6 +167,8 @@ class AppServiceProvider extends ServiceProvider
             'notification' => NotificationMessage::class,
             'notification_template' => NotificationTemplate::class,
             'quotation' => Quotation::class,
+            'support_ticket' => SupportTicket::class,
+            'traveller_document' => TravellerDocument::class,
             // Journal sources for opening balances; deal invoices billed to a company.
             'account' => Account::class,
             'client' => Client::class,
@@ -230,6 +234,14 @@ class AppServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('customer-verify', fn (Request $request) => Limit::perMinute(20)->by('verify|'.$request->ip()));
         RateLimiter::for('portal', fn (Request $request) => Limit::perMinute(120)->by('portal|'.($request->user('customer')?->getAuthIdentifier() ?? $request->ip())));
+        RateLimiter::for('portal-support', fn (Request $request) => [
+            Limit::perMinute(6)->by('portal-support-minute|'.$request->user('customer')?->getAuthIdentifier()),
+            Limit::perDay(60)->by('portal-support-day|'.$request->user('customer')?->getAuthIdentifier()),
+        ]);
+        RateLimiter::for('portal-uploads', fn (Request $request) => [
+            Limit::perMinute(10)->by('portal-uploads-minute|'.$request->user('customer')?->getAuthIdentifier()),
+            Limit::perDay(60)->by('portal-uploads-day|'.$request->user('customer')?->getAuthIdentifier()),
+        ]);
 
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
 

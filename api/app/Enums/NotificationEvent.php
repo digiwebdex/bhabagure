@@ -25,6 +25,10 @@ enum NotificationEvent: string
     case LowSeatAlert = 'low_seat_alert';
     /** A customer accepted a quotation in the portal: its owner converts it. */
     case QuoteAcceptedAlert = 'quote_accepted_alert';
+    /** A customer opened a support ticket in the portal (docs/phase-6-customer-portal.md §3.5). */
+    case SupportTicketAlert = 'support_ticket_alert';
+    /** A staff reply to a support ticket: WhatsApp and email, and it shows in the portal. */
+    case SupportReply = 'support_reply';
 
     /** A message a staff member sends from a booking or customer record. Not templated. */
     case StaffMessage = 'staff_message';
@@ -39,20 +43,20 @@ enum NotificationEvent: string
         return [
             self::BookingCreated, self::BookingConfirmed, self::PaymentReceived, self::DocumentsPending, self::PreTripReminder,
             self::DepartureToday, self::TripCompleted, self::QuoteSent, self::QuoteExpiring, self::NewBookingAlert, self::NewLeadAlert,
-            self::LowSeatAlert, self::QuoteAcceptedAlert,
+            self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::SupportReply,
         ];
     }
 
     /** @return list<self> sales alerts with a recipient list on the Notifications settings screen */
     public static function staffAlerts(): array
     {
-        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert];
+        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert];
     }
 
     public function audience(): string
     {
         return match ($this) {
-            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::WhatsAppVerification => 'staff',
+            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::WhatsAppVerification => 'staff',
             default => 'customer',
         };
     }
@@ -102,6 +106,8 @@ enum NotificationEvent: string
             self::NewLeadAlert => ['name', 'phone', 'kind', 'details'],
             self::LowSeatAlert => ['package', 'date', 'seats'],
             self::QuoteAcceptedAlert => ['number', 'package', 'total', 'customer', 'phone'],
+            self::SupportTicketAlert => ['number', 'subject', 'message', 'ref', 'customer', 'phone'],
+            self::SupportReply => ['name', 'number', 'subject', 'reply', 'link'],
             default => [],
         };
     }
@@ -118,6 +124,8 @@ enum NotificationEvent: string
             self::QuoteSent => 'when staff send a quotation',
             self::QuoteExpiring => '24 hours before a sent quotation expires',
             self::QuoteAcceptedAlert => 'when a customer accepts a quotation in the portal',
+            self::SupportTicketAlert => 'when a customer opens a support ticket in the portal',
+            self::SupportReply => 'when staff reply to a support ticket',
             default => 'immediately',
         };
     }

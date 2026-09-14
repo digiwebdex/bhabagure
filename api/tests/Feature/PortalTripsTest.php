@@ -54,6 +54,7 @@ class PortalTripsTest extends TestCase
         $this->assertSame([
             ['key' => 'paid', 'done' => false, 'waitingOn' => []],
             ['key' => 'passports', 'done' => false, 'waitingOn' => ['Nusrat Jahan']],
+            ['key' => 'documents', 'done' => false, 'waitingOn' => ['Tanvir Hasan', 'Nusrat Jahan']],
         ], $trips['next']['readiness']['checks']);
 
         $this->actingAsApi($me)->getJson("/api/v1/portal/trips/{$mine->reference}")->assertOk()

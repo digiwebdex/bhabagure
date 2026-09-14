@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\InquiryType;
 use App\Models\Booking;
+use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\Inquiry;
 use App\Models\Quotation;
 use App\Models\Staff;
+use App\Models\SupportTicket;
+use App\Models\TravellerDocument;
 use App\Services\Admin\Ownership;
 use App\Support\Admin\NavBadges;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,13 +70,23 @@ class NavCountsContractTest extends TestCase
         $this->quotation($this->staff['agent_b'], -1);
         $this->quotation($this->staff['agent_b'], 0, Quotation::DRAFT);
 
+        // Portal uploads waiting for review: one on a pool booking, one on A's; a verified one on B's is done.
+        $this->upload($pool1);
+        $this->upload($ofA);
+        $this->upload($ofB, TravellerDocument::VERIFIED);
+
+        // Support tickets: one waiting 30 hours, one 2 hours, one answered long ago — only the first is overdue.
+        $overdueTicket = $this->ticket(30);
+        $this->ticket(2);
+        $this->ticket(50, SupportTicket::ANSWERED);
+
         $this->assertContract([
-            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'air_inquiries' => 3],
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'air_inquiries' => 3],
-            'accountant' => ['bookings' => 4, 'quotations' => 2],
-            'tour_operator' => ['bookings' => 4],
-            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'air_inquiries' => 2],
-            'agent_b' => ['bookings' => 3, 'quotations' => 1, 'air_inquiries' => 2],
+            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1],
+            'accountant' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'support' => 1],
+            'tour_operator' => ['bookings' => 4, 'documents' => 2, 'support' => 1],
+            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
+            'agent_b' => ['bookings' => 3, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'support' => 1],
             'cms_only' => [],
         ]);
 
@@ -81,9 +94,9 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/bookings/{$pool1->id}/claim")->assertOk();
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/air-inquiries/{$stalePool->id}/claim")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'air_inquiries' => 3],
-            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'air_inquiries' => 2],
-            'agent_b' => ['bookings' => 2, 'quotations' => 1, 'air_inquiries' => 1],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1],
+            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
+            'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'support' => 1],
         ]);
 
         // B quotes their stale enquiry and withdraws their expiring quotation; a pool booking is cancelled; an admin
@@ -92,11 +105,12 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_b'])->postJson("/api/v1/admin/quotations/{$expiringOfB->id}/withdraw")->assertOk();
         DB::table('bookings')->where('id', $pool2->id)->update(['status' => 'cancelled']);
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bookings/{$ofA->id}/assign", ['staff_id' => $this->staff['agent_b']->id, 'reason' => 'Rebalance'])->assertOk();
+        $this->actingAsApi($this->staff['accountant'])->postJson("/api/v1/admin/support-tickets/{$overdueTicket->id}/replies", ['body' => 'The invoice now carries your company name.'])->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 3, 'quotations' => 1, 'air_inquiries' => 2],
-            'agent_a' => ['bookings' => 1, 'quotations' => 1, 'air_inquiries' => 2],
-            'agent_b' => ['bookings' => 2, 'quotations' => 0, 'air_inquiries' => 0],
-            'tour_operator' => ['bookings' => 3],
+            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 0],
+            'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'support' => 0],
+            'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'support' => 0],
+            'tour_operator' => ['bookings' => 3, 'documents' => 2, 'support' => 0],
         ]);
     }
 
@@ -141,6 +155,26 @@ class NavCountsContractTest extends TestCase
         $quotation->save();
 
         return $quotation;
+    }
+
+    private function upload(Booking $booking, string $status = TravellerDocument::UPLOADED): void
+    {
+        $traveller = BookingTraveller::query()->create(['booking_id' => $booking->id, 'is_lead' => true, 'full_name' => 'Tanvir Hasan']);
+        TravellerDocument::query()->create([
+            'booking_traveller_id' => $traveller->id, 'kind' => TravellerDocument::PHOTO, 'status' => $status,
+            'disk' => 'local', 'path' => 'traveller-documents/test.enc', 'mime' => 'image/jpeg', 'bytes' => 1, 'source' => 'portal', 'uploaded_at' => now(),
+        ]);
+    }
+
+    private function ticket(int $hoursWaiting, string $status = SupportTicket::OPEN): SupportTicket
+    {
+        static $number = 0;
+        $number++;
+
+        return SupportTicket::query()->create([
+            'number' => sprintf('ST-%04d', $number), 'customer_id' => (Customer::query()->first() ?? $this->customer())->id,
+            'subject' => 'Company name on the invoice', 'status' => $status, 'last_customer_message_at' => now()->subHours($hoursWaiting),
+        ]);
     }
 
     private function airInquiry(int $hoursOld): Inquiry

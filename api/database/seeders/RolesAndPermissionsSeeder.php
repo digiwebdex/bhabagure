@@ -54,6 +54,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'reports.profit_loss' => ['reports', 'লাভ-ক্ষতি দেখা', 'View profit and loss'],
         'notifications.send' => ['communication', 'গ্রাহককে WhatsApp বার্তা পাঠানো', 'Send WhatsApp messages to customers'],
         'notifications.manage' => ['communication', 'নোটিফিকেশন ও টেমপ্লেট ব্যবস্থাপনা', 'Manage notifications and templates'],
+        'support.manage' => ['communication', 'গ্রাহকের সাপোর্ট টিকেটের উত্তর', 'Answer customer support tickets'],
         'system.audit_view' => ['system', 'অডিট লগ দেখা', 'View audit log'],
         'system.roles_manage' => ['system', 'রোল ও অনুমতি ব্যবস্থাপনা', 'Manage roles and permissions'],
     ];
@@ -68,20 +69,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.manage', 'b2b_rates.manage', 'packages.manage', 'pricing.manage', 'payments.view', 'invoices.manage',
             'transactions.create_manual', 'ledger.view_company_balance', 'staff.manage', 'bonus.manage', 'commission.view_all',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
-            'notifications.send', 'notifications.manage',
+            'notifications.send', 'notifications.manage', 'support.manage',
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
             'quotations.view_own', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage',
-            'commission.view_own', 'reports.view', 'reports.export', 'notifications.send',
+            'commission.view_own', 'reports.view', 'reports.export', 'notifications.send', 'support.manage',
         ]],
         'accountant' => ['হিসাবরক্ষক', 'Accountant', [
             'bookings.view_all', 'quotations.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',
-            'ledger.view_company_balance', 'commission.view_all', 'reports.view', 'reports.export', 'reports.profit_loss',
+            'ledger.view_company_balance', 'commission.view_all', 'reports.view', 'reports.export', 'reports.profit_loss', 'support.manage',
         ]],
         'tour_operator' => ['ট্যুর অপারেটর', 'Tour operator', [
             'bookings.view_all', 'bookings.create', 'bookings.update', 'customers.view', 'packages.manage', 'pricing.manage',
-            'commission.view_own', 'reports.view', 'reports.export',
+            'commission.view_own', 'reports.view', 'reports.export', 'support.manage',
         ]],
     ];
 

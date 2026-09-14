@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\PackageDeparture;
 use App\Models\Quotation;
 use App\Models\SiteSetting;
+use App\Models\SupportTicket;
 use App\Services\Booking\DepartureSeats;
 use App\Services\Invoices\InvoiceShortLink;
 use App\Support\Numerals;
@@ -44,6 +45,7 @@ final class NotificationVariables
             $related instanceof Inquiry => $this->inquiry($related, $locale),
             $related instanceof PackageDeparture => $this->departure($related, $locale),
             $related instanceof Quotation => $this->quotation($related, $locale, $money),
+            $related instanceof SupportTicket => $this->supportTicket($related, $locale),
             default => [],
         };
 
@@ -105,6 +107,22 @@ final class NotificationVariables
             'customer' => $quotation->customer->name,
             'phone' => self::displayPhone($quotation->customer->phone),
             'link' => url("/api/v1/public/quotations/{$quotation->share_token}".($locale === 'en' ? '?lang=en' : '')),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function supportTicket(SupportTicket $ticket, string $locale): array
+    {
+        $ticket->loadMissing(['customer', 'booking']);
+
+        return [
+            'name' => $ticket->customer->name,
+            'customer' => $ticket->customer->name,
+            'phone' => self::displayPhone($ticket->customer->phone),
+            'number' => $ticket->number,
+            'subject' => $ticket->subject,
+            'ref' => $ticket->booking?->reference ?? '—',
+            'link' => rtrim((string) config('bhabaghure.portal_url'), '/').($locale === 'en' ? '/en' : '')."/support/{$ticket->number}",
         ];
     }
 

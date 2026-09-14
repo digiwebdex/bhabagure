@@ -5,6 +5,7 @@ namespace App\Services\Portal;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
+use App\Models\TravellerDocument;
 use Carbon\CarbonImmutable;
 
 /**
@@ -16,17 +17,23 @@ final class TripReadiness
     /** @return array{checks: list<array{key: string, done: bool, waitingOn: list<string>}>, done: int, total: int} */
     public static function for(Booking $booking): array
     {
-        $booking->loadMissing('travellers');
+        $booking->loadMissing('travellers.documents');
         $travellers = $booking->travellers->sortBy('sort_order')->values();
         $waiting = fn (callable $missing) => $travellers->filter($missing)->map(fn (BookingTraveller $t) => $t->full_name)->values()->all();
+        $status = fn (BookingTraveller $t, string $kind) => $t->documents->firstWhere('kind', $kind)?->status;
 
-        $check = fn (string $key, bool $done, array $waitingOn = []) => ['key' => $key, 'done' => $done, 'waitingOn' => $waitingOn];
-        $passportsMissing = $waiting(fn (BookingTraveller $t) => blank($t->passport_number));
-
+        $check = fn (string $key, array $waitingOn) => ['key' => $key, 'done' => $waitingOn === [], 'waitingOn' => $waitingOn];
         $checks = [
-            $check('paid', (float) $booking->due_amount <= 0),
-            $check('passports', $passportsMissing === [], $passportsMissing),
+            ['key' => 'paid', 'done' => (float) $booking->due_amount <= 0, 'waitingOn' => []],
+            $check('passports', $waiting(fn (BookingTraveller $t) => blank($t->passport_number))),
+            $check('documents', $waiting(fn (BookingTraveller $t) => collect(TravellerDocument::UPLOADS)->contains(fn (string $kind) => $status($t, $kind) !== TravellerDocument::VERIFIED))),
         ];
+        // Visa and insurance count only on trips where staff track them: someone set a status for a traveller.
+        foreach (TravellerDocument::ISSUED as $kind) {
+            if ($travellers->contains(fn (BookingTraveller $t) => $status($t, $kind) !== null)) {
+                $checks[] = $check($kind, $waiting(fn (BookingTraveller $t) => ! in_array($status($t, $kind), [TravellerDocument::ISSUED_STATUS, TravellerDocument::NOT_REQUIRED], true)));
+            }
+        }
 
         return [
             'checks' => $checks,

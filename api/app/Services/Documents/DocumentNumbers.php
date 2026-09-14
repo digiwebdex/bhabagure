@@ -35,6 +35,12 @@ final class DocumentNumbers
         return sprintf('QT-%04d', $this->next('quotation', 'QT'));
     }
 
+    /** ST-0001: portal support tickets, one running counter, at least four digits. */
+    public function supportTicketNumber(): string
+    {
+        return sprintf('ST-%04d', $this->next('support_ticket', 'ST'));
+    }
+
     private function next(string $key, string $prefix): int
     {
         if (DB::transactionLevel() === 0) {

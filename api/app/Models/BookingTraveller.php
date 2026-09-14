@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BookingTraveller extends Model
 {
@@ -45,5 +46,10 @@ class BookingTraveller extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(TravellerDocument::class);
     }
 }

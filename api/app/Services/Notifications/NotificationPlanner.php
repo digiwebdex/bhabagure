@@ -15,6 +15,8 @@ use App\Models\NotificationTemplate;
 use App\Models\PackageDeparture;
 use App\Models\Quotation;
 use App\Models\Staff;
+use App\Models\SupportMessage;
+use App\Models\SupportTicket;
 use App\Models\Transaction;
 use App\Services\Booking\DepartureSeats;
 use Illuminate\Database\Eloquent\Model;
@@ -78,6 +80,31 @@ final class NotificationPlanner
     public function quotationAccepted(Quotation $quotation): void
     {
         $this->toStaff(NotificationEvent::QuoteAcceptedAlert, $quotation, $quotation->assignedStaff);
+    }
+
+    /** A new portal ticket: the trip's owner (or the customer's) and whoever receives the alert. */
+    public function supportTicketOpened(SupportTicket $ticket, SupportMessage $message): void
+    {
+        $ticket->loadMissing(['booking.assignedStaff', 'customer.assignedStaff']);
+        $this->toStaff(NotificationEvent::SupportTicketAlert, $ticket, $ticket->booking?->assignedStaff ?? $ticket->customer->assignedStaff,
+            ['message' => $message->body]);
+    }
+
+    /** A staff reply, by WhatsApp and email to the customer's own number and address. */
+    public function supportReplied(SupportTicket $ticket, SupportMessage $reply): void
+    {
+        $ticket->loadMissing('customer');
+        $event = NotificationEvent::SupportReply;
+        $base = "{$event->value}:support_message:{$reply->id}";
+        $addresses = [
+            NotificationChannel::WhatsApp->value => $ticket->customer->phone,
+            NotificationChannel::Email->value => $ticket->customer->email,
+        ];
+
+        foreach ($event->channels() as $channel) {
+            $this->plan($event, $channel, $ticket, $ticket->customer, $addresses[$channel->value] ?? null, $ticket->customer->locale ?? 'bn',
+                ['reply' => $reply->body], null, "{$base}:{$channel->value}", null, $base);
+        }
     }
 
     private function toQuotationCustomer(NotificationEvent $event, Quotation $quotation, ?string $attachment): void
@@ -247,7 +274,7 @@ final class NotificationPlanner
         }
     }
 
-    private function toStaff(NotificationEvent $event, Model $related, ?Staff $alsoAssigned = null): void
+    private function toStaff(NotificationEvent $event, Model $related, ?Staff $alsoAssigned = null, array $extra = []): void
     {
         $staff = NotificationSettings::recipientsFor($event);
         if ($alsoAssigned && $alsoAssigned->canSignIn() && ! $staff->contains('id', $alsoAssigned->id)) {
@@ -259,10 +286,10 @@ final class NotificationPlanner
             $base = "{$event->value}:{$related->getMorphClass()}:{$related->getKey()}";
             if ($member->verifiedWhatsAppNumber()) {
                 $this->plan($event, NotificationChannel::WhatsApp, $related, $member, $member->verifiedWhatsAppNumber(), $member->locale ?? 'bn',
-                    [], null, "{$base}:whatsapp:staff:{$member->id}", null, "{$base}:staff:{$member->id}");
+                    $extra, null, "{$base}:whatsapp:staff:{$member->id}", null, "{$base}:staff:{$member->id}");
             }
             $this->plan($event, NotificationChannel::Email, $related, $member, $member->email, $member->locale ?? 'bn',
-                [], null, "{$base}:email:staff:{$member->id}", null, "{$base}:staff:{$member->id}");
+                $extra, null, "{$base}:email:staff:{$member->id}", null, "{$base}:staff:{$member->id}");
         }
     }
 

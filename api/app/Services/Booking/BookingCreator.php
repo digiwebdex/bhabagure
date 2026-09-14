@@ -15,6 +15,7 @@ use App\Models\QuotationLine;
 use App\Models\SeatHold;
 use App\Models\Staff;
 use App\Models\TourPackage;
+use App\Models\TravellerDocument;
 use App\Services\AuditLogger;
 use App\Services\Documents\DocumentNumbers;
 use App\Support\Money;
@@ -264,5 +265,10 @@ final class BookingCreator
 
         $scan->update(['booking_traveller_id' => $traveller->id]);
         $traveller->forceFill(['passport_scan_path' => $scan->path, 'ocr_filled_at' => $ocrFilled ? now() : null])->save();
+        // Waits for staff review like a scan uploaded later in the portal (docs/phase-6-customer-portal.md §3.3).
+        TravellerDocument::query()->create([
+            'booking_traveller_id' => $traveller->id, 'kind' => TravellerDocument::PASSPORT_SCAN, 'status' => TravellerDocument::UPLOADED,
+            'disk' => $scan->disk, 'path' => $scan->path, 'mime' => $scan->mime, 'bytes' => $scan->bytes, 'source' => 'booking', 'uploaded_at' => now(),
+        ]);
     }
 }

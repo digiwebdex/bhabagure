@@ -167,6 +167,24 @@ class NotificationTemplateSeeder extends Seeder
                 "কোটেশন গ্রহণ করা হয়েছে: {{number}}\n\n{{package}} · মোট {{total}}\nগ্রাহক: {{customer}} {{phone}}\n\nগ্রাহক পোর্টাল থেকে গ্রহণ করেছেন। অ্যাডমিনে কোটেশনটি বুকিংয়ে রূপান্তর করুন।",
                 "Quotation accepted: {{number}}\n\n{{package}} · total {{total}}\nCustomer: {{customer}} {{phone}}\n\nThe customer accepted it in the portal. Convert the quotation to a booking in the admin.",
                 'কোটেশন গ্রহণ · {{number}}', 'Quotation accepted · {{number}}'],
+
+            [NotificationEvent::SupportTicketAlert, $wa,
+                "নতুন সাপোর্ট টিকেট {{number}}: {{subject}}\nগ্রাহক: {{customer}} {{phone}} · বুকিং {{ref}}\n{{message}}",
+                "New support ticket {{number}}: {{subject}}\nCustomer: {{customer}} {{phone}} · booking {{ref}}\n{{message}}",
+                null, null],
+            [NotificationEvent::SupportTicketAlert, $mail,
+                "নতুন সাপোর্ট টিকেট {{number}}: {{subject}}\n\nগ্রাহক: {{customer}} {{phone}}\nবুকিং: {{ref}}\n\n{{message}}\n\nঅ্যাডমিনের Support থেকে ২৪ ঘণ্টার মধ্যে উত্তর দিন।",
+                "New support ticket {{number}}: {{subject}}\n\nCustomer: {{customer}} {{phone}}\nBooking: {{ref}}\n\n{{message}}\n\nReply from Support in the admin within 24 hours.",
+                'সাপোর্ট টিকেট · {{number}}', 'Support ticket · {{number}}'],
+
+            [NotificationEvent::SupportReply, $wa,
+                "প্রিয় {{name}},\nআপনার অনুরোধ {{number}} ({{subject}})-এর উত্তর:\n{{reply}}",
+                "Dear {{name}},\na reply to your request {{number}} ({{subject}}):\n{{reply}}",
+                null, null],
+            [NotificationEvent::SupportReply, $mail,
+                "প্রিয় {{name}},\n\nআপনার অনুরোধ {{number}} ({{subject}})-এর উত্তর:\n\n{{reply}}\n\nআরও কিছু জানাতে চাইলে আপনার পোর্টালে লিখুন: {{link}}",
+                "Dear {{name}},\n\na reply to your request {{number}} ({{subject}}):\n\n{{reply}}\n\nTo add anything, write in your portal: {{link}}",
+                'আপনার অনুরোধের উত্তর · {{number}}', 'Reply to your request · {{number}}'],
         ];
     }
 }

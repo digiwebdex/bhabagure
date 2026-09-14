@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Admin\CustomerController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DealController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
+use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\NavCountController;
@@ -25,13 +26,16 @@ use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
 use App\Http\Controllers\Api\V1\Admin\StaffBookingController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
 use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
 use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
+use App\Http\Controllers\Api\V1\Portal\PortalDocumentController;
 use App\Http\Controllers\Api\V1\Portal\PortalPaymentController;
 use App\Http\Controllers\Api\V1\Portal\PortalQuotationController;
+use App\Http\Controllers\Api\V1\Portal\PortalSupportController;
 use App\Http\Controllers\Api\V1\Portal\PortalTripController;
 use App\Http\Controllers\Api\V1\Public\PublicBookingController;
 use App\Http\Controllers\Api\V1\Public\PublicContentController;
@@ -40,6 +44,7 @@ use App\Http\Controllers\Api\V1\Public\PublicInvoiceController;
 use App\Http\Controllers\Api\V1\Public\PublicPassportScanController;
 use App\Http\Controllers\Api\V1\Public\PublicQuotationController;
 use App\Http\Controllers\Api\V1\Webhooks\WaSenderWebhookController;
+use App\Models\TravellerDocument;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -76,6 +81,18 @@ Route::prefix('v1')->group(function () {
         Route::get('quotations', [PortalQuotationController::class, 'index']);
         Route::get('quotations/{number}', [PortalQuotationController::class, 'show']);
         Route::post('quotations/{number}/accept', [PortalQuotationController::class, 'accept']);
+        Route::controller(PortalDocumentController::class)->group(function () {
+            Route::get('documents', 'index');
+            Route::post('travellers/{travellerId}/documents/{kind}', 'upload')->whereNumber('travellerId')->whereIn('kind', TravellerDocument::UPLOADS)->middleware('throttle:portal-uploads');
+            Route::get('travellers/{travellerId}/documents/{kind}/file', 'file')->whereNumber('travellerId')->whereIn('kind', TravellerDocument::UPLOADS);
+            Route::put('travellers/{travellerId}/passport', 'passport')->whereNumber('travellerId');
+        });
+        Route::controller(PortalSupportController::class)->group(function () {
+            Route::get('support', 'index');
+            Route::post('support', 'store')->middleware('throttle:portal-support');
+            Route::get('support/{number}', 'show');
+            Route::post('support/{number}/messages', 'message')->middleware('throttle:portal-support');
+        });
     });
 
     // ── Public website content (read) ────────────────────────────────────────────────────────────────
@@ -238,6 +255,14 @@ Route::prefix('v1')->group(function () {
             Route::delete('air-inquiries/{id}/quoted', 'undoQuoted')->whereNumber('id');
         });
 
+        // The Support queue: tickets from the customer portal (docs/phase-6-customer-portal.md §3.5).
+        Route::middleware('permission:support.manage,staff')->controller(SupportTicketController::class)->group(function () {
+            Route::get('support-tickets', 'index');
+            Route::get('support-tickets/{id}', 'show')->whereNumber('id');
+            Route::post('support-tickets/{id}/replies', 'reply')->whereNumber('id');
+            Route::post('support-tickets/{id}/close', 'close')->whereNumber('id');
+        });
+
         // Quotations (§4.5). Per-action permissions are checked in the controller.
         Route::middleware('permission:quotations.view_all|quotations.view_own,staff')->controller(QuotationController::class)->group(function () {
             Route::get('quotations', 'index');
@@ -291,6 +316,11 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings/options', [StaffBookingController::class, 'options']);
             Route::post('bookings', [StaffBookingController::class, 'store']);
             Route::get('bookings/{id}', 'show')->whereNumber('id');
+            // Traveller documents from the portal (docs/phase-6-customer-portal.md §3.3).
+            Route::get('document-reviews', [DocumentReviewController::class, 'index']);
+            Route::get('traveller-documents/{id}/file', [DocumentReviewController::class, 'file'])->whereNumber('id');
+            Route::post('traveller-documents/{id}/review', [DocumentReviewController::class, 'review'])->whereNumber('id');
+            Route::put('booking-travellers/{travellerId}/documents/{kind}', [DocumentReviewController::class, 'setStatus'])->whereNumber('travellerId')->whereIn('kind', TravellerDocument::ISSUED);
             Route::delete('bookings/{id}', 'destroy')->whereNumber('id');
             Route::put('bookings/{id}/quote', 'updateQuote')->whereNumber('id');
             Route::post('bookings/{id}/invoice', 'issueInvoice')->whereNumber('id');

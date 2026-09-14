@@ -849,7 +849,9 @@
       "opt_out_confirmation": "Opt-out confirmation",
       "quote_sent": "Quotation sent (with PDF)",
       "quote_expiring": "Quotation expiring",
-      "quote_accepted_alert": "Quotation accepted in the portal"
+      "quote_accepted_alert": "Quotation accepted in the portal",
+      "support_ticket_alert": "Support ticket opened",
+      "support_reply": "Reply to a support ticket"
     },
     "timing": {
       "booking_created": "Immediately, when a website booking is saved",
@@ -863,7 +865,9 @@
       "new_lead_alert": "Immediately, from the inquiry and air-ticket forms",
       "low_seat_alert": "Once, when a departure has 3 or fewer seats left",
       "quote_expiring": "24 hours before a sent quotation expires — on its last day",
-      "quote_accepted_alert": "Immediately; the quotation’s owner always gets it too"
+      "quote_accepted_alert": "Immediately; the quotation’s owner always gets it too",
+      "support_ticket_alert": "Immediately; the trip’s owner always gets it too",
+      "support_reply": "When staff reply in Support — WhatsApp and email"
     },
     "enabled": "On",
     "disabled": "Off",

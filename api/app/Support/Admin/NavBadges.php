@@ -3,10 +3,14 @@
 namespace App\Support\Admin;
 
 use App\Enums\BookingStatus;
+use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Models\Booking;
 use App\Models\Inquiry;
 use App\Models\Quotation;
 use App\Models\Staff;
+use App\Models\SupportTicket;
+use App\Models\TravellerDocument;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -38,12 +42,26 @@ final class NavBadges
                 'filter' => ['status' => 'expiring'],
                 'query' => fn (Staff $staff) => Quotation::query()->visibleTo($staff)->filtered(['status' => 'expiring'], $staff),
             ],
+            // Passport scans and photos from customers waiting for review — the Documents queue's default list.
+            'documents' => [
+                'permission' => ['bookings.view_all', 'bookings.view_own'],
+                'path' => '/api/v1/admin/document-reviews',
+                'filter' => ['status' => TravellerDocument::UPLOADED],
+                'query' => fn (Staff $staff) => DocumentReviewController::queue($staff),
+            ],
             // Open air-ticket enquiries waiting more than 24 hours — the rows the queue flags.
             'air_inquiries' => [
                 'permission' => ['air_inquiries.view'],
                 'path' => '/api/v1/admin/air-inquiries',
                 'filter' => ['state' => 'open', 'stale' => '1'],
                 'query' => fn (Staff $staff) => Inquiry::query()->airQuotes()->visibleTo($staff)->filtered(['state' => 'open', 'stale' => '1'], $staff),
+            ],
+            // Portal support tickets waiting for staff longer than the 24 hours the portal promises. One shared queue.
+            'support' => [
+                'permission' => ['support.manage'],
+                'path' => '/api/v1/admin/support-tickets',
+                'filter' => ['status' => SupportTicket::OPEN, 'overdue' => '1'],
+                'query' => fn (Staff $staff) => SupportTicketController::filtered(['status' => SupportTicket::OPEN, 'overdue' => '1']),
             ],
         ];
     }

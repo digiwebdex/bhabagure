@@ -12,6 +12,7 @@ use App\Models\PaymentAttempt;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Services\Booking\BookingQuoteEditor;
+use App\Services\Documents\TravellerDocuments;
 use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\MessageRenderer;
 use App\Services\Notifications\NotificationSettings;
@@ -53,7 +54,7 @@ final class AdminBooking
     /** @return array<string, mixed> */
     public static function detail(Booking $booking, Staff $viewer): array
     {
-        $booking->loadMissing(['customer', 'lines', 'travellers', 'assignedStaff', 'package']);
+        $booking->loadMissing(['customer', 'lines', 'travellers.documents', 'assignedStaff', 'package']);
         $invoices = Invoice::query()->where('booking_id', $booking->id)->latest('id')->get();
         $current = $invoices->firstWhere('status', Invoice::ISSUED);
         $open = ! $booking->status->isFinal();
@@ -99,6 +100,8 @@ final class AdminBooking
                 'id' => $t->id, 'is_lead' => $t->is_lead, 'full_name' => $t->full_name, 'date_of_birth' => $t->date_of_birth?->toDateString(),
                 'nationality' => $t->nationality, 'passport_number' => $t->passport_number, 'passport_expiry' => $t->passport_expiry?->toDateString(),
                 'phone' => $t->phone, 'email' => $t->email, 'has_scan' => $t->passport_scan_path !== null, 'ocr_filled' => $t->ocr_filled_at !== null,
+                // Portal documents: the slot shape the portal shows, plus the row id staff review by.
+                'documents' => collect(TravellerDocuments::slots($t))->map(fn (array $slot) => $slot + ['id' => $t->documents->firstWhere('kind', $slot['kind'])?->id])->all(),
             ])->values(),
             'invoices' => $invoices->map(fn (Invoice $invoice) => [
                 'id' => $invoice->id, 'invoice_number' => $invoice->invoice_number, 'status' => $invoice->status,
