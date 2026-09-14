@@ -34,6 +34,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\SendsNotifications;
 use Tests\TestCase;
@@ -192,7 +193,8 @@ class SmsChannelTest extends TestCase
         $booking = Booking::query()->where('reference', $this->postJson('/api/v1/public/bookings', $this->payload())->json('data.reference'))->firstOrFail();
         $admin = $this->staff('admin');
         $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/invoice")->assertOk();
-        $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/payments", ['amount' => 50000, 'method' => 'cash'])->assertOk();
+        Storage::fake('local');
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/payments", ['amount' => 50000, 'method' => 'cash', 'evidence' => $this->receipt()])->assertOk();
         $this->assertSame([], FakeSmsGateway::$sent, 'WhatsApp accepted it: no SMS yet');
 
         $failure = ['event' => 'message.sent', 'data' => ['success' => false, 'error' => 'Failed to send message: Invalid number JID: +8801711000001']];

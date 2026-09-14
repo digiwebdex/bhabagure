@@ -44,9 +44,9 @@ final class LedgerService
         'bank_transfer' => Account::BANK,
         'cheque' => Account::BANK,
         'card_terminal' => Account::BANK,
-        'bkash' => Account::MOBILE_WALLETS,
-        'nagad' => Account::MOBILE_WALLETS,
-        'rocket' => Account::MOBILE_WALLETS,
+        'bkash' => Account::BKASH,
+        'nagad' => Account::NAGAD,
+        'rocket' => Account::ROCKET,
         'sslcommerz' => Account::SSLCOMMERZ_CLEARING,
     ];
 
@@ -111,6 +111,7 @@ final class LedgerService
         ?string $referenceLabel = null,
         bool $allowOverpayment = false,
         ?\DateTimeInterface $occurredAt = null,
+        ?string $evidencePath = null,
     ): Transaction {
         $this->assertInTransaction();
         $amountPaisa = self::paisa($amount);
@@ -135,7 +136,7 @@ final class LedgerService
         ];
         $payment = Transaction::query()->create($common + [
             'direction' => TransactionDirection::In, 'amount' => self::amount($amountPaisa), 'category' => self::CATEGORY_PAYMENT,
-            'external_ref' => $externalRef, 'description' => $description,
+            'external_ref' => $externalRef, 'description' => $description, 'evidence_path' => $evidencePath,
         ]);
         if ($chargePaisa > 0) {
             Transaction::query()->create($common + [
@@ -347,16 +348,21 @@ final class LedgerService
      * The company balance: each money account's journal balance (debits − credits), in paisa. Opening balances,
      * payments, manual entries and reversals are all in the journal, so nothing else is added.
      *
+     * The old shared Mobile wallets account is included only while it still holds a balance nothing could attribute.
+     *
      * @return array<string, int> account code => paisa, in Account::MONEY order
      */
     public function moneyBalances(): array
     {
         $rows = DB::table('journal_lines')->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
-            ->whereIn('accounts.code', Account::MONEY)->groupBy('accounts.code')
+            ->whereIn('accounts.code', [...Account::MONEY, Account::MOBILE_WALLETS])->groupBy('accounts.code')
             ->selectRaw('accounts.code AS code, SUM(journal_lines.debit) - SUM(journal_lines.credit) AS balance')
             ->pluck('balance', 'code');
 
-        return collect(Account::MONEY)->mapWithKeys(fn (string $code) => [$code => self::paisa($rows[$code] ?? 0)])->all();
+        $balances = collect(Account::MONEY)->mapWithKeys(fn (string $code) => [$code => self::paisa($rows[$code] ?? 0)])->all();
+        $legacy = self::paisa($rows[Account::MOBILE_WALLETS] ?? 0);
+
+        return $legacy === 0 ? $balances : $balances + [Account::MOBILE_WALLETS => $legacy];
     }
 
     /** Recomputes paid amount and payment status of the booking and its current invoice from the cash book. */

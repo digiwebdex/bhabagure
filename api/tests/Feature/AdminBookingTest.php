@@ -10,6 +10,7 @@ use App\Services\Booking\BookingCreator;
 use App\Services\Booking\BookingRequest;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -66,8 +67,9 @@ class AdminBookingTest extends TestCase
         $admin = $this->staff('admin');
         $id = $this->booking->id;
 
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 50000, 'method' => 'cash'])
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 50000, 'method' => 'cash', 'evidence' => $this->receipt()])
             ->assertStatus(409)->assertJsonPath('code', 'no_invoice');
+        Storage::disk('local')->assertDirectoryEmpty('evidence');
 
         $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/invoice")->assertOk()
             ->assertJsonPath('data.invoices.0.status', 'issued')
@@ -79,17 +81,29 @@ class AdminBookingTest extends TestCase
         $this->actingAsApi($admin)->putJson("/api/v1/admin/bookings/{$id}/quote", ['pax' => 2, 'room' => 'twin', 'discount' => 1000, 'vat_rate' => 2, 'expected_total' => 152796])
             ->assertStatus(409)->assertJsonPath('code', 'quote_locked');
 
+        // A typed payment carries its receipt: none, or one over 5 MB, is refused.
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 76908, 'method' => 'cash'])
+            ->assertUnprocessable()->assertJsonValidationErrors('evidence');
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 76908, 'method' => 'cash', 'evidence' => UploadedFile::fake()->create('scan.pdf', 5121, 'application/pdf')])
+            ->assertUnprocessable()->assertJsonValidationErrors('evidence');
+
         // A typed paid amount or status is simply not accepted anywhere.
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 76908, 'method' => 'bkash', 'reference' => '9XK2M4', 'paid_amount' => 153816, 'payment_status' => 'paid'])
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 76908, 'method' => 'bkash', 'reference' => '9XK2M4', 'paid_amount' => 153816, 'payment_status' => 'paid', 'evidence' => $this->receipt()])
             ->assertOk()
             ->assertJsonPath('data.paid_amount', 76908)
             ->assertJsonPath('data.payment_status', 'partial')
-            ->assertJsonPath('data.invoices.0.payment_status', 'partial');
+            ->assertJsonPath('data.invoices.0.payment_status', 'partial')
+            ->assertJsonPath('data.transactions.0.has_evidence', true);
+        $receipt = Transaction::query()->where('booking_id', $id)->firstOrFail()->evidence_path;
+        Storage::disk('local')->assertExists($receipt);
+        $this->actingAsApi($accountant)->get('/api/v1/admin/cash-book/'.Transaction::query()->where('booking_id', $id)->value('id').'/evidence')->assertOk();
 
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 100, 'method' => 'bkash', 'reference' => '9XK2M4'])
+        // A refused payment leaves no stray file behind.
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 100, 'method' => 'bkash', 'reference' => '9XK2M4', 'evidence' => $this->receipt()])
             ->assertUnprocessable()->assertJsonPath('code', 'duplicate_reference');
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 76909, 'method' => 'cash'])
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 76909, 'method' => 'cash', 'evidence' => $this->receipt()])
             ->assertUnprocessable()->assertJsonPath('code', 'exceeds_balance');
+        $this->assertSame([$receipt], Storage::disk('local')->allFiles('evidence'));
 
         $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$id}/confirm")->assertOk()->assertJsonPath('data.status', 'confirmed');
 
@@ -111,10 +125,10 @@ class AdminBookingTest extends TestCase
 
         // 02:00 in Dhaka is still the previous day in UTC.
         $this->travelTo(Carbon::parse('2026-09-14 02:00', 'Asia/Dhaka'));
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 1000, 'method' => 'cash', 'occurred_at' => '2026-09-14'])->assertOk();
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 1000, 'method' => 'cash', 'occurred_at' => '2026-09-15'])
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 1000, 'method' => 'cash', 'occurred_at' => '2026-09-14', 'evidence' => $this->receipt()])->assertOk();
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 1000, 'method' => 'cash', 'occurred_at' => '2026-09-15', 'evidence' => $this->receipt()])
             ->assertUnprocessable()->assertJsonValidationErrors('occurred_at');
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 2000, 'method' => 'bkash', 'reference' => 'BK77', 'occurred_at' => '2026-09-10'])->assertOk();
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 2000, 'method' => 'bkash', 'reference' => 'BK77', 'occurred_at' => '2026-09-10', 'evidence' => $this->receipt()])->assertOk();
 
         $today = Transaction::query()->where('booking_id', $id)->where('amount', 1000)->firstOrFail();
         $backdated = Transaction::query()->where('booking_id', $id)->where('amount', 2000)->firstOrFail();

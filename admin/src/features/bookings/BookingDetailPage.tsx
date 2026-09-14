@@ -5,7 +5,9 @@ import { Link, useParams } from 'react-router'
 
 import { paymentStatus, quoteBooking, type RoomType } from '@bhabaghure/pricing'
 
+import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
+import { EvidenceInput, evidenceReady } from '../../components/ui/EvidenceInput'
 import { Dialog, ErrorNotice, useToast } from '../../components/ui/feedback'
 import { NumberInput, SelectInput, Switch, TextArea, TextInput } from '../../components/ui/fields'
 import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui/layout'
@@ -372,6 +374,15 @@ function PaymentsCard({ booking }: { booking: BookingDetail }) {
   const [reversing, setReversing] = useState<number | null>(null)
   const reverse = useBookingAction(booking.id, bookingActions.reverse())
   const reversed = new Set(booking.transactions.map((row) => row.reverses_transaction_id).filter(Boolean))
+  const { can } = useAuth()
+  const openEvidence = async (id: number) => {
+    try {
+      const blob = await fetchDocument(`admin/cash-book/${id}/evidence`)
+      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+    } catch {
+      toast(t('evidence.openFailed'), 'error')
+    }
+  }
 
   return (
     <Card>
@@ -392,6 +403,11 @@ function PaymentsCard({ booking }: { booking: BookingDetail }) {
                   {date(row.occurred_at)}
                   {row.external_ref ? ` · ${row.external_ref}` : ''}
                 </span>
+                {row.has_evidence && can('payments.view') ? (
+                  <button type="button" className="cursor-pointer self-start border-0 bg-transparent p-0 text-11 font-semibold text-green hover:underline" onClick={() => void openEvidence(row.id)}>
+                    ⎘ {t('evidence.open')}
+                  </button>
+                ) : null}
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">
                 <span className={`font-display text-14 font-semibold ${row.direction === 'out' ? 'text-red' : 'text-green-deep'}`}>
@@ -442,6 +458,7 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
   const [reference, setReference] = useState('')
   const [occurredAt, setOccurredAt] = useState(todayInDhaka)
   const [note, setNote] = useState('')
+  const [evidence, setEvidence] = useState<File | null>(null)
   const fieldError = pay.error instanceof ApiError ? pay.error : null
 
   const presets = [
@@ -450,9 +467,9 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
   ].filter((preset) => preset.value > 0)
 
   const submit = () => {
-    if (!amount) return
+    if (!amount || !evidence || !evidenceReady(evidence)) return
     pay.mutate(
-      { amount, method, reference: reference.trim(), occurred_at: occurredAt, note: note.trim() },
+      { amount, method, reference: reference.trim(), occurred_at: occurredAt, note: note.trim(), evidence },
       { onSuccess: () => { toast(t('bookings.done.paid')); onClose() } },
     )
   }
@@ -472,12 +489,13 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
       <TextInput label={t('bookings.paymentReference')} value={reference} onChange={setReference} hint={t('bookings.paymentReferenceHint')} error={fieldError?.code === 'duplicate_reference' ? fieldError.message : fieldError?.field('reference')} />
       <TextInput label={t('bookings.paidOn')} type="date" value={occurredAt} onChange={setOccurredAt} max={todayInDhaka()} error={fieldError?.field('occurred_at')} />
       <TextArea label={t('bookings.note')} value={note} onChange={setNote} rows={2} />
+      <EvidenceInput file={evidence} onChange={setEvidence} error={fieldError?.field('evidence')} />
       {pay.error && !(fieldError && (fieldError.status === 422)) ? <ErrorNotice error={pay.error} /> : null}
       <div className="flex justify-end gap-2">
         <button type="button" className={buttonClass('outline')} onClick={onClose}>
           {t('common.cancel')}
         </button>
-        <button type="button" className={buttonClass('success')} disabled={!amount || amount <= 0 || pay.isPending} onClick={submit}>
+        <button type="button" className={buttonClass('success')} disabled={!amount || amount <= 0 || !evidence || !evidenceReady(evidence) || pay.isPending} onClick={submit}>
           {pay.isPending ? t('common.saving') : t('bookings.recordPayment')}
         </button>
       </div>

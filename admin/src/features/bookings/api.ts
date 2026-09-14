@@ -101,6 +101,7 @@ export type BookingDetail = BookingSummary & {
     description: string
     occurred_at: string
     reverses_transaction_id: number | null
+    has_evidence: boolean
   }[]
   payment_attempts: {
     id: number
@@ -182,8 +183,13 @@ export const bookingActions = {
     api.put<Data<BookingDetail>>(`admin/bookings/${id}/quote`, body),
   issue: (id: number) => () => api.post<Data<BookingDetail>>(`admin/bookings/${id}/invoice`),
   void: () => ({ invoiceId, reason }: { invoiceId: number; reason: string }) => api.post<Data<BookingDetail>>(`admin/invoices/${invoiceId}/void`, { reason }),
-  pay: (id: number) => (body: { amount: number; method: string; reference: string; occurred_at: string; note: string }) =>
-    api.post<Data<BookingDetail>>(`admin/bookings/${id}/payments`, body),
+  /** Multipart: the receipt goes with the payment. */
+  pay: (id: number) => ({ evidence, ...fields }: { amount: number; method: string; reference: string; occurred_at: string; note: string; evidence: File }) => {
+    const body = new FormData()
+    for (const [key, value] of Object.entries(fields)) if (value !== '') body.append(key, String(value))
+    body.append('evidence', evidence)
+    return api.post<Data<BookingDetail>>(`admin/bookings/${id}/payments`, body)
+  },
   reverse: () => ({ transactionId, reason }: { transactionId: number; reason: string }) => api.post<Data<BookingDetail>>(`admin/transactions/${transactionId}/reverse`, { reason }),
   transition: (id: number) => ({ action, reason }: { action: 'confirm' | 'complete' | 'cancel'; reason?: string }) =>
     api.post<Data<BookingDetail>>(`admin/bookings/${id}/${action}`, reason ? { reason } : undefined),

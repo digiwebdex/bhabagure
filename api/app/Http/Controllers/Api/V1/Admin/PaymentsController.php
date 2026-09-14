@@ -100,7 +100,7 @@ class PaymentsController extends Controller
         ]]);
     }
 
-    /** Manual cash in or out, with optional evidence (image or PDF, private). */
+    /** Manual cash in or out, with its receipt (image or PDF, private). */
     public function store(Request $request, LedgerService $ledger, EvidenceStore $evidence, AuditLogger $audit): JsonResponse
     {
         $staff = $request->user('staff');
@@ -114,7 +114,7 @@ class PaymentsController extends Controller
             'description' => ['required', 'string', 'min:3', 'max:300'],
             'reference' => ['nullable', 'string', 'max:120'],
             'occurred_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
-            'evidence' => ['nullable', 'file', 'mimes:'.implode(',', EvidenceStore::MIMES), 'max:'.EvidenceStore::MAX_KB],
+            'evidence' => EvidenceStore::rules(),
         ]);
 
         $entry = $evidence->with($request->file('evidence'), fn (?string $path) => DB::transaction(function () use ($ledger, $audit, $data, $staff, $path) {
@@ -225,7 +225,7 @@ class PaymentsController extends Controller
     private function balances(LedgerService $ledger): array
     {
         $paisa = $ledger->moneyBalances();
-        $accounts = Account::query()->whereIn('code', Account::MONEY)->get()->keyBy('code');
+        $accounts = Account::query()->whereIn('code', array_keys($paisa))->get()->keyBy('code');
         $openings = OpeningBalance::query()->with('createdBy:id,name')->get()->keyBy('account_id');
 
         return [
@@ -235,6 +235,8 @@ class PaymentsController extends Controller
                 'name_en' => $accounts[$code]->name_en,
                 'name_bn' => $accounts[$code]->name_bn,
                 'balance' => Money::toNumber(LedgerService::amount($value)),
+                // The shared account from before the split, shown only while something is left in it.
+                'legacy' => $code === Account::MOBILE_WALLETS,
                 'opening' => ($opening = $openings[$accounts[$code]->id] ?? null) ? [
                     'amount' => Money::toNumber($opening->amount), 'as_of' => $opening->as_of->toDateString(), 'by' => $opening->createdBy?->name,
                 ] : null,

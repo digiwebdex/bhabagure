@@ -10,7 +10,14 @@ class Account extends Model
 
     public const BANK = '1010';
 
+    /** Shared by bKash, Nagad and Rocket until they got their own accounts; only a legacy balance can remain here. */
     public const MOBILE_WALLETS = '1020';
+
+    public const BKASH = '1021';
+
+    public const NAGAD = '1022';
+
+    public const ROCKET = '1023';
 
     public const SSLCOMMERZ_CLEARING = '1030';
 
@@ -46,8 +53,11 @@ class Account extends Model
 
     public const OTHER_EXPENSES = '5290';
 
-    /** Where money sits: the company balance is the journal balance of these (docs/phase-5-admin-core.md §4.6). */
-    public const MONEY = [self::CASH, self::BANK, self::MOBILE_WALLETS, self::SSLCOMMERZ_CLEARING];
+    /**
+     * Where money sits: the company balance is the journal balance of these (docs/phase-5-admin-core.md §4.6). Each mobile
+     * wallet provider is its own account, so its statement reconciles against the books.
+     */
+    public const MONEY = [self::CASH, self::BANK, self::BKASH, self::NAGAD, self::ROCKET, self::SSLCOMMERZ_CLEARING];
 
     protected $fillable = ['code', 'name_en', 'name_bn', 'type'];
 }

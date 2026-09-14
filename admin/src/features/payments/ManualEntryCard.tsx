@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
+import { EvidenceInput, evidenceReady } from '../../components/ui/EvidenceInput'
 import { ErrorNotice, useToast } from '../../components/ui/feedback'
 import { NumberInput, SelectInput, TextInput } from '../../components/ui/fields'
 import { Card, CardTitle, Chips, Loading } from '../../components/ui/layout'
@@ -23,7 +24,6 @@ export function ManualEntryCard() {
   const toast = useToast()
   const options = usePaymentOptions()
   const presets = usePresets()
-  const fileInput = useRef<HTMLInputElement>(null)
   const blank = { direction: 'out' as Direction, method: 'cash', category: '', business_line: '', description: '', reference: '', amount: null as number | null, occurred_on: todayInDhaka() }
   const [form, setForm] = useState(blank)
   const [evidence, setEvidence] = useState<File | null>(null)
@@ -44,7 +44,7 @@ export function ManualEntryCard() {
   const categories = options.data.categories[form.direction]
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch })
   const fieldError = (name: string) => (post.error instanceof ApiError ? post.error.field(name) : undefined)
-  const ready = !!form.category && form.description.trim().length >= 3 && (form.amount ?? 0) >= 1
+  const ready = !!form.category && form.description.trim().length >= 3 && (form.amount ?? 0) >= 1 && !!evidence && evidenceReady(evidence)
 
   return (
     <Card>
@@ -57,7 +57,7 @@ export function ManualEntryCard() {
           if (!ready) return
           post.mutate(undefined, {
             onSuccess: () => {
-              toast(evidence ? t('payments.postedWithEvidence', { name: evidence.name }) : t('payments.posted'))
+              toast(t('payments.postedWithEvidence', { name: evidence?.name ?? '' }))
               setForm({ ...blank, direction: form.direction, method: form.method })
               setEvidence(null)
             },
@@ -114,29 +114,7 @@ export function ManualEntryCard() {
         </div>
         <TextInput label={t('bookings.paymentReference')} value={form.reference} onChange={(reference) => set({ reference })} hint={t('bookings.paymentReferenceHint')} />
 
-        <label className={`flex cursor-pointer items-center gap-2.75 rounded-11 border border-dashed px-3.25 py-3 hover:border-blue ${evidence ? 'border-green bg-green-tint/50' : 'border-app-line'}`}>
-          <span className={`flex size-8 shrink-0 items-center justify-center rounded-9 text-14 text-white ${evidence ? 'bg-green' : 'bg-app-muted'}`}>⎘</span>
-          <span className="flex min-w-0 flex-1 flex-col leading-1.3">
-            <span className="text-13 font-semibold">{evidence ? evidence.name : t('payments.attachEvidence')}</span>
-            <span className="truncate text-11 text-app-muted">{t('payments.evidenceHint')}</span>
-          </span>
-          {evidence ? (
-            <button
-              type="button"
-              className="size-6.5 shrink-0 cursor-pointer rounded-7 border-0 bg-app-surface-2 text-13 text-amber"
-              aria-label={t('payments.removeEvidence')}
-              onClick={(event) => {
-                event.preventDefault()
-                setEvidence(null)
-                if (fileInput.current) fileInput.current.value = ''
-              }}
-            >
-              ×
-            </button>
-          ) : null}
-          <input ref={fileInput} type="file" accept="image/*,.pdf" className="sr-only" aria-label={t('payments.attachEvidence')} onChange={(event) => setEvidence(event.target.files?.[0] ?? null)} />
-        </label>
-        {fieldError('evidence') ? <span className="text-12 font-semibold text-red">{fieldError('evidence')}</span> : null}
+        <EvidenceInput file={evidence} onChange={setEvidence} error={fieldError('evidence')} />
 
         {post.error && !(post.error instanceof ApiError && post.error.status === 422) ? <ErrorNotice error={post.error} /> : null}
         <button type="submit" className={buttonClass('cta', 'md', 'w-full')} disabled={!ready || post.isPending}>

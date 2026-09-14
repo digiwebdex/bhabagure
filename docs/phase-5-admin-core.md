@@ -416,7 +416,7 @@ Steps 1–7 of §13 and the Air ticketing queue are built. My commission waits f
 - Row actions: → Convert, then the seven of §3.3 (✎ is Revise once sent; ✕ is Delete for a draft, Withdraw once sent).
 
 **Deviations (open to veto)**
-1. **Custom trips are not quotable yet.** A quotation needs a published package: booking and invoice lines have no "custom trip" kind, and the prototype's form offers only packages. Custom trips come with the Itinerary builder.
+1. **Custom trips are not quotable yet** — *approved 2026-09-14, logged as a real gap.* A quotation needs a published package: booking and invoice lines have no "custom trip" kind, and the prototype's form offers only packages. A package-based quote covers most of the business today, but air tickets and bespoke itineraries are a meaningful share of revenue and both need a free-form quote. **Picked up with the air quote type** (the rest of air ticketing), which brings free-form lines to quotations, bookings and invoices.
 2. **No `POST /quotations/{id}/preview`.** The editor prices live with `@bhabaghure/pricing` from `GET /quotations/options`, and the save is the check.
 3. **The prototype's "PDF" button in the new-quotation panel is "Save draft".** A PDF needs a saved quotation; the PDF is on every row and on the quotation page (with and without the company header).
 4. **The travel date is optional on a quotation** ("date not fixed yet") and required when converting; converting may pick another date, because the price doesn't depend on it.
@@ -428,8 +428,9 @@ Steps 1–7 of §13 and the Air ticketing queue are built. My commission waits f
   - the money account comes from the method (cash · bank transfer, cheque, card terminal → bank · bKash, Nagad, Rocket → mobile wallets);
   - the category decides the journal's other side (other income and owner's capital in; the expense accounts and owner's drawings out; a balance adjustment either way);
   - the prototype's "Source" is a business-line tag on the cash-book row, not an account;
-  - a saved reference fills the description; a receipt (image or PDF, 10 MB) is optional.
-- **Receipts** go on the private disk and are served only by `GET /admin/cash-book/{id}/evidence` to staff with `payments.view`. The row is append-only, so the file is stored first and removed again if the row isn't written.
+  - a saved reference fills the description; the receipt is required (below).
+- **Receipts** (decided 2026-09-14): every staff-recorded money movement carries one — a payment recorded on a booking page, a manual cash in/out, a deal payment and a deal's advance. Image or PDF, 5 MB at most. The API refuses the entry without it (422), and the forms keep their submit button disabled until one is attached. Receipts go on the private disk and are served only by `GET /admin/cash-book/{id}/evidence` to staff with `payments.view`; the booking page links each payment's receipt. The row is append-only, so the file is stored first and removed again if the row isn't written (a refused payment leaves no stray file). Reversals and opening balances carry a reason or a note, not a receipt: they record no money arriving or leaving.
+- **Each wallet provider has its own journal account** (decided 2026-09-14): 1021 bKash, 1022 Nagad, 1023 Rocket, so each provider's statement reconciles against its own account. What was already posted to the shared 1020 Mobile wallets account is moved by reclassifying journal entries, attributed per provider through the cash-book row each line came from. Nothing in the journal or cash book is edited. Anything no cash-book row explains (an opening balance) stays on 1020, shown as a legacy line on the balance card until the accountant moves it with a balance adjustment.
 - **✕ "Reverse…"** takes a reason and adds the opposite row and journal entry. It is allowed on staff-recorded customer payments (bookings and deals) and on manual entries. It is refused for online payments (refunded through the gateway), their charge and fee lines, reversals, and rows already reversed.
 - **Opening balances:** one per money account, audited and append-only, dated the day the books start, against 3900. A wrong figure is corrected with a balance adjustment entry.
 - **Company balance:** the journal balance of cash, bank, mobile wallets and SSLCommerz clearing. `GET /admin/payments/balance` answers 403 without `ledger.view_company_balance`, and the summary returns `balance: null`. The card is not rendered then, but that is a consequence of the 403, not the protection.
@@ -450,9 +451,9 @@ Steps 1–7 of §13 and the Air ticketing queue are built. My commission waits f
   - the package editor showed the old status right after publish or unpublish, and the stale button could send the same action again.
 
 **Deviations (open to veto)**
-6. **bKash, Nagad and Rocket share one journal account** (Mobile wallets), as in Phase 3. The method cards still split them, from the cash book.
-7. **No transfer between money accounts yet** (for example, cash banked). It belongs with the Accounting screen. Until then, two manual entries would misstate income and expense, so none is offered.
-8. **Receipts are taken on manual entries and deal payments only**, not on payments recorded from a booking page.
+6. ~~bKash, Nagad and Rocket share one journal account.~~ *Changed 2026-09-14:* each has its own account (above).
+7. **No transfer between money accounts yet** — *approved 2026-09-14.* For example, cash banked. It belongs with the Accounting screen. Until then, two manual entries would misstate income and expense, so none is offered.
+8. ~~Receipts only on manual entries and deal payments.~~ *Changed 2026-09-14:* required on every staff-recorded money movement, booking-page payments included (above).
 9. **The cash book has no detail view:** ◉ opens the booking, and a deal's rows point to the Deals card.
 
 **Dashboard (step 7)**
@@ -483,4 +484,4 @@ Steps 1–7 of §13 and the Air ticketing queue are built. My commission waits f
   - ◉ details;
   - ✆ WhatsApp and @ email, with no SMS; disabled until a pool enquiry is claimed by staff who don't see every enquiry;
   - ✓ Mark as quoted, which claims an unowned enquiry, or ↺ Back to open for whoever marked it or an admin.
-- **Built without the re-synced design** (it can't be read here: the local `_design` is the 2026-09-13 copy and DesignSync needs `/design-login`). The screen follows §4.7 and the prototype's table and chip styles; the layout gets checked against the design once it is readable.
+- **Built without the re-synced design** — *approved 2026-09-14 as unverified.* It can't be read here: the local `_design` is the 2026-09-13 copy and DesignSync needs `/design-login`. The screen follows §4.7 and the prototype's table and chip styles. To do once the design is readable: compare it and fix whatever drifted.

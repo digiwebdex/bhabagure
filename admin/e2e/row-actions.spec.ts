@@ -36,7 +36,7 @@ test.beforeAll(async ({ browser }) => {
   await quotationFor(page, 'Sticky Quote Three')
   const admin = await staffApi(page, 'admin')
   for (const [direction, category, description] of [['out', 'office_rent', 'Sticky office rent'], ['in', 'other_income', 'Sticky commission from an airline with a long description'], ['out', 'marketing', 'Sticky Facebook ads']]) {
-    await admin.post('admin/cash-entries', { direction, amount: 1200, method: 'cash', category, description })
+    await admin.postWithReceipt('admin/cash-entries', { direction, amount: 1200, method: 'cash', category, description })
   }
   // Air enquiries straight into the table (the public form is rate-limited per address).
   artisan(
@@ -51,7 +51,9 @@ async function openBookings(page: Page, width: number, theme: Theme) {
   await signIn(page, 'admin')
   await page.evaluate((value) => localStorage.setItem('bh-theme', value), theme)
   await page.goto(current.url)
-  await expect(page.getByTestId(current.testId).getByRole('row').nth(1)).toBeVisible()
+  // The e2e API is PHP's built-in server, one request at a time (no workers on Windows): a screen that loads several
+  // lists at once, like Payments, can take over 5 s to show its table here. Production serves them in parallel.
+  await expect(page.getByTestId(current.testId).getByRole('row').nth(1)).toBeVisible({ timeout: 15_000 })
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 }
 

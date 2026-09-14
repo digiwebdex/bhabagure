@@ -128,7 +128,13 @@ export const paymentActions = {
   openingBalance: (body: { account: string; amount: number; as_of: string; note: string | null }) => api.post<Data<Balance>>('admin/opening-balances', body),
   addPreset: (body: { label: string; direction: 'in' | 'out' | null }) => api.post<Data<ReferencePreset>>('admin/reference-presets', body),
   removePreset: (id: number) => api.delete<null>(`admin/reference-presets/${id}`),
-  createDeal: (body: Record<string, unknown>) => api.post<Data<Deal>>('admin/deals', body),
-  payDeal: (id: number, body: { amount: number; method: string; reference: string | null }) => api.post<Data<Deal>>(`admin/deals/${id}/payments`, body),
+  /** Multipart when there is an advance: its receipt goes with it. */
+  createDeal: (body: FormData) => api.post<Data<Deal>>('admin/deals', body),
+  payDeal: (id: number, { evidence, ...fields }: { amount: number; method: string; reference: string | null; evidence: File }) => {
+    const body = new FormData()
+    for (const [key, value] of Object.entries(fields)) if (value !== null && value !== '') body.append(key, String(value))
+    body.append('evidence', evidence)
+    return api.post<Data<Deal>>(`admin/deals/${id}/payments`, body)
+  },
   voidDeal: (id: number, reason: string) => api.post<Data<Deal>>(`admin/deals/${id}/void`, { reason }),
 }

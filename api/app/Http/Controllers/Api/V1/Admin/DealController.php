@@ -58,7 +58,7 @@ class DealController extends Controller
         return response()->json(['data' => AdminCashEntry::deal($this->deal($id))]);
     }
 
-    public function store(Request $request, DealService $deals): JsonResponse
+    public function store(Request $request, DealService $deals, EvidenceStore $evidence): JsonResponse
     {
         $staff = $request->user('staff');
         abort_unless($staff->can('invoices.manage'), 403, __('auth.forbidden'));
@@ -79,6 +79,8 @@ class DealController extends Controller
             'advance' => ['nullable', 'numeric', 'min:0', 'lte:total'],
             'advance_method' => ['required_unless:advance,null,0', 'nullable', Rule::in(LedgerService::STAFF_METHODS)],
             'advance_reference' => ['nullable', 'string', 'max:120'],
+            // An advance is money received: its receipt comes with it.
+            'advance_evidence' => (float) $request->input('advance', 0) > 0 ? EvidenceStore::rules() : ['prohibited'],
         ]);
 
         $party = match (true) {
@@ -90,9 +92,9 @@ class DealController extends Controller
             ),
         };
 
-        $invoice = $deals->create($party, trim($data['title']), $data['total'], ($data['note'] ?? null) ?: null,
-            (float) ($data['advance'] ?? 0) > 0 ? ['amount' => $data['advance'], 'method' => $data['advance_method'], 'reference' => $data['advance_reference'] ?? null] : null,
-            $staff);
+        $invoice = $evidence->with($request->file('advance_evidence'), fn (?string $path) => $deals->create($party, trim($data['title']), $data['total'], ($data['note'] ?? null) ?: null,
+            (float) ($data['advance'] ?? 0) > 0 ? ['amount' => $data['advance'], 'method' => $data['advance_method'], 'reference' => $data['advance_reference'] ?? null, 'evidence' => $path] : null,
+            $staff));
 
         return response()->json(['data' => AdminCashEntry::deal($invoice)], Response::HTTP_CREATED);
     }
@@ -107,7 +109,7 @@ class DealController extends Controller
             'method' => ['required', Rule::in(LedgerService::STAFF_METHODS)],
             'reference' => ['nullable', 'string', 'max:120'],
             'occurred_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
-            'evidence' => ['nullable', 'file', 'mimes:'.implode(',', EvidenceStore::MIMES), 'max:'.EvidenceStore::MAX_KB],
+            'evidence' => EvidenceStore::rules(),
         ]);
 
         try {

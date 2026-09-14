@@ -65,9 +65,9 @@ class PaymentsBooksTest extends TestCase
         $this->resetAuthState();
         $this->flushHeaders()->getJson("/api/v1/admin/cash-book/{$entry['id']}/evidence")->assertUnauthorized();
 
-        // A category belongs to a direction.
+        // A category belongs to a direction; every entry carries its receipt.
         $this->actingAsApi($accountant)->postJson('/api/v1/admin/cash-entries', ['direction' => 'in', 'amount' => 100, 'method' => 'cash', 'category' => 'office_rent', 'description' => 'Wrong way'])
-            ->assertUnprocessable()->assertJsonValidationErrors('category');
+            ->assertUnprocessable()->assertJsonValidationErrors(['category', 'evidence']);
 
         // ✕ is a reversing entry, once; a reversal isn't reversed.
         $reversal = $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$entry['id']}/reverse", ['reason' => 'Paid twice by mistake'])->assertCreated()
@@ -126,7 +126,7 @@ class PaymentsBooksTest extends TestCase
         $this->assertSame('2026-09-01', JournalEntry::query()->where('source_type', 'account')->firstOrFail()->entry_date->toDateString());
 
         // A mistaken opening figure is corrected with an adjustment, not re-entered.
-        $this->actingAsApi($accountant)->postJson('/api/v1/admin/cash-entries', ['direction' => 'out', 'amount' => 40000, 'method' => 'bank_transfer', 'category' => 'balance_adjustment', 'description' => 'Statement was ৳ 12,00,000'])->assertCreated();
+        $this->actingAsApi($accountant)->postJson('/api/v1/admin/cash-entries', ['direction' => 'out', 'amount' => 40000, 'method' => 'bank_transfer', 'category' => 'balance_adjustment', 'description' => 'Statement was ৳ 12,00,000', 'evidence' => $this->receipt('statement.jpg')])->assertCreated();
 
         $balance = $this->actingAsApi($accountant)->getJson('/api/v1/admin/payments/balance')->assertOk()->json('data');
         $this->assertSame(1200000, $balance['total']);
@@ -153,11 +153,15 @@ class PaymentsBooksTest extends TestCase
         $accountant = $this->staff('accountant');
         $this->actingAsApi($this->staff('sales_agent'))->postJson('/api/v1/admin/deals', [])->assertForbidden();
 
-        $deal = $this->actingAsApi($accountant)->postJson('/api/v1/admin/deals', [
+        $payload = [
             'company' => ['name' => 'Brac Bank Ltd', 'type' => 'corporate', 'contact_phone' => '01711-555666'],
             'title' => 'Sales team incentive tour', 'note' => 'Cox’s Bazar · 40 people', 'total' => 620000,
             'advance' => 200000, 'advance_method' => 'bank_transfer', 'advance_reference' => 'CITY-TT-8812',
-        ])->assertCreated()
+        ];
+        // The advance is money received: without its receipt nothing is created.
+        $this->actingAsApi($accountant)->postJson('/api/v1/admin/deals', $payload)->assertUnprocessable()->assertJsonValidationErrors('advance_evidence');
+        $this->assertSame(0, Invoice::query()->count());
+        $deal = $this->actingAsApi($accountant)->postJson('/api/v1/admin/deals', $payload + ['advance_evidence' => $this->receipt('tt-slip.jpg')])->assertCreated()
             ->assertJsonPath('data.status', 'issued')->assertJsonPath('data.party.name', 'Brac Bank Ltd')->assertJsonPath('data.party.type', 'client')
             ->assertJsonPath('data.paid_amount', 200000)->assertJsonPath('data.balance_due', 420000)->assertJsonPath('data.payment_status', 'partial')->json('data');
         $this->assertMatchesRegularExpression('/^INV-\d{4}$/', $deal['number']);
@@ -165,8 +169,10 @@ class PaymentsBooksTest extends TestCase
         $this->assertSame([null, 'deal', '8801711555666'], [$invoice->customer_id, $invoice->kind, $invoice->billed_phone]);
         $this->assertSame([[Account::RECEIVABLE, '620000.00', '0.00'], [Account::DEAL_SALES, '0.00', '620000.00']], $this->journalLines($invoice));
 
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 500000, 'method' => 'bkash'])->assertUnprocessable()->assertJsonPath('code', 'exceeds_due');
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 420000, 'method' => 'bkash', 'reference' => '9FK2M4'])
+        $this->assertNotNull(Transaction::query()->where('invoice_id', $invoice->id)->value('evidence_path'));
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 420000, 'method' => 'bkash'])->assertUnprocessable()->assertJsonValidationErrors('evidence');
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 500000, 'method' => 'bkash', 'evidence' => $this->receipt()])->assertUnprocessable()->assertJsonPath('code', 'exceeds_due');
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 420000, 'method' => 'bkash', 'reference' => '9FK2M4', 'evidence' => $this->receipt()])
             ->assertCreated()->assertJsonPath('data.balance_due', 0)->assertJsonPath('data.payment_status', 'paid')->assertJsonCount(2, 'data.payments');
         $this->actingAsApi($accountant)->getJson('/api/v1/admin/deals')->assertJsonPath('meta.total', 0)->assertJsonPath('meta.total_due', 0);
         $this->assertSame(0, app(LedgerService::class)->invoicePaidPaisa($invoice) - 62000000);
@@ -188,7 +194,7 @@ class PaymentsBooksTest extends TestCase
         $receivable = DB::table('journal_lines')->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')->where('accounts.code', Account::RECEIVABLE)
             ->selectRaw('SUM(debit) - SUM(credit) AS balance')->value('balance');
         $this->assertSame(0.0, (float) $receivable);
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 1, 'method' => 'cash'])->assertStatus(409);
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/payments", ['amount' => 1, 'method' => 'cash', 'evidence' => $this->receipt()])->assertStatus(409);
     }
 
     #[Test]

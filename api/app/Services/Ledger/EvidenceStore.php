@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Receipts, bank slips and bKash screenshots for cash-book rows (docs/phase-5-admin-core.md §4.6). On the private disk
+ * Receipts, bank slips and bKash screenshots for cash-book rows (docs/phase-5-admin-core.md §4.6), 5 MB at most. On the private disk
  * only — never the public media pipeline — and served through an authenticated route. A cash-book row is append-only,
  * so the file is stored first and its path written with the row; if the row isn't written, the file is removed.
  */
@@ -15,7 +15,18 @@ final class EvidenceStore
 {
     public const MIMES = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
 
-    public const MAX_KB = 10240;
+    public const MAX_KB = 5120;
+
+    /**
+     * Validation for the receipt every staff-recorded money movement carries (decided 2026-09-14): a payment typed on a
+     * booking, a manual cash entry, a deal payment or advance. Required: that typed entry is the one that most needs proof.
+     *
+     * @return list<string>
+     */
+    public static function rules(bool $required = true): array
+    {
+        return [$required ? 'required' : 'nullable', 'file', 'mimes:'.implode(',', self::MIMES), 'max:'.self::MAX_KB];
+    }
 
     public function put(UploadedFile $file): string
     {

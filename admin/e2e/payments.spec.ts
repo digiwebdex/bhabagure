@@ -22,7 +22,8 @@ test('an admin posts a cash out with a receipt, finds it in the cash book and re
   await form.getByLabel('Source').selectOption('office')
   await form.getByLabel('Description').fill(description)
   await form.getByLabel('Amount (৳)').fill('35000')
-  await form.getByLabel('Attach a receipt, bank slip or screenshot').setInputFiles(PHOTO)
+  await expect(form.getByRole('button', { name: 'লেজারে যোগ করুন · Post to ledger' })).toBeDisabled()
+  await form.getByLabel('Attach the receipt, bank slip or screenshot').setInputFiles(PHOTO)
   await form.getByRole('button', { name: 'লেজারে যোগ করুন · Post to ledger' }).click()
   await expect(page.getByText('Posted to the cash book · receipt attached: photo.jpg')).toBeVisible()
   await expect(balance.locator('span').nth(1)).not.toHaveText(before)
@@ -54,6 +55,9 @@ test('a deal with an advance shows what is due, takes the rest and is marked pai
   await form.getByLabel('Advance received').fill('50000')
   await form.getByLabel('Method').selectOption('bank_transfer')
   await expect(form).toContainText('Invoice for ৳ 2,00,000: ৳ 50,000 received now, ৳ 1,50,000 due.')
+  // The advance is money received: its receipt first.
+  await expect(form.getByRole('button', { name: 'Add deal' })).toBeDisabled()
+  await form.getByLabel('Attach the receipt, bank slip or screenshot').setInputFiles(PHOTO)
   await form.getByRole('button', { name: 'Add deal' }).click()
   await expect(page.getByText(/Deal INV-\d{4,} created/)).toBeVisible()
 
@@ -62,6 +66,7 @@ test('a deal with an advance shows what is due, takes the rest and is marked pai
   await expect(deal).toContainText('৳ 1,50,000')
   await deal.getByLabel('Receive').fill('150000')
   await deal.getByLabel('Method').selectOption('bkash')
+  await deal.getByLabel('Attach the receipt, bank slip or screenshot').setInputFiles(PHOTO)
   await deal.getByRole('button', { name: 'Record payment' }).click()
   await expect(page.getByText(/Payment recorded on INV-\d{4,}/)).toBeVisible()
   await expect(page.getByTestId('deal').filter({ hasText: company })).toHaveCount(0)

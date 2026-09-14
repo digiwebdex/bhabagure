@@ -17,7 +17,8 @@ export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_o
   await page.getByLabel('Email').fill(`${role}@e2e.test`)
   await page.getByLabel('Password').fill(password())
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).not.toHaveURL(/\/login$/)
+  // Login, refresh and "me" queue on the e2e API's single-threaded PHP server; under a full run that can pass 5 s.
+  await expect(page).not.toHaveURL(/\/login$/, { timeout: 15_000 })
 }
 
 /** The staff API as one role, for arranging data a test isn't about (signs in through the API, not the form). */
@@ -29,6 +30,15 @@ export async function staffApi(page: Page, role: 'admin' | 'sales_agent') {
   return {
     post: async <T>(path: string, data?: unknown): Promise<T> => {
       const response = await page.request.post(`${E2E_API_URL}/api/v1/${path}`, { headers, data })
+      expect(response.status(), `${path}: ${await response.text()}`).toBeLessThan(300)
+      return (await response.json()) as T
+    },
+    /** Multipart, with the e2e photo as the receipt a money movement carries. */
+    postWithReceipt: async <T>(path: string, fields: Record<string, string | number>, fileField = 'evidence'): Promise<T> => {
+      const response = await page.request.post(`${E2E_API_URL}/api/v1/${path}`, {
+        headers,
+        multipart: { ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, String(value)])), [fileField]: { name: 'receipt.jpg', mimeType: 'image/jpeg', buffer: readFileSync(PHOTO) } },
+      })
       expect(response.status(), `${path}: ${await response.text()}`).toBeLessThan(300)
       return (await response.json()) as T
     },

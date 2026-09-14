@@ -32,7 +32,7 @@ final class DealService
     ) {}
 
     /**
-     * @param  array{amount: int|float|string, method: string, reference: ?string}|null  $advance
+     * @param  array{amount: int|float|string, method: string, reference: ?string, evidence?: ?string}|null  $advance
      *
      * @throws PaymentExceedsBalance
      */
@@ -63,7 +63,7 @@ final class DealService
             $this->audit->record('deal.created', $staff, $invoice, ['number' => $invoice->invoice_number, 'title' => $title, 'total' => (float) $amount]);
 
             if ($advance !== null && LedgerService::paisa($advance['amount']) > 0) {
-                $this->ledger->recordDealPayment($invoice, $advance['amount'], $advance['method'], 'Advance', $staff, $advance['reference'] ?? null);
+                $this->ledger->recordDealPayment($invoice, $advance['amount'], $advance['method'], 'Advance', $staff, $advance['reference'] ?? null, $advance['evidence'] ?? null);
             }
 
             return $invoice->refresh();

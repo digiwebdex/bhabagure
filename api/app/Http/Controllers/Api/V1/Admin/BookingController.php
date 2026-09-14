@@ -21,6 +21,7 @@ use App\Services\Booking\PriceChanged;
 use App\Services\Booking\QuoteLocked;
 use App\Services\Invoices\InvoiceIssuer;
 use App\Services\Invoices\InvoicePdf;
+use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
 use App\Services\Ledger\PaymentExceedsBalance;
 use App\Services\Quotations\QuotationService;
@@ -152,8 +153,11 @@ class BookingController extends Controller
         return $this->detail($request, $booking->fresh());
     }
 
-    /** "Record payment" — replaces the prototype's typed Paid field. Writes the cash book and the journal. */
-    public function recordPayment(Request $request, int $id, LedgerService $ledger): JsonResponse
+    /**
+     * "Record payment" — replaces the prototype's typed Paid field. Writes the cash book and the journal, with the
+     * receipt: a payment typed in by staff is the entry that most needs proof (decided 2026-09-14).
+     */
+    public function recordPayment(Request $request, int $id, LedgerService $ledger, EvidenceStore $evidence): JsonResponse
     {
         $booking = $this->find($request, $id, 'transactions.create_manual');
         $data = $request->validate([
@@ -163,18 +167,19 @@ class BookingController extends Controller
             // A calendar date in Dhaka: "today" must be accepted between midnight and 06:00 Dhaka, when UTC is still yesterday.
             'occurred_at' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'note' => ['nullable', 'string', 'max:300'],
+            'evidence' => EvidenceStore::rules(),
         ]);
         if ($booking->status->isFinal()) {
             return $this->refused('booking.closed', 'booking_closed');
         }
 
         try {
-            $payment = DB::transaction(fn () => $ledger->recordPayment(
+            $payment = $evidence->with($request->file('evidence'), fn (?string $path) => DB::transaction(fn () => $ledger->recordPayment(
                 $booking, $data['amount'], $data['method'], ($data['note'] ?? null) ?: 'Payment recorded by staff',
                 // A wallet or bank reference is unique per method, like a gateway transaction.
                 externalRef: ($data['reference'] ?? null) ?: null, staff: $request->user('staff'), referenceLabel: $data['reference'] ?? null,
-                occurredAt: self::paidOn($data['occurred_at'] ?? null),
-            ));
+                occurredAt: self::paidOn($data['occurred_at'] ?? null), evidencePath: $path,
+            )));
         } catch (PaymentExceedsBalance) {
             return $this->refused('booking.payment_exceeds_balance', 'exceeds_balance', 422);
         } catch (LogicException) {

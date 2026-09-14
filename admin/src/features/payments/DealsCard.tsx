@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
+import { EvidenceInput, evidenceReady } from '../../components/ui/EvidenceInput'
 import { Dialog, ErrorNotice, useToast } from '../../components/ui/feedback'
 import { NumberInput, SelectInput, TextArea, TextInput } from '../../components/ui/fields'
 import { Card, CardTitle, Chips, EmptyState, Loading } from '../../components/ui/layout'
@@ -74,26 +75,34 @@ function NewDealForm() {
     enabled: partyKind === 'customer' && !customer && lookup.trim().length >= 2,
   })
 
-  const create = usePaymentsMutation(() =>
-    paymentActions.createDeal({
-      ...(partyKind === 'customer' && customer
-        ? { customer_id: customer.id }
-        : client
-          ? { client_id: client.id }
-          : { company: { name: lookup.trim(), type: form.companyType, contact_phone: form.phone || null } }),
-      title: form.title.trim(),
-      note: form.note.trim() || null,
-      total: form.total,
-      advance: form.advance ?? 0,
-      advance_method: (form.advance ?? 0) > 0 ? form.method : null,
-      advance_reference: form.reference.trim() || null,
-    }),
-  )
+  const [advanceEvidence, setAdvanceEvidence] = useState<File | null>(null)
+  const create = usePaymentsMutation(() => {
+    const body = new FormData()
+    const put = (key: string, value: string | number | null | undefined) => value !== null && value !== undefined && value !== '' && body.append(key, String(value))
+    if (partyKind === 'customer' && customer) put('customer_id', customer.id)
+    else if (client) put('client_id', client.id)
+    else {
+      put('company[name]', lookup.trim())
+      put('company[type]', form.companyType)
+      put('company[contact_phone]', form.phone)
+    }
+    put('title', form.title.trim())
+    put('note', form.note.trim())
+    put('total', form.total)
+    put('advance', form.advance ?? 0)
+    if ((form.advance ?? 0) > 0) {
+      put('advance_method', form.method)
+      put('advance_reference', form.reference.trim())
+      if (advanceEvidence) body.append('advance_evidence', advanceEvidence)
+    }
+    return paymentActions.createDeal(body)
+  })
   const fieldError = (name: string) => (create.error instanceof ApiError ? create.error.field(name) : undefined)
   const total = form.total ?? 0
   const advance = form.advance ?? 0
   const hasParty = partyKind === 'customer' ? !!customer : !!client || lookup.trim().length >= 2
-  const ready = hasParty && form.title.trim().length >= 3 && total >= 1 && advance <= total
+  // An advance is money received: its receipt comes with it.
+  const ready = hasParty && form.title.trim().length >= 3 && total >= 1 && advance <= total && (advance === 0 || (!!advanceEvidence && evidenceReady(advanceEvidence)))
 
   return (
     <form
@@ -106,6 +115,7 @@ function NewDealForm() {
           onSuccess: (response) => {
             toast(t('payments.dealCreated', { number: response.data.number }))
             setForm(blank)
+            setAdvanceEvidence(null)
             setLookup('')
             setClient(null)
             setCustomer(null)
@@ -168,10 +178,13 @@ function NewDealForm() {
         <NumberInput label={t('payments.advance')} value={form.advance} onChange={(value) => set({ advance: value })} error={fieldError('advance')} />
       </div>
       {advance > 0 && options.data ? (
-        <div className="grid-auto-fit-half-124 grid gap-2.5">
-          <SelectInput label={t('bookings.method')} value={form.method} onChange={(method) => set({ method })} options={options.data.methods.map((value) => ({ value, label: t(`bookings.methods.${value}`) }))} />
-          <TextInput label={t('bookings.paymentReference')} value={form.reference} onChange={(reference) => set({ reference })} />
-        </div>
+        <>
+          <div className="grid-auto-fit-half-124 grid gap-2.5">
+            <SelectInput label={t('bookings.method')} value={form.method} onChange={(method) => set({ method })} options={options.data.methods.map((value) => ({ value, label: t(`bookings.methods.${value}`) }))} />
+            <TextInput label={t('bookings.paymentReference')} value={form.reference} onChange={(reference) => set({ reference })} />
+          </div>
+          <EvidenceInput file={advanceEvidence} onChange={setAdvanceEvidence} error={fieldError('advance_evidence')} />
+        </>
       ) : null}
       <TextInput label={t('payments.dealNote')} value={form.note} onChange={(note) => set({ note })} />
       {total > 0 ? (
@@ -194,8 +207,9 @@ function DealRow({ deal }: { deal: Deal }) {
   const toast = useToast()
   const options = usePaymentOptions()
   const [pay, setPay] = useState({ amount: null as number | null, method: 'bkash', reference: '' })
+  const [evidence, setEvidence] = useState<File | null>(null)
   const [voiding, setVoiding] = useState(false)
-  const record = usePaymentsMutation(() => paymentActions.payDeal(deal.id, { amount: pay.amount ?? 0, method: pay.method, reference: pay.reference.trim() || null }))
+  const record = usePaymentsMutation(() => paymentActions.payDeal(deal.id, { amount: pay.amount ?? 0, method: pay.method, reference: pay.reference.trim() || null, evidence: evidence! }))
   const paidPercent = deal.total_amount > 0 ? Math.min(100, Math.round((deal.paid_amount / deal.total_amount) * 100)) : 0
   const open = deal.status === 'issued' && deal.balance_due > 0
   const tone = deal.status === 'void' ? 'bg-slate-tint text-silver' : deal.payment_status === 'paid' ? 'bg-green-tint text-green-deep' : 'bg-orange-tint text-amber'
@@ -237,18 +251,22 @@ function DealRow({ deal }: { deal: Deal }) {
         <div className="h-full bg-linear-90 from-green to-green-soft" style={{ width: `${paidPercent}%` }} />
       </div>
       {open && can('transactions.create_manual') && options.data ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <NumberInput label={t('payments.receive')} value={pay.amount} onChange={(amount) => setPay({ ...pay, amount })} className="min-w-26 flex-1" />
-          <SelectInput label={t('bookings.method')} value={pay.method} onChange={(method) => setPay({ ...pay, method })} options={options.data.methods.map((value) => ({ value, label: t(`bookings.methods.${value}`) }))} className="min-w-26 flex-1" />
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <NumberInput label={t('payments.receive')} value={pay.amount} onChange={(amount) => setPay({ ...pay, amount })} className="min-w-26 flex-1" />
+            <SelectInput label={t('bookings.method')} value={pay.method} onChange={(method) => setPay({ ...pay, method })} options={options.data.methods.map((value) => ({ value, label: t(`bookings.methods.${value}`) }))} className="min-w-26 flex-1" />
+          </div>
+          <EvidenceInput file={evidence} onChange={setEvidence} error={record.error instanceof ApiError ? record.error.field('evidence') : undefined} />
           <button
             type="button"
-            className={buttonClass('success', 'md')}
-            disabled={(pay.amount ?? 0) < 1 || record.isPending}
+            className={buttonClass('success', 'md', 'self-start')}
+            disabled={(pay.amount ?? 0) < 1 || !evidence || !evidenceReady(evidence) || record.isPending}
             onClick={() =>
               record.mutate(undefined, {
                 onSuccess: () => {
                   toast(t('payments.dealPaid', { number: deal.number }))
                   setPay({ ...pay, amount: null, reference: '' })
+                  setEvidence(null)
                 },
               })
             }

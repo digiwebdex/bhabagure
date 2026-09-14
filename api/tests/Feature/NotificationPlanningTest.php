@@ -22,6 +22,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\SendsNotifications;
 use Tests\TestCase;
@@ -125,7 +126,8 @@ class NotificationPlanningTest extends TestCase
         $admin = $this->staff('admin');
 
         $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/invoice")->assertOk();
-        $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/payments", ['amount' => 50000, 'method' => 'cash'])->assertOk();
+        Storage::fake('local');
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/payments", ['amount' => 50000, 'method' => 'cash', 'evidence' => $this->receipt()])->assertOk();
 
         $payment = NotificationMessage::query()->where('event', 'payment_received')->where('channel', 'whatsapp')->firstOrFail();
         $this->assertStringContainsString('৳ 50,000', $payment->body);

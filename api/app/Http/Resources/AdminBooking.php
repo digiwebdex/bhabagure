@@ -113,6 +113,8 @@ final class AdminBooking
                     'method' => $t->method, 'external_ref' => $t->external_ref, 'reference_label' => $t->reference_label,
                     'description' => $t->description, 'occurred_at' => $t->occurred_at?->toIso8601String(),
                     'reverses_transaction_id' => $t->reverses_transaction_id,
+                    // Opened through GET /admin/cash-book/{id}/evidence; the path never leaves the API.
+                    'has_evidence' => $t->evidence_path !== null,
                 ])->values(),
             'payment_attempts' => PaymentAttempt::query()->where('booking_id', $booking->id)->latest('id')->get()
                 ->map(fn (PaymentAttempt $a) => [

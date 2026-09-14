@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Staff;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Http\UploadedFile;
 use PHPOpenSourceSaver\JWTAuth\JWT;
 use RuntimeException;
 
@@ -48,6 +49,12 @@ abstract class TestCase extends BaseTestCase
         }
 
         return $staff;
+    }
+
+    /** A photo of a receipt: every staff-recorded money movement carries one. Fake the local disk before storing it. */
+    protected function receipt(string $name = 'receipt.jpg'): UploadedFile
+    {
+        return UploadedFile::fake()->image($name, 600, 800);
     }
 
     protected function customer(array $attributes = []): Customer

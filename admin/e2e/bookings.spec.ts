@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { signIn, websiteBooking } from './helpers'
+import { PHOTO, signIn, websiteBooking } from './helpers'
 
 /** docs/phase-3-booking.md §6: the draft quote, the printed invoice with header on/off, and payments from the ledger. */
 
@@ -39,9 +39,13 @@ test('draft quote, issue, header on and off, record payment, confirm', async ({ 
   await dialog.getByRole('button', { name: /^Half advance/ }).click()
   await dialog.getByLabel('Method').selectOption('bkash')
   await dialog.getByLabel('Reference').fill(`E2E${Date.now()}`)
+  // A typed payment carries its receipt: the button waits for it.
+  await expect(dialog.getByRole('button', { name: 'Record payment' })).toBeDisabled()
+  await dialog.getByLabel('Attach the receipt, bank slip or screenshot').setInputFiles(PHOTO)
   await dialog.getByRole('button', { name: 'Record payment' }).click()
   await expect(page.getByText('Payment recorded')).toBeVisible()
   await expect(payments.getByText('PARTIAL')).toBeVisible()
+  await expect(payments.getByRole('button', { name: '⎘ Receipt' })).toBeVisible()
   await expect(preview.locator('main')).toContainText('PARTIAL')
 
   await page.getByRole('button', { name: 'Confirm booking' }).click()

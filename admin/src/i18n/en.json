@@ -1245,14 +1245,10 @@
     "reverseNote": "Entries are never edited or deleted. An opposite entry is added to the cash book and the journal, with your reason.",
     "reversed": "Reversing entry added",
     "postedWithEvidence": "Posted to the cash book · receipt attached: {{name}}",
-    "posted": "Posted to the cash book",
     "source": "Source",
     "presets": "Saved references · click to fill",
     "removePreset": "Remove “{{label}}”",
     "newPreset": "New saved reference",
-    "attachEvidence": "Attach a receipt, bank slip or screenshot",
-    "evidenceHint": "Image or PDF, up to 10 MB · kept private",
-    "removeEvidence": "Remove the receipt",
     "post": "লেজারে যোগ করুন · Post to ledger",
     "totalDue": "Total due {{amount}}",
     "dealState": "Deals",
@@ -1378,5 +1374,14 @@
     "language": "Language",
     "enquiryFrom": "Enquiry from {{name}}",
     "quotedBy": "Marked quoted by {{name}}, {{when}}"
+  },
+  "evidence": {
+    "attach": "Attach the receipt, bank slip or screenshot",
+    "requiredHint": "Required · image or PDF, up to 5 MB · kept private",
+    "hint": "Image or PDF, up to 5 MB · kept private",
+    "tooBig": "This file is over 5 MB. Attach a smaller photo or scan.",
+    "remove": "Remove the receipt",
+    "open": "Receipt",
+    "openFailed": "The receipt could not be opened. Try again."
   }
 }
