@@ -98,7 +98,8 @@
       "facebook": "Facebook",
       "visit": "অফিসে সাক্ষাৎ",
       "email": "ইমেইল",
-      "sms": "SMS"
+      "sms": "SMS",
+      "portal": "পোর্টাল"
     },
     "outcomes": {
       "reached": "কথা হয়েছে",
@@ -106,7 +107,8 @@
       "interested": "আগ্রহী",
       "not_interested": "আগ্রহী নন",
       "call_back": "পরে কল",
-      "quote_requested": "কোটেশন চেয়েছেন"
+      "quote_requested": "কোটেশন চেয়েছেন",
+      "nps_detractor": "যাত্রাকে ০–৬ রেটিং"
     },
     "deleteHasQuotations": "কোটেশন আছে — রেকর্ড থাকবে"
   },
@@ -851,7 +853,8 @@
       "quote_expiring": "কোটেশনের মেয়াদ শেষ হচ্ছে",
       "quote_accepted_alert": "পোর্টালে কোটেশন গ্রহণ",
       "support_ticket_alert": "নতুন সাপোর্ট টিকেট",
-      "support_reply": "সাপোর্ট টিকেটের উত্তর"
+      "support_reply": "সাপোর্ট টিকেটের উত্তর",
+      "nps_follow_up_alert": "যাত্রা শেষে কম রেটিং"
     },
     "timing": {
       "booking_created": "ওয়েবসাইটে বুকিং সংরক্ষণের সঙ্গে সঙ্গে",
@@ -867,7 +870,8 @@
       "quote_expiring": "পাঠানো কোটেশনের মেয়াদ শেষের ২৪ ঘণ্টা আগে — শেষ দিনে",
       "quote_accepted_alert": "সাথে সাথে; কোটেশনের দায়িত্বপ্রাপ্ত এজেন্ট সবসময় পাবেন",
       "support_ticket_alert": "সাথে সাথে; ট্রিপের দায়িত্বপ্রাপ্ত এজেন্ট সবসময় পাবেন",
-      "support_reply": "Support থেকে উত্তর দিলে — WhatsApp ও ইমেইলে"
+      "support_reply": "Support থেকে উত্তর দিলে — WhatsApp ও ইমেইলে",
+      "nps_follow_up_alert": "গ্রাহক শেষ হওয়া যাত্রাকে ০–৬ দিলে; ট্রিপের দায়িত্বপ্রাপ্ত এজেন্ট সবসময় পাবেন"
     },
     "enabled": "চালু",
     "disabled": "বন্ধ",

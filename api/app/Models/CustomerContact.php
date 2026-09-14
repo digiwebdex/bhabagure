@@ -17,6 +17,11 @@ class CustomerContact extends Model
 
     public const OUTCOMES = ['reached', 'no_answer', 'interested', 'not_interested', 'call_back', 'quote_requested'];
 
+    /** System entries staff don't choose: an NPS answer of 0–6 from the portal (docs/phase-6-customer-portal.md §0.4). */
+    public const PORTAL = 'portal';
+
+    public const NPS_DETRACTOR = 'nps_detractor';
+
     protected $fillable = ['customer_id', 'staff_id', 'channel', 'outcome', 'note', 'next_follow_up_at', 'occurred_at'];
 
     protected function casts(): array

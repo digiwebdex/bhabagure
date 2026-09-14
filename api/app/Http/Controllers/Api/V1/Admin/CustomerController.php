@@ -11,6 +11,7 @@ use App\Models\Staff;
 use App\Services\Admin\Ownership;
 use App\Services\Admin\OwnershipRefused;
 use App\Services\AuditLogger;
+use App\Services\Auth\RefreshTokens;
 use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -166,6 +167,28 @@ class CustomerController extends Controller
 
         $customer->forceFill(['lost_at' => null, 'lost_reason' => null])->save();
         $audit->record('customer.reopened', $request->user('staff'), $customer);
+
+        return $this->detail($request, $customer->fresh());
+    }
+
+    /**
+     * Turns portal sign-in off or back on (docs/phase-6-customer-portal.md §3.1, §3.7). Turning it off ends every open
+     * session at once: refresh tokens are revoked and the portal refuses the access token still in the browser.
+     */
+    public function portalAccess(Request $request, int $id, AuditLogger $audit, RefreshTokens $tokens): JsonResponse
+    {
+        $customer = $this->find($request, $id, 'customers.manage');
+        $enabled = $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
+
+        if ($enabled === ($customer->portal_disabled_at !== null)) {
+            DB::transaction(function () use ($customer, $enabled, $audit, $tokens, $request) {
+                $customer->forceFill(['portal_disabled_at' => $enabled ? null : now()])->save();
+                if (! $enabled) {
+                    $tokens->revokeAllFor('customer', $customer->id);
+                }
+                $audit->record($enabled ? 'customer.portal_enabled' : 'customer.portal_disabled', $request->user('staff'), $customer);
+            });
+        }
 
         return $this->detail($request, $customer->fresh());
     }

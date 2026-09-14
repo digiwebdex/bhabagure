@@ -8,6 +8,7 @@ use App\Services\Notifications\AdminAlerts;
 use App\Services\Notifications\NotificationSettings;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
+use App\Support\Numerals;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -26,6 +27,11 @@ final class LoginCodes
 
     public const MAX_ATTEMPTS = 5;
 
+    /** A code proves a number for one purpose only: a sign-in code can't confirm a phone change, nor the reverse. */
+    public const SIGN_IN = 'sign_in';
+
+    public const CHANGE_PHONE = 'change_phone';
+
     private const PER_HOUR = 5;
 
     public function __construct(private readonly SmsGateway $sms, private readonly WhatsAppGateway $whatsApp) {}
@@ -33,8 +39,9 @@ final class LoginCodes
     /**
      * @return array{outcome: 'sent'|'throttled'|'undeliverable', retry_after: int}
      */
-    public function send(string $phone, string $locale, ?string $ip): array
+    public function send(string $phone, string $locale, ?string $ip, string $purpose = self::SIGN_IN): array
     {
+        // The per-number limits count every purpose: a phone-change request is still a message to that number.
         $recent = CustomerLoginCode::query()->where('phone', $phone)->where('created_at', '>=', now()->subHour())->orderBy('created_at')->get();
         $last = $recent->last();
         if ($last !== null && $last->created_at->gt(now()->subMinute())) {
@@ -45,16 +52,20 @@ final class LoginCodes
         }
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $text = $locale === 'en'
-            ? "Bhabaghure Holidays sign-in code: {$code}. Valid for ".self::MINUTES.' minutes. Never share it with anyone.'
-            : "ভবঘুরে হলিডেজ লগইন কোড: {$code}। ".self::MINUTES.' মিনিট বৈধ। কাউকে জানাবেন না।';
+        $text = match (true) {
+            $purpose === self::CHANGE_PHONE && $locale === 'en' => "Bhabaghure Holidays code to add this number to your account: {$code}. Valid for ".self::MINUTES.' minutes. Never share it with anyone.',
+            $purpose === self::CHANGE_PHONE => "ভবঘুরে হলিডেজ অ্যাকাউন্টে এই নম্বর যোগ করার কোড: {$code}। ".Numerals::number(self::MINUTES, 'bn').' মিনিট বৈধ। কাউকে জানাবেন না।',
+            $locale === 'en' => "Bhabaghure Holidays sign-in code: {$code}. Valid for ".self::MINUTES.' minutes. Never share it with anyone.',
+            default => "ভবঘুরে হলিডেজ লগইন কোড: {$code}। ".Numerals::number(self::MINUTES, 'bn').' মিনিট বৈধ। কাউকে জানাবেন না।',
+        };
         $channel = $this->deliver($phone, $text);
 
-        DB::transaction(function () use ($phone, $code, $channel, $ip) {
-            // Only the newest code works.
-            CustomerLoginCode::query()->where('phone', $phone)->whereNull('consumed_at')->where('expires_at', '>', now())->update(['expires_at' => now()]);
+        DB::transaction(function () use ($phone, $purpose, $code, $channel, $ip) {
+            // Only the newest code for this purpose works.
+            CustomerLoginCode::query()->where('phone', $phone)->where('purpose', $purpose)->whereNull('consumed_at')->where('expires_at', '>', now())->update(['expires_at' => now()]);
             CustomerLoginCode::query()->create([
-                'phone' => $phone, 'code_hash' => self::hash($phone, $code), 'channel' => $channel, 'ip' => $ip, 'expires_at' => now()->addMinutes(self::MINUTES),
+                'phone' => $phone, 'purpose' => $purpose, 'code_hash' => self::hash($phone, $code), 'channel' => $channel, 'ip' => $ip,
+                'expires_at' => now()->addMinutes(self::MINUTES),
             ]);
         });
 
@@ -71,10 +82,10 @@ final class LoginCodes
      * The live code this number was sent, if $code matches it. A wrong code uses up a try; the match is not consumed
      * here — the caller consumes it once the sign-in succeeds (a new customer may still have to give a name).
      */
-    public function match(string $phone, string $code): ?CustomerLoginCode
+    public function match(string $phone, string $code, string $purpose = self::SIGN_IN): ?CustomerLoginCode
     {
-        return DB::transaction(function () use ($phone, $code) {
-            $row = CustomerLoginCode::query()->where('phone', $phone)->whereNull('consumed_at')->where('expires_at', '>', now())
+        return DB::transaction(function () use ($phone, $code, $purpose) {
+            $row = CustomerLoginCode::query()->where('phone', $phone)->where('purpose', $purpose)->whereNull('consumed_at')->where('expires_at', '>', now())
                 ->latest('id')->lockForUpdate()->first();
             if ($row === null || $row->attempts >= self::MAX_ATTEMPTS) {
                 return null;

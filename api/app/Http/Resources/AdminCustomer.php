@@ -2,10 +2,12 @@
 
 namespace App\Http\Resources;
 
+use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\CustomerContact;
+use App\Models\NpsResponse;
 use App\Models\Quotation;
 use App\Models\Staff;
 use Illuminate\Database\Eloquent\Builder;
@@ -97,6 +99,21 @@ final class AdminCustomer
                 ->withExists(['invoices as has_invoice' => fn (Builder $q) => $q->where('status', 'issued'), 'transactions as has_payments'])
                 ->latest('id')->limit(50)->get()
                 ->map(AdminBooking::summary(...))->values(),
+            // The customer portal (docs/phase-6-customer-portal.md §3.7): claimed, blocked, recent sign-ins, the invite text.
+            'portal' => [
+                'claimed_at' => $customer->portal_claimed_at?->toIso8601String(),
+                'last_login_at' => $customer->last_login_at?->toIso8601String(),
+                'disabled_at' => $customer->portal_disabled_at?->toIso8601String(),
+                'phone_verified_at' => $customer->phone_verified_at?->toIso8601String(),
+                'sign_ins' => AuditLog::query()->where('auditable_type', $customer->getMorphClass())->where('auditable_id', $customer->id)
+                    ->whereIn('action', ['auth.customer.portal_claimed', 'auth.customer.login', 'auth.customer.login_blocked', 'customer.portal_disabled', 'customer.portal_enabled'])
+                    ->latest('id')->limit(10)->get()
+                    ->map(fn (AuditLog $log) => ['action' => $log->action, 'at' => $log->created_at->toIso8601String(), 'channel' => $log->changes['channel'] ?? null])->values(),
+                'invite_text' => __('portal.invite', ['url' => (string) config('bhabaghure.portal_url')], $customer->locale ?? 'bn'),
+                'actions' => ['block' => (Customer::seesAll($viewer) || $customer->assigned_staff_id === $viewer->id) && $viewer->can('customers.manage')],
+            ],
+            'nps' => NpsResponse::query()->where('customer_id', $customer->id)->with('booking')->latest('id')->limit(20)->get()
+                ->map(fn (NpsResponse $r) => ['booking_reference' => $r->booking->reference, 'booking_id' => $r->booking_id, 'score' => $r->score, 'comment' => $r->comment, 'created_at' => $r->created_at->toIso8601String()])->values(),
             'quotations' => Quotation::seesAll($viewer) || Quotation::seesOwn($viewer)
                 ? Quotation::query()->visibleTo($viewer)->where('customer_id', $customer->id)->with(AdminQuotation::RELATIONS)
                     ->latest('id')->limit(50)->get()

@@ -185,6 +185,15 @@ class NotificationTemplateSeeder extends Seeder
                 "প্রিয় {{name}},\n\nআপনার অনুরোধ {{number}} ({{subject}})-এর উত্তর:\n\n{{reply}}\n\nআরও কিছু জানাতে চাইলে আপনার পোর্টালে লিখুন: {{link}}",
                 "Dear {{name}},\n\na reply to your request {{number}} ({{subject}}):\n\n{{reply}}\n\nTo add anything, write in your portal: {{link}}",
                 'আপনার অনুরোধের উত্তর · {{number}}', 'Reply to your request · {{number}}'],
+
+            [NotificationEvent::NpsFollowUpAlert, $wa,
+                "যাত্রা শেষে কম রেটিং: {{score}}/১০ · {{ref}}\n{{package}}\nগ্রাহক: {{customer}} {{phone}}\nমন্তব্য: {{comment}}\nআজই ফোন করুন।",
+                "Low rating after a trip: {{score}}/10 · {{ref}}\n{{package}}\nCustomer: {{customer}} {{phone}}\nComment: {{comment}}\nPlease call them today.",
+                null, null],
+            [NotificationEvent::NpsFollowUpAlert, $mail,
+                "যাত্রা শেষে কম রেটিং: {{score}}/১০ · {{ref}}\n\n{{package}}\nগ্রাহক: {{customer}} {{phone}}\nমন্তব্য: {{comment}}\n\nগ্রাহকের যোগাযোগ লগে একটি ফলো-আপ যোগ হয়েছে। আজই ফোন করুন।",
+                "Low rating after a trip: {{score}}/10 · {{ref}}\n\n{{package}}\nCustomer: {{customer}} {{phone}}\nComment: {{comment}}\n\nA follow-up is on the customer's contact log. Please call them today.",
+                'কম রেটিং · {{ref}}', 'Low rating · {{ref}}'],
         ];
     }
 }

@@ -39,6 +39,9 @@ final class NotificationVariables
         if (isset($extra['amount'])) {
             $extra['amount'] = $money($extra['amount']);
         }
+        if (isset($extra['score'])) {
+            $extra['score'] = Numerals::number($extra['score'], $locale);
+        }
 
         $values = match (true) {
             $related instanceof Booking => $this->booking($related, $locale, $money),

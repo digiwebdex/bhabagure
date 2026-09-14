@@ -92,6 +92,8 @@ final class AdminBooking
             'cancellation_reason' => $booking->cancellation_reason,
             'terms_accepted_at' => $booking->terms_accepted_at?->toIso8601String(),
             'terms_version' => $booking->terms_version,
+            // The customer's rating after the trip, from the portal (docs/phase-6-customer-portal.md §0.4).
+            'nps' => ($nps = $booking->npsResponse()->first()) ? ['score' => $nps->score, 'comment' => $nps->comment, 'created_at' => $nps->created_at->toIso8601String()] : null,
             'lines' => $booking->lines->map(fn (BookingLine $line) => [
                 'kind' => $line->kind, 'code' => $line->code, 'title_en' => $line->title_en, 'title_bn' => $line->title_bn,
                 'quantity' => $line->quantity, 'unit_price' => Money::toNumber($line->unit_price), 'amount' => Money::toNumber($line->amount),

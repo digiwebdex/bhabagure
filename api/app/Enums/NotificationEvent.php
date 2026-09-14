@@ -29,6 +29,8 @@ enum NotificationEvent: string
     case SupportTicketAlert = 'support_ticket_alert';
     /** A staff reply to a support ticket: WhatsApp and email, and it shows in the portal. */
     case SupportReply = 'support_reply';
+    /** An NPS answer of 0–6 after a trip: its owner calls the customer (docs/phase-6-customer-portal.md §0.4). */
+    case NpsFollowUpAlert = 'nps_follow_up_alert';
 
     /** A message a staff member sends from a booking or customer record. Not templated. */
     case StaffMessage = 'staff_message';
@@ -43,20 +45,20 @@ enum NotificationEvent: string
         return [
             self::BookingCreated, self::BookingConfirmed, self::PaymentReceived, self::DocumentsPending, self::PreTripReminder,
             self::DepartureToday, self::TripCompleted, self::QuoteSent, self::QuoteExpiring, self::NewBookingAlert, self::NewLeadAlert,
-            self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::SupportReply,
+            self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::SupportReply, self::NpsFollowUpAlert,
         ];
     }
 
     /** @return list<self> sales alerts with a recipient list on the Notifications settings screen */
     public static function staffAlerts(): array
     {
-        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert];
+        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert];
     }
 
     public function audience(): string
     {
         return match ($this) {
-            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::WhatsAppVerification => 'staff',
+            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert, self::WhatsAppVerification => 'staff',
             default => 'customer',
         };
     }
@@ -108,6 +110,7 @@ enum NotificationEvent: string
             self::QuoteAcceptedAlert => ['number', 'package', 'total', 'customer', 'phone'],
             self::SupportTicketAlert => ['number', 'subject', 'message', 'ref', 'customer', 'phone'],
             self::SupportReply => ['name', 'number', 'subject', 'reply', 'link'],
+            self::NpsFollowUpAlert => ['ref', 'package', 'score', 'comment', 'customer', 'phone'],
             default => [],
         };
     }
@@ -126,6 +129,7 @@ enum NotificationEvent: string
             self::QuoteAcceptedAlert => 'when a customer accepts a quotation in the portal',
             self::SupportTicketAlert => 'when a customer opens a support ticket in the portal',
             self::SupportReply => 'when staff reply to a support ticket',
+            self::NpsFollowUpAlert => 'when a customer rates a completed trip 0–6 in the portal',
             default => 'immediately',
         };
     }

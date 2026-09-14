@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
 use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
 use App\Http\Controllers\Api\V1\Portal\PortalDocumentController;
 use App\Http\Controllers\Api\V1\Portal\PortalPaymentController;
+use App\Http\Controllers\Api\V1\Portal\PortalProfileController;
 use App\Http\Controllers\Api\V1\Portal\PortalQuotationController;
 use App\Http\Controllers\Api\V1\Portal\PortalSupportController;
 use App\Http\Controllers\Api\V1\Portal\PortalTripController;
@@ -92,6 +93,16 @@ Route::prefix('v1')->group(function () {
             Route::post('support', 'store')->middleware('throttle:portal-support');
             Route::get('support/{number}', 'show');
             Route::post('support/{number}/messages', 'message')->middleware('throttle:portal-support');
+        });
+        Route::controller(PortalProfileController::class)->group(function () {
+            Route::get('profile', 'show');
+            Route::put('profile', 'update')->middleware('throttle:portal-support');
+            Route::post('profile/email', 'requestEmail')->middleware('throttle:customer-codes');
+            Route::post('profile/email/confirm', 'confirmEmail')->middleware('throttle:customer-verify');
+            Route::post('profile/phone/code', 'requestPhoneCode')->middleware('throttle:customer-codes');
+            Route::post('profile/phone', 'changePhone')->middleware('throttle:customer-verify');
+            Route::get('nps', 'nps');
+            Route::post('trips/{reference}/nps', 'answerNps')->middleware('throttle:portal-support');
         });
     });
 
@@ -242,6 +253,7 @@ Route::prefix('v1')->group(function () {
             Route::post('customers/{id}/lost', 'markLost')->whereNumber('id');
             Route::delete('customers/{id}/lost', 'reopen')->whereNumber('id');
             Route::post('customers/{id}/claim', 'claim')->whereNumber('id');
+            Route::post('customers/{id}/portal-access', 'portalAccess')->whereNumber('id');
             Route::post('customers/{id}/assign', 'assign')->whereNumber('id');
         });
 

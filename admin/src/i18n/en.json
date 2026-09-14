@@ -98,7 +98,8 @@
       "facebook": "Facebook",
       "visit": "Office visit",
       "email": "Email",
-      "sms": "SMS"
+      "sms": "SMS",
+      "portal": "Portal"
     },
     "outcomes": {
       "reached": "Reached",
@@ -106,7 +107,8 @@
       "interested": "Interested",
       "not_interested": "Not interested",
       "call_back": "Call back",
-      "quote_requested": "Wants a quote"
+      "quote_requested": "Wants a quote",
+      "nps_detractor": "Rated the trip 0–6"
     },
     "deleteHasQuotations": "Has quotations — the record stays"
   },
@@ -851,7 +853,8 @@
       "quote_expiring": "Quotation expiring",
       "quote_accepted_alert": "Quotation accepted in the portal",
       "support_ticket_alert": "Support ticket opened",
-      "support_reply": "Reply to a support ticket"
+      "support_reply": "Reply to a support ticket",
+      "nps_follow_up_alert": "Low rating after a trip"
     },
     "timing": {
       "booking_created": "Immediately, when a website booking is saved",
@@ -867,7 +870,8 @@
       "quote_expiring": "24 hours before a sent quotation expires — on its last day",
       "quote_accepted_alert": "Immediately; the quotation’s owner always gets it too",
       "support_ticket_alert": "Immediately; the trip’s owner always gets it too",
-      "support_reply": "When staff reply in Support — WhatsApp and email"
+      "support_reply": "When staff reply in Support — WhatsApp and email",
+      "nps_follow_up_alert": "When a customer rates a completed trip 0–6; the trip’s owner always gets it too"
     },
     "enabled": "On",
     "disabled": "Off",

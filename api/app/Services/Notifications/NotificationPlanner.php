@@ -12,6 +12,7 @@ use App\Models\Inquiry;
 use App\Models\Invoice;
 use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
+use App\Models\NpsResponse;
 use App\Models\PackageDeparture;
 use App\Models\Quotation;
 use App\Models\Staff;
@@ -105,6 +106,14 @@ final class NotificationPlanner
             $this->plan($event, $channel, $ticket, $ticket->customer, $addresses[$channel->value] ?? null, $ticket->customer->locale ?? 'bn',
                 ['reply' => $reply->body], null, "{$base}:{$channel->value}", null, $base);
         }
+    }
+
+    /** An NPS answer of 0–6: the trip's owner (or the customer's) and whoever receives the alert follow up. */
+    public function npsFollowUp(NpsResponse $response): void
+    {
+        $response->loadMissing(['booking.assignedStaff', 'customer.assignedStaff']);
+        $this->toStaff(NotificationEvent::NpsFollowUpAlert, $response->booking, $response->booking->assignedStaff ?? $response->customer->assignedStaff,
+            ['score' => (string) $response->score, 'comment' => $response->comment ?: '—']);
     }
 
     private function toQuotationCustomer(NotificationEvent $event, Quotation $quotation, ?string $attachment): void

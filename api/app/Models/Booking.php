@@ -148,6 +148,11 @@ class Booking extends Model
         return $this->hasMany(SeatHold::class);
     }
 
+    public function npsResponse(): HasOne
+    {
+        return $this->hasOne(NpsResponse::class);
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class)->latest('id');

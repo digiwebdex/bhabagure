@@ -28,6 +28,8 @@ class Customer extends Authenticatable implements JWTSubject
             'phone_verified_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'portal_claimed_at' => 'datetime',
+            'portal_disabled_at' => 'datetime',
             'whatsapp_opted_out_at' => 'datetime',
             'lost_at' => 'datetime',
         ];
