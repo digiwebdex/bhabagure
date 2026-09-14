@@ -373,8 +373,12 @@ done
 need_root
 mkdir -p "$STATE/logs"
 chmod 0750 "$STATE"
-exec 9>"$STATE/deploy.lock"
-flock -n 9 || die "another deploy is running (lock: $STATE/deploy.lock)."
+# Stage 2 is the same deploy re-executed after the pull: it inherits the lock on fd 9 (and so does the log tee), so it
+# must not try to take it again.
+if [[ ${BHABAGHURE_DEPLOY_STAGE:-} != build ]]; then
+  exec 9>"$STATE/deploy.lock"
+  flock -n 9 || die "another deploy is running (lock: $STATE/deploy.lock)."
+fi
 
 case $ACTION in
   check)
