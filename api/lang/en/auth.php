@@ -12,7 +12,10 @@ return [
     'forbidden' => 'You do not have permission to do this.',
 
     // Neutral on purpose: never confirm that a number or address belongs to a customer.
-    'register_contact_us_phone' => 'To open an account with this number, please contact us.',
-    'register_contact_us_email' => 'To open an account with this email address, please contact us.',
+    'code_throttled' => 'A code was sent recently. You can ask for another in :seconds seconds.',
+    'code_undeliverable' => 'We can\'t send sign-in codes right now. Please call or WhatsApp our office.',
+    'code_invalid' => 'That code is wrong or has expired. Ask for a new one.',
+    'name_required' => 'Tell us your name to finish signing in.',
+    'portal_disabled' => 'Signing in to the portal is turned off for this number. Please contact our office.',
 
 ];

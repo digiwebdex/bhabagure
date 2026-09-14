@@ -223,10 +223,12 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('public-read', fn (Request $request) => Limit::perMinute(300)->by($request->ip()));
 
-        RateLimiter::for('customer-register', fn (Request $request) => [
-            Limit::perMinute(3)->by('register-minute|'.$request->ip()),
-            Limit::perDay(20)->by('register-day|'.$request->ip()),
+        // Portal sign-in codes: the per-number limits live in LoginCodes; these stop one address trying many numbers.
+        RateLimiter::for('customer-codes', fn (Request $request) => [
+            Limit::perMinute(5)->by('codes-minute|'.$request->ip()),
+            Limit::perDay(40)->by('codes-day|'.$request->ip()),
         ]);
+        RateLimiter::for('customer-verify', fn (Request $request) => Limit::perMinute(20)->by('verify|'.$request->ip()));
 
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
 

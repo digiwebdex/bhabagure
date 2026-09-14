@@ -1,6 +1,18 @@
 # Phase 6 — Customer portal (`customer.bhabaghure.com.bd`)
 
-**Status (2026-09-14): plan, awaiting the four answers in §7.** Nothing is built yet.
+**Status (2026-09-14): approved, being built.**
+
+## 0. Decisions (2026-09-14)
+
+1. **Sign-in:** one-time code only — SMS to the phone on record, WhatsApp as the fallback, no passwords. The first code on a known number claims the existing customer record.
+2. **Documents:** uploads with staff review. Customers upload the passport scan and photo per traveller and enter a missing passport number; staff verify or reject; visa and insurance are staff-set statuses shown read-only. Passport digits are never shown back.
+3. **Support:** tickets with an admin Support queue. The queue's badge counts tickets unanswered after 24 hours; replies go out by WhatsApp and email and show in the portal.
+4. **Loyalty:** NPS only. Loyalty and referral are deferred. NPS is asked after a completed trip, stored and shown to staff; 9–10 get the review link, and 0–6 create a follow-up for the trip's owner.
+
+Kept from the plan, open to veto:
+- private pages aren't cached offline (§2 #10);
+- the invoice is the receipt (§2 #6);
+- customers can accept a quotation, and staff still convert it (§3.2).
 
 **Sources:**
 - `_design/Bhabaghure Customer Portal.dc.html` and `_design/README.md` §3, from the local 2026-09-13 copy. The re-synced design still can't be read here; if it changed the portal, this plan is re-checked first.

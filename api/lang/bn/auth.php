@@ -14,7 +14,10 @@ return [
     'forbidden' => 'এই কাজের অনুমতি আপনার নেই।',
 
     // Neutral on purpose: never confirm that a number or address belongs to a customer.
-    'register_contact_us_phone' => 'এই নম্বর দিয়ে অ্যাকাউন্ট খুলতে আমাদের সাথে যোগাযোগ করুন।',
-    'register_contact_us_email' => 'এই ইমেইল দিয়ে অ্যাকাউন্ট খুলতে আমাদের সাথে যোগাযোগ করুন।',
+    'code_throttled' => 'কিছুক্ষণ আগে একটি কোড পাঠানো হয়েছে। :seconds সেকেন্ড পরে আবার চাইতে পারবেন।',
+    'code_undeliverable' => 'এই মুহূর্তে লগইন কোড পাঠানো যাচ্ছে না। অনুগ্রহ করে আমাদের অফিসে ফোন বা WhatsApp করুন।',
+    'code_invalid' => 'কোডটি ভুল অথবা মেয়াদ শেষ। নতুন কোড চান।',
+    'name_required' => 'লগইন শেষ করতে আপনার নাম লিখুন।',
+    'portal_disabled' => 'এই নম্বরের জন্য পোর্টালে লগইন বন্ধ রাখা হয়েছে। অনুগ্রহ করে আমাদের অফিসে যোগাযোগ করুন।',
 
 ];

@@ -198,75 +198,13 @@ class AuthTest extends TestCase
     }
 
     #[Test]
-    public function customers_register_and_sign_in_with_phone_in_any_common_format_or_email(): void
-    {
-        $this->postJson('/api/v1/customer/auth/register', [
-            'name' => 'Sadia Rahman', 'phone' => '01711-000123', 'email' => 'Sadia@Example.test', 'password' => 'secret123',
-        ])->assertCreated()->assertJsonPath('customer.name', 'Sadia Rahman')->assertJsonPath('customer.phone', '8801711000123');
-
-        $this->assertSame('sadia@example.test', Customer::query()->value('email'));
-
-        foreach (['01711000123', '+8801711000123', '০১৭১১০০০১২৩', 'sadia@example.test'] as $identifier) {
-            $this->resetAuthState();
-            $this->postJson('/api/v1/customer/auth/login', ['identifier' => $identifier, 'password' => 'secret123'])
-                ->assertOk()->assertJsonPath('customer.name', 'Sadia Rahman');
-        }
-    }
-
-    #[Test]
-    public function a_phone_or_email_already_on_file_gets_a_neutral_contact_us_answer(): void
-    {
-        $this->customer(['phone' => '8801711000123', 'email' => 'known@example.test', 'password' => null]);
-
-        $phone = $this->withHeader('X-Locale', 'en')
-            ->postJson('/api/v1/customer/auth/register', ['name' => 'Someone else', 'phone' => '01711000123', 'email' => '', 'password' => 'secret123'])
-            ->assertStatus(409)
-            ->assertExactJson(['message' => 'To open an account with this number, please contact us.', 'code' => 'contact_us', 'field' => 'phone']);
-        foreach (['customer', 'registered', 'already', 'exists', 'taken'] as $word) {
-            $this->assertStringNotContainsStringIgnoringCase($word, $phone->json('message'));
-        }
-
-        $this->withHeader('X-Locale', 'bn')->postJson('/api/v1/customer/auth/register', ['name' => 'Someone else', 'phone' => '01711000999', 'email' => 'Known@Example.test', 'password' => 'secret123'])
-            ->assertStatus(409)->assertJsonPath('field', 'email')->assertJsonPath('message', 'এই ইমেইল দিয়ে অ্যাকাউন্ট খুলতে আমাদের সাথে যোগাযোগ করুন।');
-
-        $this->assertSame(1, Customer::query()->count());
-    }
-
-    #[Test]
-    public function the_contact_us_answer_only_comes_after_the_form_is_otherwise_valid(): void
-    {
-        $this->customer(['phone' => '8801711000123']);
-
-        $this->postJson('/api/v1/customer/auth/register', ['name' => 'X', 'phone' => '01711000123', 'password' => 'short'])
-            ->assertUnprocessable()->assertJsonValidationErrors('password')->assertJsonMissingValidationErrors('phone');
-    }
-
-    #[Test]
-    public function customer_passwords_need_at_least_eight_characters(): void
-    {
-        $this->postJson('/api/v1/customer/auth/register', ['name' => 'Sadia', 'phone' => '01711000555', 'password' => 'seven77'])
-            ->assertUnprocessable()->assertJsonValidationErrors('password');
-        $this->postJson('/api/v1/customer/auth/register', ['name' => 'Sadia', 'phone' => '01711000555', 'password' => 'eight888'])
-            ->assertCreated();
-    }
-
-    #[Test]
-    public function a_customer_created_by_staff_without_a_password_cannot_sign_in(): void
-    {
-        $this->customer(['phone' => '8801711000123', 'password' => null]);
-
-        $this->postJson('/api/v1/customer/auth/login', ['identifier' => '01711000123', 'password' => ''])->assertUnprocessable();
-        $this->postJson('/api/v1/customer/auth/login', ['identifier' => '01711000123', 'password' => 'anything'])->assertUnauthorized();
-    }
-
-    #[Test]
     public function errors_are_in_bangla_by_default_and_english_on_request(): void
     {
-        $this->postJson('/api/v1/customer/auth/login', ['identifier' => 'nobody@example.test', 'password' => 'x'])
-            ->assertUnauthorized()->assertJsonPath('message', 'এই তথ্যের সাথে কোনো অ্যাকাউন্ট মেলেনি।');
+        $this->postJson('/api/v1/customer/auth/verify', ['phone' => '01711000123', 'code' => '000000'])
+            ->assertUnprocessable()->assertJsonPath('message', 'কোডটি ভুল অথবা মেয়াদ শেষ। নতুন কোড চান।');
 
-        $this->withHeader('X-Locale', 'en')->postJson('/api/v1/customer/auth/login', ['identifier' => 'nobody@example.test', 'password' => 'x'])
-            ->assertUnauthorized()->assertJsonPath('message', 'These credentials do not match our records.');
+        $this->withHeader('X-Locale', 'en')->postJson('/api/v1/customer/auth/verify', ['phone' => '01711000123', 'code' => '000000'])
+            ->assertUnprocessable()->assertJsonPath('message', 'That code is wrong or has expired. Ask for a new one.');
     }
 
     private function refresh(string $guard, string $token): TestResponse

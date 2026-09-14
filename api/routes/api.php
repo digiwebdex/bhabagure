@@ -56,9 +56,10 @@ Route::prefix('v1')->group(function () {
         });
     });
 
+    // Customer portal: sign-in by one-time code only (docs/phase-6-customer-portal.md §3.1).
     Route::prefix('customer/auth')->controller(CustomerAuthController::class)->group(function () {
-        Route::post('register', 'register')->middleware('throttle:customer-register');
-        Route::post('login', 'login');
+        Route::post('code', 'sendCode')->middleware('throttle:customer-codes');
+        Route::post('verify', 'verify')->middleware('throttle:customer-verify');
         Route::post('refresh', 'refresh')->middleware('throttle:auth-refresh');
         Route::post('logout', 'logout');
         Route::get('me', 'me')->middleware('auth:customer');
