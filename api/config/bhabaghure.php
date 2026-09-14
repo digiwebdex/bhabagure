@@ -13,6 +13,8 @@ return [
      * (web/src/app/api/revalidate/route.ts). Empty URL = skip, e.g. in local work without the website.
      */
     'web_url' => env('WEB_URL', 'http://localhost:3000'),
+    // The customer portal (docs/phase-6-customer-portal.md): payments started there return there; invites link to it.
+    'portal_url' => env('PORTAL_URL', 'http://customer.localhost:3000'),
     // Base of short invoice links in SMS (…/i/{code}); the API host serves them.
     'short_link_base' => env('SHORT_LINK_BASE') ?: env('APP_URL', 'http://localhost:8000'),
     'web_revalidate_url' => env('WEB_REVALIDATE_URL'),

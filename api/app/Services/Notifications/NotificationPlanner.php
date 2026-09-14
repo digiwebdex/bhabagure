@@ -65,8 +65,24 @@ final class NotificationPlanner
     /** A quotation was sent: WhatsApp with the PDF and email with it attached, to the customer's own number and address. */
     public function quotationSent(Quotation $quotation): void
     {
+        $this->toQuotationCustomer(NotificationEvent::QuoteSent, $quotation, "quotation:{$quotation->id}");
+    }
+
+    /** 24 hours before a sent quotation stops being honoured: WhatsApp and email, no attachment (docs/phase-6 §3.2). */
+    public function quotationExpiring(Quotation $quotation): void
+    {
+        $this->toQuotationCustomer(NotificationEvent::QuoteExpiring, $quotation, null);
+    }
+
+    /** The customer accepted a quotation in the portal: its owner, and whoever receives the alert, converts it. */
+    public function quotationAccepted(Quotation $quotation): void
+    {
+        $this->toStaff(NotificationEvent::QuoteAcceptedAlert, $quotation, $quotation->assignedStaff);
+    }
+
+    private function toQuotationCustomer(NotificationEvent $event, Quotation $quotation, ?string $attachment): void
+    {
         $quotation->loadMissing('customer');
-        $event = NotificationEvent::QuoteSent;
         $base = "{$event->value}:quotation:{$quotation->id}";
         $addresses = [
             NotificationChannel::WhatsApp->value => $quotation->customer->phone,
@@ -75,7 +91,7 @@ final class NotificationPlanner
 
         foreach ($event->channels() as $channel) {
             $this->plan($event, $channel, $quotation, $quotation->customer, $addresses[$channel->value] ?? null, $quotation->locale,
-                [], "quotation:{$quotation->id}", "{$base}:{$channel->value}", null, $base);
+                [], $attachment, "{$base}:{$channel->value}", null, $base);
         }
     }
 

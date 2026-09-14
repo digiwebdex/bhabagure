@@ -7,10 +7,12 @@ use App\Jobs\DeliverNotification;
 use App\Models\Booking;
 use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
+use App\Models\Quotation;
 use App\Models\Transaction;
 use App\Services\Booking\BookingStateMachine;
 use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\AdminAlerts;
+use App\Services\Notifications\NotificationPlanner;
 use App\Services\Notifications\NotificationSettings;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
 use App\Services\Passports\PassportScanner;
@@ -84,6 +86,27 @@ Artisan::command('bookings:check-paid', function () {
 })->purpose('Compare every booking\'s paid amount with the cash book and alert on any difference');
 
 Schedule::command('bookings:check-paid')->dailyAt('03:15')->timezone('Asia/Dhaka')->onOneServer();
+
+// docs/phase-6-customer-portal.md §3.2: a sent quotation's customer is reminded once, within the last 24 hours before
+// it stops being honoured (the end of valid_until in Dhaka). One sent less than 12 hours ago gets no reminder on top.
+Artisan::command('quotations:remind-expiring', function (NotificationPlanner $planner) {
+    // Honoured to the end of valid_until, so its last 24 hours are that day in Dhaka.
+    $count = 0;
+    Quotation::query()->where('status', Quotation::SENT)->whereNull('expiry_reminded_at')
+        ->whereDate('valid_until', now('Asia/Dhaka')->toDateString())
+        ->where('sent_at', '<=', now()->subHours(12))
+        ->orderBy('id')->each(function (Quotation $quotation) use ($planner, &$count) {
+            DB::transaction(function () use ($quotation, $planner, &$count) {
+                if (Quotation::query()->whereKey($quotation->id)->whereNull('expiry_reminded_at')->update(['expiry_reminded_at' => now()]) === 1) {
+                    $planner->quotationExpiring($quotation);
+                    $count++;
+                }
+            });
+        });
+    $this->info("Reminded {$count} quotation(s).");
+})->purpose('Remind customers 24 hours before a sent quotation expires');
+
+Schedule::command('quotations:remind-expiring')->hourly()->onOneServer();
 
 // Passport scans no booking used are deleted after their retention window (config bhabaghure.passport_ocr).
 Artisan::command('passport-scans:prune', function (PassportScanner $scanner) {

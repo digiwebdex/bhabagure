@@ -30,6 +30,9 @@ use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
 use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
 use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
+use App\Http\Controllers\Api\V1\Portal\PortalPaymentController;
+use App\Http\Controllers\Api\V1\Portal\PortalQuotationController;
+use App\Http\Controllers\Api\V1\Portal\PortalTripController;
 use App\Http\Controllers\Api\V1\Public\PublicBookingController;
 use App\Http\Controllers\Api\V1\Public\PublicContentController;
 use App\Http\Controllers\Api\V1\Public\PublicFormController;
@@ -63,6 +66,16 @@ Route::prefix('v1')->group(function () {
         Route::post('refresh', 'refresh')->middleware('throttle:auth-refresh');
         Route::post('logout', 'logout');
         Route::get('me', 'me')->middleware('auth:customer');
+    });
+
+    // ── Customer portal (docs/phase-6-customer-portal.md): only the signed-in customer's own records ─────
+    Route::prefix('portal')->middleware(['auth:customer', 'portal.access', 'throttle:portal'])->group(function () {
+        Route::get('trips', [PortalTripController::class, 'index']);
+        Route::get('trips/{reference}', [PortalTripController::class, 'show']);
+        Route::get('payments', [PortalPaymentController::class, 'index']);
+        Route::get('quotations', [PortalQuotationController::class, 'index']);
+        Route::get('quotations/{number}', [PortalQuotationController::class, 'show']);
+        Route::post('quotations/{number}/accept', [PortalQuotationController::class, 'accept']);
     });
 
     // ── Public website content (read) ────────────────────────────────────────────────────────────────

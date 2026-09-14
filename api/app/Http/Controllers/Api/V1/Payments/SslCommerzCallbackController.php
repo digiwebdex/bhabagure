@@ -88,6 +88,9 @@ class SslCommerzCallbackController extends Controller
             return redirect()->away($web, 303);
         }
         $prefix = $attempt->booking->locale === 'en' ? '/en' : '';
+        if ($attempt->return_to === 'portal') {
+            return redirect()->away(rtrim((string) config('bhabaghure.portal_url'), '/')."{$prefix}/trips/{$attempt->booking->reference}", 303);
+        }
 
         return redirect()->away("{$web}{$prefix}/booking/{$attempt->booking->reference}", 303);
     }

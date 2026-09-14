@@ -68,9 +68,9 @@ final class PaymentService
      *
      * @throws PaymentNotAllowed|PaymentAmountChanged|SeatsUnavailable|GatewayUnavailable
      */
-    public function start(Booking $booking, string $method, int|float|null $expectedTotal = null): PaymentAttempt
+    public function start(Booking $booking, string $method, int|float|null $expectedTotal = null, string $returnTo = 'site'): PaymentAttempt
     {
-        $attempt = DB::transaction(function () use ($booking, $method, $expectedTotal) {
+        $attempt = DB::transaction(function () use ($booking, $method, $expectedTotal, $returnTo) {
             $booking = Booking::query()->whereKey($booking->id)->lockForUpdate()->firstOrFail();
             if (! in_array($booking->status, [BookingStatus::Inquiry, BookingStatus::Confirmed], true) || (float) $booking->due_amount <= 0) {
                 throw new PaymentNotAllowed($booking);
@@ -96,6 +96,7 @@ final class PaymentService
                 'online_charge' => $online['charge'],
                 'currency' => 'BDT',
                 'method_hint' => $method,
+                'return_to' => $returnTo === 'portal' ? 'portal' : 'site',
                 'status' => PaymentAttemptStatus::Initiated,
                 'expires_at' => $expires,
             ]);

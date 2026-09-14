@@ -847,7 +847,9 @@
       "staff_message": "Message from staff",
       "whatsapp_verification": "WhatsApp verification code",
       "opt_out_confirmation": "Opt-out confirmation",
-      "quote_sent": "Quotation sent (with PDF)"
+      "quote_sent": "Quotation sent (with PDF)",
+      "quote_expiring": "Quotation expiring",
+      "quote_accepted_alert": "Quotation accepted in the portal"
     },
     "timing": {
       "booking_created": "Immediately, when a website booking is saved",
@@ -859,7 +861,9 @@
       "trip_completed": "2 days after return, 11:00",
       "new_booking_alert": "Immediately; the booking’s assigned agent always gets it too",
       "new_lead_alert": "Immediately, from the inquiry and air-ticket forms",
-      "low_seat_alert": "Once, when a departure has 3 or fewer seats left"
+      "low_seat_alert": "Once, when a departure has 3 or fewer seats left",
+      "quote_expiring": "24 hours before a sent quotation expires — on its last day",
+      "quote_accepted_alert": "Immediately; the quotation’s owner always gets it too"
     },
     "enabled": "On",
     "disabled": "Off",

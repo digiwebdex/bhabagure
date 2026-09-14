@@ -123,6 +123,15 @@ class NotificationTemplateSeeder extends Seeder
                 "Dear {{name}},\n\nyour quotation {{number}} for {{package}} is attached to this email.\nTravelling: {{date}}\nTravellers: {{pax}}\nTotal: {{total}}\n\nThis price is honoured until {{valid_until}}. View it online: {{link}}\n\nTo book, reply to this email or call us.",
                 'কোটেশন · {{number}}', 'Your quotation · {{number}}'],
 
+            [NotificationEvent::QuoteExpiring, $wa,
+                "প্রিয় {{name}},\n{{package}} ভ্রমণের কোটেশন {{number}} ({{total}}) {{valid_until}} পর্যন্ত প্রযোজ্য। এই মূল্যে বুক করতে চাইলে আজই আমাদের জানান।",
+                "Dear {{name}},\nyour quotation {{number}} for {{package}} ({{total}}) is honoured until {{valid_until}}. To book at this price, let us know today.",
+                null, null],
+            [NotificationEvent::QuoteExpiring, $mail,
+                "প্রিয় {{name}},\n\n{{package}} ভ্রমণের কোটেশন {{number}} ({{total}}) {{valid_until}} পর্যন্ত প্রযোজ্য।\nএই মূল্যে বুক করতে চাইলে আজই এই ইমেইলের উত্তর দিন, আমাদের ফোন করুন, অথবা আপনার পোর্টালে কোটেশনটি গ্রহণ করুন।\n\nঅনলাইনে দেখতে: {{link}}",
+                "Dear {{name}},\n\nyour quotation {{number}} for {{package}} ({{total}}) is honoured until {{valid_until}}.\nTo book at this price, reply to this email today, call us, or accept the quotation in your portal.\n\nView it online: {{link}}",
+                'কোটেশনের মেয়াদ শেষ হচ্ছে · {{number}}', 'Your quotation expires soon · {{number}}'],
+
             [NotificationEvent::NewBookingAlert, $wa,
                 "নতুন বুকিং {{ref}}\n{{package}} · {{date}} · {{pax}} জন\nমোট {{total}} · {{payment}}\nগ্রাহক: {{customer}} {{phone}}",
                 "New booking {{ref}}\n{{package}} · {{date}} · {{pax}} travellers\nTotal {{total}} · {{payment}}\nCustomer: {{customer}} {{phone}}",
@@ -149,6 +158,15 @@ class NotificationTemplateSeeder extends Seeder
                 "সিট প্রায় শেষ: {{package}} · {{date}}\nআর মাত্র {{seats}}টি সিট খালি।",
                 "Seats almost gone: {{package}} · {{date}}\nOnly {{seats}} seats left.",
                 'সিট প্রায় শেষ · {{package}}', 'Seats almost gone · {{package}}'],
+
+            [NotificationEvent::QuoteAcceptedAlert, $wa,
+                "কোটেশন গ্রহণ করা হয়েছে: {{number}}\n{{package}} · মোট {{total}}\nগ্রাহক: {{customer}} {{phone}}\nপোর্টাল থেকে গ্রহণ — বুকিংয়ে রূপান্তর করুন।",
+                "Quotation accepted: {{number}}\n{{package}} · total {{total}}\nCustomer: {{customer}} {{phone}}\nAccepted in the portal — convert it to a booking.",
+                null, null],
+            [NotificationEvent::QuoteAcceptedAlert, $mail,
+                "কোটেশন গ্রহণ করা হয়েছে: {{number}}\n\n{{package}} · মোট {{total}}\nগ্রাহক: {{customer}} {{phone}}\n\nগ্রাহক পোর্টাল থেকে গ্রহণ করেছেন। অ্যাডমিনে কোটেশনটি বুকিংয়ে রূপান্তর করুন।",
+                "Quotation accepted: {{number}}\n\n{{package}} · total {{total}}\nCustomer: {{customer}} {{phone}}\n\nThe customer accepted it in the portal. Convert the quotation to a booking in the admin.",
+                'কোটেশন গ্রহণ · {{number}}', 'Quotation accepted · {{number}}'],
         ];
     }
 }

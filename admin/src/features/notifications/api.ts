@@ -8,8 +8,8 @@ import type { Data, Paginated } from '../../lib/api/types'
 export type NotificationChannel = 'whatsapp' | 'email' | 'sms'
 export const CHANNELS: NotificationChannel[] = ['whatsapp', 'email', 'sms']
 export type NotificationStatus = 'pending' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'skipped' | 'cancelled'
-export type AlertEvent = 'new_booking_alert' | 'new_lead_alert' | 'low_seat_alert'
-export const ALERT_EVENTS: AlertEvent[] = ['new_booking_alert', 'new_lead_alert', 'low_seat_alert']
+export type AlertEvent = 'new_booking_alert' | 'new_lead_alert' | 'low_seat_alert' | 'quote_accepted_alert'
+export const ALERT_EVENTS: AlertEvent[] = ['new_booking_alert', 'new_lead_alert', 'low_seat_alert', 'quote_accepted_alert']
 
 export type NotificationMessage = {
   id: number

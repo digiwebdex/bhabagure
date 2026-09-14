@@ -134,8 +134,43 @@ final class QuotationService
             if ($locked->isExpired()) {
                 throw new QuotationRefused('expired');
             }
-            $locked->forceFill(['status' => Quotation::ACCEPTED, 'accepted_at' => now()]);
+            $locked->forceFill(['status' => Quotation::ACCEPTED, 'accepted_at' => now(), 'accepted_via' => 'staff']);
         });
+    }
+
+    /**
+     * The customer accepted a valid quotation in the portal (docs/phase-6-customer-portal.md §3.2). Nothing is booked:
+     * the owner is told and converts it, choosing the date and travellers with the customer.
+     *
+     * @throws QuotationRefused
+     */
+    public function acceptFromPortal(Quotation $quotation, Customer $customer): Quotation
+    {
+        return DB::transaction(function () use ($quotation, $customer) {
+            $locked = $this->lock($quotation);
+            if ($locked->status !== Quotation::SENT) {
+                throw new QuotationRefused('not_sent');
+            }
+            if ($locked->isExpired()) {
+                throw new QuotationRefused('expired');
+            }
+            $locked->forceFill(['status' => Quotation::ACCEPTED, 'accepted_at' => now(), 'accepted_via' => 'portal', 'viewed_at' => $locked->viewed_at ?? now()])->save();
+            $this->audit->record('quotation.accepted', $customer, $locked, ['via' => 'portal']);
+            $this->planner->quotationAccepted($locked);
+
+            return $locked->refresh();
+        });
+    }
+
+    /** The first time its customer opens a sent quotation in the portal. Staff previews never count. */
+    public function markViewed(Quotation $quotation, Customer $customer): void
+    {
+        if ($quotation->status !== Quotation::SENT || $quotation->viewed_at !== null) {
+            return;
+        }
+        if (Quotation::query()->whereKey($quotation->id)->whereNull('viewed_at')->update(['viewed_at' => now()]) === 1) {
+            $this->audit->record('quotation.viewed', $customer, $quotation);
+        }
     }
 
     /** @throws QuotationRefused */

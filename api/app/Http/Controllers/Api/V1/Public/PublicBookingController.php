@@ -110,10 +110,14 @@ class PublicBookingController extends Controller
         $data = $request->validate([
             'method' => ['required', Rule::in(array_keys(PaymentService::METHODS))],
             'expected_total' => ['required', 'numeric', 'min:0'],
+            'return_to' => ['nullable', Rule::in(['site', 'portal'])],
         ]);
+        // Back to the portal only for its signed-in owner: a guest with the private link has no portal session to return to.
+        $customer = $request->user('customer');
+        $returnTo = ($data['return_to'] ?? 'site') === 'portal' && $customer instanceof Customer && $customer->id === $booking->customer_id ? 'portal' : 'site';
 
         try {
-            $attempt = app(PaymentService::class)->start($booking, $data['method'], $data['expected_total']);
+            $attempt = app(PaymentService::class)->start($booking, $data['method'], $data['expected_total'], $returnTo);
         } catch (PaymentAmountChanged $e) {
             return response()->json(['message' => __('booking.price_changed'), 'code' => 'price_changed', 'payment' => $e->payment], Response::HTTP_CONFLICT);
         } catch (PaymentsNotConfigured|PaymentNotAllowed) {

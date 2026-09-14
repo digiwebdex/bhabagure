@@ -51,7 +51,7 @@ class Quotation extends Model
             'travel_date' => 'date', 'valid_until' => 'date', 'includes_airfare' => 'boolean',
             'list_price' => 'decimal:2', 'unit_price' => 'decimal:2', 'subtotal_amount' => 'decimal:2', 'single_supplement_amount' => 'decimal:2',
             'addons_amount' => 'decimal:2', 'discount_amount' => 'decimal:2', 'vat_rate' => 'decimal:2', 'vat_amount' => 'decimal:2', 'total_amount' => 'decimal:2',
-            'sent_at' => 'datetime', 'accepted_at' => 'datetime', 'declined_at' => 'datetime', 'withdrawn_at' => 'datetime', 'converted_at' => 'datetime',
+            'sent_at' => 'datetime', 'viewed_at' => 'datetime', 'expiry_reminded_at' => 'datetime', 'accepted_at' => 'datetime', 'declined_at' => 'datetime', 'withdrawn_at' => 'datetime', 'converted_at' => 'datetime',
         ];
     }
 

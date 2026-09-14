@@ -46,6 +46,7 @@ Beyond the Laravel basics:
 | `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis` | queue and cache on the shared Redis |
 | `REDIS_CLIENT=predis`, `REDIS_DB=12`, `REDIS_CACHE_DB=13`, `REDIS_PREFIX=bhabaghure_`, `REDIS_QUEUE_RETRY_AFTER=180` | our reserved databases (§5) — the server has no phpredis extension, and installing one is a system package |
 | `WEB_URL`, `WEB_REVALIDATE_URL`, `REVALIDATE_SECRET` | the website, for links in messages and CMS refreshes |
+| `PORTAL_URL=https://customer.bhabaghure.com.bd` | the customer portal: payments started there return there; portal invites link to it |
 | `SSLCOMMERZ_MODE=live`, `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD` | the client's store (phase 3) |
 | `PDF_CHROME_PATH` | `/var/www/Bhabagure/tools/chrome-for-testing/current/chrome-headless-shell-linux64/chrome-headless-shell` |
 | `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.sendgrid.net`, `MAIL_PORT=587`, `MAIL_USERNAME=apikey`, `MAIL_PASSWORD` | SendGrid (§4) |

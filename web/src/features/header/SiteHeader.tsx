@@ -1,11 +1,13 @@
 'use client';
 
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { useEffect } from 'react';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { restoreSession } from '@/lib/customer-api';
 import { useBooking } from '@/state/booking';
 import { initialsOf } from '@/lib/initials';
 import { useCustomerSession } from '@/state/customer-session';
@@ -57,7 +59,13 @@ export function SiteHeader({ pathname }: SiteHeaderProps) {
   const openAuth = useSiteUi((state) => state.openAuth);
   const customer = useCustomerSession((state) => state.customer);
   const startBooking = useBooking((state) => state.start);
+  const locale = useLocale();
   const isHome = pathname === '/';
+
+  // Only visitors who signed in on this device before cost a refresh request.
+  useEffect(() => {
+    if (useCustomerSession.getState().status === 'unknown') void restoreSession(locale, { onlyIfHinted: true });
+  }, [locale]);
 
   const openBooking = () => {
     closeMenu();
@@ -131,7 +139,7 @@ export function SiteHeader({ pathname }: SiteHeaderProps) {
           ) : (
             <button
               type="button"
-              onClick={() => openAuth('signIn')}
+              onClick={() => openAuth()}
               className="flex shrink-0 cursor-pointer items-center gap-1.75 rounded-pill border border-input bg-white px-3.75 py-2 text-13.5 font-semibold whitespace-nowrap text-blue-deep hover:border-orange hover:text-orange"
             >
               <span aria-hidden className="text-14">

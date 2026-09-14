@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsurePortalAccess;
 use App\Http\Middleware\EnsureStaffCanWork;
 use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Auth\AuthenticationException;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
             'staff.can-work' => EnsureStaffCanWork::class,
+            'portal.access' => EnsurePortalAccess::class,
         ]);
         // Refresh tokens travel in a cookie that Laravel must not encrypt (it's an opaque random string, stored hashed).
         $middleware->encryptCookies(except: ['bh_staff_refresh', 'bh_customer_refresh']);

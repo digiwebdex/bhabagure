@@ -229,6 +229,7 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(40)->by('codes-day|'.$request->ip()),
         ]);
         RateLimiter::for('customer-verify', fn (Request $request) => Limit::perMinute(20)->by('verify|'.$request->ip()));
+        RateLimiter::for('portal', fn (Request $request) => Limit::perMinute(120)->by('portal|'.($request->user('customer')?->getAuthIdentifier() ?? $request->ip())));
 
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
 

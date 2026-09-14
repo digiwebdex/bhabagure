@@ -30,7 +30,7 @@ final class NotificationSettings
     public static function alertRecipients(): array
     {
         $saved = self::all()['alertRecipients'] ?? [];
-        $events = [NotificationEvent::NewBookingAlert, NotificationEvent::NewLeadAlert, NotificationEvent::LowSeatAlert];
+        $events = NotificationEvent::staffAlerts();
 
         return collect($events)->mapWithKeys(fn (NotificationEvent $e) => [$e->value => array_values(array_map('intval', $saved[$e->value] ?? []))])->all();
     }

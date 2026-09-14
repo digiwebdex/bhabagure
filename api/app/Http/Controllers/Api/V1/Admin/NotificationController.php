@@ -291,7 +291,7 @@ class NotificationController extends Controller
     /** Alert recipient lists: staff with a verified WhatsApp number only. The booking's assigned agent is always added. */
     public function updateSettings(Request $request): JsonResponse
     {
-        $events = [NotificationEvent::NewBookingAlert->value, NotificationEvent::NewLeadAlert->value, NotificationEvent::LowSeatAlert->value];
+        $events = array_map(fn (NotificationEvent $event) => $event->value, NotificationEvent::staffAlerts());
         // One rule set per list: a wildcard `distinct` would compare ids across lists, and one person may be on several.
         $data = $request->validate(['alert_recipients' => ['required', 'array:'.implode(',', $events)]] + collect($events)->flatMap(fn (string $event) => [
             "alert_recipients.{$event}" => ['array'],

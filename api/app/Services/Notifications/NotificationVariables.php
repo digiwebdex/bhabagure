@@ -102,6 +102,8 @@ final class NotificationVariables
             'pax' => Numerals::number($quotation->pax_count, $locale),
             'total' => $money($quotation->total_amount),
             'valid_until' => Numerals::date($quotation->valid_until->toDateString(), $locale),
+            'customer' => $quotation->customer->name,
+            'phone' => self::displayPhone($quotation->customer->phone),
             'link' => url("/api/v1/public/quotations/{$quotation->share_token}".($locale === 'en' ? '?lang=en' : '')),
         ];
     }

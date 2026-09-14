@@ -4,8 +4,6 @@ import { create } from 'zustand';
 
 import { clampTravellers } from '@bhabaghure/pricing';
 
-export type AuthTab = 'signIn' | 'register';
-
 /**
  * Open panels and the package detail modal. The modal keeps its own traveller count, seeded from
  * the search bar when it opens, so exploring slabs in the modal doesn't change the grid.
@@ -18,7 +16,6 @@ export interface SiteUiState {
   photoIndex: number;
   menuOpen: boolean;
   authOpen: boolean;
-  authTab: AuthTab;
   chatOpen: boolean;
 
   openPackage: (slug: string, pax: number, openedBy?: 'click' | 'history') => void;
@@ -29,9 +26,8 @@ export interface SiteUiState {
   setPhotoIndex: (index: number) => void;
   toggleMenu: () => void;
   closeMenu: () => void;
-  openAuth: (tab?: AuthTab) => void;
+  openAuth: () => void;
   closeAuth: () => void;
-  setAuthTab: (tab: AuthTab) => void;
   toggleChat: () => void;
   closeChat: () => void;
 }
@@ -43,7 +39,6 @@ export const useSiteUi = create<SiteUiState>()((set) => ({
   photoIndex: 0,
   menuOpen: false,
   authOpen: false,
-  authTab: 'signIn',
   chatOpen: false,
 
   openPackage: (slug, pax, openedBy = 'click') =>
@@ -55,9 +50,8 @@ export const useSiteUi = create<SiteUiState>()((set) => ({
   setPhotoIndex: (photoIndex) => set({ photoIndex }),
   toggleMenu: () => set((state) => ({ menuOpen: !state.menuOpen })),
   closeMenu: () => set({ menuOpen: false }),
-  openAuth: (tab) => set((state) => ({ authOpen: true, authTab: tab ?? state.authTab, menuOpen: false })),
+  openAuth: () => set({ authOpen: true, menuOpen: false }),
   closeAuth: () => set({ authOpen: false }),
-  setAuthTab: (authTab) => set({ authTab }),
   toggleChat: () => set((state) => ({ chatOpen: !state.chatOpen })),
   closeChat: () => set({ chatOpen: false }),
 }));

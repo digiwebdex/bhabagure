@@ -18,9 +18,13 @@ enum NotificationEvent: string
     case TripCompleted = 'trip_completed';
     /** A quotation sent from the admin (docs/phase-5-admin-core.md §4.5): WhatsApp with the PDF, and email. Never SMS. */
     case QuoteSent = 'quote_sent';
+    /** 24 hours before a sent quotation stops being honoured (docs/phase-6-customer-portal.md §3.2). */
+    case QuoteExpiring = 'quote_expiring';
     case NewBookingAlert = 'new_booking_alert';
     case NewLeadAlert = 'new_lead_alert';
     case LowSeatAlert = 'low_seat_alert';
+    /** A customer accepted a quotation in the portal: its owner converts it. */
+    case QuoteAcceptedAlert = 'quote_accepted_alert';
 
     /** A message a staff member sends from a booking or customer record. Not templated. */
     case StaffMessage = 'staff_message';
@@ -34,14 +38,21 @@ enum NotificationEvent: string
     {
         return [
             self::BookingCreated, self::BookingConfirmed, self::PaymentReceived, self::DocumentsPending, self::PreTripReminder,
-            self::DepartureToday, self::TripCompleted, self::QuoteSent, self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert,
+            self::DepartureToday, self::TripCompleted, self::QuoteSent, self::QuoteExpiring, self::NewBookingAlert, self::NewLeadAlert,
+            self::LowSeatAlert, self::QuoteAcceptedAlert,
         ];
+    }
+
+    /** @return list<self> sales alerts with a recipient list on the Notifications settings screen */
+    public static function staffAlerts(): array
+    {
+        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert];
     }
 
     public function audience(): string
     {
         return match ($this) {
-            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::WhatsAppVerification => 'staff',
+            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::WhatsAppVerification => 'staff',
             default => 'customer',
         };
     }
@@ -86,9 +97,11 @@ enum NotificationEvent: string
             self::DepartureToday => ['name', 'package', 'ref', 'office'],
             self::TripCompleted => ['name', 'package', 'review'],
             self::QuoteSent => ['name', 'package', 'number', 'date', 'pax', 'total', 'valid_until', 'link'],
+            self::QuoteExpiring => ['name', 'package', 'number', 'total', 'valid_until', 'link'],
             self::NewBookingAlert => ['ref', 'package', 'date', 'pax', 'total', 'payment', 'customer', 'phone'],
             self::NewLeadAlert => ['name', 'phone', 'kind', 'details'],
             self::LowSeatAlert => ['package', 'date', 'seats'],
+            self::QuoteAcceptedAlert => ['number', 'package', 'total', 'customer', 'phone'],
             default => [],
         };
     }
@@ -103,6 +116,8 @@ enum NotificationEvent: string
             self::TripCompleted => '2 days after return',
             self::LowSeatAlert => 'when a departure has 3 or fewer seats left (once)',
             self::QuoteSent => 'when staff send a quotation',
+            self::QuoteExpiring => '24 hours before a sent quotation expires',
+            self::QuoteAcceptedAlert => 'when a customer accepts a quotation in the portal',
             default => 'immediately',
         };
     }

@@ -12,7 +12,7 @@ class PaymentAttempt extends Model
     protected $fillable = [
         'booking_id', 'gateway', 'tran_id', 'amount', 'currency', 'method_hint', 'status', 'session_key', 'gateway_url', 'val_id',
         'bank_tran_id', 'card_type', 'risk_level', 'online_charge', 'gateway_amount', 'store_amount', 'gateway_fee', 'gateway_surcharge', 'failure_reason', 'expires_at',
-        'settled_at', 'closed_at', 'gateway_response',
+        'settled_at', 'closed_at', 'gateway_response', 'return_to',
     ];
 
     protected $hidden = ['gateway_response', 'session_key'];
