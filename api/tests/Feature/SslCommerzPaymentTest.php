@@ -298,6 +298,33 @@ class SslCommerzPaymentTest extends TestCase
     }
 
     #[Test]
+    public function reconciliation_without_store_credentials_is_quiet_until_an_attempt_is_left_open(): void
+    {
+        [$reference, $token] = $this->createBooking();
+        $this->storeCredentials(null);
+
+        // Before the client's store is set up no payment can have started: nothing to do, and no error every ten minutes.
+        $this->artisan('payments:reconcile')->expectsOutputToContain('not configured')->assertSuccessful();
+
+        $this->storeCredentials('bhaba0test');
+        $attempt = $this->startPayment($reference, $token);
+        PaymentAttempt::query()->whereKey($attempt->id)->update(['expires_at' => now()->subMinute()]);
+        $this->assertSame(PaymentAttemptStatus::Redirected, $attempt->fresh()->status);
+        $this->storeCredentials(null);
+
+        // Credentials removed while a customer's payment is unresolved: only SSLCommerz can say whether money was taken,
+        // so the attempt stays open and the command fails loudly instead of expiring it.
+        $this->artisan('payments:reconcile')->expectsOutputToContain('cannot be reconciled')->assertFailed();
+        $this->assertSame(PaymentAttemptStatus::Redirected, $attempt->fresh()->status);
+    }
+
+    private function storeCredentials(?string $storeId): void
+    {
+        config(['bhabaghure.sslcommerz.store_id' => $storeId]);
+        $this->app->forgetInstance(SslCommerzGateway::class);
+    }
+
+    #[Test]
     public function an_ipn_with_a_bad_signature_is_ignored(): void
     {
         [$reference, $token] = $this->createBooking();

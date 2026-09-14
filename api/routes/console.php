@@ -2,22 +2,44 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\NotificationStatus;
+use App\Enums\PaymentAttemptStatus;
 use App\Jobs\DeliverNotification;
 use App\Models\Booking;
 use App\Models\NotificationMessage;
+use App\Models\PaymentAttempt;
 use App\Services\Booking\BookingStateMachine;
 use App\Services\Notifications\AdminAlerts;
 use App\Services\Notifications\NotificationSettings;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
 use App\Services\Passports\PassportScanner;
 use App\Services\Payments\PaymentService;
+use App\Services\Payments\PaymentsNotConfigured;
 use App\Support\Queue\QueuePreflight;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
 // SSLCommerz attempts nobody came back from: settle them if money was taken, otherwise expire and free the seats.
-Artisan::command('payments:reconcile', function (PaymentService $payments) {
+Artisan::command('payments:reconcile', function () {
+    try {
+        $payments = app(PaymentService::class);
+    } catch (PaymentsNotConfigured $e) {
+        // No store credentials: no payment can have started, so there is nothing to settle and nothing to report every
+        // ten minutes. An attempt left open from before the credentials were removed is different — only SSLCommerz
+        // can say whether that customer's money was taken.
+        $open = PaymentAttempt::query()->whereIn('status', [PaymentAttemptStatus::Initiated, PaymentAttemptStatus::Redirected])->count();
+        if ($open === 0) {
+            $this->line('SSLCommerz is not configured; no payment attempts to reconcile.');
+
+            return 0;
+        }
+        $this->error("{$open} open payment attempt(s) cannot be reconciled: {$e->getMessage()}");
+
+        return 1;
+    }
+
     $this->info("Checked {$payments->reconcile()} payment attempt(s).");
+
+    return 0;
 })->purpose('Settle or expire SSLCommerz payments that never called back');
 
 Schedule::command('payments:reconcile')->everyTenMinutes()->withoutOverlapping()->onOneServer();

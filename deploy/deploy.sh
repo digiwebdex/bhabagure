@@ -334,9 +334,18 @@ health() {
   if [[ -f $NGINX_DST ]]; then
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:3341/api/v1/public/settings) || true
     note "API over loopback (127.0.0.1:3341)  HTTP $code"
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/up") || true
+    # -k: this checks nginx → PHP-FPM → Laravel; certificate coverage is reported separately below.
+    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/up") || true
     note "API through nginx (/up)            HTTP $code"
-    [[ $code == 200 ]] || die "the API health check failed: tail $API/storage/logs/laravel.log; journalctl -u bhabaghure-php -n 50"
+    [[ $code == 200 ]] || die "the API health check failed: tail $API/storage/logs/laravel-*.log; journalctl -u bhabaghure-php -n 50"
+    local cert=/etc/letsencrypt/live/$SITE_HOST/fullchain.pem host names
+    if [[ -f $cert ]]; then
+      names=$(openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null | grep -o 'DNS:[^,]*' | tr -d ' ')
+      for host in "$SITE_HOST" "www.$SITE_HOST" "admin.$SITE_HOST" "customer.$SITE_HOST" "wallet.$SITE_HOST" "api.$SITE_HOST"; do
+        grep -qxE "DNS:($host|\*\.$SITE_HOST)" <<<"$names" || note "certificate does not cover $host yet"
+      done
+      note "certificate expires $(openssl x509 -in "$cert" -noout -enddate | cut -d= -f2)"
+    fi
   else
     note "nginx file not installed yet: API checks skipped."
   fi
