@@ -1,0 +1,58 @@
+# /etc/systemd/system/bhabaghure-web.service
+#
+# The public website and customer portal: one Next.js production server on 127.0.0.1:3340, behind nginx
+# (deploy/nginx/bhabaghure.conf). Reads web/.env.production.local.
+#
+# Two build slots, web/.next-a and web/.next-b: deploy.sh builds into the one not being served, so the live site keeps
+# running through the build, then points .deploy/web-slot.env (NEXT_DIST_DIR=…) at the new slot and restarts this
+# unit. A failed build never touches the running slot. (Next bakes its build directory name into the build, so a
+# finished build cannot simply be renamed into place.)
+
+[Unit]
+Description=Bhabaghure website and customer portal (Next.js on 127.0.0.1:3340)
+Documentation=https://github.com/digiwebdex/bhabagure/blob/main/docs/deployment.md
+After=network-online.target bhabaghure-php.service
+Wants=network-online.target
+ConditionPathExists=/var/www/Bhabagure/.deploy/web-slot.env
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/Bhabagure/web
+SyslogIdentifier=bhabaghure-web
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+# The V8 heap stays well under the cgroup cap below, so Node collects garbage before systemd has to step in.
+Environment=NODE_OPTIONS=--max-old-space-size=384
+EnvironmentFile=/var/www/Bhabagure/.deploy/web-slot.env
+ExecStart=/usr/bin/node /var/www/Bhabagure/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3340
+
+Restart=always
+RestartSec=15
+TimeoutStartSec=60
+TimeoutStopSec=30
+KillMode=control-group
+
+MemoryHigh=450M
+MemoryMax=600M
+MemorySwapMax=0
+CPUQuota=100%
+TasksMax=128
+Nice=5
+OOMScoreAdjust=300
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -29,9 +29,14 @@ public/uploads/
 .phpunit.cache/
 .phpunit.result.cache
 
-# Build output
+# Build output (.next-a/.next-b: the server's two website slots; dist-next: the admin build before it goes live)
 .next/
+.next-a/
+.next-b/
+.next-build/
 dist/
+dist-next/
+dist-previous/
 out/
 coverage/
 *.tsbuildinfo
@@ -57,3 +62,7 @@ docker-compose.override.yml
 
 # Server-side tools unpacked on the VPS (Chrome for Testing for invoice PDFs)
 /tools/
+
+# Server-side state kept inside the project folder by deploy/deploy.sh (logs, lock, website slot, package caches)
+/.deploy/
+/.cache/

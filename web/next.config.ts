@@ -12,6 +12,8 @@ const remote = (origin: string, pathname: string): RemotePattern => {
 };
 
 const nextConfig: NextConfig = {
+  // deploy/deploy.sh builds into a separate directory while the live server keeps serving .next, then swaps them.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   // Workspace packages that ship TypeScript source.
   transpilePackages: ['@bhabaghure/format', '@bhabaghure/pricing'],
   poweredByHeader: false,

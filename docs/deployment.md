@@ -12,9 +12,9 @@ systemd units named `bhabaghure-*`.
 
 | Piece | How | State |
 |---|---|---|
-| API | nginx site file → php-fpm, root `api/public` | not deployed |
-| Admin | static `admin/dist` | not deployed |
-| Website + portal | Next.js on a free local port (check `ss -ltnp`) | not deployed |
+| API | nginx (`deploy/nginx/bhabaghure.conf`) → **our own PHP-FPM master** `bhabaghure-php.service`, root `api/public` (§7) | being deployed |
+| Admin | static `admin/dist` | being deployed |
+| Website + portal | `bhabaghure-web.service`: Next.js on 127.0.0.1:3340, two build slots (§7) | being deployed |
 | Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **installed, disabled** |
 | Queue worker | `bhabaghure-queue.service` → `php artisan queue:work redis` (one worker, §5) | **installed and enabled 2026-09-13**; skipped until `api/artisan` exists |
 | Invoice PDFs | Chrome for Testing in `/var/www/Bhabagure/tools` | **installed** |
@@ -174,3 +174,90 @@ Without the worker nothing is sent: the admin shows the messages as waiting, and
       an English test SMS arrive readable and the balance drop matches the editor's part count
 - [ ] Sales staff verified their numbers; alert recipients chosen
 - [ ] One real booking on the live site: WhatsApp + email to the customer, alert to sales
+
+## 7. Server layout and shipping a change
+
+### 7.1 Layout
+
+```
+/var/www/Bhabagure/                 a git checkout of main — never edited by hand
+├── api/            .env (root:www-data 0640)      Laravel; storage/ and bootstrap/cache/ owned by www-data
+├── admin/          .env.production.local          dist/ served by nginx (built into dist-next/, then switched)
+├── web/            .env.production.local          .next-a/ and .next-b/: the two website build slots
+├── deploy/         deploy.sh, nginx/, php-fpm/, systemd/   (the copies that are installed)
+├── tools/          Chrome for Testing (not in git)
+├── .deploy/        deploy logs, lock, web-slot.env (which slot is live), nginx backups (not in git)
+└── .cache/         npm and composer caches, so nothing is written to root's home (not in git)
+```
+
+| Host | Served by |
+|---|---|
+| `bhabaghure.com.bd`, `customer.` | nginx → Next.js 127.0.0.1:3340 (the app picks website or portal from the Host header) |
+| `www.` | 301 → apex |
+| `admin.` | nginx, static `admin/dist` |
+| `api.` | nginx → `/run/bhabaghure-php/php-fpm.sock`; also on **127.0.0.1:3341** (loopback only) for the website's server-side content fetches (`API_INTERNAL_URL`), so they never leave the box |
+| `wallet.` | 404 until Phase 7; then an IP allow-list and basic auth in front of its own sign-in |
+| anything else | `000-catch-all.conf`: 444 on :80, TLS handshake refused on :443 |
+
+All hosts are behind Cloudflare (**SSL mode Full (strict)**); every block sets the real visitor IP from
+`CF-Connecting-IP` for Cloudflare's ranges only, because Laravel rate-limits sign-ins, forms and bookings per IP.
+
+**Why our own PHP-FPM master.** The shared `php8.3-fpm` serves another site (travelagencyweb) from its single
+five-worker pool. A reload of that master cuts off that site's requests in flight, and sharing the pool lets either
+site starve the other. `bhabaghure-php.service` runs `php-fpm8.3` with `deploy/php-fpm/bhabaghure.conf`: six workers,
+75 s request limit, `MemoryMax=600M`, `CPUQuota=100%`, OPcache not watching files (new code lands at the deploy's
+reload, not file by file during `git pull`). Deploys reload that master only; the shared one is never touched.
+
+**Why two website slots.** `next build` rewrites its output directory, and Next bakes the directory name into the
+build, so a finished build cannot be renamed into place. The deploy builds into the slot that is not live while the
+site keeps serving, then points `.deploy/web-slot.env` at it and restarts `bhabaghure-web`. The previous slot stays on
+disk until the next build, and a build that fails or doesn't answer never replaces the live one.
+
+### 7.2 Shipping a change
+
+Locally (Phases 5–7 are built and tested against the local database first):
+
+```bash
+npm run lint && npm test && npm run test:api       # plus the e2e suites for the screens you touched
+git push origin main
+ssh root@187.77.144.38 /var/www/Bhabagure/deploy/deploy.sh
+```
+
+What `deploy.sh` does on the server, in order, stopping at the first failure:
+
+1. **Refuses** if a tracked file was edited on the server or `origin/main` doesn't fast-forward; takes a lock.
+2. `git fetch` + fast-forward, then continues with the script it just pulled.
+3. Pauses our queue worker and scheduler timer (they load PHP files as they go).
+4. `composer install --no-dev --optimize-autoloader`; `npm ci` only when `package-lock.json` changed.
+5. Builds the admin into `admin/dist-next` and the website into the idle slot — each build in a transient
+   `bhabaghure-build-*` scope capped at 1.6 GB and 1.5 CPUs at nice 10. Nothing live has changed yet.
+6. `migrate --force` (the API answers 503 with Retry-After only while migrations are pending), `db:seed --force`
+   (create-only seeders: new permissions and templates, never an edit made in the admin), `optimize`.
+7. Reloads **`bhabaghure-php`** (the pool file is tested first), restarts **`bhabaghure-queue`**, starts the timer.
+8. Switches `admin/dist`, switches the website slot and restarts **`bhabaghure-web`**; if the new build doesn't answer
+   within 90 s it goes back to the previous slot.
+9. Tells the website to drop cached content (the build rendered it before migrations), then health checks.
+10. Reports drift: when `deploy/nginx/bhabaghure.conf` or a `deploy/systemd/bhabaghure-*` unit differs from the
+    installed copy, it prints the diff — **it never installs them itself**.
+
+It never restarts a shared service and never reloads nginx. Config changes are separate, deliberate steps:
+
+- `deploy.sh --install-nginx` — backs up the installed file, installs the new one, runs `nginx -t`; on failure it puts
+  the previous state back and does not reload, so the shared nginx is never left holding a config it cannot load.
+- `deploy.sh --install-units` — installs changed `bhabaghure-*` units, `daemon-reload`, restarts only those.
+- `deploy.sh --check` — pending commits and drift, changes nothing.
+
+Logs: `/var/www/Bhabagure/.deploy/logs/`. Services: `journalctl -u bhabaghure-php -u bhabaghure-web -u bhabaghure-queue`.
+Access logs: `/var/log/nginx/bhabaghure-{web,admin,api}.access.log`.
+
+**Rolling back** is a commit, not a server edit: `git revert` locally, push, run `deploy.sh`. (For the website alone,
+the previous slot is still built: set `.deploy/web-slot.env` back and `systemctl restart bhabaghure-web`.)
+
+### 7.3 First sign-in
+
+```bash
+cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan staff:super-admin owner@example.com --name="Owner"
+```
+
+prints a temporary password once; it must be changed at the first sign-in. `--reset` gives an existing account a new
+temporary password and signs it out everywhere.

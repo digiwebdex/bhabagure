@@ -56,7 +56,8 @@ async function loadSeed(withDemo: boolean): Promise<ContentBundle> {
 
 /** Endpoint shapes: docs/phase-2-cms-api.md §4. Kept in step with the seed by api/tests/Feature/PublicContentContractTest. */
 async function loadFromApi(): Promise<ContentBundle> {
-  const base = process.env.API_URL;
+  // On the server the API is reached over loopback (API_INTERNAL_URL) rather than out through the CDN and back.
+  const base = process.env.API_INTERNAL_URL || process.env.API_URL;
   if (!base) throw new Error('CONTENT_SOURCE=api needs API_URL');
   const get = async <T,>(path: string, tag: string): Promise<T> => {
     const res = await fetch(`${base}/api/v1/public/${path}`, { next: { tags: [tag], revalidate: 3600 } });
