@@ -6,6 +6,8 @@
 #   /var/www/Bhabagure/deploy/deploy.sh --check          report pending commits and config drift; change nothing
 #   /var/www/Bhabagure/deploy/deploy.sh --install-nginx  install deploy/nginx/bhabaghure.conf (nginx -t; restored on failure)
 #   /var/www/Bhabagure/deploy/deploy.sh --install-units  install changed bhabaghure-* systemd units
+#   /var/www/Bhabagure/deploy/deploy.sh --reload-config  after editing api/.env: re-cache config, reload our PHP-FPM,
+#                                                        restart our queue worker (no pull, no build)
 #
 # Shared-server rules (docs/deployment.md): it touches only /var/www/Bhabagure and bhabaghure-* units. It never
 # restarts a shared service; nginx is only ever reloaded by --install-nginx, and only after `nginx -t` passes (a file
@@ -121,6 +123,23 @@ install_units() {
     fi
   done
   note "installed: ${changed[*]} (daemon-reload; only bhabaghure-* units restarted)."
+}
+
+# ── --reload-config ───────────────────────────────────────────────────────────────────────────────────────────────
+# The API runs with a cached config (artisan optimize), so an edit to api/.env does nothing until this runs.
+reload_config() {
+  need_root
+  say "Apply api/.env"
+  chown root:www-data "$API/.env"
+  chmod 0640 "$API/.env"
+  artisan config:clear >/dev/null
+  artisan optimize
+  systemctl reload bhabaghure-php.service
+  note "bhabaghure-php reloaded."
+  systemctl restart bhabaghure-queue.service
+  systemctl is-active --quiet bhabaghure-queue.service || die "bhabaghure-queue did not start: journalctl -u bhabaghure-queue -n 50"
+  note "bhabaghure-queue restarted (its preflight re-checked the Redis settings)."
+  artisan tinker --execute='$c = config("bhabaghure.notifications"); echo "   WhatsApp: ".($c["whatsapp"]["mode"] ?? "?")."   SMS: ".($c["sms"]["mode"] ?? "?")."   mail: ".config("mail.default")."   SSLCommerz: ".config("bhabaghure.sslcommerz.mode").PHP_EOL;' 2>/dev/null || true
 }
 
 # ── Deploy, stage 1: fetch and fast-forward, then continue with the script that was just pulled ─────────────────
@@ -336,7 +355,8 @@ for arg in "$@"; do
     --check) ACTION=check ;;
     --install-nginx) ACTION=install-nginx ;;
     --install-units) ACTION=install-units ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --reload-config) ACTION=reload-config ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) die "unknown option $arg (see --help)" ;;
   esac
 done
@@ -358,6 +378,7 @@ case $ACTION in
     ;;
   install-nginx) install_nginx; exit 0 ;;
   install-units) install_units; exit 0 ;;
+  reload-config) reload_config; exit 0 ;;
 esac
 
 if [[ ${BHABAGHURE_DEPLOY_STAGE:-} == build ]]; then

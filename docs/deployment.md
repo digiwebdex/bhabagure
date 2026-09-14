@@ -1,7 +1,9 @@
 # Deployment notes
 
-**Status (2026-09-13): not deployed.** On the VPS so far: Chrome for Testing, the scheduler timer (disabled) — see
-[`phase-3-booking.md` §0.5](phase-3-booking.md) — and the queue worker unit (enabled, waiting for the API; §5). DNS hosts and the shared-server rules are in
+**Status (2026-09-14): deploying.** On the VPS: the checkout, database and user, `.env` files (third-party keys blank,
+sending off), migrations and seed content, admin and website builds; `bhabaghure-php`, `bhabaghure-web`,
+`bhabaghure-queue` and `bhabaghure-scheduler.timer` running; the nginx catch-all (§7.4) installed. Waiting on the
+Cloudflare token and `api` DNS record for the wildcard certificate, then `bhabaghure.conf`. DNS hosts and the shared-server rules are in
 `_design/DEPLOYMENT.md`; the short version is: nothing outside `/var/www/Bhabagure` without asking first, a new nginx
 file (never an edited one), reload never restart, a dedicated MySQL database and user, a project Redis index and prefix,
 systemd units named `bhabaghure-*`.
@@ -12,13 +14,13 @@ systemd units named `bhabaghure-*`.
 
 | Piece | How | State |
 |---|---|---|
-| API | nginx (`deploy/nginx/bhabaghure.conf`) → **our own PHP-FPM master** `bhabaghure-php.service`, root `api/public` (§7) | being deployed |
-| Admin | static `admin/dist` | being deployed |
-| Website + portal | `bhabaghure-web.service`: Next.js on 127.0.0.1:3340, two build slots (§7) | being deployed |
-| Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **installed, disabled** |
-| Queue worker | `bhabaghure-queue.service` → `php artisan queue:work redis` (one worker, §5) | **installed and enabled 2026-09-13**; skipped until `api/artisan` exists |
+| API | nginx (`deploy/nginx/bhabaghure.conf`) → **our own PHP-FPM master** `bhabaghure-php.service`, root `api/public` (§7) | PHP-FPM **running** 2026-09-14; nginx file waits for the certificate |
+| Admin | static `admin/dist` | **built**; served once the nginx file is in |
+| Website + portal | `bhabaghure-web.service`: Next.js on 127.0.0.1:3340, two build slots (§7) | **running** 2026-09-14 (slot `.next-a`) |
+| Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **enabled and running** 2026-09-14 |
+| Queue worker | `bhabaghure-queue.service` → `php artisan queue:work redis` (one worker, §5) | **running** 2026-09-14, preflight passed |
 | Invoice PDFs | Chrome for Testing in `/var/www/Bhabagure/tools` | **installed** |
-| MySQL | database `bhabaghure`, user `bhabaghure_user` (never root) | to create |
+| MySQL | database `bhabaghure` (utf8mb4_unicode_ci), user `bhabaghure_user@127.0.0.1` with privileges on `bhabaghure.*` only; the password was generated on the server and exists only in `api/.env` | **created** 2026-09-14 |
 | Redis | the box's shared Redis 7.0 (localhost, 16 databases): **database 12 = queue, 13 = cache**, prefix `bhabaghure_`, client Predis | **reserved** — 0 and 3 hold other sites' keys; the worker refuses anything else |
 
 What the scheduler runs (`api/routes/console.php`): `payments:reconcile` (10 min), `bookings:complete-travelled`
@@ -27,8 +29,15 @@ retried sends) and `notifications:check-whatsapp` (5 min).
 
 ## 2. `api/.env` on the server
 
-Never committed (the repository is public). Beyond the Laravel basics (`APP_ENV=production`, `APP_DEBUG=false`,
-`APP_KEY`, `JWT_SECRET`, `DB_*`):
+Never committed (the repository is public). Written on the server on 2026-09-14 with every internal secret generated
+there (`APP_KEY`, `JWT_SECRET`, `DB_PASSWORD`, `REVALIDATE_SECRET`, also in `web/.env.production.local`) and every
+third-party key blank, sending off (`WASENDER_MODE=off`, `BULKSMSBD_MODE=off`, `MAIL_MAILER=log`, `SSLCOMMERZ_MODE=sandbox`).
+**Back up `APP_KEY` outside the server** — it encrypts passport numbers.
+
+The config is cached: after editing `api/.env`, run `/var/www/Bhabagure/deploy/deploy.sh --reload-config` (re-caches,
+reloads `bhabaghure-php`, restarts the queue worker, prints the active modes).
+
+Beyond the Laravel basics:
 
 | Variable | Value |
 |---|---|
@@ -246,6 +255,7 @@ It never restarts a shared service and never reloads nginx. Config changes are s
   the previous state back and does not reload, so the shared nginx is never left holding a config it cannot load.
 - `deploy.sh --install-units` — installs changed `bhabaghure-*` units, `daemon-reload`, restarts only those.
 - `deploy.sh --check` — pending commits and drift, changes nothing.
+- `deploy.sh --reload-config` — after editing `api/.env`: re-cache config, reload `bhabaghure-php`, restart the worker.
 
 Logs: `/var/www/Bhabagure/.deploy/logs/`. Services: `journalctl -u bhabaghure-php -u bhabaghure-web -u bhabaghure-queue`.
 Access logs: `/var/log/nginx/bhabaghure-{web,admin,api}.access.log`.
@@ -260,4 +270,20 @@ cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan staff:super-admi
 ```
 
 prints a temporary password once; it must be changed at the first sign-in. `--reset` gives an existing account a new
-temporary password and signs it out everywhere.
+temporary password and signs it out everywhere. Run it yourself over SSH, so the password never passes through
+anyone else's terminal or logs.
+
+### 7.4 Shared-server changes made for this deploy (2026-09-14, each approved)
+
+| Change | Why | Undo |
+|---|---|---|
+| `/etc/nginx/sites-available/000-catch-all.conf` + `sites-enabled` link (copy of `deploy/nginx/000-catch-all.conf`) | nginx sent unmatched hosts to the first site it loaded (SaniTiles), so `bhabaghure.com.bd` showed another client's app. Now 444 on :80, TLS refused on :443. No existing file edited (none carried `default_server`). Before/after: sanitileserp.com and admin.sanitileserp.com 200 with the same page; worldjumperbd.com and travelagencyweb.com 200; app.sanitileserp.com 410 before and after. Only names with no nginx block of their own changed: ours and four orphaned certificate names whose HTTPS was already broken (api.primeskyint.com, api.showterraflight.com, nirman.digiwebdex.com, travelsaas.digiwebdex.com) | remove both, `nginx -t`, reload |
+| `bhabaghure-php.service`, `bhabaghure-web.service` in `/etc/systemd/system` | §7.1 | `systemctl disable --now`, remove, `daemon-reload` |
+| `bhabaghure-scheduler.timer` enabled | §1 | `systemctl disable --now bhabaghure-scheduler.timer` |
+| `apt install python3-certbot-dns-cloudflare` (8 new packages, 0 upgraded) | DNS-01 wildcard certificate on a Cloudflare zone | `apt remove python3-certbot-dns-cloudflare` |
+| MySQL database `bhabaghure`, user `bhabaghure_user@127.0.0.1` | §1 | `DROP DATABASE` / `DROP USER` |
+
+**Certificate renewal baseline, before any change (2026-09-14 03:36 UTC):** `certbot renew --dry-run` — 38 of 42 pass.
+The four failures are other sites' and pre-date this deploy: `api.primeskyint.com` (webroot challenge 404; also failed
+2026-09-13), `app.sanitileserp.com` (410), `seventrip.net` (403) and `shanghaitravels.com.bd` (404) — the last three are
+behind Cloudflare's proxy, which answers the HTTP challenge itself.
