@@ -20,13 +20,20 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     private const GUARD = 'staff';
 
-    /** name => [module, bn, en] */
-    private const PERMISSIONS = [
+    /** name => [module, bn, en]. A permission added here reaches a live database through `php artisan permissions:sync --add-only`. */
+    public const PERMISSIONS = [
         'bookings.view_all' => ['bookings', 'সব বুকিং দেখা', 'View all bookings'],
         'bookings.view_own' => ['bookings', 'নিজের বুকিং দেখা', 'View own bookings'],
         'bookings.create' => ['bookings', 'বুকিং তৈরি', 'Create bookings'],
         'bookings.update' => ['bookings', 'বুকিং সম্পাদনা', 'Edit bookings'],
         'bookings.delete' => ['bookings', 'বুকিং মুছে ফেলা', 'Delete bookings'],
+        'records.assign' => ['bookings', 'বুকিং, গ্রাহক ও ইনকোয়্যারির দায়িত্ব বদল', 'Reassign bookings, customers and enquiries'],
+        'quotations.view_all' => ['quotations', 'সব কোটেশন দেখা', 'View all quotations'],
+        'quotations.view_own' => ['quotations', 'নিজের কোটেশন দেখা', 'View own quotations'],
+        'quotations.manage' => ['quotations', 'কোটেশন তৈরি ও পাঠানো', 'Create and send quotations'],
+        'quotations.convert' => ['quotations', 'কোটেশন থেকে বুকিং', 'Convert quotations to bookings'],
+        'air_inquiries.view' => ['air', 'টিকেট ইনকোয়্যারি দেখা', 'View air-ticket enquiries'],
+        'air_inquiries.manage' => ['air', 'টিকেট ইনকোয়্যারিতে কাজ করা', 'Work air-ticket enquiries'],
         'customers.view' => ['customers', 'গ্রাহক দেখা', 'View customers'],
         'customers.manage' => ['customers', 'গ্রাহক ব্যবস্থাপনা', 'Manage customers'],
         'clients.manage' => ['customers', 'কর্পোরেট ও এজেন্ট ব্যবস্থাপনা', 'Manage corporate and agent accounts'],
@@ -52,10 +59,12 @@ class RolesAndPermissionsSeeder extends Seeder
     ];
 
     /** role => [bn, en, permissions] */
-    private const ROLES = [
+    public const ROLES = [
         'super_admin' => ['সুপার অ্যাডমিন', 'Super admin', []],
         'admin' => ['অ্যাডমিন', 'Admin', [
-            'bookings.view_all', 'bookings.create', 'bookings.update', 'bookings.delete', 'customers.view', 'customers.manage',
+            'bookings.view_all', 'bookings.create', 'bookings.update', 'bookings.delete', 'records.assign',
+            'quotations.view_all', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage',
+            'customers.view', 'customers.manage',
             'clients.manage', 'b2b_rates.manage', 'packages.manage', 'pricing.manage', 'payments.view', 'invoices.manage',
             'transactions.create_manual', 'ledger.view_company_balance', 'staff.manage', 'bonus.manage', 'commission.view_all',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
@@ -63,10 +72,11 @@ class RolesAndPermissionsSeeder extends Seeder
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
+            'quotations.view_own', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage',
             'commission.view_own', 'reports.view', 'reports.export', 'notifications.send',
         ]],
         'accountant' => ['হিসাবরক্ষক', 'Accountant', [
-            'bookings.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',
+            'bookings.view_all', 'quotations.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',
             'ledger.view_company_balance', 'commission.view_all', 'reports.view', 'reports.export', 'reports.profit_loss',
         ]],
         'tour_operator' => ['ট্যুর অপারেটর', 'Tour operator', [

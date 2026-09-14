@@ -60,7 +60,11 @@ class NotificationAdminTest extends TestCase
         $this->actingAsApi($this->staff('tour_operator'))->postJson($url, ['booking_id' => $this->booking->id, 'text' => 'Hi'])->assertForbidden();
 
         $agent = $this->staff('sales_agent');
+        Booking::query()->whereKey($this->booking->id)->update(['assigned_staff_id' => $this->staff('sales_agent')->id]);
         $this->actingAsApi($agent)->postJson($url, ['booking_id' => $this->booking->id, 'text' => 'Hi'])->assertNotFound();
+        // In the shared pool the booking is visible, but only its owner messages the customer.
+        Booking::query()->whereKey($this->booking->id)->update(['assigned_staff_id' => null]);
+        $this->actingAsApi($agent)->postJson($url, ['booking_id' => $this->booking->id, 'text' => 'Hi'])->assertStatus(409)->assertJsonPath('code', 'claim_first');
         Booking::query()->whereKey($this->booking->id)->update(['assigned_staff_id' => $agent->id]);
         $this->actingAsApi($agent)->postJson($url, ['booking_id' => $this->booking->id, 'text' => 'Hi'])->assertCreated();
 

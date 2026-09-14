@@ -122,6 +122,13 @@ class NotificationController extends Controller
         ]);
 
         $subject = isset($data['booking_id']) ? $this->visibleBooking($staff, (int) $data['booking_id']) : $this->visibleCustomer($staff, (int) $data['customer_id']);
+        // The shared pool is visible to every sales agent, but only the owner messages the customer: claim first.
+        $works = $subject instanceof Booking
+            ? Booking::seesAll($staff) || $subject->assigned_staff_id === $staff->id
+            : Customer::seesAll($staff) || $subject->assigned_staff_id === $staff->id || $subject->bookings()->where('assigned_staff_id', $staff->id)->exists();
+        if (! $works) {
+            return response()->json(['message' => __('ownership.claim_first'), 'code' => 'claim_first'], Response::HTTP_CONFLICT);
+        }
         $customer = $subject instanceof Booking ? $subject->customer : $subject;
         $invoice = null;
         if (($data['attach_invoice'] ?? false) && $subject instanceof Booking) {
@@ -354,22 +361,13 @@ class NotificationController extends Controller
 
     private function visibleBooking(Staff $staff, int $id): Booking
     {
-        return Booking::query()
-            ->when(! $staff->can('bookings.view_all'), fn (Builder $q) => $q->where(fn (Builder $inner) => $inner
-                ->where('assigned_staff_id', $staff->id)->orWhere('created_by_staff_id', $staff->id)))
-            ->when(! $staff->can('bookings.view_all') && ! $staff->can('bookings.view_own'), fn (Builder $q) => $q->whereRaw('1 = 0'))
-            ->with('customer')
-            ->findOrFail($id);
+        return Booking::query()->visibleTo($staff)->with('customer')->findOrFail($id);
     }
 
     private function visibleCustomer(Staff $staff, int $id): Customer
     {
         abort_unless($staff->can('customers.view'), 403, __('auth.forbidden'));
 
-        return Customer::query()
-            ->when(! $staff->can('bookings.view_all'), fn (Builder $q) => $q->where(fn (Builder $inner) => $inner
-                ->where('assigned_staff_id', $staff->id)
-                ->orWhereHas('bookings', fn (Builder $b) => $b->where('assigned_staff_id', $staff->id)->orWhere('created_by_staff_id', $staff->id))))
-            ->findOrFail($id);
+        return Customer::query()->visibleTo($staff)->findOrFail($id);
     }
 }

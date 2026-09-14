@@ -7,7 +7,9 @@ use App\Jobs\DeliverNotification;
 use App\Models\Booking;
 use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
+use App\Models\Transaction;
 use App\Services\Booking\BookingStateMachine;
+use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\AdminAlerts;
 use App\Services\Notifications\NotificationSettings;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
@@ -16,6 +18,7 @@ use App\Services\Payments\PaymentService;
 use App\Services\Payments\PaymentsNotConfigured;
 use App\Support\Queue\QueuePreflight;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 // SSLCommerz attempts nobody came back from: settle them if money was taken, otherwise expire and free the seats.
@@ -57,6 +60,30 @@ Artisan::command('bookings:complete-travelled', function (BookingStateMachine $m
 })->purpose('Mark confirmed bookings completed after their travel end date');
 
 Schedule::command('bookings:complete-travelled')->dailyAt('02:30')->timezone('Asia/Dhaka')->onOneServer();
+
+// docs/phase-3-booking.md §3: paid_amount is a cache of the cash book. If it ever differs from the ledger, the people
+// who see the company balance are told (once a day) — nothing is corrected silently.
+Artisan::command('bookings:check-paid', function () {
+    $ledger = Transaction::query()->where('category', LedgerService::CATEGORY_PAYMENT)->groupBy('booking_id')
+        ->selectRaw("booking_id, SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END) AS paid");
+    $drifted = DB::table('bookings')->leftJoinSub($ledger, 'ledger', 'ledger.booking_id', '=', 'bookings.id')
+        ->whereRaw('bookings.paid_amount <> COALESCE(ledger.paid, 0)')
+        ->orderBy('bookings.id')->limit(50)->pluck('bookings.reference');
+
+    if ($drifted->isEmpty()) {
+        $this->info('Every booking\'s paid amount matches the cash book.');
+
+        return 0;
+    }
+    AdminAlerts::once('paid-drift:'.now('Asia/Dhaka')->toDateString(),
+        'Paid amount differs from the cash book for: '.$drifted->implode(', ').'. Check before recording further payments on them.',
+        'ledger.view_company_balance');
+    $this->error("Paid amount differs from the cash book: {$drifted->implode(', ')}");
+
+    return 1;
+})->purpose('Compare every booking\'s paid amount with the cash book and alert on any difference');
+
+Schedule::command('bookings:check-paid')->dailyAt('03:15')->timezone('Asia/Dhaka')->onOneServer();
 
 // Passport scans no booking used are deleted after their retention window (config bhabaghure.passport_ocr).
 Artisan::command('passport-scans:prune', function (PassportScanner $scanner) {

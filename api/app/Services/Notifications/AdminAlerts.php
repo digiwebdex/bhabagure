@@ -14,7 +14,8 @@ final class AdminAlerts
 {
     public const WHATSAPP_SESSION = 'whatsapp-session';
 
-    public static function once(string $key, string $message): void
+    /** @param string $permission who is told: staff holding this permission (notification managers by default) */
+    public static function once(string $key, string $message, string $permission = 'notifications.manage'): void
     {
         if (! Cache::add("bhabaghure:notification-alert:{$key}", true, 3600)) {
             return;
@@ -22,7 +23,7 @@ final class AdminAlerts
         Log::error($message);
 
         Staff::query()->where('status', 'active')->get()
-            ->filter(fn (Staff $staff) => $staff->can('notifications.manage'))
+            ->filter(fn (Staff $staff) => $staff->can($permission))
             ->each(function (Staff $staff) use ($message) {
                 try {
                     Mail::to($staff->email)->send(new AdminAlertMail($message));

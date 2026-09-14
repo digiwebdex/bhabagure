@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Events\BookingCancelled;
 use App\Events\BookingConfirmed;
 use App\Models\Booking;
+use App\Models\Customer;
 use App\Models\SeatHold;
 use App\Models\Staff;
 use App\Services\AuditLogger;
@@ -34,6 +35,8 @@ final class BookingStateMachine
             $locked->confirmed_at = now();
             SeatHold::query()->where('booking_id', $locked->id)->whereNull('released_at')->whereNull('converted_at')
                 ->update(['converted_at' => now()]);
+            // A lead becomes a customer with their first confirmed booking (docs/phase-5-admin-core.md §10).
+            Customer::query()->whereKey($locked->customer_id)->where('stage', 'lead')->update(['stage' => 'customer']);
         });
     }
 

@@ -55,6 +55,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use PHPOpenSourceSaver\JWTAuth\Http\Parser\AuthHeaders;
 use RuntimeException;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -158,6 +159,8 @@ class AppServiceProvider extends ServiceProvider
             'inquiry' => Inquiry::class,
             'notification' => NotificationMessage::class,
             'notification_template' => NotificationTemplate::class,
+            // Audit rows about permission changes (permissions:sync, later the Roles screen).
+            'role' => Role::class,
         ]);
 
         // Ledger tables are append-only on every connection, whichever way SQL is sent (LedgerTables).

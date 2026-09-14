@@ -125,12 +125,22 @@ class AdminBookingTest extends TestCase
     }
 
     #[Test]
-    public function sales_agents_see_only_their_bookings_and_cannot_touch_money(): void
+    public function sales_agents_see_their_own_bookings_and_the_pool_work_only_what_they_claimed_and_cannot_touch_money(): void
     {
         $agent = $this->staff('sales_agent');
+        $colleague = $this->staff('sales_agent');
 
+        // A colleague's booking is invisible.
+        Booking::query()->whereKey($this->booking->id)->update(['assigned_staff_id' => $colleague->id]);
         $this->actingAsApi($agent)->getJson('/api/v1/admin/bookings')->assertOk()->assertJsonCount(0, 'data');
         $this->actingAsApi($agent)->getJson("/api/v1/admin/bookings/{$this->booking->id}")->assertNotFound();
+
+        // An unowned inquiry is in the shared pool: visible, but claimed before it is worked (docs/phase-5-admin-core.md §0).
+        Booking::query()->whereKey($this->booking->id)->update(['assigned_staff_id' => null]);
+        $this->actingAsApi($agent)->getJson('/api/v1/admin/bookings')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.claimable', true);
+        $this->actingAsApi($agent)->getJson("/api/v1/admin/bookings/{$this->booking->id}")->assertOk();
+        $this->actingAsApi($agent)->putJson("/api/v1/admin/bookings/{$this->booking->id}/quote", ['pax' => 2, 'room' => 'twin', 'discount' => 0, 'vat_rate' => 0, 'expected_total' => 1])
+            ->assertStatus(409)->assertJsonPath('code', 'claim_first');
 
         Booking::query()->whereKey($this->booking->id)->update(['assigned_staff_id' => $agent->id]);
         $this->actingAsApi($agent)->getJson("/api/v1/admin/bookings/{$this->booking->id}")->assertOk()

@@ -12,12 +12,15 @@ use LogicException;
  */
 final class DocumentNumbers
 {
-    /** BH-2609-001: per-month counter, at least three digits. */
+    /**
+     * BH-2609-037: the Dhaka month the booking was made in, then one running counter that never restarts
+     * (BH-2608-036 → BH-2609-037, as the approved schema and the prototype number them). At least three digits.
+     */
     public function bookingReference(?Carbon $at = null): string
     {
-        $month = ($at ?? now('Asia/Dhaka'))->format('ym');
+        $month = ($at ?? now())->copy()->setTimezone('Asia/Dhaka')->format('ym');
 
-        return sprintf('BH-%s-%03d', $month, $this->next("booking:{$month}", 'BH'));
+        return sprintf('BH-%s-%03d', $month, $this->next('booking', 'BH'));
     }
 
     /** INV-0001: one running counter, at least four digits. */

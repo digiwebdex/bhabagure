@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AirInquiryController;
 use App\Http\Controllers\Api\V1\Admin\BlogCategoryController;
 use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\CatalogueController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\NavCountController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PackageController;
 use App\Http\Controllers\Api\V1\Admin\PackageImageController;
@@ -175,6 +177,19 @@ Route::prefix('v1')->group(function () {
             Route::put('notification-settings', 'updateSettings');
         });
 
+        // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).
+        Route::get('nav-counts', NavCountController::class);
+
+        // The Air ticketing queue: website air-ticket enquiries (§4.7). Per-action permissions are checked in the controller.
+        Route::middleware('permission:air_inquiries.view,staff')->controller(AirInquiryController::class)->group(function () {
+            Route::get('air-inquiries', 'index');
+            Route::get('air-inquiries/{id}', 'show')->whereNumber('id');
+            Route::post('air-inquiries/{id}/claim', 'claim')->whereNumber('id');
+            Route::post('air-inquiries/{id}/assign', 'assign')->whereNumber('id');
+            Route::post('air-inquiries/{id}/quoted', 'markQuoted')->whereNumber('id');
+            Route::delete('air-inquiries/{id}/quoted', 'undoQuoted')->whereNumber('id');
+        });
+
         // Bookings, invoices and payments. Per-action permissions are checked in the controller.
         Route::middleware('permission:bookings.view_all|bookings.view_own,staff')->controller(BookingController::class)->group(function () {
             Route::get('bookings', 'index');
@@ -184,6 +199,8 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings/{id}/invoice/print', 'invoiceHtml')->whereNumber('id');
             Route::get('bookings/{id}/invoice/pdf', 'invoicePdf')->whereNumber('id');
             Route::post('bookings/{id}/payments', 'recordPayment')->whereNumber('id');
+            Route::post('bookings/{id}/claim', 'claim')->whereNumber('id');
+            Route::post('bookings/{id}/assign', 'assign')->whereNumber('id');
             Route::post('bookings/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['confirm', 'complete', 'cancel']);
             Route::post('invoices/{invoiceId}/void', 'voidInvoice')->whereNumber('invoiceId');
             Route::post('transactions/{transactionId}/reverse', 'reversePayment')->whereNumber('transactionId');

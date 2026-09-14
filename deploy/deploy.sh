@@ -251,6 +251,8 @@ build_and_release() {
   fi
   artisan migrate --force --no-interaction
   artisan db:seed --force --no-interaction
+  # New permissions reach existing roles only through this audited, add-only step (never removes one).
+  artisan permissions:sync --add-only --no-interaction
   # api/public belongs to root, so the link is made as root.
   [[ -L $API/public/storage ]] || (cd "$API" && php artisan storage:link --no-interaction)
   artisan optimize

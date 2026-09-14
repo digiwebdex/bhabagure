@@ -10,6 +10,8 @@ use App\Models\Booking;
 use App\Models\Invoice;
 use App\Models\Staff;
 use App\Models\Transaction;
+use App\Services\Admin\Ownership;
+use App\Services\Admin\OwnershipRefused;
 use App\Services\Booking\BookingQuoteEditor;
 use App\Services\Booking\BookingStateMachine;
 use App\Services\Booking\BookingTransitionRefused;
@@ -40,16 +42,14 @@ class BookingController extends Controller
         $filters = $request->validate([
             'status' => ['nullable', Rule::enum(BookingStatus::class)],
             'payment_status' => ['nullable', Rule::in(['unpaid', 'partial', 'paid'])],
+            'owner' => ['nullable', Rule::in(['mine', 'pool'])],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
+        $staff = $request->user('staff');
 
-        $page = $this->visible($request->user('staff'))
-            ->with('customer')
-            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
-            ->when($filters['payment_status'] ?? null, fn ($q, $status) => $q->where('payment_status', $status))
-            ->when($filters['search'] ?? null, fn ($q, $search) => $q->where(fn ($inner) => $inner
-                ->where('reference', 'like', "%{$search}%")
-                ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))))
+        $page = $this->visible($staff)
+            ->filtered($filters, $staff)
+            ->with(['customer', 'assignedStaff'])
             ->latest('id')
             ->paginate(30);
 
@@ -227,19 +227,57 @@ class BookingController extends Controller
         return response()->json(['data' => AdminBooking::detail($booking, $request->user('staff'))]);
     }
 
-    /** Bookings this staff member may see: all, or only those assigned to or created by them. */
-    private function visible(Staff $staff): Builder
+    /** Takes an unowned inquiry booking from the shared pool; its commission then belongs to the claimant (audited). */
+    public function claim(Request $request, int $id, Ownership $ownership): JsonResponse
     {
-        return Booking::query()->when(! $staff->can('bookings.view_all'), fn (Builder $q) => $q->where(fn (Builder $inner) => $inner
-            ->where('assigned_staff_id', $staff->id)->orWhere('created_by_staff_id', $staff->id)));
+        $booking = $this->find($request, $id, 'bookings.update', claiming: true);
+        try {
+            $ownership->claim($booking, $request->user('staff'));
+        } catch (OwnershipRefused $e) {
+            return $this->refused("ownership.{$e->reason}", $e->reason);
+        }
+
+        return $this->detail($request, $booking->fresh());
     }
 
-    private function find(Request $request, int $id, ?string $permission = null): Booking
+    /** An admin moves a booking to another staff member, or back to the pool. The reason goes to the audit trail. */
+    public function assign(Request $request, int $id, Ownership $ownership): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'records.assign');
+        $data = $request->validate([
+            'staff_id' => ['present', 'nullable', 'integer', Rule::exists('staff', 'id')->whereNull('deleted_at')],
+            'reason' => ['required', 'string', 'min:3', 'max:300'],
+        ]);
+        try {
+            $ownership->assign($booking, $data['staff_id'] ? Staff::query()->find($data['staff_id']) : null, $request->user('staff'), $data['reason']);
+        } catch (OwnershipRefused $e) {
+            return $this->refused("ownership.{$e->reason}", $e->reason, 422);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    /** Bookings this staff member may see — the one rule every list, count and search uses (Booking::scopeVisibleTo). */
+    private function visible(Staff $staff): Builder
+    {
+        return Booking::query()->visibleTo($staff);
+    }
+
+    /**
+     * A visible booking, and for any action ($permission given) one this staff member may work on: a sales agent sees the
+     * shared pool but claims a booking before changing it, so two agents never work the same customer.
+     */
+    private function find(Request $request, int $id, ?string $permission = null, bool $claiming = false): Booking
     {
         $staff = $request->user('staff');
         abort_if($permission !== null && ! $staff->can($permission), 403, __('auth.forbidden'));
+        $booking = $this->visible($staff)->findOrFail($id);
 
-        return $this->visible($staff)->findOrFail($id);
+        if ($permission !== null && ! $claiming && ! Booking::seesAll($staff) && $booking->assigned_staff_id !== $staff->id) {
+            abort(response()->json(['message' => __('ownership.claim_first'), 'code' => 'claim_first'], 409));
+        }
+
+        return $booking;
     }
 
     /** The day the money arrived, in Dhaka: now for today, midday for an earlier day (never drifting across a date line). */

@@ -27,7 +27,7 @@ final class NotificationVariables
 {
     /**
      * @param  array<string, string|int|float>  $extra  values only the caller knows (the private booking link; a payment
-     *                                                   `amount` as a number — it is formatted here, for the channel)
+     *                                                  `amount` as a number — it is formatted here, for the channel)
      * @return array<string, string>
      */
     public function for(NotificationEvent $event, object $related, string $locale, NotificationChannel $channel, array $extra = []): array

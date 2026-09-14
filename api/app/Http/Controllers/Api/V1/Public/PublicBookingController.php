@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Public;
 
+use App\Enums\LeadSource;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PublicBooking;
 use App\Models\Addon;
@@ -80,7 +81,7 @@ class PublicBookingController extends Controller
                 ], array_values($data['travellers'])),
                 expectedTotal: $data['expected_total'],
                 locale: $data['locale'],
-                source: 'website',
+                source: LeadSource::WebsiteForm->value,
                 termsAccepted: true,
             ), $request->user('customer'));
         } catch (PriceChanged $e) {

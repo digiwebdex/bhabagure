@@ -39,6 +39,10 @@ final class AdminBooking
             'paid_amount' => Money::toNumber($booking->paid_amount),
             'due_amount' => Money::toNumber($booking->due_amount),
             'source' => $booking->source,
+            'assigned_staff' => $booking->relationLoaded('assignedStaff') && $booking->assignedStaff
+                ? ['id' => $booking->assignedStaff->id, 'name' => $booking->assignedStaff->name] : null,
+            // In the shared pool: unowned and still an inquiry (Booking::scopeClaimable).
+            'claimable' => $booking->assigned_staff_id === null && $booking->status === BookingStatus::Inquiry,
             'created_at' => $booking->created_at?->toIso8601String(),
         ];
     }
@@ -50,7 +54,9 @@ final class AdminBooking
         $invoices = Invoice::query()->where('booking_id', $booking->id)->latest('id')->get();
         $current = $invoices->firstWhere('status', Invoice::ISSUED);
         $open = ! $booking->status->isFinal();
-        $can = fn (string $permission) => $viewer->can($permission);
+        // Staff who don't see every booking work only what they own; a pool booking is claimed first (BookingController::find).
+        $works = Booking::seesAll($viewer) || $booking->assigned_staff_id === $viewer->id;
+        $can = fn (string $permission) => $works && $viewer->can($permission);
 
         // array_replace, not `+`: the detail's fuller `customer` must win over the summary's.
         return array_replace(self::summary($booking), [
@@ -124,7 +130,9 @@ final class AdminBooking
                 'cancel' => $open && $can('bookings.update'),
                 'reverse_payment' => $can('transactions.create_manual'),
                 'send_whatsapp' => $can('notifications.send') && $booking->customer?->whatsapp_opted_out_at === null,
-                'toggle_whatsapp_opt_out' => $can('customers.manage'),
+                'toggle_whatsapp_opt_out' => $viewer->can('customers.manage'),
+                'claim' => $booking->assigned_staff_id === null && $booking->status === BookingStatus::Inquiry && $viewer->can('bookings.update'),
+                'assign' => $viewer->can('records.assign'),
             ],
             // Inputs for @bhabaghure/pricing on the draft-invoice controls — the same the server recomputes with.
             'quote_inputs' => [

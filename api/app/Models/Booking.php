@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\BookingStatus;
+use App\Models\Concerns\OwnedByStaff;
 use App\Support\WriteScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,7 +20,7 @@ use LogicException;
  */
 class Booking extends Model
 {
-    use SoftDeletes;
+    use OwnedByStaff, SoftDeletes;
 
     protected $fillable = [
         'reference', 'customer_id', 'client_id', 'tour_package_id', 'departure_id', 'package_title_en', 'package_title_bn',
@@ -85,9 +87,40 @@ class Booking extends Model
         return $this->belongsTo(PackageDeparture::class, 'departure_id');
     }
 
-    public function assignedStaff(): BelongsTo
+    public static function seesAll(Staff $staff): bool
     {
-        return $this->belongsTo(Staff::class, 'assigned_staff_id');
+        return $staff->can('bookings.view_all');
+    }
+
+    public static function seesOwn(Staff $staff): bool
+    {
+        return $staff->can('bookings.view_own');
+    }
+
+    /**
+     * The list filters, shared by GET /admin/bookings and its sidebar badge so the two can never disagree.
+     *
+     * @param  array{status?: ?string, payment_status?: ?string, search?: ?string, owner?: ?string}  $filters
+     */
+    public function scopeFiltered(Builder $query, array $filters, Staff $staff): void
+    {
+        $query
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
+            ->when($filters['payment_status'] ?? null, fn (Builder $q, string $status) => $q->where('payment_status', $status))
+            ->when(($filters['owner'] ?? null) === 'mine', fn (Builder $q) => $q->where('assigned_staff_id', $staff->id))
+            ->when(($filters['owner'] ?? null) === 'pool', fn (Builder $q) => $q->claimable())
+            ->when($filters['search'] ?? null, fn (Builder $q, string $search) => $q->where(fn (Builder $inner) => $inner
+                ->where('reference', 'like', "%{$search}%")
+                ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))));
+    }
+
+    /**
+     * The pool: unowned bookings still at the inquiry stage. A website booking that was paid online and confirmed without
+     * anyone's help isn't claimable — whoever clicked first would take its commission; an admin assigns it (audited).
+     */
+    public function scopeClaimable(Builder $query): void
+    {
+        $query->whereNull($this->qualifyColumn('assigned_staff_id'))->where($this->qualifyColumn('status'), BookingStatus::Inquiry);
     }
 
     public function lines(): HasMany

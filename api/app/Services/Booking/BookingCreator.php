@@ -2,6 +2,7 @@
 
 namespace App\Services\Booking;
 
+use App\Enums\LeadSource;
 use App\Events\BookingCreated;
 use App\Models\Addon;
 use App\Models\Booking;
@@ -84,6 +85,8 @@ final class BookingCreator
                 'total_amount' => $quote['total'],
                 'source' => $request->source,
                 'created_by_staff_id' => $staff?->id,
+                // A booking belongs to the staff member who made it; a website booking starts in the shared pool.
+                'assigned_staff_id' => $staff?->id,
                 'locale' => $request->locale,
                 'terms_accepted_at' => $request->termsAccepted ? now() : null,
                 'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
@@ -174,7 +177,7 @@ final class BookingCreator
 
         return Customer::query()->create([
             'name' => $name, 'phone' => $phone, 'email' => $emailFree ? $email : null,
-            'stage' => 'lead', 'source' => 'website_booking', 'locale' => $locale,
+            'stage' => 'lead', 'source' => LeadSource::WebsiteForm->value, 'locale' => $locale,
         ]);
     }
 
