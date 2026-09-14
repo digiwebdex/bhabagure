@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { artisan } from '../../scripts/e2e-api.mjs'
 import { quotationFor, signIn, staffApi, websiteBooking } from './helpers'
 
 /**
@@ -18,6 +19,8 @@ const TABLES = [
   { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700, icons: 7 },
   { name: 'Quotations', url: '/quotations', testId: 'quotations-table', width: 1024, icons: 8 },
   { name: 'Cash book', url: '/payments', testId: 'cash-book-table', width: 1024, icons: 7 },
+  // WhatsApp and email only, and Mark as quoted (§4.7).
+  { name: 'Air ticketing', url: '/air-ticketing?state=all', testId: 'air-inquiries-table', width: 700, icons: 4 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -35,6 +38,11 @@ test.beforeAll(async ({ browser }) => {
   for (const [direction, category, description] of [['out', 'office_rent', 'Sticky office rent'], ['in', 'other_income', 'Sticky commission from an airline with a long description'], ['out', 'marketing', 'Sticky Facebook ads']]) {
     await admin.post('admin/cash-entries', { direction, amount: 1200, method: 'cash', category, description })
   }
+  // Air enquiries straight into the table (the public form is rate-limited per address).
+  artisan(
+    'tinker',
+    `--execute=foreach (['Sticky Air One', 'Sticky Air Two With A Much Longer Passenger Name', 'Sticky Air Three'] as $i => $n) { App\\Models\\Inquiry::query()->create(['type' => 'air_quote', 'name' => $n, 'phone' => '88017110006'.$i.'0', 'email' => 'air'.$i.'@example.test', 'pax' => 2, 'locale' => 'en', 'details' => ['from' => 'Dhaka', 'to' => 'Kuala Lumpur', 'departOn' => '2026-12-10', 'returnOn' => '2026-12-20', 'cabinClass' => 'business']]); } echo 'ok';`,
+  )
   await page.close()
 })
 

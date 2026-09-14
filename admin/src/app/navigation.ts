@@ -19,6 +19,10 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     ],
   },
   {
+    key: 'services',
+    items: [{ key: 'air_ticketing', path: '/air-ticketing', icon: 'A', permissions: ['air_inquiries.view'], badge: 'air_inquiries' }],
+  },
+  {
     key: 'finance',
     items: [{ key: 'payments', path: '/payments', icon: '৳', permissions: ['payments.view'] }],
   },

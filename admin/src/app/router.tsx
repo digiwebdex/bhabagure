@@ -18,6 +18,7 @@ const page = (load: () => Promise<Record<string, unknown>>, name: string) => {
   }
 }
 
+const AirTicketingPage = page(() => import('../features/air/AirTicketingPage'), 'AirTicketingPage')
 const BookingDetailPage = page(() => import('../features/bookings/BookingDetailPage'), 'BookingDetailPage')
 const BookingListPage = page(() => import('../features/bookings/BookingListPage'), 'BookingListPage')
 const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'), 'NewBookingPage')
@@ -72,6 +73,7 @@ export const router = createBrowserRouter([
       { path: 'quotations/:id', element: <Require permissions={quotations}><QuotationDetailPage /></Require> },
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
+      { path: 'air-ticketing', element: <Require permissions={['air_inquiries.view']}><AirTicketingPage /></Require> },
       { path: 'payments', element: <Require permissions={['payments.view']}><PaymentsPage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },
       { path: 'profile', element: <ProfilePage /> },

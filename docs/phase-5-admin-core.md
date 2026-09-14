@@ -395,7 +395,7 @@ Admin dates are always Dhaka calendar dates (§10).
 
 ## 14. As built (in progress)
 
-Steps 1–7 of §13 are built; the Air ticketing screen and My commission follow.
+Steps 1–7 of §13 and the Air ticketing queue are built. My commission waits for the re-synced design (its commission rules are only there); then the wrap-up.
 
 **Ownership and the pool (steps 1, 3, 4)**
 - The pools are: bookings that are unassigned inquiries; unassigned leads; unassigned open air-ticket enquiries. Quotations have no pool — staff make every one.
@@ -475,3 +475,12 @@ Steps 1–7 of §13 are built; the Air ticketing screen and My commission follow
 
 **Deviation (open to veto)**
 10. **Recent bookings carry five actions** (contact, PDF, view), not all seven. Delete and edit stay on the Bookings list and the booking page.
+
+**Air ticketing — enquiry queue (§4.7)**
+- **Where:** `/air-ticketing`, in a Services group of the sidebar, with the badge (open enquiries waiting over 24 hours). Clicking the badge opens `?state=open&stale=1`, exactly the rows it counts.
+- **Filters** (in the URL): open · quoted · all, waiting over 24 hours, owner (all · mine · pool), and search. Open enquiries are listed oldest first. A flagged row shows how long it has waited ("Waiting 30 h" / "৩০ ঘণ্টা অপেক্ষায়").
+- **Row actions:**
+  - ◉ details;
+  - ✆ WhatsApp and @ email, with no SMS; disabled until a pool enquiry is claimed by staff who don't see every enquiry;
+  - ✓ Mark as quoted, which claims an unowned enquiry, or ↺ Back to open for whoever marked it or an admin.
+- **Built without the re-synced design** (it can't be read here: the local `_design` is the 2026-09-13 copy and DesignSync needs `/design-login`). The screen follows §4.7 and the prototype's table and chip styles; the layout gets checked against the design once it is readable.

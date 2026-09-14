@@ -18,15 +18,20 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    try {
-      localStorage.setItem(STORAGE_KEY, theme)
-    } catch {
-      // Storage unavailable: the theme still applies for this session.
-    }
   }, [theme])
 
   return {
     theme,
-    toggle: () => setTheme((previous) => (previous === 'light' ? 'dark' : 'light')),
+    // Stored only when someone toggles: writing on mount could overwrite a choice made meanwhile (another tab, or
+    // storage set while the shell was still loading) with the value read before it.
+    toggle: () => {
+      const next: Theme = theme === 'light' ? 'dark' : 'light'
+      try {
+        localStorage.setItem(STORAGE_KEY, next)
+      } catch {
+        // Storage unavailable: the theme still applies for this session.
+      }
+      setTheme(next)
+    },
   }
 }

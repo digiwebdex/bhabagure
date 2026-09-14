@@ -197,7 +197,8 @@
       "sales": "Sales",
       "catalogue": "Catalogue",
       "website": "Website",
-      "finance": "Finance"
+      "finance": "Finance",
+      "services": "Services"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -213,7 +214,8 @@
       "settings": "Site settings",
       "notifications": "Notifications",
       "quotations": "Quotations",
-      "payments": "Payments & invoices"
+      "payments": "Payments & invoices",
+      "air_ticketing": "Air ticketing"
     }
   },
   "status": {
@@ -1327,5 +1329,54 @@
     "other": "Other",
     "allBookings": "All bookings",
     "recentBookings": "Recent bookings"
+  },
+  "air": {
+    "title": "Air ticketing",
+    "subtitle": "Ticket enquiries from the website — reply, then mark them quoted",
+    "claimFirst": "Claim this enquiry first",
+    "contactSubject": "Your air ticket enquiry · {{route}}",
+    "contactMessage": "Hello {{name}}, about your air ticket enquiry {{route}} on {{date}} — Bhabaghure Holidays",
+    "markQuoted": "Mark as quoted",
+    "quoted": "{{name}}’s enquiry marked quoted",
+    "undoQuoted": "Back to open",
+    "reopened": "{{name}}’s enquiry is open again",
+    "noPermission": "You can’t change enquiries",
+    "undoOnlyBy": "Only whoever marked it, or an admin, can reopen it",
+    "passenger": "Passenger",
+    "waiting": "Waiting {{age}}",
+    "route": "Route",
+    "oneWay": "one way",
+    "passengers_one": "{{n}} passenger",
+    "passengers_other": "{{n}} passengers",
+    "cabin": {
+      "economy": "Economy",
+      "premium": "Premium economy",
+      "business": "Business",
+      "first": "First"
+    },
+    "status": {
+      "new": "Open",
+      "quoted": "Quoted"
+    },
+    "states": {
+      "open": "Open",
+      "quoted": "Quoted",
+      "all": "All"
+    },
+    "waitingFilter": "Waiting",
+    "anyAge": "Any age",
+    "over24h": "Over 24 hours",
+    "queueNote": "Oldest open first · flagged after 24 hours",
+    "search": "Search by name or phone",
+    "empty": "No enquiries here",
+    "emptyNote": "Enquiries from the website’s air ticket form appear here.",
+    "departOn": "Departure",
+    "returnOn": "Return",
+    "passengersLabel": "Passengers",
+    "cabinLabel": "Class",
+    "received": "Received",
+    "language": "Language",
+    "enquiryFrom": "Enquiry from {{name}}",
+    "quotedBy": "Marked quoted by {{name}}, {{when}}"
   }
 }
