@@ -392,3 +392,32 @@ Admin dates are always Dhaka calendar dates (§10).
 6. **Payments:** cash book, summaries, review queue, manual entries, presets, evidence, opening balances and deals as decided.
 7. **Dashboard:** built last, on the queries the other screens already prove.
 8. **Wrap-up:** full checks, docs as built, deploy notes.
+
+## 14. As built (in progress)
+
+Steps 1–5 of §13 are built; Payments, Dashboard, Air ticketing screen and My commission follow.
+
+**Ownership and the pool (steps 1, 3, 4)**
+- The pools are: bookings that are unassigned inquiries; unassigned leads; unassigned open air-ticket enquiries. Quotations have no pool — staff make every one.
+- A staff member without `*.view_all` must claim a pool record before working it (sending a message, editing): the API answers 409 `claim_first`, and the row's contact buttons are disabled with that reason.
+- Claiming a booking also claims its customer if that customer is still an unowned lead. Picking an unowned lead for a staff booking or a quotation claims it.
+- Reassigning (bookings, customers, enquiries, quotations) needs `records.assign` and a reason; claims and reassignments are audited.
+
+**Quotations (step 5)**
+- Numbering `QT-0001`, taken when the draft is created (a deleted draft leaves a gap; quotations are not tax documents).
+- A draft is priced from current package and add-on prices and checked against the editor's `expected_total` (409 `price_changed` with the new quote). Sending starts validity: `valid_until` = today in Dhaka + 3, 7 or 14 days. From then on nothing re-prices.
+- **Expired** (sent, past `valid_until`) and **expiring** (sent, ending within 48 h) are derived in Dhaka time in one model scope each; the list filter, the chip counts, the KPI and the sidebar badge all use them.
+- An expired quotation can't be accepted or converted, only declined, withdrawn or revised. An **accepted** one keeps its price after the date: it was accepted in time.
+- **Revise** creates a new draft with a new number pointing back, starting from the frozen lines; saving it re-prices. Asking again returns the same open draft. Sending the revision withdraws the original (audited with reason `revised`).
+- **Convert** books at the frozen price, copying the lines, as an inquiry booking. The booking belongs to the quotation's owner (commission follows it), `created_by` is whoever converted. Converting twice returns the first booking. Deleting a converted booking (allowed only without invoice or payments) puts the quotation back to accepted.
+- **PDF**: the invoice print view with `kind = quotation` — same letterhead and header-off pad setting; validity instead of payments; never travellers or passport data. Public share link `/api/v1/public/quotations/{token}` (and `/pdf`) once sent; drafts have none.
+- **`quote_sent`**: WhatsApp with the PDF attached and email with it attached; never SMS, no SMS fallback. Templates are editable on the Notification templates screen. A message still waiting when the quotation is withdrawn or deleted is cancelled (`quotation_withdrawn`).
+- A customer with quotations can't be deleted; the lead state **Quoted** means a quotation was sent and not withdrawn.
+- Row actions: → Convert, then the seven of §3.3 (✎ is Revise once sent; ✕ is Delete for a draft, Withdraw once sent).
+
+**Deviations (open to veto)**
+1. **Custom trips are not quotable yet.** A quotation needs a published package: booking and invoice lines have no "custom trip" kind, and the prototype's form offers only packages. Custom trips come with the Itinerary builder.
+2. **No `POST /quotations/{id}/preview`.** The editor prices live with `@bhabaghure/pricing` from `GET /quotations/options`, and the save is the check.
+3. **The prototype's "PDF" button in the new-quotation panel is "Save draft".** A PDF needs a saved quotation; the PDF is on every row and on the quotation page (with and without the company header).
+4. **The travel date is optional on a quotation** ("date not fixed yet") and required when converting; converting may pick another date, because the price doesn't depend on it.
+5. **"Viewed" and "Auto reminder before expiry" are not shown** (question 2: they wait for the customer portal); the table note says how validity works instead.

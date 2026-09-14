@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
 import type { BookingSummary } from '../bookings/api'
+import type { QuotationRow } from '../quotations/api'
 
 export type LeadState = 'new' | 'contacted' | 'quoted' | 'converted' | 'lost'
 export type PassportStatus = 'on_file' | 'expiring' | 'missing'
@@ -30,6 +31,7 @@ export type CustomerRow = {
   next_trip: { booking_id: number; travel_start: string } | null
   whatsapp_opted_out: boolean
   has_bookings: boolean
+  has_quotations: boolean
   actions: Record<'claim' | 'edit' | 'log_contact' | 'mark_lost' | 'assign', boolean>
 }
 
@@ -43,7 +45,7 @@ export type ContactEntry = {
   staff: { id: number; name: string } | null
 }
 
-export type CustomerDetail = CustomerRow & { address: string | null; notes: string | null; locale: 'bn' | 'en'; contacts: ContactEntry[]; bookings: BookingSummary[] }
+export type CustomerDetail = CustomerRow & { address: string | null; notes: string | null; locale: 'bn' | 'en'; contacts: ContactEntry[]; bookings: BookingSummary[]; quotations: QuotationRow[] }
 
 export type BoardColumn = { count: number; cards: CustomerRow[] }
 export type Board = Record<'new' | 'contacted' | 'quoted' | 'converted', BoardColumn>
@@ -74,8 +76,8 @@ export function useBoard(owner: CustomerFilters['owner']) {
   })
 }
 
-export function useCustomer(id: number) {
-  return useQuery({ queryKey: ['customer', id], queryFn: ({ signal }) => api.get<Data<CustomerDetail>>(`admin/customers/${id}`, signal) })
+export function useCustomer(id: number, enabled = true) {
+  return useQuery({ queryKey: ['customer', id], queryFn: ({ signal }) => api.get<Data<CustomerDetail>>(`admin/customers/${id}`, signal), enabled })
 }
 
 /** Every customer action answers with the updated profile; lists and the board refresh. */

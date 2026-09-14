@@ -89,7 +89,13 @@ export function CustomersPage() {
         label: t('table.delete'),
         tone: 'red',
         onSelect: () => void deleteCustomer(customer),
-        disabledReason: !customer.actions.edit ? (claimFirst ?? t('customers.noEdit')) : customer.has_bookings ? t('customers.deleteHasBookings') : undefined,
+        disabledReason: !customer.actions.edit
+          ? (claimFirst ?? t('customers.noEdit'))
+          : customer.has_bookings
+            ? t('customers.deleteHasBookings')
+            : customer.has_quotations
+              ? t('customers.deleteHasQuotations')
+              : undefined,
       },
     ]
   }

@@ -26,10 +26,23 @@
       "quoted": "কোটেশন · Quoted",
       "converted": "কনভার্টেড · Converted (৩০ দিন)"
     },
-    "state": { "new": "নতুন লিড", "contacted": "যোগাযোগ হয়েছে", "quoted": "কোটেশন দেওয়া", "converted": "কনভার্টেড", "lost": "হারানো" },
-    "stage": { "lead": "লিড", "customer": "গ্রাহক" },
+    "state": {
+      "new": "নতুন লিড",
+      "contacted": "যোগাযোগ হয়েছে",
+      "quoted": "কোটেশন দেওয়া",
+      "converted": "কনভার্টেড",
+      "lost": "হারানো"
+    },
+    "stage": {
+      "lead": "লিড",
+      "customer": "গ্রাহক"
+    },
     "stageLabel": "ধাপ",
-    "passport": { "on_file": "পাসপোর্ট আছে", "expiring": "পাসপোর্টের মেয়াদ শেষের পথে", "missing": "পাসপোর্ট নেই" },
+    "passport": {
+      "on_file": "পাসপোর্ট আছে",
+      "expiring": "পাসপোর্টের মেয়াদ শেষের পথে",
+      "missing": "পাসপোর্ট নেই"
+    },
     "passportColumn": "পাসপোর্ট",
     "anyPassport": "যেকোনো পাসপোর্ট",
     "listTitle": "গ্রাহক ডাটাবেস",
@@ -79,15 +92,31 @@
     "contactLogged": "যোগাযোগের লগে যোগ হয়েছে",
     "noContacts": "এখনো কোনো যোগাযোগ লগ করা হয়নি।",
     "noBookings": "এখনো কোনো বুকিং নেই।",
-    "channels": { "call": "কল", "whatsapp": "WhatsApp", "facebook": "Facebook", "visit": "অফিসে সাক্ষাৎ", "email": "ইমেইল", "sms": "SMS" },
-    "outcomes": { "reached": "কথা হয়েছে", "no_answer": "ধরেননি", "interested": "আগ্রহী", "not_interested": "আগ্রহী নন", "call_back": "পরে কল", "quote_requested": "কোটেশন চেয়েছেন" }
+    "channels": {
+      "call": "কল",
+      "whatsapp": "WhatsApp",
+      "facebook": "Facebook",
+      "visit": "অফিসে সাক্ষাৎ",
+      "email": "ইমেইল",
+      "sms": "SMS"
+    },
+    "outcomes": {
+      "reached": "কথা হয়েছে",
+      "no_answer": "ধরেননি",
+      "interested": "আগ্রহী",
+      "not_interested": "আগ্রহী নন",
+      "call_back": "পরে কল",
+      "quote_requested": "কোটেশন চেয়েছেন"
+    },
+    "deleteHasQuotations": "কোটেশন আছে — রেকর্ড থাকবে"
   },
   "search": {
-    "placeholder": "বুকিং, গ্রাহক, ফোন খুঁজুন…",
+    "placeholder": "বুকিং, কোটেশন, গ্রাহক, ফোন খুঁজুন…",
     "results": "খোঁজার ফলাফল",
     "nothing": "“{{query}}” দিয়ে কিছু পাওয়া যায়নি",
     "bookings": "বুকিং",
-    "customers": "গ্রাহক"
+    "customers": "গ্রাহক",
+    "quotations": "কোটেশন"
   },
   "ownership": {
     "pool": "খোলা তালিকা",
@@ -160,7 +189,9 @@
       "bookings_one": "{{n}}টি ইনকোয়্যারি — তালিকা খুলুন",
       "bookings_other": "{{n}}টি ইনকোয়্যারি — তালিকা খুলুন",
       "air_inquiries_one": "{{n}}টি ইনকোয়্যারি ২৪ ঘণ্টার বেশি অপেক্ষায় — তালিকা খুলুন",
-      "air_inquiries_other": "{{n}}টি ইনকোয়্যারি ২৪ ঘণ্টার বেশি অপেক্ষায় — তালিকা খুলুন"
+      "air_inquiries_other": "{{n}}টি ইনকোয়্যারি ২৪ ঘণ্টার বেশি অপেক্ষায় — তালিকা খুলুন",
+      "quotations_one": "{{n}}টি কোটেশনের মেয়াদ ৪৮ ঘণ্টার মধ্যে শেষ — তালিকা খুলুন",
+      "quotations_other": "{{n}}টি কোটেশনের মেয়াদ ৪৮ ঘণ্টার মধ্যে শেষ — তালিকা খুলুন"
     },
     "groups": {
       "sales": "বিক্রয়",
@@ -178,7 +209,8 @@
       "gallery": "গ্যালারি",
       "media": "মিডিয়া লাইব্রেরি",
       "settings": "সাইট সেটিংস",
-      "notifications": "নোটিফিকেশন"
+      "notifications": "নোটিফিকেশন",
+      "quotations": "কোটেশন"
     }
   },
   "status": {
@@ -809,7 +841,8 @@
       "low_seat_alert": "সিট প্রায় শেষ",
       "staff_message": "স্টাফের বার্তা",
       "whatsapp_verification": "WhatsApp যাচাই কোড",
-      "opt_out_confirmation": "বার্তা বন্ধের নিশ্চিতকরণ"
+      "opt_out_confirmation": "বার্তা বন্ধের নিশ্চিতকরণ",
+      "quote_sent": "কোটেশন পাঠানো (PDF সহ)"
     },
     "timing": {
       "booking_created": "ওয়েবসাইটে বুকিং সংরক্ষণের সঙ্গে সঙ্গে",
@@ -993,5 +1026,112 @@
     "lastMonth": "গত মাস",
     "subscription": "মাসিক সাবস্ক্রিপশন",
     "costNote": "SMS-এর খরচ সেট করা প্রতি-অংশের হার থেকে আনুমানিক। WhatsApp মাসিক সাবস্ক্রিপশন; ইমেইলে প্রতি বার্তায় খরচ নেই।"
+  },
+  "quotations": {
+    "title": "কোটেশন",
+    "subtitle": "মূল্যসহ অফার পাঠান, ফলো-আপ করুন, বুকিংয়ে রূপান্তর করুন",
+    "back": "সব কোটেশন",
+    "number": "কোটেশন",
+    "value": "মূল্য",
+    "validUntil": "মেয়াদ",
+    "validityNote": "পাঠানোর দিন থেকে ৩, ৭ বা ১৪ দিন বৈধ · মূল্য নির্ধারিত",
+    "search": "নম্বর, গ্রাহক, ফোন বা প্যাকেজ দিয়ে খুঁজুন",
+    "empty": "এখানে কোনো কোটেশন নেই",
+    "emptyNote": "“নতুন কোটেশন”-এ গ্রাহকের জন্য মূল্য হিসাব করে WhatsApp ও ইমেইলে পাঠান।",
+    "status": {
+      "all": "সব",
+      "draft": "খসড়া",
+      "sent": "পাঠানো",
+      "expiring": "মেয়াদ শেষ হচ্ছে",
+      "expired": "মেয়াদ শেষ",
+      "accepted": "গৃহীত",
+      "converted": "বুকিং হয়েছে",
+      "declined": "প্রত্যাখ্যাত",
+      "withdrawn": "প্রত্যাহার"
+    },
+    "kpi": {
+      "open": "চলমান কোটেশন",
+      "openTotal": "মোট {{total}}",
+      "conversion": "রূপান্তর হার",
+      "conversionNote": "গত ৯০ দিনে · {{sent}}টির মধ্যে {{converted}}টি বুকিং",
+      "expiring": "মেয়াদ শেষ হচ্ছে",
+      "expiringNote": "৪৮ ঘণ্টার মধ্যে",
+      "average": "গড় কোটেশন মূল্য",
+      "averageNote": "প্রতি কোটেশন, গত ৯০ দিনে"
+    },
+    "convert": "বুকিংয়ে রূপান্তর",
+    "bookedAs": "{{reference}} হিসেবে বুকিং হয়েছে",
+    "noPermission": "এই কোটেশন পরিবর্তনের অনুমতি আপনার নেই",
+    "sendFirst": "আগে গ্রাহককে পাঠান",
+    "expiredRevise": "মেয়াদ শেষ — নতুন মূল্য পাঠাতে রিভিশন করুন",
+    "notOffered": "অফারটি আর চালু নেই",
+    "revise": "রিভিশন",
+    "bookedNoRevise": "বুকিং হয়ে গেছে — রিভিশনের কিছু নেই",
+    "withdraw": "প্রত্যাহার",
+    "deleteConfirm": "খসড়া {{number}} মুছে ফেলবেন? এটি কখনো পাঠানো হয়নি।",
+    "deleted": "{{number}} মুছে ফেলা হয়েছে",
+    "withdrawConfirm": "{{number}} প্রত্যাহার করবেন? গ্রাহক আর এই মূল্যে বুকিং করতে পারবেন না।",
+    "withdrawn": "{{number}} প্রত্যাহার করা হয়েছে",
+    "contactSubject": "ভবঘুরে হলিডেজ কোটেশন {{number}}",
+    "contactMessage": "আসসালামু আলাইকুম {{name}}, আপনার {{package}} কোটেশন ({{number}}) পাঠানো হলো — ভবঘুরে হলিডেজ",
+    "revises": "{{number}}-এর রিভিশন",
+    "expired": "মেয়াদ শেষ",
+    "expiresToday": "আজ শেষ",
+    "fromSending_one": "পাঠানোর পর {{n}} দিন",
+    "fromSending_other": "পাঠানোর পর {{n}} দিন",
+    "customer": "গ্রাহক",
+    "noCustomerYet": "এখনো গ্রাহক নন?",
+    "addLead": "আগে লিড হিসেবে যোগ করুন",
+    "sent": "{{number}} WhatsApp ও ইমেইলে পাঠানো হয়েছে",
+    "send": "কোটেশন পাঠান",
+    "sendFor": "কোটেশন পাঠান · {{total}}",
+    "saveDraft": "খসড়া সংরক্ষণ",
+    "sendNote": "পাঠালে মেয়াদ শুরু হয় এবং PDF WhatsApp ও ইমেইলে যায় — SMS-এ কখনো নয়।",
+    "dateLater": "তারিখ এখনো ঠিক হয়নি",
+    "dateOptional": "ঐচ্ছিক — বুকিংয়ের সময় লাগবে",
+    "travellers": "যাত্রী",
+    "validity": "মেয়াদ",
+    "days_one": "{{n}} দিন",
+    "days_other": "{{n}} দিন",
+    "vatRate": "সার্ভিস চার্জ ও ভ্যাট",
+    "language": "কোটেশনের ভাষা",
+    "notes": "অফিসের নোট",
+    "notesHint": "শুধু অফিসের জন্য — প্রিন্ট বা পাঠানো হয় না",
+    "perPersonTimes": "{{price}} × {{n}} জন",
+    "discount": "ডিসকাউন্ট",
+    "pdfForPad": "প্যাডের জন্য PDF",
+    "revisesLink": "রিভিশন:",
+    "bookedLink": "বুকিং:",
+    "sendConfirm": "এই কোটেশন {{name}}-কে WhatsApp ও ইমেইলে পাঠাবেন? এরপর মেয়াদ শেষ হওয়া পর্যন্ত মূল্য নির্ধারিত থাকবে।",
+    "accepted": "{{number}} গৃহীত হিসেবে চিহ্নিত",
+    "markAccepted": "গৃহীত চিহ্নিত করুন",
+    "revising": "রিভিশন {{number}} শুরু হয়েছে — সম্পাদনা করে পাঠান",
+    "markDeclined": "প্রত্যাখ্যাত চিহ্নিত করুন",
+    "declined": "{{number}} প্রত্যাখ্যাত হিসেবে চিহ্নিত",
+    "declineTitle": "গ্রাহক {{number}} প্রত্যাখ্যান করেছেন",
+    "withdrawTitle": "{{number}} প্রত্যাহার",
+    "reason": "কারণ (ঐচ্ছিক)",
+    "reasonHint": "অডিট লগে থাকবে। যেমন: অন্য এজেন্সিতে বুকিং, তারিখ বদলেছে",
+    "draftNote": "এখনো পাঠানো হয়নি — পাঠানোর আগ পর্যন্ত আজকের প্যাকেজ মূল্য প্রযোজ্য",
+    "packageGone": "এই কোটেশনের প্যাকেজটি আর প্রকাশিত নেই। অন্য প্যাকেজ বেছে নিন।",
+    "frozenNote": "সংরক্ষণের সময় নির্ধারিত — মেয়াদ শেষ পর্যন্ত প্রযোজ্য",
+    "history": {
+      "created_at": "তৈরি",
+      "sent_at": "পাঠানো",
+      "accepted_at": "গৃহীত",
+      "declined_at": "প্রত্যাখ্যাত",
+      "withdrawn_at": "প্রত্যাহার",
+      "converted_at": "বুকিং হয়েছে"
+    },
+    "createdBy": "প্রস্তুত করেছেন {{name}}",
+    "revisions": "রিভিশন",
+    "convertTitle": "{{number}} বুকিং করুন",
+    "convertNote": "কোটেশনের {{total}} মূল্যেই বুকিং হবে, নতুন হিসাব ছাড়া, এবং বুকিংটি কোটেশনের দায়িত্বপ্রাপ্ত স্টাফের হবে।",
+    "converted": "বুকিং {{reference}} তৈরি হয়েছে",
+    "convertSubmit": "বুকিং তৈরি করুন",
+    "assignTitle": "{{number}} পুনর্বণ্টন",
+    "assignHint": "অডিট লগে থাকবে। এ থেকে হওয়া বুকিং নতুন দায়িত্বপ্রাপ্তের হবে।",
+    "newFor": "নতুন কোটেশন",
+    "noneForCustomer": "এখনো কোনো কোটেশন নেই।"
   }
 }

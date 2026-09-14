@@ -11,6 +11,7 @@ import { useFormat } from '../lib/useFormat'
 type Results = {
   bookings?: { id: number; reference: string; status: string; customer: string | null }[]
   customers?: { id: number; name: string; phone: string; stage: string }[]
+  quotations?: { id: number; number: string; status: string; customer: string }[]
 }
 
 /**
@@ -57,6 +58,7 @@ export function HeaderSearch() {
 
   const bookings = results.data?.bookings ?? []
   const customers = results.data?.customers ?? []
+  const quotations = results.data?.quotations ?? []
   const showPanel = open && query.length >= 2
 
   return (
@@ -79,7 +81,7 @@ export function HeaderSearch() {
         <div id={listId} role="region" aria-live="polite" aria-label={t('search.results')} className="absolute top-full right-0 z-40 mt-1.5 flex max-h-dialog-h w-full flex-col gap-3 overflow-y-auto rounded-12 border border-app-line bg-app-surface p-3 shadow-popover sm:w-header-search-panel">
           {results.isPending ? (
             <span className="text-13 text-app-muted">{t('common.loading')}</span>
-          ) : bookings.length === 0 && customers.length === 0 ? (
+          ) : bookings.length === 0 && customers.length === 0 && quotations.length === 0 ? (
             <span className="text-13 text-app-muted">{t('search.nothing', { query })}</span>
           ) : (
             <>
@@ -101,6 +103,17 @@ export function HeaderSearch() {
                     <Link key={customer.id} to={`/customers/${customer.id}`} className="flex items-center justify-between gap-3 rounded-8 px-2 py-1.5 text-14 text-app-text no-underline hover:bg-app-surface-2">
                       <span className="truncate font-medium">{customer.name}</span>
                       <span className="font-display text-13 text-app-muted">{digits(customer.phone.replace(/^88/, ''))}</span>
+                    </Link>
+                  ))}
+                </section>
+              ) : null}
+              {quotations.length > 0 ? (
+                <section className="flex flex-col gap-1">
+                  <h3 className="m-0 px-2 font-display text-11 font-bold tracking-eyebrow text-app-muted uppercase">{t('search.quotations')}</h3>
+                  {quotations.map((quotation) => (
+                    <Link key={quotation.id} to={`/quotations/${quotation.id}`} className="flex items-center justify-between gap-3 rounded-8 px-2 py-1.5 text-14 text-app-text no-underline hover:bg-app-surface-2">
+                      <span className="font-display font-semibold">{quotation.number}</span>
+                      <span className="truncate text-13 text-app-muted">{quotation.customer}</span>
                     </Link>
                   ))}
                 </section>

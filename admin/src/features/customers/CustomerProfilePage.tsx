@@ -10,8 +10,10 @@ import { Badge, Card, CardTitle, EmptyState, Loading, PageHeader } from '../../c
 import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
+import { useAuth } from '../../app/auth'
 import { BookingStatusBadge, PaymentBadge } from '../bookings/badges'
 import { setCustomerOptOut } from '../notifications/api'
+import { QuotationStatusBadge } from '../quotations/QuotationStatusBadge'
 import { CONTACT_CHANNELS, CONTACT_OUTCOMES, customerActions, useCustomer, useCustomerAction, type CustomerDetail } from './api'
 import { PassportChip, SourcePill } from './CustomersPage'
 
@@ -87,6 +89,7 @@ function Profile({ customer }: { customer: CustomerDetail }) {
       <div className="grid-auto-fit-360 grid items-start gap-admin-gap">
         <div className="flex flex-col gap-admin-gap">
           <DetailsCard customer={customer} />
+          <QuotationsCard customer={customer} />
           <BookingsCard customer={customer} />
         </div>
         <ContactLogCard customer={customer} />
@@ -202,6 +205,49 @@ function ContactLogCard({ customer }: { customer: CustomerDetail }) {
             </li>
           ))}
         </ol>
+      )}
+    </Card>
+  )
+}
+
+function QuotationsCard({ customer }: { customer: CustomerDetail }) {
+  const { t } = useTranslation()
+  const { bdt, locale } = useFormat()
+  const { can } = useAuth()
+  if (!can('quotations.view_all', 'quotations.view_own')) return null
+
+  return (
+    <Card>
+      <CardTitle
+        bn="কোটেশন"
+        en="Quotations"
+        aside={
+          can('quotations.manage') && customer.lead_state !== 'lost' ? (
+            <Link to={`/quotations?customer=${customer.id}`} className={buttonClass('outline', 'sm')}>
+              {t('quotations.newFor')}
+            </Link>
+          ) : null
+        }
+      />
+      {customer.quotations.length === 0 ? (
+        <p className="m-0 text-13 text-app-muted">{t('quotations.noneForCustomer')}</p>
+      ) : (
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {customer.quotations.map((quotation) => (
+            <li key={quotation.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-app-line pb-2 last:border-b-0">
+              <span className="flex flex-col">
+                <Link to={`/quotations/${quotation.id}`} className="font-display font-semibold">
+                  {quotation.number}
+                </Link>
+                <span className="text-12 text-app-muted">{(locale === 'bn' ? quotation.package_title_bn : null) || quotation.package_title_en}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="font-display text-13 font-semibold">{bdt(quotation.total_amount)}</span>
+                <QuotationStatusBadge status={quotation.display_status} />
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </Card>
   )

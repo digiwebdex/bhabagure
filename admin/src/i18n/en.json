@@ -26,10 +26,23 @@
       "quoted": "কোটেশন · Quoted",
       "converted": "কনভার্টেড · Converted (30 days)"
     },
-    "state": { "new": "New lead", "contacted": "Contacted", "quoted": "Quoted", "converted": "Converted", "lost": "Lost" },
-    "stage": { "lead": "Leads", "customer": "Customer" },
+    "state": {
+      "new": "New lead",
+      "contacted": "Contacted",
+      "quoted": "Quoted",
+      "converted": "Converted",
+      "lost": "Lost"
+    },
+    "stage": {
+      "lead": "Leads",
+      "customer": "Customer"
+    },
     "stageLabel": "Stage",
-    "passport": { "on_file": "Passport on file", "expiring": "Passport expiring", "missing": "No passport" },
+    "passport": {
+      "on_file": "Passport on file",
+      "expiring": "Passport expiring",
+      "missing": "No passport"
+    },
     "passportColumn": "Passport",
     "anyPassport": "Any passport",
     "listTitle": "Customers · passport & visa",
@@ -79,15 +92,31 @@
     "contactLogged": "Added to the contact log",
     "noContacts": "No contact logged yet.",
     "noBookings": "No bookings yet.",
-    "channels": { "call": "Call", "whatsapp": "WhatsApp", "facebook": "Facebook", "visit": "Office visit", "email": "Email", "sms": "SMS" },
-    "outcomes": { "reached": "Reached", "no_answer": "No answer", "interested": "Interested", "not_interested": "Not interested", "call_back": "Call back", "quote_requested": "Wants a quote" }
+    "channels": {
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "facebook": "Facebook",
+      "visit": "Office visit",
+      "email": "Email",
+      "sms": "SMS"
+    },
+    "outcomes": {
+      "reached": "Reached",
+      "no_answer": "No answer",
+      "interested": "Interested",
+      "not_interested": "Not interested",
+      "call_back": "Call back",
+      "quote_requested": "Wants a quote"
+    },
+    "deleteHasQuotations": "Has quotations — the record stays"
   },
   "search": {
-    "placeholder": "Search bookings, customers, phone…",
+    "placeholder": "Search bookings, quotations, customers, phone…",
     "results": "Search results",
     "nothing": "Nothing found for “{{query}}”",
     "bookings": "Bookings",
-    "customers": "Customers"
+    "customers": "Customers",
+    "quotations": "Quotations"
   },
   "ownership": {
     "pool": "Pool",
@@ -160,7 +189,9 @@
       "bookings_one": "{{n}} inquiry — open the list",
       "bookings_other": "{{n}} inquiries — open the list",
       "air_inquiries_one": "{{n}} enquiry waiting over 24 hours — open the queue",
-      "air_inquiries_other": "{{n}} enquiries waiting over 24 hours — open the queue"
+      "air_inquiries_other": "{{n}} enquiries waiting over 24 hours — open the queue",
+      "quotations_one": "{{n}} quotation expiring within 48 hours — open the list",
+      "quotations_other": "{{n}} quotations expiring within 48 hours — open the list"
     },
     "groups": {
       "sales": "Sales",
@@ -178,7 +209,8 @@
       "gallery": "Gallery",
       "media": "Media library",
       "settings": "Site settings",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "quotations": "Quotations"
     }
   },
   "status": {
@@ -809,7 +841,8 @@
       "low_seat_alert": "Seats almost gone",
       "staff_message": "Message from staff",
       "whatsapp_verification": "WhatsApp verification code",
-      "opt_out_confirmation": "Opt-out confirmation"
+      "opt_out_confirmation": "Opt-out confirmation",
+      "quote_sent": "Quotation sent (with PDF)"
     },
     "timing": {
       "booking_created": "Immediately, when a website booking is saved",
@@ -993,5 +1026,112 @@
     "lastMonth": "Last month",
     "subscription": "flat subscription",
     "costNote": "SMS costs are estimates from the configured rate per part. WhatsApp is a flat monthly subscription; email costs nothing per message."
+  },
+  "quotations": {
+    "title": "Quotations",
+    "subtitle": "Send a priced offer, follow it up, turn it into a booking",
+    "back": "All quotations",
+    "number": "Quote",
+    "value": "Value",
+    "validUntil": "Valid until",
+    "validityNote": "Valid 3, 7 or 14 days from sending · price frozen",
+    "search": "Search by number, customer, phone or package",
+    "empty": "No quotations here",
+    "emptyNote": "Price a trip for a customer in “New quotation” and send it by WhatsApp and email.",
+    "status": {
+      "all": "All",
+      "draft": "Draft",
+      "sent": "Sent",
+      "expiring": "Expiring soon",
+      "expired": "Expired",
+      "accepted": "Accepted",
+      "converted": "Booked",
+      "declined": "Declined",
+      "withdrawn": "Withdrawn"
+    },
+    "kpi": {
+      "open": "Open quotes",
+      "openTotal": "{{total}} total",
+      "conversion": "Conversion rate",
+      "conversionNote": "Last 90 days · {{converted}} of {{sent}} booked",
+      "expiring": "Expiring soon",
+      "expiringNote": "Within 48 hours",
+      "average": "Avg quote value",
+      "averageNote": "Per quotation, last 90 days"
+    },
+    "convert": "Convert to booking",
+    "bookedAs": "Booked as {{reference}}",
+    "noPermission": "You can’t change this quotation",
+    "sendFirst": "Send it to the customer first",
+    "expiredRevise": "Expired — revise it to send a new price",
+    "notOffered": "No longer an open offer",
+    "revise": "Revise",
+    "bookedNoRevise": "Booked — nothing to revise",
+    "withdraw": "Withdraw",
+    "deleteConfirm": "Delete draft {{number}}? It was never sent.",
+    "deleted": "{{number}} deleted",
+    "withdrawConfirm": "Withdraw {{number}}? The customer can no longer book at this price.",
+    "withdrawn": "{{number}} withdrawn",
+    "contactSubject": "Your Bhabaghure Holidays quotation {{number}}",
+    "contactMessage": "Hello {{name}}, here is your quotation for {{package}} ({{number}}) — Bhabaghure Holidays",
+    "revises": "Revises {{number}}",
+    "expired": "Expired",
+    "expiresToday": "Expires today",
+    "fromSending_one": "{{n}} day from sending",
+    "fromSending_other": "{{n}} days from sending",
+    "customer": "Customer",
+    "noCustomerYet": "Not a customer yet?",
+    "addLead": "Add them as a lead first",
+    "sent": "{{number}} sent by WhatsApp and email",
+    "send": "Send quote",
+    "sendFor": "Send quote · {{total}}",
+    "saveDraft": "Save draft",
+    "sendNote": "Sending starts the validity and sends the PDF by WhatsApp and email — never SMS.",
+    "dateLater": "Date not fixed yet",
+    "dateOptional": "Optional — needed when it becomes a booking",
+    "travellers": "Travellers",
+    "validity": "Valid for",
+    "days_one": "{{n}} day",
+    "days_other": "{{n}} days",
+    "vatRate": "Service charge & VAT",
+    "language": "Quotation language",
+    "notes": "Internal note",
+    "notesHint": "For the office only — not printed or sent",
+    "perPersonTimes": "{{price}} × {{n}} travellers",
+    "discount": "Discount",
+    "pdfForPad": "PDF for pad",
+    "revisesLink": "revises",
+    "bookedLink": "booked as",
+    "sendConfirm": "Send this quotation to {{name}} by WhatsApp and email? The price is then fixed until it expires.",
+    "accepted": "{{number}} marked accepted",
+    "markAccepted": "Mark accepted",
+    "revising": "Revision {{number}} started — edit and send it",
+    "markDeclined": "Mark declined",
+    "declined": "{{number}} marked declined",
+    "declineTitle": "The customer declined {{number}}",
+    "withdrawTitle": "Withdraw {{number}}",
+    "reason": "Reason (optional)",
+    "reasonHint": "Kept in the audit log. For example: booked with another agency, dates changed",
+    "draftNote": "Not sent yet — prices follow today’s package prices until you send it",
+    "packageGone": "The package on this quotation is no longer published. Choose another one.",
+    "frozenNote": "Frozen when saved — honoured until the validity ends",
+    "history": {
+      "created_at": "Created",
+      "sent_at": "Sent",
+      "accepted_at": "Accepted",
+      "declined_at": "Declined",
+      "withdrawn_at": "Withdrawn",
+      "converted_at": "Booked"
+    },
+    "createdBy": "Prepared by {{name}}",
+    "revisions": "Revisions",
+    "convertTitle": "Book {{number}}",
+    "convertNote": "The booking is made at the quoted {{total}}, without re-pricing, and belongs to the quotation’s owner.",
+    "converted": "Booking {{reference}} created",
+    "convertSubmit": "Create booking",
+    "assignTitle": "Reassign {{number}}",
+    "assignHint": "Kept in the audit log. A booking made from it belongs to the new owner.",
+    "newFor": "New quotation",
+    "noneForCustomer": "No quotations yet."
   }
 }

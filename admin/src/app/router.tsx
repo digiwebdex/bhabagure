@@ -32,6 +32,8 @@ const PackageListPage = page(() => import('../features/cms/packages/PackageListP
 const PostEditorPage = page(() => import('../features/cms/blog/PostEditorPage'), 'PostEditorPage')
 const PostListPage = page(() => import('../features/cms/blog/PostListPage'), 'PostListPage')
 const PricingPage = page(() => import('../features/cms/pricing/PricingPage'), 'PricingPage')
+const QuotationDetailPage = page(() => import('../features/quotations/QuotationDetailPage'), 'QuotationDetailPage')
+const QuotationsPage = page(() => import('../features/quotations/QuotationsPage'), 'QuotationsPage')
 const ProfilePage = page(() => import('../features/profile/ProfilePage'), 'ProfilePage')
 const ReviewsPage = page(() => import('../features/cms/reviews/ReviewsPage'), 'ReviewsPage')
 const SettingsPage = page(() => import('../features/cms/settings/SettingsPage'), 'SettingsPage')
@@ -40,6 +42,7 @@ const TeamPage = page(() => import('../features/cms/team/TeamPage'), 'TeamPage')
 const packages = ['packages.manage']
 const cms = ['cms.manage']
 const bookings = ['bookings.view_all', 'bookings.view_own']
+const quotations = ['quotations.view_all', 'quotations.view_own']
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -62,6 +65,8 @@ export const router = createBrowserRouter([
       { path: 'bookings', element: <Require permissions={bookings}><BookingListPage /></Require> },
       { path: 'bookings/new', element: <Require permissions={['bookings.create']}><NewBookingPage /></Require> },
       { path: 'bookings/:id', element: <Require permissions={bookings}><BookingDetailPage /></Require> },
+      { path: 'quotations', element: <Require permissions={quotations}><QuotationsPage /></Require> },
+      { path: 'quotations/:id', element: <Require permissions={quotations}><QuotationDetailPage /></Require> },
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },

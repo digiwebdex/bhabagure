@@ -66,7 +66,11 @@ export function usePackageMutation<TVariables, TResult>(mutationFn: (variables: 
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // The answer is the package as saved: show it at once, so a publish flips the status and its button now rather
+      // than after the refetch (until then the old button stayed clickable and sent the old action again).
+      const saved = (result as Partial<Data<TourPackage>> | null)?.data
+      if (saved && typeof saved === 'object' && 'slug' in saved) queryClient.setQueryData(['package', saved.id], { data: saved })
       void queryClient.invalidateQueries({ queryKey: ['packages'] })
       void queryClient.invalidateQueries({ queryKey: ['package'] })
       void queryClient.invalidateQueries({ queryKey: ['tags'] })

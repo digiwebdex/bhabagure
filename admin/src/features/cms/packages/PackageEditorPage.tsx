@@ -63,6 +63,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
     })
 
   const onTransition = async (action: 'publish' | 'unpublish' | 'archive') => {
+    if (transition.isPending) return
     if (dirty) return toast(t('packages.saveFirst'), 'error')
     if (action === 'archive' && !(await confirm(t('packages.confirmArchive')))) return
     transition.mutate(action, { onSuccess: () => toast(t(`packages.done.${action}`)) })

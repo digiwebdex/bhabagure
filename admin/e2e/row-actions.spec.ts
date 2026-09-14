@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { signIn, websiteBooking } from './helpers'
+import { quotationFor, signIn, websiteBooking } from './helpers'
 
 /**
  * docs/phase-5-admin-core.md §3.2: the sticky row-actions cell, measured on the real admin tables — the eight failure
@@ -12,10 +12,11 @@ test.describe.configure({ mode: 'serial' })
 
 type Theme = 'light' | 'dark'
 
-/** Every admin table with row actions, at a width where its columns overflow the card. */
+/** Every admin table with row actions, at a width where its columns overflow the card. Quotations add → Convert (§2 #10). */
 const TABLES = [
-  { name: 'Bookings', url: '/bookings', testId: 'bookings-table', width: 1024 },
-  { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700 },
+  { name: 'Bookings', url: '/bookings', testId: 'bookings-table', width: 1024, icons: 7 },
+  { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700, icons: 7 },
+  { name: 'Quotations', url: '/quotations', testId: 'quotations-table', width: 1024, icons: 8 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -26,6 +27,9 @@ test.beforeAll(async ({ browser }) => {
   await websiteBooking(page, 'Sticky Cell One', 'sticky.one@example.test')
   await websiteBooking(page, 'Sticky Cell Two With A Much Longer Customer Name')
   await websiteBooking(page, 'Sticky Cell Three', 'sticky.three@example.test')
+  await quotationFor(page, 'Sticky Quote One')
+  await quotationFor(page, 'Sticky Quote Two With A Much Longer Customer Name', { send: false })
+  await quotationFor(page, 'Sticky Quote Three')
   await page.close()
 })
 
@@ -161,8 +165,8 @@ for (const table of TABLES) for (const theme of ['light', 'dark'] as const) {
         expect(Math.abs(m.row.width - m.table.width), `${label}: row as wide as the table`).toBeLessThanOrEqual(1)
         expect(m.table.width, label).toBeGreaterThanOrEqual(m.scrollWidth - 1)
 
-        // F6 seven icons, none clipped by the cell.
-        expect(m.icons, label).toHaveLength(7)
+        // F6 every icon, none clipped by the cell.
+        expect(m.icons, label).toHaveLength(current.icons)
         for (const icon of m.icons) {
           expect(icon.left, `${label}: icon inside the cell`).toBeGreaterThanOrEqual(m.cell.left + m.paddingLeft - 0.5)
           expect(icon.right, `${label}: icon inside the cell`).toBeLessThanOrEqual(m.cell.right - m.paddingRight + 0.5)

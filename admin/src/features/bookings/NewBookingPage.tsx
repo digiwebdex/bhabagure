@@ -12,14 +12,7 @@ import { Card, CardTitle, Chips, Loading, PageHeader } from '../../components/ui
 import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
-import type { BookingDetail } from './api'
-
-type Options = {
-  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; departures: { date: string; seats_left: number | null }[] }[]
-  addons: { code: string; name_en: string; name_bn: string | null; price: number; unit: 'per_person' | 'per_booking' }[]
-  config: { slabs: { minPax: number; discountPercent: number }[]; singleRoomSupplementPercent: number; serviceChargePercent: number; maxTravellers: number; onlinePaymentChargePercent: number }
-  sources: string[]
-}
+import type { BookingDetail, BookingFormOptions as Options } from './api'
 
 type Traveller = { name: string; passport_number: string; date_of_birth: string; passport_expiry: string }
 type CustomerHit = { id: number; name: string; phone: string }

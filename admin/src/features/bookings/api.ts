@@ -6,6 +6,14 @@ import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
 import type { NotificationGroup } from '../notifications/api'
 
+/** api/app/Services/Booking/BookingFormOptions.php — what the staff booking form and the quotation editor price with. */
+export type BookingFormOptions = {
+  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; departures: { date: string; seats_left: number | null }[] }[]
+  addons: { code: string; name_en: string; name_bn: string | null; price: number; unit: 'per_person' | 'per_booking' }[]
+  config: { slabs: { minPax: number; discountPercent: number }[]; singleRoomSupplementPercent: number; serviceChargePercent: number; maxTravellers: number; onlinePaymentChargePercent: number }
+  sources: string[]
+}
+
 export type BookingStatus = 'inquiry' | 'confirmed' | 'completed' | 'cancelled'
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
 
