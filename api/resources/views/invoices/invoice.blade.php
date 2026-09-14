@@ -1,7 +1,9 @@
 <!doctype html>
 {{-- Invoice print view (_design/Bhabaghure Invoice.dc.html). Sized in millimetres for A4. The letterhead block has a
      fixed height whether the header is on or off, so nothing below it moves; with it off the block is blank for a
-     pre-printed pad. Data: App\Services\Invoices\InvoiceView (frozen snapshot + ledger). --}}
+     pre-printed pad. Data: App\Services\Invoices\InvoiceView (frozen snapshot + ledger).
+     The same page prints quotations ($kind = 'quotation', App\Services\Quotations\QuotationView): the letterhead and
+     lines are shared; a quotation shows its validity instead of payments, and never travellers or passports. --}}
 <html lang="{{ $locale }}">
 <head>
 <meta charset="utf-8">
@@ -35,6 +37,8 @@
   .pill { font-size: 8.5pt; font-weight: 700; letter-spacing: .05em; padding: 1mm 3.2mm; border-radius: 999px; }
   .pill.paid { background: #E6F7EC; color: #12A150; } .pill.partial { background: #FFF1E6; color: #C2410C; }
   .pill.unpaid, .pill.void { background: #FEE2E2; color: #B91C1C; }
+  .pill.draft, .pill.withdrawn { background: #EEF1F6; color: var(--muted); } .pill.valid { background: #E8F0FE; color: var(--blue); }
+  .pill.accepted, .pill.booked { background: #E6F7EC; color: #12A150; } .pill.expired, .pill.declined { background: #FEE2E2; color: #B91C1C; }
   .label { font-family: 'Bricolage Grotesque', 'Hind Siliguri', sans-serif; font-size: 8pt; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
   .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 6mm; }
   .billed { display: flex; flex-direction: column; gap: 1mm; }
@@ -82,7 +86,7 @@
 </style>
 </head>
 <body>
-<main class="page" data-invoice="{{ $number }}">
+<main class="page" data-{{ $kind }}="{{ $number }}">
   @if ($header)
     <header class="letterhead on" data-region="letterhead">
       @if ($logo)<img src="{{ $logo }}" alt="{{ $company['name'] }}">@endif
@@ -99,13 +103,13 @@
   @endif
 
   <div class="title">
-    <h1>INVOICE</h1>
-    <span class="no"><span>ইনভয়েস · <span class="num">{{ $number }}</span></span><span class="pill {{ $status['key'] }}">{{ $status['label'] }}</span></span>
+    <h1>{{ $kind === 'quotation' ? 'QUOTATION' : 'INVOICE' }}</h1>
+    <span class="no"><span>{{ $kind === 'quotation' ? 'কোটেশন' : 'ইনভয়েস' }} · <span class="num">{{ $number }}</span></span><span class="pill {{ $status['key'] }}">{{ $status['label'] }}</span></span>
   </div>
 
   <section class="grid">
     <div class="billed">
-      <span class="label">Billed to · গ্রাহক</span>
+      <span class="label">{{ $kind === 'quotation' ? 'Prepared for · গ্রাহক' : 'Billed to · গ্রাহক' }}</span>
       <strong>{{ $billed['name'] }}</strong>
       <span class="lines">@foreach ($billed['lines'] as $line){{ $line }}@if (! $loop->last)<br>@endif @endforeach</span>
     </div>
@@ -149,14 +153,21 @@
           @endforeach
         </div>
       @endif
-      <div>
-        <span class="label">Payment · পেমেন্ট</span>
-        @forelse ($payments as $payment)
-          <span class="muted">{{ $payment }}</span>
-        @empty
-          <span class="muted">{{ $locale === 'bn' ? 'এখনো কোনো পেমেন্ট পাওয়া যায়নি।' : 'No payment received yet.' }}</span>
-        @endforelse
-      </div>
+      @if ($kind === 'quotation')
+        <div data-region="validity">
+          <span class="label">Validity · মেয়াদ</span>
+          <span class="muted">{{ $validUntil }}</span>
+        </div>
+      @else
+        <div>
+          <span class="label">Payment · পেমেন্ট</span>
+          @forelse ($payments as $payment)
+            <span class="muted">{{ $payment }}</span>
+          @empty
+            <span class="muted">{{ $locale === 'bn' ? 'এখনো কোনো পেমেন্ট পাওয়া যায়নি।' : 'No payment received yet.' }}</span>
+          @endforelse
+        </div>
+      @endif
     </div>
     <div class="totals">
       @foreach ($totals as [$label, $amount])
@@ -164,8 +175,10 @@
       @endforeach
       <div class="rule"></div>
       <div class="grand"><span>সর্বমোট · Total</span><span class="num">{{ $total }}</span></div>
-      <div class="paid"><span>পরিশোধিত · Paid</span><span class="num">{{ $paid }}</span></div>
-      <div class="due"><span>বকেয়া · Balance due</span><span class="num">{{ $due }}</span></div>
+      @if ($kind !== 'quotation')
+        <div class="paid"><span>পরিশোধিত · Paid</span><span class="num">{{ $paid }}</span></div>
+        <div class="due"><span>বকেয়া · Balance due</span><span class="num">{{ $due }}</span></div>
+      @endif
     </div>
   </section>
 

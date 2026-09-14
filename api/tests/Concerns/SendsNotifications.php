@@ -11,6 +11,8 @@ use App\Services\Notifications\Sms\FakeSmsGateway;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\FakeWhatsAppGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
+use App\Services\Quotations\QuotationPdf;
+use App\Services\Quotations\QuotationView;
 use Database\Seeders\ContentSeeder;
 use Database\Seeders\NotificationTemplateSeeder;
 use Illuminate\Support\Facades\Cache;
@@ -56,6 +58,13 @@ trait SendsNotifications
             public function pdf($invoice, bool $header, string $locale = 'bn', bool $maskPassports = false): string
             {
                 return '%PDF-1.4 test invoice';
+            }
+        });
+        $this->app->instance(QuotationPdf::class, new class(app(QuotationView::class), app(InvoicePdf::class)) extends QuotationPdf
+        {
+            public function pdf($quotation, bool $header, string $locale = 'bn'): string
+            {
+                return '%PDF-1.4 test quotation';
             }
         });
     }

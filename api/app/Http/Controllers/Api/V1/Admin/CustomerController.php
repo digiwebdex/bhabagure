@@ -205,6 +205,10 @@ class CustomerController extends Controller
         if ($customer->bookings()->withTrashed()->exists()) {
             return response()->json(['message' => __('customers.delete_has_bookings'), 'code' => 'has_bookings'], Response::HTTP_CONFLICT);
         }
+        // A deleted draft never reached the customer and doesn't count.
+        if ($customer->quotations()->exists()) {
+            return response()->json(['message' => __('customers.delete_has_quotations'), 'code' => 'has_quotations'], Response::HTTP_CONFLICT);
+        }
 
         DB::transaction(function () use ($customer, $request, $audit) {
             $customer->delete();

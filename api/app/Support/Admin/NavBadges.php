@@ -5,6 +5,7 @@ namespace App\Support\Admin;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Inquiry;
+use App\Models\Quotation;
 use App\Models\Staff;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +30,13 @@ final class NavBadges
                 'path' => '/api/v1/admin/bookings',
                 'filter' => ['status' => BookingStatus::Inquiry->value],
                 'query' => fn (Staff $staff) => Booking::query()->visibleTo($staff)->filtered(['status' => BookingStatus::Inquiry->value], $staff),
+            ],
+            // Sent quotations running out within 48 hours (Dhaka) — the "Expiring soon" KPI shows the same.
+            'quotations' => [
+                'permission' => ['quotations.view_all', 'quotations.view_own'],
+                'path' => '/api/v1/admin/quotations',
+                'filter' => ['status' => 'expiring'],
+                'query' => fn (Staff $staff) => Quotation::query()->visibleTo($staff)->filtered(['status' => 'expiring'], $staff),
             ],
             // Open air-ticket enquiries waiting more than 24 hours — the rows the queue flags.
             'air_inquiries' => [

@@ -16,6 +16,8 @@ enum NotificationEvent: string
     case PreTripReminder = 'pre_trip_reminder';
     case DepartureToday = 'departure_today';
     case TripCompleted = 'trip_completed';
+    /** A quotation sent from the admin (docs/phase-5-admin-core.md §4.5): WhatsApp with the PDF, and email. Never SMS. */
+    case QuoteSent = 'quote_sent';
     case NewBookingAlert = 'new_booking_alert';
     case NewLeadAlert = 'new_lead_alert';
     case LowSeatAlert = 'low_seat_alert';
@@ -27,12 +29,12 @@ enum NotificationEvent: string
     case WhatsAppVerification = 'whatsapp_verification';
     case OptOutConfirmation = 'opt_out_confirmation';
 
-    /** @return list<self> the ten events with editable templates */
+    /** @return list<self> the events with editable templates */
     public static function templated(): array
     {
         return [
             self::BookingCreated, self::BookingConfirmed, self::PaymentReceived, self::DocumentsPending, self::PreTripReminder,
-            self::DepartureToday, self::TripCompleted, self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert,
+            self::DepartureToday, self::TripCompleted, self::QuoteSent, self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert,
         ];
     }
 
@@ -83,6 +85,7 @@ enum NotificationEvent: string
             self::PreTripReminder => ['name', 'package', 'ref', 'date', 'leader', 'office', 'short_link'],
             self::DepartureToday => ['name', 'package', 'ref', 'office'],
             self::TripCompleted => ['name', 'package', 'review'],
+            self::QuoteSent => ['name', 'package', 'number', 'date', 'pax', 'total', 'valid_until', 'link'],
             self::NewBookingAlert => ['ref', 'package', 'date', 'pax', 'total', 'payment', 'customer', 'phone'],
             self::NewLeadAlert => ['name', 'phone', 'kind', 'details'],
             self::LowSeatAlert => ['package', 'date', 'seats'],
@@ -99,6 +102,7 @@ enum NotificationEvent: string
             self::DepartureToday => '06:00 on the travel day',
             self::TripCompleted => '2 days after return',
             self::LowSeatAlert => 'when a departure has 3 or fewer seats left (once)',
+            self::QuoteSent => 'when staff send a quotation',
             default => 'immediately',
         };
     }

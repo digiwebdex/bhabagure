@@ -13,6 +13,7 @@ use App\Models\Invoice;
 use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
 use App\Models\PackageDeparture;
+use App\Models\Quotation;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Services\Booking\DepartureSeats;
@@ -59,6 +60,23 @@ final class NotificationPlanner
     {
         $this->toCustomer(NotificationEvent::PaymentReceived, $booking,
             extra: ['amount' => $payment->amount], dedupeSuffix: "payment:{$payment->id}");
+    }
+
+    /** A quotation was sent: WhatsApp with the PDF and email with it attached, to the customer's own number and address. */
+    public function quotationSent(Quotation $quotation): void
+    {
+        $quotation->loadMissing('customer');
+        $event = NotificationEvent::QuoteSent;
+        $base = "{$event->value}:quotation:{$quotation->id}";
+        $addresses = [
+            NotificationChannel::WhatsApp->value => $quotation->customer->phone,
+            NotificationChannel::Email->value => $quotation->customer->email,
+        ];
+
+        foreach ($event->channels() as $channel) {
+            $this->plan($event, $channel, $quotation, $quotation->customer, $addresses[$channel->value] ?? null, $quotation->locale,
+                [], "quotation:{$quotation->id}", "{$base}:{$channel->value}", null, $base);
+        }
     }
 
     public function leadReceived(Inquiry $inquiry): void

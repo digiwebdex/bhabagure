@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\CustomerContact;
+use App\Models\Quotation;
 use App\Models\Staff;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -21,7 +22,7 @@ final class AdminCustomer
     {
         $today = now('Asia/Dhaka')->toDateString();
 
-        return $query->withLeadFacts()->with('assignedStaff')
+        return $query->withLeadFacts()->withExists('quotations as has_quotations')->with('assignedStaff')
             ->withCount(['bookings as trips_completed' => fn (Builder $b) => $b->where('status', 'completed')])
             ->addSelect([
                 'last_contact_at' => CustomerContact::query()->select('occurred_at')->whereColumn('customer_id', 'customers.id')->orderByDesc('occurred_at')->orderByDesc('id')->limit(1),
@@ -63,6 +64,7 @@ final class AdminCustomer
             'next_trip' => $customer->next_trip_id ? ['booking_id' => (int) $customer->next_trip_id, 'travel_start' => Carbon::parse($customer->next_trip_start)->toDateString()] : null,
             'whatsapp_opted_out' => $customer->whatsapp_opted_out_at !== null,
             'has_bookings' => (bool) $customer->has_booking,
+            'has_quotations' => (bool) $customer->has_quotations,
             'actions' => [
                 'claim' => $customer->assigned_staff_id === null && $customer->stage === 'lead' && $viewer->can('customers.manage'),
                 'edit' => $works && $viewer->can('customers.manage'),
@@ -95,6 +97,11 @@ final class AdminCustomer
                 ->withExists(['invoices as has_invoice' => fn (Builder $q) => $q->where('status', 'issued'), 'transactions as has_payments'])
                 ->latest('id')->limit(50)->get()
                 ->map(AdminBooking::summary(...))->values(),
+            'quotations' => Quotation::seesAll($viewer) || Quotation::seesOwn($viewer)
+                ? Quotation::query()->visibleTo($viewer)->where('customer_id', $customer->id)->with(AdminQuotation::RELATIONS)
+                    ->latest('id')->limit(50)->get()
+                    ->map(fn (Quotation $quotation) => AdminQuotation::row($quotation, $viewer))->values()
+                : [],
         ]);
     }
 }

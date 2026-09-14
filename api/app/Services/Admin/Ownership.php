@@ -6,6 +6,7 @@ use App\Enums\StaffStatus;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Inquiry;
+use App\Models\Quotation;
 use App\Models\Staff;
 use App\Services\AuditLogger;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ use InvalidArgumentException;
  */
 final class Ownership
 {
-    private const KINDS = [Booking::class => 'booking', Customer::class => 'customer', Inquiry::class => 'inquiry'];
+    private const KINDS = [Booking::class => 'booking', Customer::class => 'customer', Inquiry::class => 'inquiry', Quotation::class => 'quotation'];
 
     public function __construct(private readonly AuditLogger $audit) {}
 

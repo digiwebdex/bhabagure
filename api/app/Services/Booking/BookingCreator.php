@@ -10,6 +10,8 @@ use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\PackageDeparture;
 use App\Models\PassportScan;
+use App\Models\Quotation;
+use App\Models\QuotationLine;
 use App\Models\SeatHold;
 use App\Models\Staff;
 use App\Models\TourPackage;
@@ -50,30 +52,13 @@ final class BookingCreator
                 throw new PriceChanged($quote);
             }
 
-            $departure = PackageDeparture::query()->where('tour_package_id', $package->id)->where('status', 'scheduled')
-                ->whereDate('departs_on', $request->travelDate)->lockForUpdate()->first();
-            if ($departure && $departure->seats_total !== null && DepartureSeats::available($departure) < $request->pax) {
-                throw new SeatsUnavailable(DepartureSeats::available($departure));
-            }
+            $lines = self::lineRows($package, $quote, $addons->all());
 
-            $lead = $request->travellers[0];
-            $customer ??= $this->customerFor($lead['name'], $lead['phone'], $lead['email'] ?? null, $request->locale);
-            $accessToken = Str::random(48);
-            $start = Carbon::parse($request->travelDate);
-            $lines = $quote['lines'];
-
-            $booking = Booking::query()->create([
-                'reference' => $this->numbers->bookingReference(),
-                'customer_id' => $customer->id,
-                'client_id' => $customer->client_id,
+            $result = $this->persist($request, [
                 'tour_package_id' => $package->id,
-                'departure_id' => $departure?->id,
                 'package_title_en' => $package->title_en,
                 'package_title_bn' => $package->title_bn,
-                'travel_start' => $start->toDateString(),
-                'travel_end' => $package->duration_days ? $start->copy()->addDays($package->duration_days - 1)->toDateString() : null,
-                'pax_count' => $request->pax,
-                'room_type' => $request->room,
+                'duration_days' => $package->duration_days,
                 'list_price' => $this->listPrice($package),
                 'unit_price' => $quote['perPerson'],
                 'subtotal_amount' => $quote['subtotal'],
@@ -83,61 +68,145 @@ final class BookingCreator
                 'vat_rate' => $quote['chargePercent'],
                 'vat_amount' => $quote['serviceCharge'],
                 'total_amount' => $quote['total'],
-                'source' => $request->source,
-                'created_by_staff_id' => $staff?->id,
-                // A booking belongs to the staff member who made it; a website booking starts in the shared pool.
-                'assigned_staff_id' => $staff?->id,
-                'locale' => $request->locale,
-                'terms_accepted_at' => $request->termsAccepted ? now() : null,
-                'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
-                'access_token_hash' => Booking::hashAccessToken($accessToken),
-            ]);
+            ], $lines, $customer, $staff);
 
-            $addonsByCode = $addons->keyBy('code');
-            foreach ($lines as $index => $line) {
-                $addon = $line['code'] ? $addonsByCode[$line['code']] : null;
-                $booking->lines()->create([
-                    'kind' => $line['kind'],
-                    'code' => $line['code'],
-                    'title_en' => $addon?->name_en ?? ($line['kind'] === 'package' ? $package->title_en : 'Single room supplement'),
-                    'title_bn' => $addon?->name_bn ?? ($line['kind'] === 'package' ? $package->title_bn : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
-                    'quantity' => $line['quantity'],
-                    'unit_price' => $line['unitPrice'],
-                    'amount' => $line['amount'],
-                    'sort_order' => $index,
-                ]);
-            }
-
-            foreach ($request->travellers as $index => $data) {
-                $traveller = $booking->travellers()->create([
-                    'customer_id' => $index === 0 ? $customer->id : null,
-                    'is_lead' => $index === 0,
-                    'full_name' => $data['name'],
-                    'date_of_birth' => $data['dateOfBirth'] ?? null,
-                    'passport_number' => isset($data['passportNumber']) ? strtoupper(preg_replace('/\s+/', '', $data['passportNumber'])) : null,
-                    'passport_expiry' => $data['passportExpiry'] ?? null,
-                    'phone' => $data['phone'] ?? null,
-                    'email' => $data['email'] ?? null,
-                    'sort_order' => $index,
-                ]);
-                $this->attachScan($traveller, $data['passportScanToken'] ?? null, (bool) ($data['ocrFilled'] ?? false));
-            }
-
-            if ($departure && $departure->seats_total !== null) {
-                SeatHold::query()->create([
-                    'departure_id' => $departure->id, 'booking_id' => $booking->id, 'seats' => $request->pax,
-                    'expires_at' => now()->addMinutes((int) config('bhabaghure.booking.hold_minutes')),
-                ]);
-            }
-
-            $this->audit->record('booking.created', $staff ?? $customer, $booking, ['source' => $request->source, 'total' => $quote['total']]);
-
-            // The private link (token in the fragment) can only be sent now: afterwards only its hash exists.
-            $web = rtrim((string) config('bhabaghure.web_url'), '/').($request->locale === 'en' ? '/en' : '');
-            BookingCreated::dispatch($booking, "{$web}/booking/{$booking->reference}#t={$accessToken}");
-
-            return ['booking' => $booking->refresh(), 'accessToken' => $accessToken, 'quote' => $quote];
+            return $result + ['quote' => $quote];
         });
+    }
+
+    /**
+     * Booking and quotation lines from a pricing quote: package, single supplement and add-ons, titled in both languages.
+     *
+     * @param  array<string, mixed>  $quote  PricingService::quoteBooking
+     * @param  list<Addon>  $addons
+     * @return list<array{kind: string, code: ?string, title_en: string, title_bn: ?string, quantity: int, unit_price: int|float, amount: int|float}>
+     */
+    public static function lineRows(TourPackage $package, array $quote, array $addons): array
+    {
+        $addonsByCode = collect($addons)->keyBy('code');
+
+        return array_map(fn (array $line) => [
+            'kind' => $line['kind'],
+            'code' => $line['code'],
+            'title_en' => ($line['code'] ? $addonsByCode[$line['code']]->name_en : null) ?? ($line['kind'] === 'package' ? $package->title_en : 'Single room supplement'),
+            'title_bn' => ($line['code'] ? $addonsByCode[$line['code']]->name_bn : null) ?? ($line['kind'] === 'package' ? $package->title_bn : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
+            'quantity' => $line['quantity'],
+            'unit_price' => $line['unitPrice'],
+            'amount' => $line['amount'],
+        ], $quote['lines']);
+    }
+
+    /**
+     * A booking from a sent or accepted quotation, at the quotation's frozen price — nothing is re-priced; the lines
+     * are copied one to one. The booking belongs to the quotation's owner (commission follows it); $staff is who
+     * converted it. The quotation must be locked by the caller (QuotationService::convert).
+     *
+     * @param  list<array<string, mixed>>  $travellers
+     * @return array{booking: Booking, accessToken: string}
+     *
+     * @throws SeatsUnavailable
+     */
+    public function createFromQuotation(Quotation $quotation, string $travelDate, array $travellers, Staff $staff): array
+    {
+        return DB::transaction(function () use ($quotation, $travelDate, $travellers, $staff) {
+            $quotation->loadMissing(['lines', 'customer']);
+            $request = new BookingRequest(
+                packageSlug: '', travelDate: $travelDate, pax: $quotation->pax_count, room: $quotation->room_type,
+                addonCodes: [], travellers: $travellers, expectedTotal: (float) $quotation->total_amount, locale: $quotation->locale,
+                source: $quotation->customer->source, termsAccepted: false,
+            );
+
+            return $this->persist($request, [
+                'tour_package_id' => $quotation->tour_package_id,
+                'package_title_en' => $quotation->package_title_en,
+                'package_title_bn' => $quotation->package_title_bn,
+                'duration_days' => $quotation->duration_days,
+            ] + $quotation->only(['list_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
+                $quotation->lines->map(fn (QuotationLine $line) => $line->only(['kind', 'code', 'title_en', 'title_bn', 'quantity', 'unit_price', 'amount']))->all(),
+                $quotation->customer, $staff, $quotation->id, $quotation->assigned_staff_id ?? $staff->id);
+        });
+    }
+
+    /**
+     * Everything after pricing, the same for the website, the office and a converted quotation: seats, customer, number,
+     * snapshot, lines, travellers, seat hold, audit and the booking-received messages.
+     *
+     * @param  array<string, mixed>  $snapshot  package snapshot and amounts
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{booking: Booking, accessToken: string}
+     *
+     * @throws SeatsUnavailable
+     */
+    private function persist(BookingRequest $request, array $snapshot, array $lines, ?Customer $customer, ?Staff $staff, ?int $quotationId = null, ?int $ownerId = null): array
+    {
+        $departure = $snapshot['tour_package_id'] === null ? null : PackageDeparture::query()->where('tour_package_id', $snapshot['tour_package_id'])
+            ->where('status', 'scheduled')->whereDate('departs_on', $request->travelDate)->lockForUpdate()->first();
+        if ($departure && $departure->seats_total !== null && DepartureSeats::available($departure) < $request->pax) {
+            throw new SeatsUnavailable(DepartureSeats::available($departure));
+        }
+
+        $lead = $request->travellers[0];
+        $customer ??= $this->customerFor($lead['name'], $lead['phone'], $lead['email'] ?? null, $request->locale);
+        $accessToken = Str::random(48);
+        $start = Carbon::parse($request->travelDate);
+
+        $booking = Booking::query()->create([
+            'reference' => $this->numbers->bookingReference(),
+            'customer_id' => $customer->id,
+            'client_id' => $customer->client_id,
+            'tour_package_id' => $snapshot['tour_package_id'],
+            'departure_id' => $departure?->id,
+            'quotation_id' => $quotationId,
+            'package_title_en' => $snapshot['package_title_en'],
+            'package_title_bn' => $snapshot['package_title_bn'],
+            'travel_start' => $start->toDateString(),
+            'travel_end' => $snapshot['duration_days'] ? $start->copy()->addDays($snapshot['duration_days'] - 1)->toDateString() : null,
+            'pax_count' => $request->pax,
+            'room_type' => $request->room,
+            'source' => $request->source,
+            'created_by_staff_id' => $staff?->id,
+            // A booking belongs to the staff member who made it (a converted quotation's owner); a website booking
+            // starts in the shared pool.
+            'assigned_staff_id' => $ownerId ?? $staff?->id,
+            'locale' => $request->locale,
+            'terms_accepted_at' => $request->termsAccepted ? now() : null,
+            'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
+            'access_token_hash' => Booking::hashAccessToken($accessToken),
+        ] + array_intersect_key($snapshot, array_flip(['list_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
+
+        foreach (array_values($lines) as $index => $line) {
+            $booking->lines()->create($line + ['sort_order' => $index]);
+        }
+
+        foreach ($request->travellers as $index => $data) {
+            $traveller = $booking->travellers()->create([
+                'customer_id' => $index === 0 ? $customer->id : null,
+                'is_lead' => $index === 0,
+                'full_name' => $data['name'],
+                'date_of_birth' => $data['dateOfBirth'] ?? null,
+                'passport_number' => isset($data['passportNumber']) ? strtoupper(preg_replace('/\s+/', '', $data['passportNumber'])) : null,
+                'passport_expiry' => $data['passportExpiry'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'email' => $data['email'] ?? null,
+                'sort_order' => $index,
+            ]);
+            $this->attachScan($traveller, $data['passportScanToken'] ?? null, (bool) ($data['ocrFilled'] ?? false));
+        }
+
+        if ($departure && $departure->seats_total !== null) {
+            SeatHold::query()->create([
+                'departure_id' => $departure->id, 'booking_id' => $booking->id, 'seats' => $request->pax,
+                'expires_at' => now()->addMinutes((int) config('bhabaghure.booking.hold_minutes')),
+            ]);
+        }
+
+        $this->audit->record('booking.created', $staff ?? $customer, $booking, array_filter(['source' => $request->source, 'total' => $snapshot['total_amount'], 'quotation_id' => $quotationId]));
+
+        // The private link (token in the fragment) can only be sent now: afterwards only its hash exists.
+        $web = rtrim((string) config('bhabaghure.web_url'), '/').($request->locale === 'en' ? '/en' : '');
+        BookingCreated::dispatch($booking, "{$web}/booking/{$booking->reference}#t={$accessToken}");
+
+        return ['booking' => $booking->refresh(), 'accessToken' => $accessToken];
     }
 
     /**
@@ -157,7 +226,7 @@ final class BookingCreator
         );
     }
 
-    private function listPrice(TourPackage $package): int|float
+    public function listPrice(TourPackage $package): int|float
     {
         return Money::toNumber($package->sale_price ?? $package->regular_price);
     }

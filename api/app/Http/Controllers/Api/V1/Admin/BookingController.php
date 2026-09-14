@@ -23,6 +23,7 @@ use App\Services\Invoices\InvoiceIssuer;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Ledger\LedgerService;
 use App\Services\Ledger\PaymentExceedsBalance;
+use App\Services\Quotations\QuotationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -75,7 +76,7 @@ class BookingController extends Controller
      * Deletes a booking made by mistake — only while nothing about money exists: no issued or voided invoice, no payment,
      * no payment attempt. Anything else is cancelled through the state machine instead, so the books keep their record.
      */
-    public function destroy(Request $request, int $id, AuditLogger $audit): JsonResponse
+    public function destroy(Request $request, int $id, AuditLogger $audit, QuotationService $quotations): JsonResponse
     {
         $booking = $this->find($request, $id, 'bookings.delete');
         $blocked = Invoice::query()->where('booking_id', $booking->id)->exists() ? 'has_invoice'
@@ -84,8 +85,9 @@ class BookingController extends Controller
             return $this->refused("booking.delete_{$blocked}", $blocked);
         }
 
-        DB::transaction(function () use ($booking, $request, $audit) {
+        DB::transaction(function () use ($booking, $request, $audit, $quotations) {
             SeatHold::query()->where('booking_id', $booking->id)->whereNull('released_at')->update(['released_at' => now()]);
+            $quotations->bookingDeleted($booking, $request->user('staff'));
             $booking->delete();
             $audit->record('booking.deleted', $request->user('staff'), $booking, ['reference' => $booking->reference]);
         });

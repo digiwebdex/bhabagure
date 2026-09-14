@@ -57,4 +57,10 @@ class NotificationMessage extends Model
     {
         return preg_match('/^invoice:(\d+)$/', (string) $this->attachment_path, $m) === 1 ? (int) $m[1] : null;
     }
+
+    /** A quotation PDF to attach, stored as "quotation:{id}". */
+    public function attachedQuotationId(): ?int
+    {
+        return preg_match('/^quotation:(\d+)$/', (string) $this->attachment_path, $m) === 1 ? (int) $m[1] : null;
+    }
 }

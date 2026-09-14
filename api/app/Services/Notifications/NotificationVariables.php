@@ -10,6 +10,7 @@ use App\Models\BookingTraveller;
 use App\Models\Inquiry;
 use App\Models\Invoice;
 use App\Models\PackageDeparture;
+use App\Models\Quotation;
 use App\Models\SiteSetting;
 use App\Services\Booking\DepartureSeats;
 use App\Services\Invoices\InvoiceShortLink;
@@ -42,6 +43,7 @@ final class NotificationVariables
             $related instanceof Booking => $this->booking($related, $locale, $money),
             $related instanceof Inquiry => $this->inquiry($related, $locale),
             $related instanceof PackageDeparture => $this->departure($related, $locale),
+            $related instanceof Quotation => $this->quotation($related, $locale, $money),
             default => [],
         };
 
@@ -81,6 +83,26 @@ final class NotificationVariables
             },
             'customer' => $booking->customer->name,
             'phone' => self::displayPhone($lead?->phone ?: $booking->customer->phone),
+        ];
+    }
+
+    /**
+     * @param  callable(int|float|string): string  $money
+     * @return array<string, string>
+     */
+    private function quotation(Quotation $quotation, string $locale, callable $money): array
+    {
+        $quotation->loadMissing('customer');
+
+        return [
+            'name' => $quotation->customer->name,
+            'package' => $locale === 'en' ? $quotation->package_title_en : ($quotation->package_title_bn ?: $quotation->package_title_en),
+            'number' => $quotation->number,
+            'date' => $quotation->travel_date ? Numerals::date($quotation->travel_date->toDateString(), $locale) : ($locale === 'en' ? 'date to be fixed' : 'তারিখ পরে ঠিক হবে'),
+            'pax' => Numerals::number($quotation->pax_count, $locale),
+            'total' => $money($quotation->total_amount),
+            'valid_until' => Numerals::date($quotation->valid_until->toDateString(), $locale),
+            'link' => url("/api/v1/public/quotations/{$quotation->share_token}".($locale === 'en' ? '?lang=en' : '')),
         ];
     }
 

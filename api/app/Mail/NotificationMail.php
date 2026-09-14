@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use App\Models\Invoice;
 use App\Models\NotificationMessage;
 use App\Models\SiteSetting;
 use App\Models\Staff;
@@ -25,10 +24,11 @@ class NotificationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /** @param  ?string  $pdf  the invoice or quotation PDF, attached as $filename */
     public function __construct(
         public readonly NotificationMessage $notification,
-        public readonly ?Invoice $invoice = null,
-        public readonly ?string $invoicePdf = null,
+        public readonly ?string $filename = null,
+        public readonly ?string $pdf = null,
     ) {}
 
     public function envelope(): Envelope
@@ -61,8 +61,8 @@ class NotificationMail extends Mailable
     /** @return list<Attachment> */
     public function attachments(): array
     {
-        return $this->invoice && $this->invoicePdf !== null
-            ? [Attachment::fromData(fn () => $this->invoicePdf, "{$this->invoice->invoice_number}.pdf")->withMime('application/pdf')]
+        return $this->filename !== null && $this->pdf !== null
+            ? [Attachment::fromData(fn () => $this->pdf, $this->filename)->withMime('application/pdf')]
             : [];
     }
 }

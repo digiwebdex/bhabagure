@@ -64,14 +64,13 @@ final class InvoiceView
             ->values()->all();
 
         $subtotal = (float) $invoice->subtotal_amount;
-        $settings = SiteSetting::get('invoice', []);
 
         return [
+            'kind' => 'invoice',
+            'validUntil' => null,
             'locale' => $locale,
             'header' => $header,
-            'headerHeightMm' => (float) ($settings['headerHeightMm'] ?? config('bhabaghure.invoices.header_height_mm')),
-            'company' => $this->company($locale),
-            'logo' => $this->logoDataUri(),
+            ...$this->letterhead($locale),
             'number' => $invoice->invoice_number ?? 'DRAFT',
             'barcode' => $invoice->invoice_number ? Code128::svg($invoice->invoice_number) : null,
             'status' => $status,
@@ -117,6 +116,22 @@ final class InvoiceView
                 'ভিসা প্রত্যাখ্যাত হলে প্রসেসিং ফি অফেরতযোগ্য। এই ইনভয়েস কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
             ],
             'voidReason' => $invoice->status === Invoice::VOID ? $invoice->void_reason : null,
+        ];
+    }
+
+    /**
+     * The letterhead every printed document shares (invoices, quotations): company details, logo and pad height.
+     *
+     * @return array{company: array<string, mixed>, logo: ?string, headerHeightMm: float}
+     */
+    public function letterhead(string $locale): array
+    {
+        $settings = SiteSetting::get('invoice', []);
+
+        return [
+            'company' => $this->company($locale),
+            'logo' => $this->logoDataUri(),
+            'headerHeightMm' => (float) ($settings['headerHeightMm'] ?? config('bhabaghure.invoices.header_height_mm')),
         ];
     }
 

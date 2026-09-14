@@ -45,20 +45,25 @@ class Customer extends Authenticatable implements JWTSubject
         match ($state) {
             'lost' => $query->whereNotNull($this->qualifyColumn('lost_at')),
             'converted' => $query->where($open)->whereHas('bookings', $booked),
-            // Quotations arrive with the Quotations screen; until then nothing is Quoted.
-            'quoted' => $query->whereRaw('1 = 0'),
-            'contacted' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereHas('contacts'),
-            'new' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereDoesntHave('contacts'),
+            'quoted' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereHas('quotations', self::sentQuotation(...)),
+            'contacted' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereDoesntHave('quotations', self::sentQuotation(...))->whereHas('contacts'),
+            'new' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereDoesntHave('quotations', self::sentQuotation(...))->whereDoesntHave('contacts'),
         };
     }
 
-    /** The same rule for one loaded row (needs has_booking and has_contact from withExists). */
+    /** A quotation that reached the customer and wasn't taken back: sent, whatever happened after, except withdrawn. */
+    private static function sentQuotation(Builder $quotations): void
+    {
+        $quotations->whereNotNull('sent_at')->where('status', '!=', Quotation::WITHDRAWN);
+    }
+
+    /** The same rule for one loaded row (needs has_booking, has_quote and has_contact from withLeadFacts). */
     public function leadState(): string
     {
         return match (true) {
             $this->lost_at !== null => 'lost',
             (bool) $this->has_booking => 'converted',
-            (bool) ($this->has_quote ?? false) => 'quoted',
+            (bool) $this->has_quote => 'quoted',
             (bool) $this->has_contact => 'contacted',
             default => 'new',
         };
@@ -67,7 +72,11 @@ class Customer extends Authenticatable implements JWTSubject
     /** withExists columns the leadState() rule reads. */
     public function scopeWithLeadFacts(Builder $query): void
     {
-        $query->withExists(['bookings as has_booking' => fn (Builder $b) => $b->where('status', '!=', 'cancelled'), 'contacts as has_contact']);
+        $query->withExists([
+            'bookings as has_booking' => fn (Builder $b) => $b->where('status', '!=', 'cancelled'),
+            'quotations as has_quote' => self::sentQuotation(...),
+            'contacts as has_contact',
+        ]);
     }
 
     /** Traveller rows that are this customer (the lead traveller on their bookings): where passports are on file. */
@@ -98,10 +107,11 @@ class Customer extends Authenticatable implements JWTSubject
         $query->whereNull($this->qualifyColumn('assigned_staff_id'))->where($this->qualifyColumn('stage'), 'lead');
     }
 
-    /** A repeat customer booked through another agent: that agent sees the customer too. */
+    /** A repeat customer booked or quoted through another agent: that agent sees the customer too. */
     public function alsoVisibleToOwner(Builder $query, Staff $staff): void
     {
-        $query->orWhereHas('bookings', fn (Builder $bookings) => $bookings->where('assigned_staff_id', $staff->id));
+        $query->orWhereHas('bookings', fn (Builder $bookings) => $bookings->where('assigned_staff_id', $staff->id))
+            ->orWhereHas('quotations', fn (Builder $quotations) => $quotations->where('assigned_staff_id', $staff->id));
     }
 
     public function client(): BelongsTo
@@ -112,6 +122,11 @@ class Customer extends Authenticatable implements JWTSubject
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
     }
 
     public function getJWTIdentifier(): mixed

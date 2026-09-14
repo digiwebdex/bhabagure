@@ -14,10 +14,12 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
+use App\Models\Quotation;
 use App\Models\Staff;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
+use App\Services\Quotations\QuotationPdf;
 use App\Support\Sms\SmsParts;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -45,6 +47,7 @@ final class NotificationDelivery
         private readonly MessageRenderer $renderer,
         private readonly NotificationVariables $variables,
         private readonly InvoicePdf $invoicePdf,
+        private readonly QuotationPdf $quotationPdf,
     ) {}
 
     public function deliver(int $id): ?NotificationMessage
@@ -58,7 +61,7 @@ final class NotificationDelivery
         $row = NotificationMessage::query()->with('related')->findOrFail($id);
 
         if ($reason = $this->noLongerWanted($row)) {
-            $finished = $this->finish($row, $reason === 'booking_cancelled' ? NotificationStatus::Cancelled : NotificationStatus::Skipped, ['skipped_reason' => $reason]);
+            $finished = $this->finish($row, in_array($reason, ['booking_cancelled', 'quotation_withdrawn'], true) ? NotificationStatus::Cancelled : NotificationStatus::Skipped, ['skipped_reason' => $reason]);
             if (in_array($reason, self::WHATSAPP_UNAVAILABLE, true)) {
                 $this->fallBackToSms($finished);
             }
@@ -96,9 +99,9 @@ final class NotificationDelivery
             }
 
             $row->increment('attempts');
-            $invoice = $row->attachedInvoiceId() ? Invoice::query()->find($row->attachedInvoiceId()) : null;
-            $result = $invoice
-                ? $this->whatsApp->sendDocument($row->to_address, url("/api/v1/public/invoices/{$invoice->share_token}/pdf"), "{$invoice->invoice_number}.pdf", $row->body)
+            $document = $this->document($row);
+            $result = $document
+                ? $this->whatsApp->sendDocument($row->to_address, $document['url'], $document['filename'], $row->body)
                 : $this->whatsApp->sendText($row->to_address, $row->body);
 
             if ($result->isSent()) {
@@ -183,24 +186,50 @@ final class NotificationDelivery
     private function sendEmail(NotificationMessage $row): NotificationMessage
     {
         $row->increment('attempts');
-        $invoice = $row->attachedInvoiceId() ? Invoice::query()->find($row->attachedInvoiceId()) : null;
+        $document = $this->document($row);
         $pdf = null;
-        if ($invoice) {
+        if ($document) {
             try {
-                $pdf = $this->invoicePdf->pdf($invoice, true, $row->locale, maskPassports: true);
+                $pdf = ($document['render'])();
             } catch (Throwable $e) {
-                // The email still goes: its body carries the invoice link.
-                Log::warning('Invoice PDF could not be attached to a notification email', ['notification' => $row->id, 'error' => $e->getMessage()]);
+                // The email still goes: its body carries the link to the document.
+                Log::warning('A PDF could not be attached to a notification email', ['notification' => $row->id, 'error' => $e->getMessage()]);
             }
         }
 
         try {
-            Mail::to($row->to_address)->send(new NotificationMail($row, $invoice, $pdf));
+            Mail::to($row->to_address)->send(new NotificationMail($row, $pdf === null ? null : $document['filename'], $pdf));
         } catch (Throwable $e) {
             return $this->retry($row, 300, 'mail_error: '.mb_substr($e->getMessage(), 0, 200));
         }
 
         return $this->finish($row, NotificationStatus::Sent, ['sent_at' => now(), 'provider' => (string) config('mail.default'), 'last_error' => null, 'cost' => 0]);
+    }
+
+    /**
+     * The PDF a message carries: where WhatsApp fetches it (the public share link), its file name, and how to render it
+     * for an email attachment. Customer copies of invoices mask passport numbers; quotations carry none.
+     *
+     * @return array{url: string, filename: string, render: callable(): string}|null
+     */
+    private function document(NotificationMessage $row): ?array
+    {
+        if ($row->attachedInvoiceId() && ($invoice = Invoice::query()->find($row->attachedInvoiceId()))) {
+            return [
+                'url' => url("/api/v1/public/invoices/{$invoice->share_token}/pdf"),
+                'filename' => "{$invoice->invoice_number}.pdf",
+                'render' => fn () => $this->invoicePdf->pdf($invoice, true, $row->locale, maskPassports: true),
+            ];
+        }
+        if ($row->attachedQuotationId() && ($quotation = Quotation::query()->find($row->attachedQuotationId()))) {
+            return [
+                'url' => url("/api/v1/public/quotations/{$quotation->share_token}/pdf".($row->locale === 'en' ? '?lang=en' : '')),
+                'filename' => "{$quotation->number}.pdf",
+                'render' => fn () => $this->quotationPdf->pdf($quotation, true, $row->locale),
+            ];
+        }
+
+        return null;
     }
 
     /** Null when the message should still go; otherwise why it shouldn't. */
@@ -209,6 +238,10 @@ final class NotificationDelivery
         $related = $row->related;
         if ($related instanceof Booking && $row->event->needsConfirmedBooking() && $related->status === BookingStatus::Cancelled) {
             return 'booking_cancelled';
+        }
+        // A withdrawn or deleted quotation is no longer an offer (the related row is null once soft-deleted).
+        if ($row->event === NotificationEvent::QuoteSent && (! $related instanceof Quotation || $related->status === Quotation::WITHDRAWN)) {
+            return 'quotation_withdrawn';
         }
         if ($row->event === NotificationEvent::DocumentsPending && $related instanceof Booking && ! $related->travellers()->whereNull('passport_number')->exists()) {
             return 'no_longer_needed';

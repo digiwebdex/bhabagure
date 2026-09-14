@@ -113,6 +113,16 @@ class NotificationTemplateSeeder extends Seeder
                 "Dear {{name}},\nthank you for travelling {{package}} with us. A short review would mean a lot: {{review}}",
                 null, null],
 
+            // The PDF goes with both: attached to the WhatsApp message as a document, and to the email.
+            [NotificationEvent::QuoteSent, $wa,
+                "প্রিয় {{name}},\n{{package}} ভ্রমণের কোটেশন {{number}} সংযুক্ত করা হলো। যাত্রা {{date}}, {{pax}} জন, মোট {{total}}।\n{{valid_until}} পর্যন্ত এই মূল্য প্রযোজ্য।",
+                "Dear {{name}},\nyour quotation {{number}} for {{package}} is attached. Travelling {{date}}, {{pax}} travellers, total {{total}}.\nThis price is honoured until {{valid_until}}.",
+                null, null],
+            [NotificationEvent::QuoteSent, $mail,
+                "প্রিয় {{name}},\n\n{{package}} ভ্রমণের কোটেশন {{number}} এই ইমেইলে সংযুক্ত।\nযাত্রা: {{date}}\nযাত্রী: {{pax}} জন\nমোট: {{total}}\n\n{{valid_until}} পর্যন্ত এই মূল্য প্রযোজ্য। অনলাইনে দেখতে: {{link}}\n\nবুকিং করতে এই ইমেইলের উত্তর দিন বা আমাদের ফোন করুন।",
+                "Dear {{name}},\n\nyour quotation {{number}} for {{package}} is attached to this email.\nTravelling: {{date}}\nTravellers: {{pax}}\nTotal: {{total}}\n\nThis price is honoured until {{valid_until}}. View it online: {{link}}\n\nTo book, reply to this email or call us.",
+                'কোটেশন · {{number}}', 'Your quotation · {{number}}'],
+
             [NotificationEvent::NewBookingAlert, $wa,
                 "নতুন বুকিং {{ref}}\n{{package}} · {{date}} · {{pax}} জন\nমোট {{total}} · {{payment}}\nগ্রাহক: {{customer}} {{phone}}",
                 "New booking {{ref}}\n{{package}} · {{date}} · {{pax}} travellers\nTotal {{total}} · {{payment}}\nCustomer: {{customer}} {{phone}}",

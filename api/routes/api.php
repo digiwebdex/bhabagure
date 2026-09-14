@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Admin\PackageController;
 use App\Http\Controllers\Api\V1\Admin\PackageImageController;
 use App\Http\Controllers\Api\V1\Admin\PricingController;
 use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
+use App\Http\Controllers\Api\V1\Admin\QuotationController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Api\V1\Public\PublicContentController;
 use App\Http\Controllers\Api\V1\Public\PublicFormController;
 use App\Http\Controllers\Api\V1\Public\PublicInvoiceController;
 use App\Http\Controllers\Api\V1\Public\PublicPassportScanController;
+use App\Http\Controllers\Api\V1\Public\PublicQuotationController;
 use App\Http\Controllers\Api\V1\Webhooks\WaSenderWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -91,6 +93,10 @@ Route::prefix('v1')->group(function () {
         Route::controller(PublicInvoiceController::class)->middleware('throttle:public-read')->group(function () {
             Route::get('invoices/{token}', 'show');
             Route::get('invoices/{token}/pdf', 'pdf');
+        });
+        Route::controller(PublicQuotationController::class)->middleware('throttle:public-read')->group(function () {
+            Route::get('quotations/{token}', 'show');
+            Route::get('quotations/{token}/pdf', 'pdf');
         });
 
         // Signed-link actions: separate from the form limit so a shared office IP can always unsubscribe.
@@ -210,6 +216,22 @@ Route::prefix('v1')->group(function () {
             Route::post('air-inquiries/{id}/assign', 'assign')->whereNumber('id');
             Route::post('air-inquiries/{id}/quoted', 'markQuoted')->whereNumber('id');
             Route::delete('air-inquiries/{id}/quoted', 'undoQuoted')->whereNumber('id');
+        });
+
+        // Quotations (§4.5). Per-action permissions are checked in the controller.
+        Route::middleware('permission:quotations.view_all|quotations.view_own,staff')->controller(QuotationController::class)->group(function () {
+            Route::get('quotations', 'index');
+            Route::get('quotations/summary', 'summary');
+            Route::get('quotations/options', 'options');
+            Route::post('quotations', 'store');
+            Route::get('quotations/{id}', 'show')->whereNumber('id');
+            Route::put('quotations/{id}', 'update')->whereNumber('id');
+            Route::delete('quotations/{id}', 'destroy')->whereNumber('id');
+            Route::get('quotations/{id}/print', 'print')->whereNumber('id');
+            Route::get('quotations/{id}/pdf', 'pdf')->whereNumber('id');
+            Route::post('quotations/{id}/convert', 'convert')->whereNumber('id');
+            Route::post('quotations/{id}/assign', 'assign')->whereNumber('id');
+            Route::post('quotations/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['send', 'accept', 'decline', 'withdraw', 'revise']);
         });
 
         // Bookings, invoices and payments. Per-action permissions are checked in the controller.

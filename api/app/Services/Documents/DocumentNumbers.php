@@ -29,6 +29,12 @@ final class DocumentNumbers
         return sprintf('INV-%04d', $this->next('invoice', 'INV'));
     }
 
+    /** QT-0001: one running counter, at least four digits. A revision takes a new number. */
+    public function quotationNumber(): string
+    {
+        return sprintf('QT-%04d', $this->next('quotation', 'QT'));
+    }
+
     private function next(string $key, string $prefix): int
     {
         if (DB::transactionLevel() === 0) {

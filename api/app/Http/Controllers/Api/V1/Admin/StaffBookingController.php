@@ -7,15 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminBooking;
 use App\Models\Addon;
 use App\Models\Customer;
-use App\Models\PackageDeparture;
-use App\Models\TourPackage;
+use App\Services\Booking\BookingFormOptions;
 use App\Services\Booking\BookingRequest;
 use App\Services\Booking\CustomerExists;
-use App\Services\Booking\DepartureSeats;
 use App\Services\Booking\PriceChanged;
 use App\Services\Booking\SeatsUnavailable;
 use App\Services\Booking\StaffBookingCreator;
-use App\Support\Money;
 use App\Support\Phone;
 use App\Support\Pricing\PricingConfig;
 use Illuminate\Http\JsonResponse;
@@ -30,33 +27,8 @@ class StaffBookingController extends Controller
     public function options(Request $request): JsonResponse
     {
         abort_unless($request->user('staff')->can('bookings.create'), 403, __('auth.forbidden'));
-        $today = now('Asia/Dhaka')->toDateString();
-        $config = PricingConfig::current();
 
-        return response()->json(['data' => [
-            'packages' => TourPackage::query()->published()->orderBy('sort_order')->orderBy('id')
-                ->with(['departures' => fn ($q) => $q->where('status', 'scheduled')->whereDate('departs_on', '>=', $today)->orderBy('departs_on')])
-                ->get()
-                ->map(fn (TourPackage $package) => [
-                    'slug' => $package->slug,
-                    'title_en' => $package->title_en,
-                    'title_bn' => $package->title_bn,
-                    'duration_days' => $package->duration_days,
-                    'list_price' => Money::toNumber($package->sale_price ?? $package->regular_price),
-                    'departures' => $package->departures->map(fn (PackageDeparture $departure) => [
-                        'date' => $departure->departs_on->toDateString(),
-                        'seats_left' => $departure->seats_total === null ? null : DepartureSeats::available($departure),
-                    ])->values(),
-                ])->values(),
-            'addons' => Addon::query()->where('is_active', true)->orderBy('sort_order')->get()
-                ->map(fn (Addon $addon) => ['code' => $addon->code, 'name_en' => $addon->name_en, 'name_bn' => $addon->name_bn, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit])->values(),
-            'config' => [
-                'slabs' => $config->slabs, 'singleRoomSupplementPercent' => $config->singleRoomSupplementPercent,
-                'serviceChargePercent' => $config->serviceChargePercent, 'maxTravellers' => $config->maxTravellers,
-                'onlinePaymentChargePercent' => $config->onlinePaymentChargePercent,
-            ],
-            'sources' => array_map(fn (LeadSource $source) => $source->value, LeadSource::forCustomers()),
-        ]]);
+        return response()->json(['data' => BookingFormOptions::data()]);
     }
 
     public function store(Request $request, StaffBookingCreator $creator): JsonResponse

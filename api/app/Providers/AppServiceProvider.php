@@ -20,6 +20,7 @@ use App\Models\NotificationTemplate;
 use App\Models\PackageDeparture;
 use App\Models\PassportScan;
 use App\Models\PaymentAttempt;
+use App\Models\Quotation;
 use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\Staff;
@@ -159,6 +160,7 @@ class AppServiceProvider extends ServiceProvider
             'inquiry' => Inquiry::class,
             'notification' => NotificationMessage::class,
             'notification_template' => NotificationTemplate::class,
+            'quotation' => Quotation::class,
             // Audit rows about permission changes (permissions:sync, later the Roles screen).
             'role' => Role::class,
         ]);

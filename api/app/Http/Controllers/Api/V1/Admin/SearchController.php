@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\Quotation;
 use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +45,15 @@ class SearchController extends Controller
                     ->when($phoneLike, fn (Builder $p) => $p->orWhere('phone', 'like', $phoneLike)))
                 ->latest('id')->limit(self::LIMIT)->get()
                 ->map(fn (Customer $c) => ['id' => $c->id, 'name' => $c->name, 'phone' => $c->phone, 'stage' => $c->stage]);
+        }
+
+        if (Quotation::seesAll($staff) || Quotation::seesOwn($staff)) {
+            $results['quotations'] = Quotation::query()->visibleTo($staff)->with('customer')
+                ->where(fn (Builder $w) => $w->where('number', 'like', $like)
+                    ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', $like)
+                        ->when($phoneLike, fn (Builder $p) => $p->orWhere('phone', 'like', $phoneLike))))
+                ->latest('id')->limit(self::LIMIT)->get()
+                ->map(fn (Quotation $quotation) => ['id' => $quotation->id, 'number' => $quotation->number, 'status' => $quotation->displayStatus(), 'customer' => $quotation->customer->name]);
         }
 
         return response()->json(['data' => $results]);
