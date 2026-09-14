@@ -31,6 +31,7 @@ const PackageEditorPage = page(() => import('../features/cms/packages/PackageEdi
 const PackageListPage = page(() => import('../features/cms/packages/PackageListPage'), 'PackageListPage')
 const PostEditorPage = page(() => import('../features/cms/blog/PostEditorPage'), 'PostEditorPage')
 const PostListPage = page(() => import('../features/cms/blog/PostListPage'), 'PostListPage')
+const PaymentsPage = page(() => import('../features/payments/PaymentsPage'), 'PaymentsPage')
 const PricingPage = page(() => import('../features/cms/pricing/PricingPage'), 'PricingPage')
 const QuotationDetailPage = page(() => import('../features/quotations/QuotationDetailPage'), 'QuotationDetailPage')
 const QuotationsPage = page(() => import('../features/quotations/QuotationsPage'), 'QuotationsPage')
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
       { path: 'quotations/:id', element: <Require permissions={quotations}><QuotationDetailPage /></Require> },
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
+      { path: 'payments', element: <Require permissions={['payments.view']}><PaymentsPage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'packages', element: <Require permissions={packages}><PackageListPage /></Require> },

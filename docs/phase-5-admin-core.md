@@ -395,7 +395,7 @@ Admin dates are always Dhaka calendar dates (§10).
 
 ## 14. As built (in progress)
 
-Steps 1–5 of §13 are built; Payments, Dashboard, Air ticketing screen and My commission follow.
+Steps 1–6 of §13 are built; Dashboard, the Air ticketing screen and My commission follow.
 
 **Ownership and the pool (steps 1, 3, 4)**
 - The pools are: bookings that are unassigned inquiries; unassigned leads; unassigned open air-ticket enquiries. Quotations have no pool — staff make every one.
@@ -421,3 +421,36 @@ Steps 1–5 of §13 are built; Payments, Dashboard, Air ticketing screen and My 
 3. **The prototype's "PDF" button in the new-quotation panel is "Save draft".** A PDF needs a saved quotation; the PDF is on every row and on the quotation page (with and without the company header).
 4. **The travel date is optional on a quotation** ("date not fixed yet") and required when converting; converting may pick another date, because the price doesn't depend on it.
 5. **"Viewed" and "Auto reminder before expiry" are not shown** (question 2: they wait for the customer portal); the table note says how validity works instead.
+
+**Payments & invoices (step 6)**
+- **Chart of accounts added:** 3000 Owner's capital, 3100 Owner's drawings, 3900 Opening balances, 4200 Other income, 4300 Deal and service sales, 5000 Tour costs and suppliers, 5200 Office rent, 5210 Salaries and wages, 5220 Utilities and internet, 5230 Marketing, 5290 Other expenses.
+- **Manual cash in / out:**
+  - the money account comes from the method (cash · bank transfer, cheque, card terminal → bank · bKash, Nagad, Rocket → mobile wallets);
+  - the category decides the journal's other side (other income and owner's capital in; the expense accounts and owner's drawings out; a balance adjustment either way);
+  - the prototype's "Source" is a business-line tag on the cash-book row, not an account;
+  - a saved reference fills the description; a receipt (image or PDF, 10 MB) is optional.
+- **Receipts** go on the private disk and are served only by `GET /admin/cash-book/{id}/evidence` to staff with `payments.view`. The row is append-only, so the file is stored first and removed again if the row isn't written.
+- **✕ "Reverse…"** takes a reason and adds the opposite row and journal entry. It is allowed on staff-recorded customer payments (bookings and deals) and on manual entries. It is refused for online payments (refunded through the gateway), their charge and fee lines, reversals, and rows already reversed.
+- **Opening balances:** one per money account, audited and append-only, dated the day the books start, against 3900. A wrong figure is corrected with a balance adjustment entry.
+- **Company balance:** the journal balance of cash, bank, mobile wallets and SSLCommerz clearing. `GET /admin/payments/balance` answers 403 without `ledger.view_company_balance`, and the summary returns `balance: null`. The card is not rendered then, but that is a consequence of the 403, not the protection.
+- **Method cards:**
+  - customer money received in the Dhaka month, net of reversals, counting original payments;
+  - bKash · Nagad · SSLCommerz · Cash & bank, and Rocket only when used;
+  - "Collected" sits beside invoiced sales.
+- **Online payments needing review:** held attempts (paid less, high risk, wrong currency, booking cancelled) and settled attempts where more was collected than shown. They stay listed until marked reviewed with a note (`reviewed_at`, `reviewed_by`, `review_note`).
+- **Deals:**
+  - an invoice of kind `deal`, issued at once with the next INV number, for a customer or a company;
+  - a company is picked from `clients`, or created from the deal form with name, type and phone;
+  - posting is Dr receivable · Cr 4300; the advance is an ordinary payment; paid, due and PAID / PARTIAL come from the cash book;
+  - a deal can be voided only after its payments are reversed;
+  - it prints with the invoice view as "Service" with the deal's title and note.
+- **Fixed on the way:**
+  - a payment time passed in Dhaka time was stored six hours off (the ledger now stores a UTC instant whatever the caller passes);
+  - the invoice view would have listed every booking-less row for an invoice without a booking;
+  - the package editor showed the old status right after publish or unpublish, and the stale button could send the same action again.
+
+**Deviations (open to veto)**
+6. **bKash, Nagad and Rocket share one journal account** (Mobile wallets), as in Phase 3. The method cards still split them, from the cash book.
+7. **No transfer between money accounts yet** (for example, cash banked). It belongs with the Accounting screen. Until then, two manual entries would misstate income and expense, so none is offered.
+8. **Receipts are taken on manual entries and deal payments only**, not on payments recorded from a booking page.
+9. **The cash book has no detail view:** ◉ opens the booking, and a deal's rows point to the Deals card.

@@ -16,6 +16,10 @@ export const NAV_GROUPS: { key: string; items: NavItem[] }[] = [
     ],
   },
   {
+    key: 'finance',
+    items: [{ key: 'payments', path: '/payments', icon: '৳', permissions: ['payments.view'] }],
+  },
+  {
     key: 'catalogue',
     items: [
       { key: 'packages', path: '/packages', icon: 'P', permissions: ['packages.manage'] },

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { quotationFor, signIn, websiteBooking } from './helpers'
+import { quotationFor, signIn, staffApi, websiteBooking } from './helpers'
 
 /**
  * docs/phase-5-admin-core.md §3.2: the sticky row-actions cell, measured on the real admin tables — the eight failure
@@ -17,6 +17,7 @@ const TABLES = [
   { name: 'Bookings', url: '/bookings', testId: 'bookings-table', width: 1024, icons: 7 },
   { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700, icons: 7 },
   { name: 'Quotations', url: '/quotations', testId: 'quotations-table', width: 1024, icons: 8 },
+  { name: 'Cash book', url: '/payments', testId: 'cash-book-table', width: 1024, icons: 7 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -30,6 +31,10 @@ test.beforeAll(async ({ browser }) => {
   await quotationFor(page, 'Sticky Quote One')
   await quotationFor(page, 'Sticky Quote Two With A Much Longer Customer Name', { send: false })
   await quotationFor(page, 'Sticky Quote Three')
+  const admin = await staffApi(page, 'admin')
+  for (const [direction, category, description] of [['out', 'office_rent', 'Sticky office rent'], ['in', 'other_income', 'Sticky commission from an airline with a long description'], ['out', 'marketing', 'Sticky Facebook ads']]) {
+    await admin.post('admin/cash-entries', { direction, amount: 1200, method: 'cash', category, description })
+  }
   await page.close()
 })
 
