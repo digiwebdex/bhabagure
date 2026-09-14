@@ -20,6 +20,7 @@ const page = (load: () => Promise<Record<string, unknown>>, name: string) => {
 
 const BookingDetailPage = page(() => import('../features/bookings/BookingDetailPage'), 'BookingDetailPage')
 const BookingListPage = page(() => import('../features/bookings/BookingListPage'), 'BookingListPage')
+const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'), 'NewBookingPage')
 const ChangePasswordPage = page(() => import('../features/auth/ChangePasswordPage'), 'ChangePasswordPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'bookings', element: <Require permissions={bookings}><BookingListPage /></Require> },
+      { path: 'bookings/new', element: <Require permissions={['bookings.create']}><NewBookingPage /></Require> },
       { path: 'bookings/:id', element: <Require permissions={bookings}><BookingDetailPage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },
       { path: 'profile', element: <ProfilePage /> },

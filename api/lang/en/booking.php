@@ -15,6 +15,7 @@ return [
     'transition_not_allowed' => 'This booking cannot move to that status.',
     'transition_no_payment' => 'Record a payment before confirming the booking.',
     'transition_reason_required' => 'A cancellation needs a reason.',
+    'customer_exists' => 'A customer with this phone number already exists. Pick them instead of adding a new one.',
     'delete_has_invoice' => 'This booking has an invoice. Cancel it instead, so the books keep its record.',
     'delete_has_payments' => 'Money was recorded against this booking. Cancel it instead.',
     'delete_has_payment_attempts' => 'An online payment was started for this booking. Cancel it instead.',

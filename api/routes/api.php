@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
+use App\Http\Controllers\Api\V1\Admin\StaffBookingController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
@@ -196,6 +197,8 @@ Route::prefix('v1')->group(function () {
         // Bookings, invoices and payments. Per-action permissions are checked in the controller.
         Route::middleware('permission:bookings.view_all|bookings.view_own,staff')->controller(BookingController::class)->group(function () {
             Route::get('bookings', 'index');
+            Route::get('bookings/options', [StaffBookingController::class, 'options']);
+            Route::post('bookings', [StaffBookingController::class, 'store']);
             Route::get('bookings/{id}', 'show')->whereNumber('id');
             Route::delete('bookings/{id}', 'destroy')->whereNumber('id');
             Route::put('bookings/{id}/quote', 'updateQuote')->whereNumber('id');

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 
+import { buttonClass } from '../components/ui/button'
 import { HeaderToolsContext } from '../components/ui/layout'
 import { useFormat } from '../lib/useFormat'
 import { useTheme } from '../lib/useTheme'
@@ -61,7 +62,20 @@ export function Shell() {
           </button>
         </div>
         <main id="main" className="flex min-w-0 flex-1 flex-col gap-admin-gap px-admin-x py-admin-y">
-          <HeaderToolsContext.Provider value={searchable ? <HeaderSearch /> : null}>
+          <HeaderToolsContext.Provider
+            value={
+              searchable || can('bookings.create') ? (
+                <>
+                  {searchable ? <HeaderSearch /> : null}
+                  {can('bookings.create') && location.pathname !== '/bookings/new' ? (
+                    <Link to="/bookings/new" className={buttonClass('cta')}>
+                      {t('shell.newBooking')}
+                    </Link>
+                  ) : null}
+                </>
+              ) : null
+            }
+          >
             <Outlet />
           </HeaderToolsContext.Provider>
         </main>
