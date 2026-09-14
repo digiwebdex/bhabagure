@@ -58,7 +58,8 @@ type Props<T> = {
   rowKey: (row: T) => string | number
   /** Names the row in each action's accessible name and in the phone sheet's title: the reference, or the name. */
   rowLabel: (row: T) => string
-  actions: (row: T) => RowAction[]
+  /** Leave out for a read-only list: no actions column is drawn. */
+  actions?: (row: T) => RowAction[]
   onRowClick?: (row: T) => void
   isSelected?: (row: T) => boolean
   testId?: string
@@ -108,15 +109,17 @@ export function DataTable<T>({ label, columns, rows, rowKey, rowLabel, actions, 
                   {column.header}
                 </th>
               ))}
-              <th scope="col" data-sticky-actions className="sticky right-0 z-1 w-px border-b border-app-line bg-app-surface py-2.5 pr-4.5 pl-1.5 text-right font-display text-12 font-semibold tracking-eyebrow whitespace-nowrap text-app-muted uppercase group-data-[edge=true]/table:shadow-sticky-edge">
-                {t('table.actions')}
-              </th>
+              {actions ? (
+                <th scope="col" data-sticky-actions className="sticky right-0 z-1 w-px border-b border-app-line bg-app-surface py-2.5 pr-4.5 pl-1.5 text-right font-display text-12 font-semibold tracking-eyebrow whitespace-nowrap text-app-muted uppercase group-data-[edge=true]/table:shadow-sticky-edge">
+                  {t('table.actions')}
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => {
               const selected = isSelected?.(row) ?? false
-              const rowActions = actions(row)
+              const rowActions = actions?.(row) ?? []
               const name = rowLabel(row)
               return (
                 <tr
@@ -131,24 +134,26 @@ export function DataTable<T>({ label, columns, rows, rowKey, rowLabel, actions, 
                       {column.cell(row)}
                     </td>
                   ))}
-                  <td data-sticky-actions className={`sticky right-0 z-1 w-px bg-inherit py-2 pr-4.5 pl-1.5 whitespace-nowrap ${cellBase.replace('px-4 py-3 ', '')} group-data-[edge=true]/table:shadow-sticky-edge`}>
-                    <div className="hidden items-center justify-end gap-0.75 sm:flex">
-                      {rowActions.map((action) => (
-                        <ActionIcon key={action.key} action={action} rowName={name} />
-                      ))}
-                    </div>
-                    <div className="flex justify-end sm:hidden">
-                      <button
-                        type="button"
-                        onClick={() => setSheetRow(row)}
-                        aria-label={t('table.actionsFor', { name })}
-                        aria-haspopup="dialog"
-                        className="flex size-8 cursor-pointer items-center justify-center rounded-8 border border-app-line bg-transparent text-16 text-app-text hover:bg-app-surface-2"
-                      >
-                        ⋯
-                      </button>
-                    </div>
-                  </td>
+                  {actions ? (
+                    <td data-sticky-actions className={`sticky right-0 z-1 w-px bg-inherit py-2 pr-4.5 pl-1.5 whitespace-nowrap ${cellBase.replace('px-4 py-3 ', '')} group-data-[edge=true]/table:shadow-sticky-edge`}>
+                      <div className="hidden items-center justify-end gap-0.75 sm:flex">
+                        {rowActions.map((action) => (
+                          <ActionIcon key={action.key} action={action} rowName={name} />
+                        ))}
+                      </div>
+                      <div className="flex justify-end sm:hidden">
+                        <button
+                          type="button"
+                          onClick={() => setSheetRow(row)}
+                          aria-label={t('table.actionsFor', { name })}
+                          aria-haspopup="dialog"
+                          className="flex size-8 cursor-pointer items-center justify-center rounded-8 border border-app-line bg-transparent text-16 text-app-text hover:bg-app-surface-2"
+                        >
+                          ⋯
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               )
             })}
@@ -159,7 +164,7 @@ export function DataTable<T>({ label, columns, rows, rowKey, rowLabel, actions, 
       <Dialog open={sheetRow !== null} onClose={() => setSheetRow(null)} title={sheetRow ? t('table.actionsFor', { name: rowLabel(sheetRow) }) : ''}>
         {sheetRow ? (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {actions(sheetRow).map((action) => (
+            {(actions?.(sheetRow) ?? []).map((action) => (
               <li key={action.key}>
                 <SheetAction action={action} onDone={() => setSheetRow(null)} />
               </li>

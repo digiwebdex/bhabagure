@@ -50,6 +50,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'commission.view_all' => ['staff', 'সবার কমিশন দেখা', 'View all commission'],
         'staff_documents.view' => ['staff', 'স্টাফের ডকুমেন্ট দেখা', 'View staff documents'],
         'staff_documents.manage' => ['staff', 'স্টাফের ডকুমেন্ট আপলোড ও আর্কাইভ', 'Upload and archive staff documents'],
+        'attendance.view_all' => ['staff', 'সবার হাজিরা দেখা', 'View everyone’s attendance'],
+        'attendance.manage' => ['staff', 'হাজিরা, ডিভাইস ও ছুটি ব্যবস্থাপনা', 'Manage attendance, devices and leave'],
         'cms.manage' => ['website', 'ওয়েবসাইট কনটেন্ট ব্যবস্থাপনা', 'Manage website content'],
         'reports.view' => ['reports', 'রিপোর্ট দেখা', 'View reports'],
         'reports.export' => ['reports', 'রিপোর্ট এক্সপোর্ট', 'Export reports'],
@@ -70,7 +72,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'customers.view', 'customers.manage',
             'clients.manage', 'b2b_rates.manage', 'packages.manage', 'pricing.manage', 'payments.view', 'invoices.manage',
             'transactions.create_manual', 'ledger.view_company_balance', 'staff.manage', 'bonus.manage', 'commission.view_all',
-            'staff_documents.view', 'staff_documents.manage',
+            'staff_documents.view', 'staff_documents.manage', 'attendance.view_all', 'attendance.manage',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
             'notifications.send', 'notifications.manage', 'support.manage',
         ]],
@@ -82,6 +84,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'accountant' => ['হিসাবরক্ষক', 'Accountant', [
             'bookings.view_all', 'quotations.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',
             'ledger.view_company_balance', 'commission.view_all', 'reports.view', 'reports.export', 'reports.profit_loss', 'support.manage',
+            'attendance.view_all',
         ]],
         'tour_operator' => ['ট্যুর অপারেটর', 'Tour operator', [
             'bookings.view_all', 'bookings.create', 'bookings.update', 'customers.view', 'packages.manage', 'pricing.manage',

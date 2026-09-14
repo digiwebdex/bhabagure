@@ -19,6 +19,9 @@ const page = (load: () => Promise<Record<string, unknown>>, name: string) => {
 }
 
 const AirTicketingPage = page(() => import('../features/air/AirTicketingPage'), 'AirTicketingPage')
+const AttendancePage = page(() => import('../features/attendance/AttendancePage'), 'AttendancePage')
+const AttendanceStaffPage = page(() => import('../features/attendance/AttendanceStaffPage'), 'AttendanceStaffPage')
+const MyAttendancePage = page(() => import('../features/attendance/MyAttendancePage'), 'MyAttendancePage')
 const BookingDetailPage = page(() => import('../features/bookings/BookingDetailPage'), 'BookingDetailPage')
 const BookingListPage = page(() => import('../features/bookings/BookingListPage'), 'BookingListPage')
 const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'), 'NewBookingPage')
@@ -103,6 +106,9 @@ export const router = createBrowserRouter([
       { path: 'gallery', element: <Require permissions={cms}><GalleryPage /></Require> },
       { path: 'media', element: <Require permissions={['packages.manage', 'cms.manage']}><MediaLibraryPage /></Require> },
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },
+      { path: 'attendance', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendancePage /></Require> },
+      { path: 'attendance/staff/:id', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendanceStaffPage /></Require> },
+      { path: 'my-attendance', element: <MyAttendancePage /> },
       { path: 'staff', element: <Require permissions={['staff.manage']}><StaffPage /></Require> },
       { path: 'staff/:id', element: <Require permissions={['staff.manage']}><StaffProfilePage /></Require> },
       { path: 'vault', element: <Require permissions={['staff_documents.view']}><VaultPage /></Require> },

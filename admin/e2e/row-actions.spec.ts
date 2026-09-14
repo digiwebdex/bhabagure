@@ -29,6 +29,10 @@ const TABLES = [
   { name: 'Staff', url: '/staff', testId: 'staff-table', width: 700, icons: 3 },
   // Open file, Replace, Archive, Open staff record (§4.2).
   { name: 'Vault', url: '/vault', testId: 'staff-documents-table', width: 700, icons: 4 },
+  // Open days (§5.1).
+  { name: 'Attendance', url: '/attendance', testId: 'attendance-month-table', width: 700, icons: 1 },
+  // Approve, Reject, Revoke, Open their days (§5.1).
+  { name: 'Leave requests', url: '/attendance?status=all', testId: 'leave-requests-table', width: 700, icons: 4 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -57,6 +61,11 @@ test.beforeAll(async ({ browser }) => {
   artisan(
     'tinker',
     `--execute=foreach (App\\Models\\Staff::query()->orderBy('id')->take(3)->get() as $i => $s) { App\\Models\\StaffDocument::query()->create(['staff_id' => $s->id, 'type' => $i === 1 ? 'certificate' : 'passport', 'title' => $i === 1 ? 'IATA fares and ticketing course certificate with a long title' : null, 'number' => 'BX447122'.$i, 'expires_on' => now()->addDays(20 + $i * 40)->toDateString(), 'disk' => 'local', 'path' => 'staff-documents/sticky.enc', 'mime' => 'application/pdf', 'bytes' => 1]); } echo 'ok';`,
+  )
+  // Leave requests for the queue, one with a long reason.
+  artisan(
+    'tinker',
+    `--execute=foreach (App\\Models\\Staff::query()->orderBy('id')->skip(1)->take(3)->get() as $i => $s) { app(App\\Services\\Attendance\\LeaveDesk::class)->file($s, now()->addDays(60 + $i * 3)->toDateString(), now()->addDays(61 + $i * 3)->toDateString(), $i === 1 ? 'Sticky leave for a family wedding in Sylhet, travelling by the night coach both ways' : 'Sticky leave '.$i, $s); } echo 'ok';`,
   )
   // Air enquiries straight into the table (the public form is rate-limited per address).
   artisan(

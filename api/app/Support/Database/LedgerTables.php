@@ -26,6 +26,12 @@ final class LedgerTables
         'journal_lines',
         'opening_balances',
         'wallet_transactions',
+        // Attendance (docs/phase-7-hr-attendance-bonus-wallet.md §5): punches as the device recorded them, the device sync
+        // log, hand corrections (undone by reversal rows) and the steps of each leave request.
+        'attendance_punches',
+        'attendance_sync_events',
+        'attendance_corrections',
+        'leave_request_events',
     ];
 
     public static function contains(string $table): bool

@@ -203,6 +203,15 @@ class NotificationTemplateSeeder extends Seeder
                 "স্টাফ ডকুমেন্টের মেয়াদ শেষ হচ্ছে।\n\nস্টাফ: {{staff}}\nডকুমেন্ট: {{document}}\nমেয়াদ: {{expires}} ({{days}})\n\nনবায়নের পর ভল্টে নতুন কপি দিয়ে পুরোনোটি বদলে দিন: {{link}}",
                 "A staff document is expiring.\n\nStaff: {{staff}}\nDocument: {{document}}\nExpires: {{expires}} ({{days}})\n\nOnce it is renewed, replace it with the new copy in the Vault: {{link}}",
                 'ডকুমেন্টের মেয়াদ · {{staff}}', 'Document expiry · {{staff}}'],
+
+            [NotificationEvent::AttendanceDeviceOfflineAlert, $wa,
+                "হাজিরা ডিভাইস {{device}} থেকে পাঞ্চ আসছে না।\nকারণ: {{reason}}\nসর্বশেষ সফল সিঙ্ক: {{since}}\n{{link}}",
+                "No punches are coming from the attendance device {{device}}.\nWhy: {{reason}}\nLast good sync: {{since}}\n{{link}}",
+                null, null],
+            [NotificationEvent::AttendanceDeviceOfflineAlert, $mail,
+                "হাজিরা ডিভাইস {{device}} থেকে এক ঘণ্টার বেশি পাঞ্চ আসছে না।\n\nকারণ: {{reason}}\nসর্বশেষ সফল সিঙ্ক: {{since}}\n\nপাঞ্চ ডিভাইসেই জমা থাকে, সংযোগ ফিরলে চলে আসবে। অবস্থা দেখুন: {{link}}",
+                "No punches have come from the attendance device {{device}} for over an hour.\n\nWhy: {{reason}}\nLast good sync: {{since}}\n\nPunches wait on the device and arrive once the link is back. See its status: {{link}}",
+                'হাজিরা ডিভাইস সংযোগহীন · {{device}}', 'Attendance device offline · {{device}}'],
         ];
     }
 }

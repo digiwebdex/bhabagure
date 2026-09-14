@@ -8,8 +8,25 @@ import type { Data, Paginated } from '../../lib/api/types'
 export type NotificationChannel = 'whatsapp' | 'email' | 'sms'
 export const CHANNELS: NotificationChannel[] = ['whatsapp', 'email', 'sms']
 export type NotificationStatus = 'pending' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'skipped' | 'cancelled'
-export type AlertEvent = 'new_booking_alert' | 'new_lead_alert' | 'low_seat_alert' | 'quote_accepted_alert' | 'support_ticket_alert' | 'nps_follow_up_alert' | 'staff_document_expiring_alert'
-export const ALERT_EVENTS: AlertEvent[] = ['new_booking_alert', 'new_lead_alert', 'low_seat_alert', 'quote_accepted_alert', 'support_ticket_alert', 'nps_follow_up_alert', 'staff_document_expiring_alert']
+export type AlertEvent =
+  | 'new_booking_alert'
+  | 'new_lead_alert'
+  | 'low_seat_alert'
+  | 'quote_accepted_alert'
+  | 'support_ticket_alert'
+  | 'nps_follow_up_alert'
+  | 'staff_document_expiring_alert'
+  | 'attendance_device_offline_alert'
+export const ALERT_EVENTS: AlertEvent[] = [
+  'new_booking_alert',
+  'new_lead_alert',
+  'low_seat_alert',
+  'quote_accepted_alert',
+  'support_ticket_alert',
+  'nps_follow_up_alert',
+  'staff_document_expiring_alert',
+  'attendance_device_offline_alert',
+]
 
 export type NotificationMessage = {
   id: number

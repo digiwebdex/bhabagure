@@ -6,6 +6,7 @@ use App\Enums\NotificationChannel;
 use App\Enums\NotificationEvent;
 use App\Enums\NotificationStatus;
 use App\Jobs\DeliverNotification;
+use App\Models\AttendanceDevice;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Inquiry;
@@ -148,6 +149,19 @@ final class NotificationPlanner
     {
         $this->toStaff(NotificationEvent::StaffDocumentExpiringAlert, $document, occasion: ":{$occasion}",
             fallback: fn () => Staff::permission('staff_documents.manage')->where('status', 'active')->get());
+    }
+
+    /**
+     * The attendance device has been silent for an hour of duty time: once per outage (the outage is named by the last good
+     * pull), to the alert's list or, with nobody on it, everyone active who manages attendance.
+     *
+     * @param  string  $reason  pc_silent · device_unreachable
+     */
+    public function attendanceDeviceOffline(AttendanceDevice $device, string $reason): void
+    {
+        $this->toStaff(NotificationEvent::AttendanceDeviceOfflineAlert, $device, extra: ['reason' => $reason],
+            occasion: ':'.($device->last_pull_ok_at?->timestamp ?? 'never'),
+            fallback: fn () => Staff::permission('attendance.manage')->where('status', 'active')->get());
     }
 
     /** Trip messages still waiting are cancelled with the booking. */

@@ -27,6 +27,7 @@ use App\Models\Quotation;
 use App\Models\ReferencePreset;
 use App\Models\Review;
 use App\Models\SiteSetting;
+use App\Models\AttendanceDevice;
 use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\SupportTicket;
@@ -179,6 +180,8 @@ class AppServiceProvider extends ServiceProvider
             'role' => Role::class,
             // Staff document expiry alerts (docs/phase-7-hr-attendance-bonus-wallet.md §4.2).
             'staff_document' => StaffDocument::class,
+            // Attendance devices: audit rows and offline alerts (§5).
+            'attendance_device' => AttendanceDevice::class,
         ]);
 
         // Ledger tables are append-only on every connection, whichever way SQL is sent (LedgerTables).
@@ -249,6 +252,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
         // Staff invitation and reset links are 256-bit tokens; this only stops one address hammering the endpoint.
         RateLimiter::for('staff-invitations', fn (Request $request) => Limit::perMinute(10)->by('staff-invitations|'.$request->ip()));
+        // The office agent: a check-in a minute, a report, and batches — a full resend of a large device log is a few
+        // hundred batches, which this lets through in a couple of minutes.
+        RateLimiter::for('attendance-agent', fn (Request $request) => Limit::perMinute(300)->by('attendance-agent|'.($request->attributes->get('attendance_device')?->id ?? $request->ip())));
 
         RateLimiter::for('media-upload', fn (Request $request) => Limit::perMinute(60)->by('upload|'.($request->user('staff')?->id ?? $request->ip())));
     }

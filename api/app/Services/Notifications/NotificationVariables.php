@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Enums\InquiryType;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationEvent;
+use App\Models\AttendanceDevice;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Inquiry;
@@ -44,6 +45,11 @@ final class NotificationVariables
         if (isset($extra['score'])) {
             $extra['score'] = Numerals::number($extra['score'], $locale);
         }
+        // An offline device's reason is a code from the planner; the words are the recipient's language.
+        $deviceReason = (string) ($extra['reason'] ?? '');
+        if ($related instanceof AttendanceDevice) {
+            unset($extra['reason']);
+        }
 
         $values = match (true) {
             $related instanceof Booking => $this->booking($related, $locale, $money),
@@ -52,6 +58,7 @@ final class NotificationVariables
             $related instanceof Quotation => $this->quotation($related, $locale, $money),
             $related instanceof SupportTicket => $this->supportTicket($related, $locale),
             $related instanceof StaffDocument => $this->staffDocument($related, $locale),
+            $related instanceof AttendanceDevice => $this->attendanceDevice($related, $locale, $deviceReason),
             default => [],
         };
 
@@ -152,6 +159,25 @@ final class NotificationVariables
                 default => $en ? Numerals::number(-$days, $locale).' '.Str::plural('day', -$days).' ago' : Numerals::number(-$days, $locale).' দিন আগে',
             },
             'link' => rtrim((string) config('bhabaghure.admin_url'), '/').'/vault?status=attention',
+        ];
+    }
+
+    /**
+     * @param  string  $reason  pc_silent: the office PC stopped checking in; device_unreachable: it can't reach the device
+     * @return array<string, string>
+     */
+    private function attendanceDevice(AttendanceDevice $device, string $locale, string $reason): array
+    {
+        $en = $locale === 'en';
+        $since = $device->last_pull_ok_at?->timezone('Asia/Dhaka');
+
+        return [
+            'device' => $device->name,
+            'since' => $since === null ? ($en ? 'never' : 'কখনও নয়') : Numerals::date($since->toDateString(), $locale).', '.Numerals::localizeDigits($since->format('H:i'), $locale),
+            'reason' => $reason === 'pc_silent'
+                ? ($en ? 'the office PC that reads it has stopped checking in (is it switched on and online?)' : 'যে অফিস পিসি এটি পড়ে সেটি সাড়া দিচ্ছে না (পিসি চালু ও ইন্টারনেটে আছে কি?)')
+                : ($en ? 'the office PC can’t reach the device (power, cable or network)' : 'অফিস পিসি ডিভাইসে পৌঁছাতে পারছে না (বিদ্যুৎ, ক্যাবল বা নেটওয়ার্ক)'),
+            'link' => rtrim((string) config('bhabaghure.admin_url'), '/').'/attendance',
         ];
     }
 

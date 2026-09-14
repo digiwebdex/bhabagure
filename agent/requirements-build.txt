@@ -1,0 +1,2 @@
+# Only for build.ps1; never shipped as a dependency of the agent itself.
+pyinstaller==6.16.0

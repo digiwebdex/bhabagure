@@ -1,6 +1,6 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): step 1 built (§12); building step 2.**
+**Status (2026-09-15): steps 1 and 2 built (§12); step 3 (salary) next.**
 
 ## 0. Decisions (2026-09-15)
 
@@ -545,3 +545,89 @@ through the API (`role_name_en` / `role_name_bn`).
   - `staff.spec.ts`: invitation to first sign-in in a separate browser, link used once; document upload, open and archive
     with the badge; a custom role in the matrix;
   - Staff and Vault in the row-actions matrix.
+
+### Step 2 — biometric attendance (2026-09-15)
+
+**The agent** (`agent/`, Python with pyzk 0.9 and its dependency `future` 1.0.0, both pinned by hash; see
+`agent/README.md`), built as designed in §5.2:
+- **Schedule:** Task Scheduler runs `agent.exe run` every minute as SYSTEM. It checks in, and every 15 minutes or on a
+  command it reads the device, reports and sends unacknowledged punches in batches of 500.
+- **Device calls:** `GuardedConnection` refuses any pyzk call outside the allowed reads and the clock write.
+- **Stored on the PC:**
+  - the token in DPAPI (machine scope) in a folder readable only by SYSTEM and Administrators;
+  - acknowledged punch keys in SQLite;
+  - office time as a fixed UTC+6, so the PC's timezone doesn't matter.
+- **Install and build:** `install.ps1` installs, updates and uninstalls. `build.ps1` runs the tests and makes the zip;
+  the build is never committed.
+- **Commands:** `run`, `test`, `status`, `pull --full`, `set-token`, `configure`.
+- **Tests:** 15 unit tests with a fake device and a fake API.
+
+**The API:**
+- **Agent endpoints** (`/api/v1/attendance-agent/check-in | device | punches`):
+  - A device token goes through the `attendance.agent` middleware: looked up by SHA-256, refused with 401 when revoked
+    or rotated, and repeated failures from one address are throttled.
+  - The first report binds the serial; a different one gets 409 `device_changed` (logged) until *Confirm replacement*.
+  - Punches are inserted with `INSERT IGNORE` on (device, device user, device time). The reply counts stored,
+    duplicates and rejected (`future`, `too_old` before 2015).
+  - Commands (`pull`, `test`, `set_clock`) go out at check-in until the agent reports them. After 10 minutes they
+    expire, visibly.
+- **Days** (`DailyAttendance`) are computed, never stored, from punches through the device-user mapping, corrections in
+  force, approved leave, holidays, weekly off days and joining or leaving dates, in office time.
+  - Statuses: full, late, early, late-and-early, single punch (a second tap within 10 minutes counts as none), leave
+    (paid or unpaid), absent, off, holiday, worked on a day off, not employed, in progress, upcoming.
+  - The totals include what salary uses: reduced days, absent days, working days outside employment.
+- **Rules** are versioned by effective month (the design's defaults are seeded from 2000-01), with holidays alongside.
+  **Corrections** are append-only, undone by reversal rows; nobody corrects their own attendance except the super
+  admin.
+- **Leave** (`LeaveDesk`):
+  - staff file and cancel their own;
+  - `attendance.manage` approves (paid or unpaid), rejects with a reason, revokes, or records leave for someone;
+  - nobody decides their own, except the super admin;
+  - every step is a `leave_request_events` row.
+- **Append-only:** punches, the sync log, corrections and leave events are in `LedgerTables`.
+- **Permissions:** `attendance.view_all` (Admin, Accountant), `attendance.manage` (Admin). My attendance needs none.
+- **Badge:** `leave_requests` (pending), part of the nav-counts contract.
+- **Alert:** `attendance:watch-devices` runs every 5 minutes. From an hour into the duty day to its end, on a working day,
+  it sends `attendance_device_offline_alert` once per outage after an hour without a good pull. The alert says whether
+  the office PC went quiet or can't reach the device, and goes to its list or else to attendance managers.
+
+**The admin:**
+- **Attendance:**
+  - the device card with state, device facts, clock drift, sync log, Sync now, Test link and Set device clock (shown past
+    2 minutes of drift);
+  - device users matched to staff or ignored, and the token shown once on adding or rotating;
+  - the rules form and holidays;
+  - KPIs, and the monthly table with today's status;
+  - the leave queue, which the badge opens at `?status=pending`.
+- **A person's month:** every day with in, out, hours and status, corrections (add, undo with a reason) and their leave.
+- **My attendance** for everyone: their own days, and leave requests filed and cancelled there.
+
+`DataTable` now takes `actions` as optional, so a read-only list draws no actions column.
+
+**Differences from the plan:**
+- Only reports, batches and commands go in the sync log; a check-in every minute would flood it. The last check-in
+  time is kept on the device instead.
+- Punches aren't linked to their sync-log row. The log row is append-only and written after the insert, which is when
+  its counts are known.
+- Salary columns (base, payable, cut) join the monthly table in step 3.
+
+**Tests:**
+- **API:**
+  - `AttendanceAgentTest`: tokens, serial binding and replacement, replays and impossible times, commands;
+  - `AttendanceDaysTest`: every status at its edges, grace, single-punch rules, corrections and reversal, mapping and
+    ignoring, permissions, rules by month;
+  - `LeaveRequestsTest`: filing, overlap, approval unpaid, revoke, cancel, own-leave rule, and the offline alert once per
+    outage within duty hours;
+  - `NavCountsContractTest` covers the leave badge.
+- **Admin e2e:**
+  - `attendance.spec.ts`: device, token and agent sync with replay; mapping; correction; Sync now round trip; leave
+    asked for and approved unpaid, with the badge;
+  - Attendance and Leave requests in the row-actions matrix.
+- **Agent:**
+  - 16 unit tests;
+  - `build.ps1` builds the zip (PyInstaller, Python 3.14; it also checks pyzk imports);
+  - the built `agent.exe` was run against a local API: token stored with DPAPI, check-in accepted, an unreachable
+    device reported and recorded. That run found and fixed a token piped from PowerShell arriving with a byte-order
+    mark.
+  - A request with the agent's User-Agent reaches the production API through Cloudflare without a challenge.
+  - Still to do at the office: `agent.exe test` against the real K40.

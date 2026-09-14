@@ -1,6 +1,10 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
+use App\Models\AttendanceDevice;
+use App\Models\AttendanceRule;
+use App\Models\Holiday;
 use App\Enums\NotificationStatus;
 use App\Enums\PaymentAttemptStatus;
 use App\Jobs\DeliverNotification;
@@ -124,6 +128,34 @@ Artisan::command('staff-documents:remind-expiring', function (NotificationPlanne
 })->purpose('Alert staff 30 days before a staff document expires, and on the day');
 
 Schedule::command('staff-documents:remind-expiring')->dailyAt('09:00')->timezone('Asia/Dhaka')->onOneServer();
+
+// docs/phase-7-hr-attendance-bonus-wallet.md §5.1: an attendance device with no good pull for an hour, during duty hours on
+// a working day, alerts once per outage — saying whether the office PC went quiet or can't reach the device. A good pull
+// clears the flag (AgentGateway::report), so the next outage alerts again. Outside duty hours a silent PC is normal.
+Artisan::command('attendance:watch-devices', function (NotificationPlanner $planner) {
+    $now = now('Asia/Dhaka');
+    $rules = AttendanceRule::forMonth($now->format('Y-m'));
+    $working = ! in_array($now->dayOfWeekIso, $rules->weekly_off_days, true) && ! Holiday::query()->whereDate('date', $now->toDateString())->exists();
+    // From an hour into the duty day to its end: a PC switched on at 11:00 isn't an outage at 11:05.
+    $time = $now->format('H:i:s');
+    $watchFrom = $now->copy()->setTimeFromTimeString((string) $rules->duty_start)->addHour()->format('H:i:s');
+    if (! $working || $time < $watchFrom || $time > (string) $rules->duty_end) {
+        return;
+    }
+
+    $count = 0;
+    AttendanceDevice::query()->active()->whereNotNull('serial_number')->whereNull('offline_alerted_at')
+        ->where(fn ($query) => $query->whereNull('last_pull_ok_at')->orWhere('last_pull_ok_at', '<', now()->subHour()))
+        ->each(function (AttendanceDevice $device) use ($planner, &$count) {
+            $silent = $device->last_check_in_at === null || $device->last_check_in_at->lt(now()->subMinutes(AttendanceDeviceController::SILENT_MINUTES));
+            $device->forceFill(['offline_alerted_at' => now()])->save();
+            $planner->attendanceDeviceOffline($device, $silent ? 'pc_silent' : 'device_unreachable');
+            $count++;
+        });
+    $this->info("Alerted about {$count} silent attendance device(s).");
+})->purpose('Alert when an attendance device has been silent for an hour of duty time');
+
+Schedule::command('attendance:watch-devices')->everyFiveMinutes()->onOneServer();
 
 // Passport scans no booking used are deleted after their retention window (config bhabaghure.passport_ocr).
 Artisan::command('passport-scans:prune', function (PassportScanner $scanner) {

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\Admin\AirInquiryController;
 use App\Http\Controllers\Api\V1\Admin\AssignableStaffController;
+use App\Http\Controllers\Api\V1\Admin\AttendanceController;
+use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
 use App\Http\Controllers\Api\V1\Admin\BlogCategoryController;
 use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
@@ -13,7 +15,9 @@ use App\Http\Controllers\Api\V1\Admin\DealController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
+use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\MyAttendanceController;
 use App\Http\Controllers\Api\V1\Admin\MyRecordController;
 use App\Http\Controllers\Api\V1\Admin\NavCountController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
@@ -33,6 +37,7 @@ use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
+use App\Http\Controllers\Api\V1\Agent\AttendanceAgentController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffInvitationController;
@@ -179,6 +184,14 @@ Route::prefix('v1')->group(function () {
     // WaSenderAPI delivery status, session status and STOP replies. Refused without the shared secret.
     Route::post('webhooks/wasender', WaSenderWebhookController::class)->middleware('throttle:webhooks');
 
+    // ── Office attendance agent ──────────────────────────────────────────────────────────────────────
+    // docs/phase-7-hr-attendance-bonus-wallet.md §5.2: a device token, not a staff session.
+    Route::prefix('attendance-agent')->middleware(['attendance.agent', 'throttle:attendance-agent'])->controller(AttendanceAgentController::class)->group(function () {
+        Route::post('check-in', 'checkIn');
+        Route::post('device', 'report');
+        Route::post('punches', 'punches');
+    });
+
     // ── CMS (staff) ──────────────────────────────────────────────────────────────────────────────────
     Route::prefix('admin')->middleware(['auth:staff', 'staff.can-work'])->group(function () {
 
@@ -274,6 +287,46 @@ Route::prefix('v1')->group(function () {
             Route::post('staff/{id}/documents', 'store')->whereNumber('id')->middleware('throttle:media-upload');
             Route::post('staff-documents/{id}/replace', 'replace')->whereNumber('id')->middleware('throttle:media-upload');
             Route::post('staff-documents/{id}/archive', 'archive')->whereNumber('id');
+        });
+
+        // Attendance (docs/phase-7-hr-attendance-bonus-wallet.md §5). Changes also need attendance.manage (checked in the
+        // controllers); leave decisions are attendance.manage's alone.
+        Route::middleware('permission:attendance.view_all|attendance.manage,staff')->group(function () {
+            Route::controller(AttendanceDeviceController::class)->group(function () {
+                Route::get('attendance/devices', 'index');
+                Route::post('attendance/devices', 'store');
+                Route::post('attendance/devices/{id}/rotate-token', 'rotateToken')->whereNumber('id');
+                Route::post('attendance/devices/{id}/revoke', 'revoke')->whereNumber('id');
+                Route::post('attendance/devices/{id}/commands', 'command')->whereNumber('id');
+                Route::post('attendance/devices/{id}/allow-replacement', 'allowReplacement')->whereNumber('id');
+                Route::get('attendance/devices/{id}/users', 'users')->whereNumber('id');
+                Route::put('attendance/device-users/{userId}', 'mapUser')->whereNumber('userId');
+            });
+            Route::controller(AttendanceController::class)->group(function () {
+                Route::get('attendance/month', 'month');
+                Route::get('attendance/staff/{id}', 'staff')->whereNumber('id');
+                Route::get('attendance/rules', 'rules');
+                Route::put('attendance/rules', 'saveRules');
+                Route::get('attendance/holidays', 'holidayList');
+                Route::post('attendance/holidays', 'storeHoliday');
+                Route::delete('attendance/holidays/{id}', 'destroyHoliday')->whereNumber('id');
+                Route::post('attendance/corrections', 'correct');
+                Route::post('attendance/corrections/{id}/reverse', 'reverseCorrection')->whereNumber('id');
+            });
+        });
+        Route::middleware('permission:attendance.manage,staff')->controller(LeaveRequestController::class)->group(function () {
+            Route::get('leave-requests', 'index');
+            Route::post('leave-requests', 'store');
+            Route::post('leave-requests/{id}/approve', 'approve')->whereNumber('id');
+            Route::post('leave-requests/{id}/reject', 'reject')->whereNumber('id');
+            Route::post('leave-requests/{id}/revoke', 'revoke')->whereNumber('id');
+        });
+        // Everyone's own attendance and leave: no permission, and no staff id to point elsewhere.
+        Route::controller(MyAttendanceController::class)->group(function () {
+            Route::get('profile/attendance', 'month');
+            Route::get('profile/leave-requests', 'leave');
+            Route::post('profile/leave-requests', 'file');
+            Route::post('profile/leave-requests/{id}/cancel', 'cancel')->whereNumber('id');
         });
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).

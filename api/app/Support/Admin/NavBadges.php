@@ -4,10 +4,12 @@ namespace App\Support\Admin;
 
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
+use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Models\Booking;
 use App\Models\Inquiry;
+use App\Models\LeaveRequest;
 use App\Models\Quotation;
 use App\Models\Staff;
 use App\Models\StaffDocument;
@@ -64,6 +66,13 @@ final class NavBadges
                 'path' => '/api/v1/admin/support-tickets',
                 'filter' => ['status' => SupportTicket::OPEN, 'overdue' => '1'],
                 'query' => fn (Staff $staff) => SupportTicketController::filtered(['status' => SupportTicket::OPEN, 'overdue' => '1']),
+            ],
+            // Leave requests nobody has decided yet — the design's badge on Attendance & salary (Phase 7 §5.1).
+            'leave_requests' => [
+                'permission' => ['attendance.manage'],
+                'path' => '/api/v1/admin/leave-requests',
+                'filter' => ['status' => LeaveRequest::PENDING],
+                'query' => fn (Staff $staff) => LeaveRequestController::filtered(['status' => LeaveRequest::PENDING]),
             ],
             // Staff documents expired or expiring within 30 days, for staff who aren't suspended (Phase 7 §4.2).
             'staff_documents' => [

@@ -55,7 +55,12 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
   // docs/phase-7-hr-attendance-bonus-wallet.md §4: the design's HR and System groups, as far as they are built.
   {
     key: 'hr',
-    items: [{ key: 'staff', path: '/staff', icon: 'S', permissions: ['staff.manage'] }],
+    items: [
+      { key: 'attendance', path: '/attendance', icon: '◷', permissions: ['attendance.view_all', 'attendance.manage'], badge: 'leave_requests' },
+      { key: 'staff', path: '/staff', icon: 'S', permissions: ['staff.manage'] },
+      // Everyone's own days and leave (§5.1).
+      { key: 'my_attendance', path: '/my-attendance', icon: '◴', permissions: [] },
+    ],
   },
   {
     key: 'system',
