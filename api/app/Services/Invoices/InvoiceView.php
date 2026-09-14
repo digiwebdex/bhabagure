@@ -51,13 +51,16 @@ final class InvoiceView
             $invoice->pax_count ? ($locale === 'bn' ? $n($invoice->pax_count).' জন যাত্রী' : $invoice->pax_count.' travellers') : null,
         ]);
 
-        $rows = Transaction::query()->where('booking_id', $invoice->booking_id)
+        $deal = $invoice->kind === Invoice::KIND_DEAL;
+        // A booking's payments are the booking's (they carry over a void and reissue); a deal's are the invoice's own.
+        $rows = Transaction::query()->when($invoice->booking_id !== null, fn ($q) => $q->where('booking_id', $invoice->booking_id), fn ($q) => $q->where('invoice_id', $invoice->id ?? 0))
             ->whereIn('category', [LedgerService::CATEGORY_PAYMENT, LedgerService::CATEGORY_ONLINE_CHARGE])->orderBy('occurred_at')->orderBy('id')->get();
         // An online payment's charge line is listed with the payment it belongs to (same gateway reference).
         $charges = $rows->where('category', LedgerService::CATEGORY_ONLINE_CHARGE)->keyBy(fn (Transaction $t) => (string) preg_replace('/:charge$/', '', (string) $t->external_ref));
         $payments = $rows->where('category', LedgerService::CATEGORY_PAYMENT)
             ->map(fn (Transaction $t) => ($t->direction->value === 'out' ? '− ' : '').$bdt($t->amount).' · '.$this->methodLabel($t->method)
-                .($t->external_ref ? ' · '.$t->external_ref : '').' · '.$date($t->occurred_at)
+                // A gateway or wallet reference; a deal payment's reference is only its label.
+                .(($t->external_ref ?? $t->reference_label) ? ' · '.($t->external_ref ?? $t->reference_label) : '').' · '.$date($t->occurred_at)
                 .(isset($charges[(string) $t->external_ref]) && $t->external_ref !== null
                     ? ' · + '.$bdt($charges[$t->external_ref]->amount).' '.($locale === 'bn' ? 'অনলাইন পেমেন্ট চার্জ' : 'online payment charge')
                     : ''))
@@ -78,13 +81,17 @@ final class InvoiceView
                 'name' => $invoice->billed_name,
                 'lines' => array_values(array_filter([$invoice->billed_phone ? $this->phone($invoice->billed_phone) : null, $invoice->billed_email, $invoice->billed_address])),
             ],
-            'meta' => [
+            'meta' => $deal ? [
+                ['ইনভয়েস তারিখ · Date', $date($invoice->issued_on)],
+                ['প্রস্তুতকারী · Issued by', $invoice->sales_agent_name ?? '—'],
+            ] : [
                 ['ইনভয়েস তারিখ · Date', $date($invoice->issued_on)],
                 ['বুকিং রেফ · Booking', $invoice->booking_reference ?? '—'],
                 ['যাত্রার তারিখ · Travel', $travel],
                 ['সেলস এজেন্ট · Agent', $invoice->sales_agent_name ?? '—'],
             ],
-            'package' => [
+            'packageLabel' => $deal ? 'Service · সেবা' : 'Package · প্যাকেজ',
+            'package' => $deal ? ['title' => $invoice->title, 'code' => null, 'detail' => (string) $invoice->note] : [
                 'title' => $locale === 'bn' ? ($invoice->package_title_bn ?: $invoice->package_title_en) : ($invoice->package_title_en ?: $invoice->package_title_bn),
                 'code' => $invoice->package_code,
                 'detail' => implode(' · ', $packageDetail),
@@ -111,7 +118,9 @@ final class InvoiceView
             'due' => $bdt($invoice->balance_due),
             'hasDue' => (float) $invoice->balance_due > 0,
             'payments' => $payments,
-            'terms' => [
+            'terms' => $deal ? [
+                'চুক্তি অনুযায়ী বাকি অর্থ পরিশোধযোগ্য। এই ইনভয়েস কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
+            ] : [
                 'যাত্রার ২১ দিন আগে বাতিল করলে নন-রিফান্ডেবল অংশ বাদে অর্থ ফেরত দেওয়া হয়। পাসপোর্টের মেয়াদ যাত্রার তারিখ থেকে কমপক্ষে ৬ মাস থাকতে হবে।',
                 'ভিসা প্রত্যাখ্যাত হলে প্রসেসিং ফি অফেরতযোগ্য। এই ইনভয়েস কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
             ],

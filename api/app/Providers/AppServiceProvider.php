@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Listeners\PlanNotifications;
+use App\Models\Account;
 use App\Models\Addon;
 use App\Models\AuditLog;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Booking;
+use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Destination;
 use App\Models\GalleryItem;
@@ -17,10 +19,12 @@ use App\Models\JournalEntry;
 use App\Models\Media;
 use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
+use App\Models\OpeningBalance;
 use App\Models\PackageDeparture;
 use App\Models\PassportScan;
 use App\Models\PaymentAttempt;
 use App\Models\Quotation;
+use App\Models\ReferencePreset;
 use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\Staff;
@@ -161,6 +165,11 @@ class AppServiceProvider extends ServiceProvider
             'notification' => NotificationMessage::class,
             'notification_template' => NotificationTemplate::class,
             'quotation' => Quotation::class,
+            // Journal sources for opening balances; deal invoices billed to a company.
+            'account' => Account::class,
+            'client' => Client::class,
+            'opening_balance' => OpeningBalance::class,
+            'reference_preset' => ReferencePreset::class,
             // Audit rows about permission changes (permissions:sync, later the Roles screen).
             'role' => Role::class,
         ]);

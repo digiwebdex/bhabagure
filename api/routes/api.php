@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController;
+use App\Http\Controllers\Api\V1\Admin\DealController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -14,9 +15,11 @@ use App\Http\Controllers\Api\V1\Admin\NavCountController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PackageController;
 use App\Http\Controllers\Api\V1\Admin\PackageImageController;
+use App\Http\Controllers\Api\V1\Admin\PaymentsController;
 use App\Http\Controllers\Api\V1\Admin\PricingController;
 use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
 use App\Http\Controllers\Api\V1\Admin\QuotationController;
+use App\Http\Controllers\Api\V1\Admin\ReferencePresetController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
@@ -232,6 +235,37 @@ Route::prefix('v1')->group(function () {
             Route::post('quotations/{id}/convert', 'convert')->whereNumber('id');
             Route::post('quotations/{id}/assign', 'assign')->whereNumber('id');
             Route::post('quotations/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['send', 'accept', 'decline', 'withdraw', 'revise']);
+        });
+
+        // Payments & invoices (§4.6): cash book, method cards, company balance, manual entries, online payment review,
+        // opening balances, saved references and deals. Per-action permissions are checked in the controllers.
+        Route::middleware('permission:payments.view,staff')->group(function () {
+            Route::controller(PaymentsController::class)->group(function () {
+                Route::get('payments/summary', 'summary');
+                Route::get('payments/balance', 'balance');
+                Route::get('payments/options', 'options');
+                Route::get('cash-book', 'cashBook');
+                Route::get('cash-book/{id}/evidence', 'evidence')->whereNumber('id');
+                Route::post('cash-book/{id}/reverse', 'reverse')->whereNumber('id');
+                Route::post('cash-entries', 'store')->middleware('throttle:media-upload');
+                Route::post('opening-balances', 'storeOpeningBalance');
+                Route::get('payment-attempts/review', 'reviewIndex');
+                Route::post('payment-attempts/{id}/review', 'markReviewed')->whereNumber('id');
+            });
+            Route::controller(ReferencePresetController::class)->group(function () {
+                Route::get('reference-presets', 'index');
+                Route::post('reference-presets', 'store');
+                Route::delete('reference-presets/{id}', 'destroy')->whereNumber('id');
+            });
+            Route::controller(DealController::class)->group(function () {
+                Route::get('deals', 'index');
+                Route::post('deals', 'store');
+                Route::get('deals/clients', 'clients');
+                Route::get('deals/{id}', 'show')->whereNumber('id');
+                Route::get('deals/{id}/pdf', 'pdf')->whereNumber('id');
+                Route::post('deals/{id}/payments', 'pay')->whereNumber('id')->middleware('throttle:media-upload');
+                Route::post('deals/{id}/void', 'void')->whereNumber('id');
+            });
         });
 
         // Bookings, invoices and payments. Per-action permissions are checked in the controller.

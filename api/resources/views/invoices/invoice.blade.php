@@ -124,7 +124,7 @@
   </section>
 
   <section class="package">
-    <span class="label">Package · প্যাকেজ</span>
+    <span class="label">{{ $packageLabel ?? 'Package · প্যাকেজ' }}</span>
     <strong>{{ $package['title'] }}@if ($package['code']) <span class="num" style="font-weight:400;color:var(--muted);font-size:9pt">· {{ $package['code'] }}</span>@endif</strong>
     @if ($package['detail'])<span class="detail">{{ $package['detail'] }}</span>@endif
   </section>

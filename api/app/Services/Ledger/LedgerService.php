@@ -7,8 +7,10 @@ use App\Models\Account;
 use App\Models\Booking;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
+use App\Models\OpeningBalance;
 use App\Models\Staff;
 use App\Models\Transaction;
+use App\Support\Ledger\CashCategories;
 use App\Support\Pricing\PricingService;
 use App\Support\WriteScope;
 use Illuminate\Database\Eloquent\Model;
@@ -65,6 +67,22 @@ final class LedgerService
         ]);
     }
 
+    /** A deal invoice (no package): Dr Accounts receivable · Cr Deal and service sales · Cr VAT payable when it has VAT. */
+    public function postDealIssued(Invoice $invoice, ?Staff $staff = null): ?JournalEntry
+    {
+        $total = self::paisa($invoice->total_amount);
+        $vat = self::paisa($invoice->vat_amount);
+        if ($total === 0) {
+            return null;
+        }
+
+        return $this->post($invoice, "Deal invoice {$invoice->invoice_number} issued · {$invoice->title}", null, $staff, [
+            [Account::RECEIVABLE, $total, 0],
+            [Account::DEAL_SALES, 0, $total - $vat],
+            [Account::VAT_PAYABLE, 0, $vat],
+        ]);
+    }
+
     public function postInvoiceVoided(Invoice $invoice, ?Staff $staff = null): ?JournalEntry
     {
         $issued = JournalEntry::query()->where('source_type', $invoice->getMorphClass())->where('source_id', $invoice->id)
@@ -112,7 +130,7 @@ final class LedgerService
 
         $common = [
             'method' => $method, 'booking_id' => $booking->id, 'invoice_id' => $invoice->id, 'customer_id' => $booking->customer_id,
-            'client_id' => $booking->client_id, 'occurred_at' => $occurredAt ?? now(), 'recorded_by_staff_id' => $staff?->id,
+            'client_id' => $booking->client_id, 'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff?->id,
             'reference_label' => $referenceLabel,
         ];
         $payment = Transaction::query()->create($common + [
@@ -145,34 +163,200 @@ final class LedgerService
         return $payment;
     }
 
-    /** A mistaken payment is corrected by an opposite entry in the cash book and the journal — never by editing. */
+    /**
+     * A payment on a deal invoice (a standalone invoice with no booking), by a staff member: the cash book row and
+     * Dr money account · Cr Accounts receivable. Never more than is still due.
+     */
+    public function recordDealPayment(
+        Invoice $invoice,
+        string|int|float $amount,
+        string $method,
+        string $description,
+        Staff $staff,
+        ?string $referenceLabel = null,
+        ?string $evidencePath = null,
+        ?\DateTimeInterface $occurredAt = null,
+    ): Transaction {
+        $this->assertInTransaction();
+        $amountPaisa = self::paisa($amount);
+        $account = in_array($method, self::STAFF_METHODS, true) ? self::METHOD_ACCOUNTS[$method] : throw new InvalidArgumentException("Unknown payment method {$method}");
+        if ($amountPaisa <= 0) {
+            throw new InvalidArgumentException('A payment amount must be positive.');
+        }
+        $invoice = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+        if ($invoice->kind !== Invoice::KIND_DEAL || $invoice->status !== Invoice::ISSUED) {
+            throw new LogicException("Invoice {$invoice->invoice_number} is not an issued deal invoice.");
+        }
+        if ($amountPaisa > self::paisa($invoice->total_amount) - $this->invoicePaidPaisa($invoice)) {
+            throw new PaymentExceedsBalance($invoice);
+        }
+
+        $payment = Transaction::query()->create([
+            'direction' => TransactionDirection::In, 'amount' => self::amount($amountPaisa), 'category' => self::CATEGORY_PAYMENT,
+            'method' => $method, 'invoice_id' => $invoice->id, 'customer_id' => $invoice->customer_id, 'client_id' => $invoice->client_id,
+            'description' => $description, 'reference_label' => $referenceLabel, 'evidence_path' => $evidencePath,
+            'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff->id,
+        ]);
+        $this->post($payment, "Payment for {$invoice->invoice_number} · {$description}", null, $staff, [
+            [$account, $amountPaisa, 0],
+            [Account::RECEIVABLE, 0, $amountPaisa],
+        ], on: $occurredAt);
+        $this->syncInvoicePaid($invoice);
+
+        return $payment;
+    }
+
+    /**
+     * A manual cash in or out: the cash book row, and the journal entry between its money account (from the method) and
+     * the category's account — Dr money · Cr category for money in, the other way round for money out.
+     */
+    public function recordManualEntry(
+        TransactionDirection $direction,
+        string|int|float $amount,
+        string $method,
+        string $category,
+        ?string $businessLine,
+        string $description,
+        Staff $staff,
+        ?string $referenceLabel = null,
+        ?string $evidencePath = null,
+        ?\DateTimeInterface $occurredAt = null,
+    ): Transaction {
+        $this->assertInTransaction();
+        [$allowed, $other] = CashCategories::MANUAL[$category] ?? throw new InvalidArgumentException("Unknown cash category {$category}");
+        if ($allowed !== 'both' && $allowed !== $direction->value) {
+            throw new InvalidArgumentException("{$category} is money {$allowed}, not {$direction->value}.");
+        }
+        $money = in_array($method, self::STAFF_METHODS, true) ? self::METHOD_ACCOUNTS[$method] : throw new InvalidArgumentException("Unknown payment method {$method}");
+        if ($businessLine !== null && ! in_array($businessLine, CashCategories::BUSINESS_LINES, true)) {
+            throw new InvalidArgumentException("Unknown business line {$businessLine}");
+        }
+        $paisa = self::paisa($amount);
+        if ($paisa <= 0) {
+            throw new InvalidArgumentException('An amount must be positive.');
+        }
+
+        $entry = Transaction::query()->create([
+            'direction' => $direction, 'amount' => self::amount($paisa), 'category' => $category, 'business_line' => $businessLine,
+            'method' => $method, 'description' => $description, 'reference_label' => $referenceLabel, 'evidence_path' => $evidencePath,
+            'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff->id,
+        ]);
+        $this->post($entry, "Manual {$direction->value} · {$category} · {$description}", null, $staff, $direction === TransactionDirection::In
+            ? [[$money, $paisa, 0], [$other, 0, $paisa]]
+            : [[$other, $paisa, 0], [$money, 0, $paisa]], on: $occurredAt);
+
+        return $entry;
+    }
+
+    /**
+     * A money account's opening balance, once, against Opening balances equity, dated the day the books start. Zero is
+     * recorded without a journal entry. A wrong figure is corrected with a balance adjustment, never re-entered.
+     */
+    public function postOpeningBalance(Account $account, string|int|float $amount, string $asOf, ?string $note, Staff $staff): OpeningBalance
+    {
+        $this->assertInTransaction();
+        if (! in_array($account->code, Account::MONEY, true)) {
+            throw new InvalidArgumentException("Account {$account->code} is not a money account.");
+        }
+        $paisa = self::paisa($amount);
+        if ($paisa < 0) {
+            throw new InvalidArgumentException('An opening balance can\'t be negative.');
+        }
+        Account::query()->whereKey($account->id)->lockForUpdate()->first();
+        if (OpeningBalance::query()->where('account_id', $account->id)->exists()) {
+            throw new LogicException("{$account->name_en} already has its opening balance.");
+        }
+
+        $entry = $paisa === 0 ? null : $this->post($account, "Opening balance · {$account->name_en}", null, $staff, [
+            [$account->code, $paisa, 0],
+            [Account::OPENING_BALANCES, 0, $paisa],
+        ], on: Carbon::parse($asOf, 'Asia/Dhaka'));
+
+        return OpeningBalance::query()->create([
+            'account_id' => $account->id, 'amount' => self::amount($paisa), 'as_of' => $asOf, 'note' => $note,
+            'journal_entry_id' => $entry?->id, 'created_by_staff_id' => $staff->id,
+        ]);
+    }
+
+    /**
+     * A mistake is corrected by an opposite entry in the cash book and the journal — never by editing. Reversible: an
+     * original staff-recorded customer payment (booking or deal) and a manual entry. Not an online payment (refunded
+     * through the gateway), its charge or fee lines, or a reversal.
+     */
     public function reversePayment(Transaction $payment, string $reason, Staff $staff): Transaction
     {
         $this->assertInTransaction();
-        if ($payment->category !== self::CATEGORY_PAYMENT || $payment->reverses_transaction_id !== null) {
-            throw new LogicException('Only an original customer payment can be reversed.');
+        if (! self::reversible($payment)) {
+            throw new LogicException($payment->method === 'sslcommerz'
+                ? 'An online payment is refunded through the gateway, not reversed in the ledger.'
+                : 'Only an original customer payment or manual entry can be reversed.');
         }
-        if ($payment->method === 'sslcommerz') {
-            throw new LogicException('An online payment is refunded through the gateway, not reversed in the ledger.');
-        }
-        $booking = Booking::query()->whereKey($payment->booking_id)->lockForUpdate()->firstOrFail();
+        $booking = $payment->booking_id ? Booking::query()->whereKey($payment->booking_id)->lockForUpdate()->firstOrFail() : null;
+        $invoice = $booking === null && $payment->invoice_id ? Invoice::query()->whereKey($payment->invoice_id)->lockForUpdate()->firstOrFail() : null;
+        Transaction::query()->whereKey($payment->id)->lockForUpdate()->first();
         if (Transaction::query()->where('reverses_transaction_id', $payment->id)->exists()) {
-            throw new LogicException("Payment #{$payment->id} is already reversed.");
+            throw new LogicException("Entry #{$payment->id} is already reversed.");
         }
 
         $reversal = Transaction::query()->create([
             'direction' => $payment->direction->opposite(), 'amount' => $payment->amount, 'category' => $payment->category,
-            'method' => $payment->method, 'booking_id' => $payment->booking_id, 'invoice_id' => $payment->invoice_id,
-            'customer_id' => $payment->customer_id, 'client_id' => $payment->client_id, 'occurred_at' => now(),
-            'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $payment->id,
-            'description' => "Reversal of payment #{$payment->id}: {$reason}",
+            'business_line' => $payment->business_line, 'method' => $payment->method, 'booking_id' => $payment->booking_id,
+            'invoice_id' => $payment->invoice_id, 'customer_id' => $payment->customer_id, 'client_id' => $payment->client_id,
+            'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $payment->id,
+            'description' => "Reversal of #{$payment->id}: {$reason}",
         ]);
 
         $entry = JournalEntry::query()->where('source_type', $payment->getMorphClass())->where('source_id', $payment->id)->firstOrFail();
-        $this->reverse($entry, "Reversal of payment #{$payment->id}: {$reason}", $staff, $reversal);
-        $this->syncPaid($booking);
+        $this->reverse($entry, "Reversal of #{$payment->id}: {$reason}", $staff, $reversal);
+        if ($booking) {
+            $this->syncPaid($booking);
+        } elseif ($invoice) {
+            $this->syncInvoicePaid($invoice);
+        }
 
         return $reversal;
+    }
+
+    /** Whether reversePayment accepts the row (the cash book shows ✕ "Reverse…" only for these). */
+    public static function reversible(Transaction $row): bool
+    {
+        return $row->reverses_transaction_id === null && $row->method !== 'sslcommerz'
+            && ($row->category === self::CATEGORY_PAYMENT || CashCategories::isManual($row->category));
+    }
+
+    /** A deal invoice's paid amount and payment status, from its cash-book rows. */
+    public function syncInvoicePaid(Invoice $invoice): void
+    {
+        $paid = self::amount($this->invoicePaidPaisa($invoice));
+        WriteScope::run(WriteScope::BOOKING_MONEY, fn () => $invoice->forceFill([
+            'paid_amount' => $paid,
+            'payment_status' => PricingService::paymentStatus($invoice->total_amount, $paid),
+        ])->save());
+    }
+
+    public function invoicePaidPaisa(Invoice $invoice): int
+    {
+        $sum = Transaction::query()->where('invoice_id', $invoice->id)->where('category', self::CATEGORY_PAYMENT)
+            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END), 0) AS paid")
+            ->value('paid');
+
+        return self::paisa($sum ?? 0);
+    }
+
+    /**
+     * The company balance: each money account's journal balance (debits − credits), in paisa. Opening balances,
+     * payments, manual entries and reversals are all in the journal, so nothing else is added.
+     *
+     * @return array<string, int> account code => paisa, in Account::MONEY order
+     */
+    public function moneyBalances(): array
+    {
+        $rows = DB::table('journal_lines')->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+            ->whereIn('accounts.code', Account::MONEY)->groupBy('accounts.code')
+            ->selectRaw('accounts.code AS code, SUM(journal_lines.debit) - SUM(journal_lines.credit) AS balance')
+            ->pluck('balance', 'code');
+
+        return collect(Account::MONEY)->mapWithKeys(fn (string $code) => [$code => self::paisa($rows[$code] ?? 0)])->all();
     }
 
     /** Recomputes paid amount and payment status of the booking and its current invoice from the cash book. */
@@ -233,6 +417,15 @@ final class LedgerService
             ->all();
 
         return $this->post($source ?? $entry->source, $description, $entry->booking_id, $staff, $lines, $entry->id);
+    }
+
+    /**
+     * When money moved, as a UTC instant. Eloquent writes a date in its own timezone without converting, so a Dhaka
+     * time passed as-is would be stored six hours off.
+     */
+    private static function instant(?\DateTimeInterface $at): Carbon
+    {
+        return $at === null ? now()->utc() : Carbon::instance($at)->utc();
     }
 
     private function assertInTransaction(): void

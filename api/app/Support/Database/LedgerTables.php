@@ -24,6 +24,7 @@ final class LedgerTables
         'audit_logs',
         'journal_entries',
         'journal_lines',
+        'opening_balances',
         'wallet_transactions',
     ];
 
