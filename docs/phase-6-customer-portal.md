@@ -1,6 +1,6 @@
 # Phase 6 — Customer portal (`customer.bhabaghure.com.bd`)
 
-**Status (2026-09-14): approved, being built.**
+**Status (2026-09-14): built.** What shipped, and where it differs from the plan below, is in §8.
 
 ## 0. Decisions (2026-09-14)
 
@@ -156,3 +156,80 @@ Kept from the plan, open to veto:
    - **(a) Recommended:** defer loyalty and referral (the design contradicts itself, and referral needs a coupon engine). Build NPS: one question after a completed trip, stored, shown to staff; 9–10 gets the review link, 0–6 creates a follow-up for the trip's owner.
    - (b) Show a trips/spend tier as the admin design defines it (Gold 5+ trips or ৳5L, Silver 3–4, Bronze 1–2), display only, plus NPS as in (a).
    - (c) Points as the portal design draws them (needs an earning and spending rule from you).
+
+## 8. What was built (2026-09-14)
+
+### Sign-in (§3.1)
+- `POST customer/auth/code` and `customer/auth/verify`; the password endpoints are gone. The answer to "send a code" is
+  the same for known and unknown numbers. A new number becomes a website lead once it gives a name, after the code.
+- Codes: six digits, 10 minutes, five tries, one a minute and five an hour per number, stored as an HMAC, never in
+  the message log. SMS first; WhatsApp when SMS can't deliver and the Phase 4 rules allow it.
+- **Until SMS or WhatsApp is switched on in production, nobody can sign in to the portal** (the API answers
+  `code_undeliverable`, and staff who manage notifications get one alert email an hour).
+- The website's Sign in dialog uses the same flow; the header pill opens the portal.
+- Staff can turn portal sign-in off per customer. That revokes every refresh token and the portal refuses the access
+  token still in the browser at once.
+
+### Portal (`customer.bhabaghure.com.bd`)
+- **My trips:**
+  - the next trip with its readiness and a Dhaka countdown;
+  - quotations to open (Viewed) and accept;
+  - bookings with All / Upcoming / Completed.
+- **Trip page:** amounts, invoice and PDF, paying the balance online (SSLCommerz returns to the portal trip), travellers
+  (names only) and the package's planned itinerary.
+- **Documents:** passport scan and photo per traveller on upcoming trips, 5 MB, encrypted on the private disk, served
+  back only to the customer and to staff who can see the booking, never cached. A missing passport number can be added
+  once and is never shown back. Visa and insurance are statuses staff set.
+- **Payments:** paid and due from the ledger; history from the cash book with reversals. The invoice is the receipt.
+- **Support:** tickets optionally about a trip; the conversation; staff appear by first name.
+- **Profile:** name, address, language for messages, WhatsApp on/off; a new email or phone is confirmed with a code
+  sent to it. A phone-change code can't be used to sign in, nor the reverse. Neither change can take another
+  customer's address or number, and that answer only comes after the code.
+- **NPS:** one question about the latest completed trip (ended within 180 days).
+  - 9–10: offered the review link (the contact settings' Facebook page, else the website);
+  - 0–6: a follow-up on the customer's contact log (channel "Portal") and an alert to the trip's owner.
+- Offline, a banner says the account needs a connection and gives the office number (§2 #10).
+
+### Admin
+- **Documents** (Services, badge: uploads waiting). Open, verify, reject with a reason. The website booking's
+  passport scan joins the queue.
+- **Support** (Communication, badge: open tickets waiting over 24 hours). One shared queue behind the new
+  `support.manage` permission, granted to every system role by `permissions:sync`. Replies go by WhatsApp and email.
+- **Booking page:** traveller documents with open / verify / reject and visa and insurance status; the trip's NPS.
+- **Customer page:** portal status, recent sign-ins, a WhatsApp portal invite, turning sign-in off, ratings after trips.
+- **New notification templates:**
+  - `quote_expiring`: WhatsApp and email on a sent quotation's last day in Dhaka, once;
+  - `support_reply`;
+  - staff alerts `quote_accepted_alert`, `support_ticket_alert` and `nps_follow_up_alert`, with recipient lists on
+    the Notifications settings screen. The record's owner always gets them.
+
+### Differences from the plan
+- **Readiness checks only what the system knows:**
+  - paid in full;
+  - passport numbers;
+  - passport scan and photo verified;
+  - visa and insurance, only on trips where staff have set a status for someone.
+
+  There is no e-ticket check: nothing records e-tickets yet.
+- **Accepting a quotation books nothing:** its owner is alerted and converts it with the customer, as planned.
+- **Loyalty and referral stay deferred** (decision 4). The design's loyalty card isn't shown.
+- **Still a gap from Phase 5:** custom-trip and air quotations. The portal lists package quotations only.
+
+### Tests
+- **API:**
+  - `CustomerSignInTest`;
+  - `PortalTripsTest` (owner-only 404s, ledger figures, Viewed and accept, the Dhaka reminder, payments returning to the portal);
+  - `PortalDocumentsTest`;
+  - `SupportTicketsTest`;
+  - `PortalProfileTest`;
+  - `NavCountsContractTest` covers the two new badges.
+- **Web e2e (`web/e2e/portal.spec.ts`):**
+  - sign in by code, pay and come back signed in, sign out;
+  - a photo verified by staff;
+  - a support reply;
+  - Bangla by default at phone width;
+  - the website dialog for a new number.
+
+  The test browser maps `*.e2e.example.com` to the machine, so the portal and the API share a site as they do in
+  production.
+- **Admin e2e:** `portal-queues.spec.ts`, and both new tables in the row-actions matrix.

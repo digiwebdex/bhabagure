@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { API_URL, signIn } from './helpers'
+import { API_URL, FIRST_LOAD, signIn } from './helpers'
 
 /** docs/phase-5-admin-core.md §4.4: a website enquiry becomes a pool lead; claimed, contacted, lost and reopened. */
 test('a website enquiry reaches the board as a new lead; the agent claims it, logs a call and it moves to Contacted', async ({ page }) => {
@@ -16,7 +16,7 @@ test('a website enquiry reaches the board as a new lead; the agent claims it, lo
   await page.getByRole('navigation').getByRole('link', { name: /Customers & leads/ }).click()
   const newColumn = page.getByTestId('lead-column-new')
   const card = newColumn.getByTestId('lead-card').filter({ hasText: name })
-  await expect(card).toBeVisible()
+  await expect(card).toBeVisible(FIRST_LOAD)
   await expect(card).toContainText('Website')
   await card.click()
 
@@ -42,7 +42,7 @@ test('a website enquiry reaches the board as a new lead; the agent claims it, lo
   await page.getByRole('dialog').getByRole('button', { name: 'Mark lost' }).click()
   await expect(page.getByRole('note')).toContainText('Lost: Booked with another agency')
   await page.goto('/customers?state=lost')
-  await expect(page.getByTestId('customers-table').locator('tbody tr').filter({ hasText: name })).toBeVisible()
+  await expect(page.getByTestId('customers-table').locator('tbody tr').filter({ hasText: name })).toBeVisible(FIRST_LOAD)
   await page.getByTestId('customers-table').getByRole('link', { name, exact: true }).click()
   await page.getByRole('button', { name: 'Reopen lead' }).click()
   await expect(page.getByText('Lead reopened')).toBeVisible()
@@ -52,7 +52,7 @@ test('the customer list shows a passport status chip and never a passport number
   await signIn(page, 'admin')
   await page.goto('/customers')
   const table = page.getByTestId('customers-table')
-  await expect(table.locator('tbody tr').first()).toBeVisible()
+  await expect(table.locator('tbody tr').first()).toBeVisible(FIRST_LOAD)
   await expect(table).not.toContainText(/[A-Z]{2}\d{7}/)
   await expect(table.getByText(/Passport on file|Passport expiring|No passport/).first()).toBeVisible()
 })

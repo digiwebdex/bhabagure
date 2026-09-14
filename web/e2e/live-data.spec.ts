@@ -42,37 +42,6 @@ test.describe('forms on the live API', () => {
   });
 });
 
-test.describe('customer accounts', () => {
-  test('passwords need 8 characters; a number already on file gets the neutral contact-us answer with WhatsApp', async ({ page }) => {
-    const phone = uniquePhone();
-    const register = async (password: string, email: string) => {
-      await page.goto('/en');
-      await page.getByRole('button', { name: 'Sign in' }).first().click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('tab', { name: 'Register' }).click();
-      await dialog.getByLabel('Full name as on passport').fill('E2E Customer');
-      await dialog.getByLabel('Mobile · WhatsApp').fill(phone);
-      await dialog.getByLabel('Email').fill(email);
-      await dialog.getByLabel(/^Password/).fill(password);
-      await dialog.getByRole('button', { name: 'Create account' }).click();
-      return dialog;
-    };
-
-    let dialog = await register('seven77', `c1-${Date.now()}@e2e.test`);
-    await expect(dialog.getByText('Use at least 8 characters.')).toBeVisible();
-
-    dialog = await register('eight888', `c2-${Date.now()}@e2e.test`);
-    await expect(dialog.getByText('Account created')).toBeVisible();
-
-    await page.context().clearCookies();
-    dialog = await register('eight888', `c3-${Date.now()}@e2e.test`);
-    const notice = dialog.getByRole('alert').filter({ hasText: 'To open an account with this number, please contact us.' });
-    await expect(notice).toBeVisible();
-    await expect(notice).not.toContainText(/customer|already|registered|exists/i);
-    await expect(notice.getByRole('link', { name: 'Message us on WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\/8801743939300\?text=/);
-  });
-});
-
 test.describe('CMS to website', () => {
   test('the FAQ quotes the single-room supplement from the Pricing screen', async ({ page }) => {
     await page.goto('/en');

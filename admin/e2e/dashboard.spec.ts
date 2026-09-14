@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { signIn, staffApi, websiteBooking } from './helpers'
+import { FIRST_LOAD, signIn, staffApi, websiteBooking } from './helpers'
 
 /**
  * docs/phase-5-admin-core.md §4.2: the Dashboard is computed, not written — a cash entry and a website booking show up
@@ -11,14 +11,14 @@ test('the dashboard shows what just happened, and Collected is the same figure a
   await signIn(page, 'admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 
-  await expect(page.getByTestId('recent-bookings-table').getByRole('link', { name: reference, exact: true })).toBeVisible()
+  await expect(page.getByTestId('recent-bookings-table').getByRole('link', { name: reference, exact: true })).toBeVisible(FIRST_LOAD)
   await expect(page.getByTestId('kpi-leads')).toBeVisible()
 
   // Collected is one figure: the Dashboard card and the Payments card agree to the taka.
   const collected = (await page.getByTestId('kpi-collected').locator('span').nth(1).getAttribute('title'))!
   await page.getByTestId('kpi-collected').click()
   await expect(page).toHaveURL(/\/payments$/)
-  await expect(page.getByTestId('payments-collected')).toHaveText(collected)
+  await expect(page.getByTestId('payments-collected')).toHaveText(collected, FIRST_LOAD)
 
   // A new lead raises New leads on the next visit.
   const api = await staffApi(page, 'admin')

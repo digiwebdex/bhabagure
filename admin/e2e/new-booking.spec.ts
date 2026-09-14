@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { signIn } from './helpers'
+import { FIRST_LOAD, signIn } from './helpers'
 
 const MUSTANG = 'nepal-mustang-adventure-tour-8-days-7-nights'
 
@@ -32,7 +32,7 @@ test('a sales agent books a walk-in customer at the website price; the booking i
 
   await page.goto('/bookings?owner=mine')
   const row = page.getByTestId('bookings-table').locator('tbody tr').filter({ hasText: reference! })
-  await expect(row).toContainText('Walk In Customer')
+  await expect(row).toContainText('Walk In Customer', FIRST_LOAD)
   await expect(row.getByText('Pool', { exact: true })).toHaveCount(0)
   await expect(row.getByRole('link', { name: `WhatsApp — ${reference}` })).toHaveAttribute('href', 'https://wa.me/8801711424242')
 

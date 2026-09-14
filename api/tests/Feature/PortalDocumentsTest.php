@@ -176,6 +176,20 @@ class PortalDocumentsTest extends TestCase
         $this->assertSame($original, app(TravellerDocuments::class)->contents($document));
     }
 
+    #[Test]
+    public function the_service_works_on_a_traveller_from_a_loaded_booking_without_lazy_loading(): void
+    {
+        $booking = $this->websiteBooking('01711-000001');
+        [$lead, $second] = $booking->travellers->sortBy('sort_order')->values();
+        $documents = app(TravellerDocuments::class);
+
+        $documents->upload($lead, TravellerDocument::PHOTO, UploadedFile::fake()->image('photo.jpg'), $booking->customer);
+        $documents->setIssued($second, TravellerDocument::VISA, TravellerDocument::NOT_REQUIRED, null, $this->staff('admin'));
+
+        $this->assertSame(2, TravellerDocument::query()->count());
+        $this->assertSame([$booking->id, $booking->id], AuditLog::query()->where('action', 'like', 'traveller_document.%')->pluck('auditable_id')->all());
+    }
+
     private function websiteBooking(string $phone): Booking
     {
         $reference = $this->postJson('/api/v1/public/bookings', $this->bookingPayload($phone))->assertCreated()->json('data.reference');

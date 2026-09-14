@@ -21,6 +21,10 @@ const TABLES = [
   { name: 'Cash book', url: '/payments', testId: 'cash-book-table', width: 1024, icons: 7 },
   // WhatsApp and email only, and Mark as quoted (§4.7).
   { name: 'Air ticketing', url: '/air-ticketing?state=all', testId: 'air-inquiries-table', width: 700, icons: 4 },
+  // Open file, Verify, Reject, Open booking (docs/phase-6-customer-portal.md §3.3).
+  { name: 'Documents', url: '/documents?status=uploaded', testId: 'document-reviews-table', width: 700, icons: 4 },
+  // Open ticket, WhatsApp, Open customer (§3.5).
+  { name: 'Support', url: '/support?status=all', testId: 'support-tickets-table', width: 700, icons: 3 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -28,9 +32,16 @@ let current: (typeof TABLES)[number] = TABLES[0]
 
 test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage()
-  await websiteBooking(page, 'Sticky Cell One', 'sticky.one@example.test')
-  await websiteBooking(page, 'Sticky Cell Two With A Much Longer Customer Name')
-  await websiteBooking(page, 'Sticky Cell Three', 'sticky.three@example.test')
+  const bookings = [
+    await websiteBooking(page, 'Sticky Cell One', 'sticky.one@example.test'),
+    await websiteBooking(page, 'Sticky Cell Two With A Much Longer Customer Name'),
+    await websiteBooking(page, 'Sticky Cell Three', 'sticky.three@example.test'),
+  ]
+  // Portal uploads waiting for review, and support tickets, on those bookings.
+  artisan(
+    'tinker',
+    `--execute=foreach (${JSON.stringify(bookings.map((b) => b.reference))} as $i => $ref) { $b = App\\Models\\Booking::query()->with('travellers')->where('reference', $ref)->firstOrFail(); App\\Models\\TravellerDocument::query()->create(['booking_traveller_id' => $b->travellers->first()->id, 'kind' => 'photo', 'status' => 'uploaded', 'disk' => 'local', 'path' => 'traveller-documents/sticky.enc', 'mime' => 'image/jpeg', 'bytes' => 1, 'source' => 'portal', 'uploaded_at' => now()]); app(App\\Services\\Support\\SupportDesk::class)->open($b->customer, $b, $i === 1 ? 'Sticky request with a much longer subject about changing the room type' : 'Sticky request '.$i, 'Please help.'); } echo 'ok';`,
+  )
   await quotationFor(page, 'Sticky Quote One')
   await quotationFor(page, 'Sticky Quote Two With A Much Longer Customer Name', { send: false })
   await quotationFor(page, 'Sticky Quote Three')

@@ -84,7 +84,7 @@ final class TravellerDocuments
                     'bytes' => (int) $file->getSize(), 'note' => null, 'source' => $by instanceof Staff ? 'staff' : 'portal', 'uploaded_at' => now(),
                     'reviewed_by_staff_id' => null, 'reviewed_at' => null,
                 ])->save();
-                $this->audit->record('traveller_document.uploaded', $by, $traveller->booking, ['traveller_id' => $traveller->id, 'kind' => $kind]);
+                $this->audit->record('traveller_document.uploaded', $by, $traveller->loadMissing('booking')->booking, ['traveller_id' => $traveller->id, 'kind' => $kind]);
 
                 return [$document, $previous];
             });
@@ -130,7 +130,7 @@ final class TravellerDocuments
             $document = TravellerDocument::query()->where('booking_traveller_id', $traveller->id)->where('kind', $kind)->lockForUpdate()->first()
                 ?? new TravellerDocument(['booking_traveller_id' => $traveller->id, 'kind' => $kind]);
             $document->fill(['status' => $status, 'note' => $note, 'source' => 'staff', 'reviewed_by_staff_id' => $staff->id, 'reviewed_at' => now()])->save();
-            $this->audit->record('traveller_document.status_set', $staff, $traveller->booking, ['traveller_id' => $traveller->id, 'kind' => $kind, 'status' => $status]);
+            $this->audit->record('traveller_document.status_set', $staff, $traveller->loadMissing('booking')->booking,['traveller_id' => $traveller->id, 'kind' => $kind, 'status' => $status]);
 
             return $document;
         });
@@ -150,7 +150,7 @@ final class TravellerDocuments
                 throw new DocumentRefused('passport_on_file');
             }
             $locked->forceFill(['passport_number' => $number, 'passport_expiry' => $expiry])->save();
-            $this->audit->record('traveller.passport_added', $customer, $locked->booking, ['traveller_id' => $locked->id]);
+            $this->audit->record('traveller.passport_added', $customer, $locked->loadMissing('booking')->booking,['traveller_id' => $locked->id]);
         });
     }
 

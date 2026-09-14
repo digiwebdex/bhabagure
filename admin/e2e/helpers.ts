@@ -9,6 +9,13 @@ export const PHOTO = resolve(import.meta.dirname, '.state/photo.jpg')
 
 export const password = () => (JSON.parse(readFileSync(resolve(import.meta.dirname, '.state/staff.json'), 'utf8')) as { password: string }).password
 
+/**
+ * The first data on a screen after a full page load. The e2e API is PHP's built-in server, one request at a time: a
+ * reload queues refresh, me, nav-counts and each list the screen loads (Customers: board and list; Payments: five
+ * cards), which can pass 5 s here. Production serves them in parallel. Later waits on the same screen keep the default.
+ */
+export const FIRST_LOAD = { timeout: 15_000 }
+
 /** Signs in through the real login form, in English so assertions read naturally. */
 export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_operator' | 'sales_agent' | 'new.hire') {
   await page.goto('/login')
