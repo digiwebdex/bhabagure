@@ -35,7 +35,7 @@ say() { printf '\n== %s\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
 die() { printf '\nDEPLOY STOPPED: %s\n' "$*" >&2; exit 1; }
 
-as_www() { runuser -u www-data -- env HOME="$STATE/home" "$@"; }
+as_www() { runuser -u www-data -- env HOME="$ROOT/.cache/www-home" "$@"; }
 artisan() { (cd "$API" && as_www php artisan "$@"); }
 
 # A build step inside a transient scope: memory and CPU capped, lower priority than the sites being served.
@@ -174,8 +174,8 @@ build_and_release() {
   for file in "$API/.env" "$WEB/.env.production.local" "$ADMIN/.env.production.local"; do
     [[ -f $file ]] || die "$file is missing (docs/deployment.md §2)."
   done
-  mkdir -p "$STATE/home" "$ROOT/.cache/npm" "$ROOT/.cache/composer"
-  chown www-data:www-data "$STATE/home"
+  mkdir -p "$ROOT/.cache/www-home" "$ROOT/.cache/npm" "$ROOT/.cache/composer"
+  chown www-data:www-data "$ROOT/.cache/www-home"
 
   trap restore_on_exit EXIT
 
@@ -232,7 +232,8 @@ build_and_release() {
   fi
   artisan migrate --force --no-interaction
   artisan db:seed --force --no-interaction
-  [[ -L $API/public/storage ]] || artisan storage:link
+  # api/public belongs to root, so the link is made as root.
+  [[ -L $API/public/storage ]] || (cd "$API" && php artisan storage:link --no-interaction)
   artisan optimize
   if [[ $API_DOWN -eq 1 ]]; then
     artisan up
@@ -279,13 +280,21 @@ build_and_release() {
   drift_report
 }
 
+# Both hosts must answer 200 on their home page — a redirect counts as a failure (a host-routing fault shows up as 308).
 wait_for_web() {
   local i
   for i in $(seq 1 45); do
-    curl -fsS -o /dev/null --max-time 5 -H "Host: $SITE_HOST" http://127.0.0.1:3340/ && return 0
+    if [[ $(web_status "$SITE_HOST") == 200 && $(web_status "customer.$SITE_HOST") == 200 ]]; then
+      return 0
+    fi
     sleep 2
   done
+  note "website $(web_status "$SITE_HOST"), portal $(web_status "customer.$SITE_HOST") (both must be 200)"
   return 1
+}
+
+web_status() {
+  curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Host: $1" -H 'X-Forwarded-Proto: https' http://127.0.0.1:3340/ || true
 }
 
 # The build rendered pages from the API as it was before migrations; drop those copies so visitors get fresh ones.
@@ -301,8 +310,8 @@ revalidate_all() {
 health() {
   say "Health"
   local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H "Host: $SITE_HOST" http://127.0.0.1:3340/) || true
-  note "website (127.0.0.1:3340)            HTTP $code"
+  note "website (127.0.0.1:3340)            HTTP $(web_status "$SITE_HOST")"
+  note "customer portal (127.0.0.1:3340)    HTTP $(web_status "customer.$SITE_HOST")"
   if [[ -f $NGINX_DST ]]; then
     code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:3341/api/v1/public/settings) || true
     note "API over loopback (127.0.0.1:3341)  HTTP $code"

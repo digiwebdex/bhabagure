@@ -26,9 +26,13 @@ SyslogIdentifier=bhabaghure-web
 Environment=NODE_ENV=production
 Environment=NEXT_TELEMETRY_DISABLED=1
 # The V8 heap stays well under the cgroup cap below, so Node collects garbage before systemd has to step in.
-Environment=NODE_OPTIONS=--max-old-space-size=384
+# --dns-result-order=ipv4first: "localhost" below resolves to 127.0.0.1, so the server listens on 127.0.0.1 only.
+Environment="NODE_OPTIONS=--max-old-space-size=384 --dns-result-order=ipv4first"
 EnvironmentFile=/var/www/Bhabagure/.deploy/web-slot.env
-ExecStart=/usr/bin/node /var/www/Bhabagure/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3340
+# --hostname localhost, not 127.0.0.1: Next renames a loopback address to "localhost" in the URL it hands the proxy
+# (web/src/proxy.ts) but compares rewrites against the literal --hostname. Bound to 127.0.0.1, every host-routing
+# rewrite counts as an external URL, is fetched over HTTP and routed a second time (/ → /bn/site → 308 /site).
+ExecStart=/usr/bin/node /var/www/Bhabagure/node_modules/next/dist/bin/next start --hostname localhost --port 3340
 
 Restart=always
 RestartSec=15
