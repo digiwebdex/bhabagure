@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\MyRecordController;
 use App\Http\Controllers\Api\V1\Admin\NavCountController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PackageController;
@@ -24,13 +25,17 @@ use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
 use App\Http\Controllers\Api\V1\Admin\QuotationController;
 use App\Http\Controllers\Api\V1\Admin\ReferencePresetController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
+use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
 use App\Http\Controllers\Api\V1\Admin\StaffBookingController;
+use App\Http\Controllers\Api\V1\Admin\StaffController;
+use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
+use App\Http\Controllers\Api\V1\Auth\StaffInvitationController;
 use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
 use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
 use App\Http\Controllers\Api\V1\Portal\PortalDocumentController;
@@ -63,6 +68,11 @@ Route::prefix('v1')->group(function () {
         Route::middleware('auth:staff')->group(function () {
             Route::get('me', 'me');
             Route::post('change-password', 'changePassword');
+        });
+        // Invitation and password-reset links (docs/phase-7-hr-attendance-bonus-wallet.md §4.1).
+        Route::middleware('throttle:staff-invitations')->controller(StaffInvitationController::class)->group(function () {
+            Route::post('invitation/check', 'check');
+            Route::post('invitation/accept', 'accept');
         });
     });
 
@@ -233,6 +243,37 @@ Route::prefix('v1')->group(function () {
             Route::post('notification-templates/{id}/preview', 'previewTemplate')->whereNumber('id');
             Route::get('notification-settings', 'settings');
             Route::put('notification-settings', 'updateSettings');
+        });
+
+        // Staff records, roles and staff documents (docs/phase-7-hr-attendance-bonus-wallet.md §4).
+        Route::get('profile/record', MyRecordController::class);
+        Route::middleware('permission:staff.manage,staff')->controller(StaffController::class)->group(function () {
+            Route::get('staff', 'index');
+            Route::get('staff/options', 'options');
+            Route::post('staff', 'store');
+            Route::get('staff/{id}', 'show')->whereNumber('id');
+            Route::put('staff/{id}', 'update')->whereNumber('id');
+            Route::put('staff/{id}/role', 'changeRole')->whereNumber('id');
+            Route::post('staff/{id}/suspend', 'suspend')->whereNumber('id');
+            Route::post('staff/{id}/reactivate', 'reactivate')->whereNumber('id');
+            Route::post('staff/{id}/invitation', 'invite')->whereNumber('id');
+            Route::post('staff/{id}/password-reset', 'passwordReset')->whereNumber('id');
+        });
+        Route::middleware('permission:system.roles_manage,staff')->controller(RoleController::class)->group(function () {
+            Route::get('roles', 'index');
+            Route::post('roles', 'store');
+            Route::put('roles/{id}', 'update')->whereNumber('id');
+            Route::put('roles/{id}/permissions', 'setPermission')->whereNumber('id');
+            Route::delete('roles/{id}', 'destroy')->whereNumber('id');
+        });
+        // Uploading, replacing and archiving also need staff_documents.manage (checked in the controller).
+        Route::middleware('permission:staff_documents.view,staff')->controller(StaffDocumentController::class)->group(function () {
+            Route::get('staff-documents', 'index');
+            Route::get('staff-documents/owners', 'owners');
+            Route::get('staff-documents/{id}/file', 'file')->whereNumber('id');
+            Route::post('staff/{id}/documents', 'store')->whereNumber('id')->middleware('throttle:media-upload');
+            Route::post('staff-documents/{id}/replace', 'replace')->whereNumber('id')->middleware('throttle:media-upload');
+            Route::post('staff-documents/{id}/archive', 'archive')->whereNumber('id');
         });
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).

@@ -52,6 +52,19 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'settings', path: '/settings', icon: 'S', permissions: ['cms.manage'] },
     ],
   },
+  // docs/phase-7-hr-attendance-bonus-wallet.md §4: the design's HR and System groups, as far as they are built.
+  {
+    key: 'hr',
+    items: [{ key: 'staff', path: '/staff', icon: 'S', permissions: ['staff.manage'] }],
+  },
+  {
+    key: 'system',
+    items: [
+      { key: 'vault', path: '/vault', icon: 'U', permissions: ['staff_documents.view'], badge: 'staff_documents' },
+      // system.roles_manage can't be granted to a role, so this is the super admin's.
+      { key: 'roles', path: '/roles', icon: 'Y', permissions: ['system.roles_manage'] },
+    ],
+  },
 ]
 
 export const allowed = (item: NavItem, can: (...permissions: string[]) => boolean): boolean => item.permissions.length === 0 || can(...item.permissions)

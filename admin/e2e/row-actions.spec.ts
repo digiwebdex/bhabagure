@@ -25,6 +25,10 @@ const TABLES = [
   { name: 'Documents', url: '/documents?status=uploaded', testId: 'document-reviews-table', width: 700, icons: 4 },
   // Open ticket, WhatsApp, Open customer (§3.5).
   { name: 'Support', url: '/support?status=all', testId: 'support-tickets-table', width: 700, icons: 3 },
+  // Open record, WhatsApp, email (docs/phase-7-hr-attendance-bonus-wallet.md §4.1).
+  { name: 'Staff', url: '/staff', testId: 'staff-table', width: 700, icons: 3 },
+  // Open file, Replace, Archive, Open staff record (§4.2).
+  { name: 'Vault', url: '/vault', testId: 'staff-documents-table', width: 700, icons: 4 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -49,6 +53,11 @@ test.beforeAll(async ({ browser }) => {
   for (const [direction, category, description] of [['out', 'office_rent', 'Sticky office rent'], ['in', 'other_income', 'Sticky commission from an airline with a long description'], ['out', 'marketing', 'Sticky Facebook ads']]) {
     await admin.postWithReceipt('admin/cash-entries', { direction, amount: 1200, method: 'cash', category, description })
   }
+  // Staff documents for the Vault table, one with a long title.
+  artisan(
+    'tinker',
+    `--execute=foreach (App\\Models\\Staff::query()->orderBy('id')->take(3)->get() as $i => $s) { App\\Models\\StaffDocument::query()->create(['staff_id' => $s->id, 'type' => $i === 1 ? 'certificate' : 'passport', 'title' => $i === 1 ? 'IATA fares and ticketing course certificate with a long title' : null, 'number' => 'BX447122'.$i, 'expires_on' => now()->addDays(20 + $i * 40)->toDateString(), 'disk' => 'local', 'path' => 'staff-documents/sticky.enc', 'mime' => 'application/pdf', 'bytes' => 1]); } echo 'ok';`,
+  )
   // Air enquiries straight into the table (the public form is rate-limited per address).
   artisan(
     'tinker',

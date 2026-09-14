@@ -28,6 +28,7 @@ use App\Models\ReferencePreset;
 use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\Staff;
+use App\Models\StaffDocument;
 use App\Models\SupportTicket;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
@@ -174,8 +175,10 @@ class AppServiceProvider extends ServiceProvider
             'client' => Client::class,
             'opening_balance' => OpeningBalance::class,
             'reference_preset' => ReferencePreset::class,
-            // Audit rows about permission changes (permissions:sync, later the Roles screen).
+            // Audit rows about permission changes (permissions:sync and the Roles screen).
             'role' => Role::class,
+            // Staff document expiry alerts (docs/phase-7-hr-attendance-bonus-wallet.md §4.2).
+            'staff_document' => StaffDocument::class,
         ]);
 
         // Ledger tables are append-only on every connection, whichever way SQL is sent (LedgerTables).
@@ -244,6 +247,8 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
+        // Staff invitation and reset links are 256-bit tokens; this only stops one address hammering the endpoint.
+        RateLimiter::for('staff-invitations', fn (Request $request) => Limit::perMinute(10)->by('staff-invitations|'.$request->ip()));
 
         RateLimiter::for('media-upload', fn (Request $request) => Limit::perMinute(60)->by('upload|'.($request->user('staff')?->id ?? $request->ip())));
     }

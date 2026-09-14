@@ -370,7 +370,7 @@ function AlertsPanel() {
 
 function AlertsEditor({ settings, note }: { settings: NonNullable<ReturnType<typeof useAlertSettings>['data']>['data']; note: string }) {
   const { t } = useTranslation()
-  const { digits } = useFormat()
+  const { digits, locale } = useFormat()
   const toast = useToast()
   const save = useSaveAlertSettings()
   const [recipients, setRecipients] = useState<Record<AlertEvent, number[]>>(settings.alert_recipients)
@@ -399,7 +399,7 @@ function AlertsEditor({ settings, note }: { settings: NonNullable<ReturnType<typ
                   <span className="flex min-w-0 flex-col leading-1.3">
                     <span className="font-medium">{staff.name}</span>
                     <span className="font-display text-11 text-app-muted">
-                      {t(`roles.${staff.role ?? 'staff'}`)} · {digits(staff.whatsapp.replace(/^88/, ''))}
+                      {t(`roles.${staff.role ?? 'staff'}`, { defaultValue: (locale === 'en' ? staff.role_name_en : staff.role_name_bn) ?? staff.role_name_en ?? '' })} · {digits(staff.whatsapp.replace(/^88/, ''))}
                     </span>
                   </span>
                 </label>

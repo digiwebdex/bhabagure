@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
 use App\Models\Quotation;
+use App\Models\StaffDocument;
 use App\Models\Transaction;
 use App\Services\Booking\BookingStateMachine;
 use App\Services\Ledger\LedgerService;
@@ -107,6 +108,22 @@ Artisan::command('quotations:remind-expiring', function (NotificationPlanner $pl
 })->purpose('Remind customers 24 hours before a sent quotation expires');
 
 Schedule::command('quotations:remind-expiring')->hourly()->onOneServer();
+
+// docs/phase-7-hr-attendance-bonus-wallet.md §4.2: a staff document is alerted once when it comes within 30 days of its
+// expiry and once on the day. Ranges rather than exact dates, so a day the scheduler missed is caught up; the
+// notifications' dedupe keys keep each alert to once. Suspended staff (leavers) are left out, as on the Vault badge.
+Artisan::command('staff-documents:remind-expiring', function (NotificationPlanner $planner) {
+    $today = StaffDocument::today();
+    $count = 0;
+    StaffDocument::query()->current()->withStatus(StaffDocument::ATTENTION, $today)->with('staff')->orderBy('id')
+        ->each(function (StaffDocument $document) use ($planner, $today, &$count) {
+            $planner->staffDocumentExpiring($document, $document->expires_on->toDateString() <= $today->toDateString() ? 'due' : 'soon');
+            $count++;
+        });
+    $this->info("Checked {$count} staff document(s) needing attention.");
+})->purpose('Alert staff 30 days before a staff document expires, and on the day');
+
+Schedule::command('staff-documents:remind-expiring')->dailyAt('09:00')->timezone('Asia/Dhaka')->onOneServer();
 
 // Passport scans no booking used are deleted after their retention window (config bhabaghure.passport_ocr).
 Artisan::command('passport-scans:prune', function (PassportScanner $scanner) {

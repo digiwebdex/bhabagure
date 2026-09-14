@@ -105,7 +105,9 @@ function SidebarContent() {
     <>
       <div className="flex flex-col gap-1.75 px-2 pt-1 pb-5">
         <img src="/brand/logo-wordmark-light.png" alt={t('shell.brand')} className="block h-auto w-full max-w-sidebar-logo" />
-        <span className="pl-0.5 font-display text-10 tracking-eyebrow-wide text-orange uppercase">{t(`roles.${staff.is_super_admin ? 'super_admin' : (staff.role ?? 'staff')}`)}</span>
+        <span className="pl-0.5 font-display text-10 tracking-eyebrow-wide text-orange uppercase">
+          {t(`roles.${staff.is_super_admin ? 'super_admin' : (staff.role ?? 'staff')}`, { defaultValue: (isBn ? staff.role_name_bn : staff.role_name_en) ?? staff.role_name_en ?? '' })}
+        </span>
       </div>
 
       <nav className="flex flex-col gap-1.5">

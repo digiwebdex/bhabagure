@@ -31,6 +31,8 @@ enum NotificationEvent: string
     case SupportReply = 'support_reply';
     /** An NPS answer of 0–6 after a trip: its owner calls the customer (docs/phase-6-customer-portal.md §0.4). */
     case NpsFollowUpAlert = 'nps_follow_up_alert';
+    /** A staff document within 30 days of its expiry, and again on the day (docs/phase-7-hr-attendance-bonus-wallet.md §4.2). */
+    case StaffDocumentExpiringAlert = 'staff_document_expiring_alert';
 
     /** A message a staff member sends from a booking or customer record. Not templated. */
     case StaffMessage = 'staff_message';
@@ -45,20 +47,21 @@ enum NotificationEvent: string
         return [
             self::BookingCreated, self::BookingConfirmed, self::PaymentReceived, self::DocumentsPending, self::PreTripReminder,
             self::DepartureToday, self::TripCompleted, self::QuoteSent, self::QuoteExpiring, self::NewBookingAlert, self::NewLeadAlert,
-            self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::SupportReply, self::NpsFollowUpAlert,
+            self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::SupportReply, self::NpsFollowUpAlert, self::StaffDocumentExpiringAlert,
         ];
     }
 
     /** @return list<self> sales alerts with a recipient list on the Notifications settings screen */
     public static function staffAlerts(): array
     {
-        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert];
+        return [self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert, self::StaffDocumentExpiringAlert];
     }
 
     public function audience(): string
     {
         return match ($this) {
-            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert, self::WhatsAppVerification => 'staff',
+            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert,
+            self::StaffDocumentExpiringAlert, self::WhatsAppVerification => 'staff',
             default => 'customer',
         };
     }
@@ -111,6 +114,7 @@ enum NotificationEvent: string
             self::SupportTicketAlert => ['number', 'subject', 'message', 'ref', 'customer', 'phone'],
             self::SupportReply => ['name', 'number', 'subject', 'reply', 'link'],
             self::NpsFollowUpAlert => ['ref', 'package', 'score', 'comment', 'customer', 'phone'],
+            self::StaffDocumentExpiringAlert => ['staff', 'document', 'expires', 'days', 'link'],
             default => [],
         };
     }
@@ -130,6 +134,7 @@ enum NotificationEvent: string
             self::SupportTicketAlert => 'when a customer opens a support ticket in the portal',
             self::SupportReply => 'when staff reply to a support ticket',
             self::NpsFollowUpAlert => 'when a customer rates a completed trip 0–6 in the portal',
+            self::StaffDocumentExpiringAlert => '30 days before a staff document expires, and on the day',
             default => 'immediately',
         };
     }

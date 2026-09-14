@@ -12,10 +12,12 @@ use App\Models\Invoice;
 use App\Models\PackageDeparture;
 use App\Models\Quotation;
 use App\Models\SiteSetting;
+use App\Models\StaffDocument;
 use App\Models\SupportTicket;
 use App\Services\Booking\DepartureSeats;
 use App\Services\Invoices\InvoiceShortLink;
 use App\Support\Numerals;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
 /**
@@ -49,6 +51,7 @@ final class NotificationVariables
             $related instanceof PackageDeparture => $this->departure($related, $locale),
             $related instanceof Quotation => $this->quotation($related, $locale, $money),
             $related instanceof SupportTicket => $this->supportTicket($related, $locale),
+            $related instanceof StaffDocument => $this->staffDocument($related, $locale),
             default => [],
         };
 
@@ -128,6 +131,42 @@ final class NotificationVariables
             'link' => rtrim((string) config('bhabaghure.portal_url'), '/').($locale === 'en' ? '/en' : '')."/support/{$ticket->number}",
         ];
     }
+
+    /** @return array<string, string> the document's name, its owner and when it expires — never its number */
+    private function staffDocument(StaffDocument $document, string $locale): array
+    {
+        $document->loadMissing('staff');
+        $en = $locale === 'en';
+        $type = self::STAFF_DOCUMENT_TYPES[$document->type][$en ? 1 : 0] ?? $document->type;
+        $days = $document->expires_on === null ? null
+            : (int) StaffDocument::today()->diffInDays(CarbonImmutable::parse($document->expires_on->toDateString(), 'Asia/Dhaka'), false);
+
+        return [
+            'staff' => $document->staff->name,
+            'document' => filled($document->title) ? "{$type} · {$document->title}" : $type,
+            'expires' => $document->expires_on === null ? '—' : Numerals::date($document->expires_on->toDateString(), $locale),
+            'days' => match (true) {
+                $days === null => '—',
+                $days === 0 => $en ? 'today' : 'আজ',
+                $days > 0 => $en ? 'in '.Numerals::number($days, $locale).' '.Str::plural('day', $days) : Numerals::number($days, $locale).' দিন পর',
+                default => $en ? Numerals::number(-$days, $locale).' '.Str::plural('day', -$days).' ago' : Numerals::number(-$days, $locale).' দিন আগে',
+            },
+            'link' => rtrim((string) config('bhabaghure.admin_url'), '/').'/vault?status=attention',
+        ];
+    }
+
+    /** Staff document types as the alert names them: [bn, en]. The admin's own labels live in its i18n files. */
+    private const STAFF_DOCUMENT_TYPES = [
+        'passport' => ['পাসপোর্ট', 'Passport'],
+        'nid' => ['জাতীয় পরিচয়পত্র', 'NID'],
+        'driving_licence' => ['ড্রাইভিং লাইসেন্স', 'Driving licence'],
+        'cv' => ['সিভি', 'CV'],
+        'appointment_letter' => ['নিয়োগপত্র', 'Appointment letter'],
+        'contract' => ['চুক্তিপত্র', 'Contract'],
+        'certificate' => ['সনদ', 'Certificate'],
+        'photo' => ['ছবি', 'Photo'],
+        'other' => ['অন্যান্য', 'Other'],
+    ];
 
     /** @return array<string, string> */
     private function inquiry(Inquiry $inquiry, string $locale): array

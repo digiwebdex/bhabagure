@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\StaffRole;
 use App\Enums\StaffStatus;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
@@ -44,6 +46,22 @@ class Staff extends Authenticatable implements JWTSubject
     public function canSignIn(): bool
     {
         return $this->status !== StaffStatus::Suspended;
+    }
+
+    /** The HR record (docs/phase-7-hr-attendance-bonus-wallet.md §4.1), created with the staff member. */
+    public function profile(): HasOne
+    {
+        return $this->hasOne(StaffProfile::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(StaffDocument::class);
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(StaffInvitation::class);
     }
 
     public function isSuperAdmin(): bool

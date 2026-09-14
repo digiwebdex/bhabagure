@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\InquiryType;
+use App\Enums\StaffStatus;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\Inquiry;
 use App\Models\Quotation;
 use App\Models\Staff;
+use App\Models\StaffDocument;
 use App\Models\SupportTicket;
 use App\Models\TravellerDocument;
 use App\Services\Admin\Ownership;
@@ -80,9 +82,15 @@ class NavCountsContractTest extends TestCase
         $this->ticket(2);
         $this->ticket(50, SupportTicket::ANSWERED);
 
+        // Staff documents: A's expired and B's expiring need attention; a valid one and a suspended leaver's don't.
+        $expiredOfA = $this->staffDocument($this->staff['agent_a'], -3);
+        $this->staffDocument($this->staff['agent_b'], 12);
+        $this->staffDocument($this->staff['tour_operator'], 200);
+        $this->staffDocument($this->staff('sales_agent', ['status' => StaffStatus::Suspended]), -40);
+
         $this->assertContract([
-            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1],
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1],
+            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'staff_documents' => 2],
             'accountant' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'support' => 1],
             'tour_operator' => ['bookings' => 4, 'documents' => 2, 'support' => 1],
             'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
@@ -94,7 +102,7 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/bookings/{$pool1->id}/claim")->assertOk();
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/air-inquiries/{$stalePool->id}/claim")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'staff_documents' => 2],
             'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
             'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'support' => 1],
         ]);
@@ -106,8 +114,9 @@ class NavCountsContractTest extends TestCase
         DB::table('bookings')->where('id', $pool2->id)->update(['status' => 'cancelled']);
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bookings/{$ofA->id}/assign", ['staff_id' => $this->staff['agent_b']->id, 'reason' => 'Rebalance'])->assertOk();
         $this->actingAsApi($this->staff['accountant'])->postJson("/api/v1/admin/support-tickets/{$overdueTicket->id}/replies", ['body' => 'The invoice now carries your company name.'])->assertOk();
+        $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/staff-documents/{$expiredOfA->id}/archive", ['reason' => 'Renewed; the new passport is on file'])->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 0],
+            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 0, 'staff_documents' => 1],
             'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'support' => 0],
             'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'support' => 0],
             'tour_operator' => ['bookings' => 3, 'documents' => 2, 'support' => 0],
@@ -163,6 +172,15 @@ class NavCountsContractTest extends TestCase
         TravellerDocument::query()->create([
             'booking_traveller_id' => $traveller->id, 'kind' => TravellerDocument::PHOTO, 'status' => $status,
             'disk' => 'local', 'path' => 'traveller-documents/test.enc', 'mime' => 'image/jpeg', 'bytes' => 1, 'source' => 'portal', 'uploaded_at' => now(),
+        ]);
+    }
+
+    /** A staff document expiring $daysLeft days from today in Dhaka (negative: already expired). */
+    private function staffDocument(Staff $owner, int $daysLeft): StaffDocument
+    {
+        return StaffDocument::query()->create([
+            'staff_id' => $owner->id, 'type' => 'passport', 'expires_on' => now('Asia/Dhaka')->addDays($daysLeft)->toDateString(),
+            'disk' => 'local', 'path' => 'staff-documents/test.enc', 'mime' => 'application/pdf', 'bytes' => 1,
         ]);
     }
 

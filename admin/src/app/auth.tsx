@@ -14,6 +14,8 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<Staff>
   signOut: () => Promise<void>
   changePassword: (current: string, next: string, confirmation: string) => Promise<void>
+  /** Sets the password from an invitation or reset link and signs in (docs/phase-7-hr-attendance-bonus-wallet.md §4.1). */
+  acceptLink: (token: string, password: string, confirmation: string) => Promise<Staff>
   can: (...permissions: string[]) => boolean
 }
 
@@ -74,6 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       changePassword: async (current, next, confirmation) => {
         accept(await api.post<TokenResponse>('staff/auth/change-password', { current_password: current, password: next, password_confirmation: confirmation }))
+      },
+      acceptLink: async (token, password, confirmation) => {
+        queryClient.clear()
+        return accept(await api.post<TokenResponse>('staff/auth/invitation/accept', { token, password, password_confirmation: confirmation }))
       },
       // Mirrors the API: super admin passes every check. The API enforces permissions regardless.
       can: (...permissions) => !!staff && (staff.is_super_admin || permissions.some((permission) => staff.permissions.includes(permission))),

@@ -40,7 +40,12 @@ const QuotationDetailPage = page(() => import('../features/quotations/QuotationD
 const QuotationsPage = page(() => import('../features/quotations/QuotationsPage'), 'QuotationsPage')
 const ProfilePage = page(() => import('../features/profile/ProfilePage'), 'ProfilePage')
 const ReviewsPage = page(() => import('../features/cms/reviews/ReviewsPage'), 'ReviewsPage')
+const RolesPage = page(() => import('../features/staff/RolesPage'), 'RolesPage')
+const SetPasswordPage = page(() => import('../features/auth/SetPasswordPage'), 'SetPasswordPage')
 const SettingsPage = page(() => import('../features/cms/settings/SettingsPage'), 'SettingsPage')
+const StaffPage = page(() => import('../features/staff/StaffPage'), 'StaffPage')
+const StaffProfilePage = page(() => import('../features/staff/StaffProfilePage'), 'StaffProfilePage')
+const VaultPage = page(() => import('../features/staff/VaultPage'), 'VaultPage')
 const SupportPage = page(() => import('../features/support/SupportPage'), 'SupportPage')
 const SupportTicketPage = page(() => import('../features/support/SupportTicketPage'), 'SupportTicketPage')
 const TeamPage = page(() => import('../features/cms/team/TeamPage'), 'TeamPage')
@@ -52,6 +57,9 @@ const quotations = ['quotations.view_all', 'quotations.view_own']
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  // Invitation and password-reset links (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): the token is the credential.
+  { path: '/accept-invite', element: <SetPasswordPage /> },
+  { path: '/reset-password', element: <SetPasswordPage /> },
   {
     path: '/change-password',
     element: (
@@ -95,6 +103,10 @@ export const router = createBrowserRouter([
       { path: 'gallery', element: <Require permissions={cms}><GalleryPage /></Require> },
       { path: 'media', element: <Require permissions={['packages.manage', 'cms.manage']}><MediaLibraryPage /></Require> },
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },
+      { path: 'staff', element: <Require permissions={['staff.manage']}><StaffPage /></Require> },
+      { path: 'staff/:id', element: <Require permissions={['staff.manage']}><StaffProfilePage /></Require> },
+      { path: 'vault', element: <Require permissions={['staff_documents.view']}><VaultPage /></Require> },
+      { path: 'roles', element: <Require permissions={['system.roles_manage']}><RolesPage /></Require> },
       { path: '*', element: <NotFound /> },
     ],
   },

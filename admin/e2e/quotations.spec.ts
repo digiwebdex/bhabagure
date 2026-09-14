@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { artisan } from '../../scripts/e2e-api.mjs'
-import { API_URL, quotationFor, signIn } from './helpers'
+import { API_URL, FIRST_LOAD, quotationFor, signIn } from './helpers'
 
 const MUSTANG = 'nepal-mustang-adventure-tour-8-days-7-nights'
 
@@ -47,11 +47,11 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
 
   // The lead is Quoted now.
   await page.goto('/customers?state=quoted')
-  await expect(page.getByTestId('customers-table').locator('tbody tr').filter({ hasText: name })).toBeVisible()
+  await expect(page.getByTestId('customers-table').locator('tbody tr').filter({ hasText: name })).toBeVisible(FIRST_LOAD)
 
   // Convert from the row: the travellers' names, then the booking at the frozen price, owned by the agent.
   await page.goto('/quotations')
-  await page.getByTestId('quotations-table').locator('tbody tr').filter({ hasText: number }).getByRole('link', { name: `Convert to booking — ${number}` }).click()
+  await page.getByTestId('quotations-table').locator('tbody tr').filter({ hasText: number }).getByRole('link', { name: `Convert to booking — ${number}` }).click(FIRST_LOAD)
   const dialog = page.getByRole('dialog')
   await expect(dialog).toContainText('৳ 1,53,000')
   // No date was fixed on the quotation: the booking needs one.
@@ -68,7 +68,7 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
 
   await page.goto('/quotations?status=converted')
   const booked = page.getByTestId('quotations-table').locator('tbody tr').filter({ hasText: number })
-  await expect(booked).toContainText('Booked')
+  await expect(booked).toContainText('Booked', FIRST_LOAD)
   await expect(booked.getByRole('link', { name: reference! })).toBeVisible()
   await expect(booked.getByRole('link', { name: `Convert to booking — ${number}` })).toHaveCount(0)
   await expect(booked.getByRole('button', { name: new RegExp(`^Convert to booking — ${number} \\(Booked as ${reference}\\)$`) })).toBeDisabled()
@@ -107,7 +107,7 @@ test('revising a sent quotation opens a new draft that sending replaces the orig
   const original = await quotationFor(page, 'Revision Customer')
   await signIn(page, 'admin')
   await page.goto(`/quotations/${original.id}`)
-  await expect(page.getByRole('heading', { name: original.number, level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: original.number, level: 1 })).toBeVisible(FIRST_LOAD)
 
   await page.getByTestId('quotation-actions').getByRole('button', { name: 'Revise' }).click()
   await expect(page.getByText(/Revision QT-\d{4,} started/)).toBeVisible()

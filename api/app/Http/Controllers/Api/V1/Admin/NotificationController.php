@@ -333,8 +333,13 @@ class NotificationController extends Controller
     {
         return [
             'alert_recipients' => NotificationSettings::alertRecipients(),
-            'eligible_staff' => Staff::query()->where('status', 'active')->whereNotNull('whatsapp_verified_at')->orderBy('name')->get()
-                ->map(fn (Staff $s) => ['id' => $s->id, 'name' => $s->name, 'role' => $s->getRoleNames()->first(), 'whatsapp' => $s->whatsapp_number])->values(),
+            'eligible_staff' => Staff::query()->where('status', 'active')->whereNotNull('whatsapp_verified_at')->with('roles')->orderBy('name')->get()
+                ->map(fn (Staff $s) => [
+                    'id' => $s->id, 'name' => $s->name, 'role' => $s->roles->first()?->name,
+                    // Custom roles have no fixed label in the admin; their names come with them.
+                    'role_name_en' => $s->roles->first()?->name_en, 'role_name_bn' => $s->roles->first()?->name_bn,
+                    'whatsapp' => $s->whatsapp_number,
+                ])->values(),
         ];
     }
 

@@ -10,6 +10,7 @@ import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui
 import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
 import { myWhatsAppActions, useMyWhatsApp, useMyWhatsAppAction, type MyWhatsApp } from '../notifications/api'
+import { useMyRecord } from '../staff/api'
 
 export function ProfilePage() {
   const { t } = useTranslation()
@@ -27,8 +28,45 @@ export function ProfilePage() {
             {t('profile.changePassword')}
           </Link>
         </Card>
+        <MyRecordCard />
       </div>
     </>
+  )
+}
+
+/** The staff member's own HR record, read-only: HR keeps it (docs/phase-7-hr-attendance-bonus-wallet.md §4.1). */
+function MyRecordCard() {
+  const { t } = useTranslation()
+  const { date, digits } = useFormat()
+  const record = useMyRecord()
+
+  if (record.isPending) return <Loading />
+  if (record.isError) return <ErrorNotice error={record.error} />
+  const data = record.data.data
+  const rows: [string, string | null][] = [
+    [t('staff.code'), data.employee_code],
+    [t('staff.designation'), data.designation],
+    [t('staff.joinedOn'), data.joined_on ? date(data.joined_on) : null],
+    [t('staff.dateOfBirth'), data.date_of_birth ? date(data.date_of_birth) : null],
+    [t('staff.nid'), data.nid_number ? digits(data.nid_number) : null],
+    [t('staff.address'), data.address],
+    [t('staff.emergencyContact'), data.emergency_contact_name ? `${data.emergency_contact_name}${data.emergency_contact_phone ? ` · ${digits(data.emergency_contact_phone)}` : ''}` : null],
+    [t('staff.payoutMethod'), data.payout_method ? `${t(`staff.payoutMethods.${data.payout_method}`)}${data.payout_account ? ` · ${digits(data.payout_account)}` : ''}` : null],
+  ]
+
+  return (
+    <Card>
+      <CardTitle bn="আমার এইচআর রেকর্ড" en="My HR record" />
+      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-13.5" data-testid="my-record">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-app-muted">{label}</dt>
+            <dd className="m-0 min-w-0 break-words">{value ?? '—'}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="m-0 text-12.5 text-app-muted">{t('profile.recordNote')}</p>
+    </Card>
   )
 }
 

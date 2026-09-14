@@ -1,7 +1,20 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): plan.** Nothing in this phase is built yet. It is waiting on two things: approval of the attendance
-agent design (§5.2) and the questions in §11.
+**Status (2026-09-15): step 1 built (§12); building step 2.**
+
+## 0. Decisions (2026-09-15)
+
+1. **Attendance agent:** built as designed in §5.2, on an office Windows PC.
+2. **Payouts:** marking a salary or a bonus withdrawal paid also records a cash-out in the company cash book (Salaries, or a
+   new Staff bonuses expense account), with the money account, reference and receipt.
+3. **"Configurable per company"** means this installation's own settings: one company per install, and every rule editable
+   with nothing hard-coded.
+
+Kept from the plan, open to veto:
+- a Roles screen with custom roles (§4.1);
+- staff documents hidden from their owners in this phase (§4.2);
+- the salary formula applied as deductions (§3 #3);
+- a single punch counting as a late-or-early day until corrected (§3 #4).
 
 **Sources:**
 - `_design/Bhabaghure Admin.dc.html`, from the local 2026-09-13 copy. Screens used:
@@ -435,6 +448,8 @@ The prototype is built as designed, except for one change:
 
 ## 11. Questions
 
+All three were answered on 2026-09-15; see §0.
+
 1. **Attendance agent (§5.2):** build it as designed, on an office Windows PC? The alternative is a small always-on Linux
    box (a Raspberry Pi or mini PC) running the same agent on a timer.
 2. **Payouts and the company books:** when a salary or a bonus withdrawal is marked paid, should the system record a cash-out in
@@ -451,3 +466,82 @@ The prototype is built as designed, except for one change:
   run `/design-login` once in an interactive Claude Code terminal on this machine.
 - **For the agent:** which office PC it goes on, and the device's Comm Key if one is set (Menu → Comm. → Comm Key; 0
   means none). Someone with administrator rights on that PC installs it.
+
+## 12. What was built
+
+### Step 1 — staff records, roles, staff documents (2026-09-15)
+
+**Staff** (HR → Staff, `staff.manage`):
+- **List:** status chips (current, active, invited, suspended, all), search, sales closed this month, documents needing
+  attention. Row actions: open, WhatsApp, email.
+- **Adding someone:**
+  - It creates an `invited` account whose password nobody knows, with the next `STF-` code, and a one-time invitation.
+  - The invitation is emailed. Its link is also shown once, with Copy and "Send by WhatsApp" to the person's own number.
+  - The dialog says plainly when this server's mailer reaches nobody (`MAIL_MAILER=log`).
+- **The record page:**
+  - Account and HR record: designation, dates, date of birth, NID, address, emergency contact, where salary is paid.
+  - Role and access: change role, new invitation link, password reset, suspend or reactivate.
+  - Documents.
+- **Links:** `/accept-invite` and `/reset-password` read the token from the URL fragment, clear it from the address bar,
+  and sign in on success.
+  - **Invitations:** 72 hours.
+  - **Resets:** 60 minutes, emailed only and never shown to the admin who sent them.
+  - **Either kind:** a newer link cancels the older one. Using a link ends every other session.
+- **Rules** (`App\Services\Hr\StaffDirectory`):
+  - nobody changes their own role or suspends themselves;
+  - only a super admin touches a super admin;
+  - the last active super admin can't be demoted or suspended;
+  - the sign-in email of someone already using their account is the super admin's to change.
+
+  Suspension revokes every refresh token at once.
+- **Private fields:**
+  - The NID and salary account are encrypted, with an HMAC on the NID to refuse the same number on two records.
+  - The audit log names changed fields, never values.
+  - Each person sees their own record, read-only, on Profile (`GET admin/profile/record`).
+
+**Roles** (System → Roles & permissions, `system.roles_manage`, which no role can be given):
+- the roles table with holders and company-balance visibility;
+- custom roles (`custom_…` slugs) and the permission matrix by module;
+- the design's staff-visibility toggles.
+
+System roles keep their names, the super admin role isn't editable, and a custom role is deleted only when nobody holds
+it. Grants and revokes are audited as `role.permission_granted` / `role.permission_revoked`, so `permissions:sync
+--add-only` never re-grants a revoked permission. Custom role names reach the sidebar and the alert recipient lists
+through the API (`role_name_en` / `role_name_bn`).
+
+**Staff documents** (System → Vault, `staff_documents.view`; uploading, replacing and archiving need
+`staff_documents.manage`; both granted to Admin):
+- **Stored:** the file encrypted on the private disk, the number in an encrypted column. Files are served with
+  `no-store`. Every opening is audited as `staff_document.opened`.
+- **Status from the expiry date, in Dhaka:** expired, expiring (≤ 30 days), renew soon (≤ 90), valid, no expiry.
+- **Badge:** the Vault badge counts expired and expiring documents of staff who aren't suspended. It is part of the
+  nav-counts contract.
+- **Replacing** archives the old copy as replaced. Archiving needs a reason. Nothing is deleted.
+- **Alerts:** `staff-documents:remind-expiring` runs daily at 09:00 Dhaka. It sends the `staff_document_expiring_alert`
+  staff alert once when a document comes within 30 days and once on the day, catching up missed days.
+  - The alert goes to its list on the Notifications screen, or to everyone who manages staff documents when the list is
+    empty.
+  - It names the person, the document and the date, never the number.
+
+**Differences from the plan:**
+- The Vault's upload form picks the owner from `GET admin/staff-documents/owners`, so documents can be managed without
+  `staff.manage`.
+- Company documents (trade licence, IATA, TIN) from the design's Vault aren't built; they weren't asked for.
+- Screen names follow what exists: "Staff", "Vault" and "Roles & permissions". They become "Staff & bonus", "Vault &
+  tasks" and "Roles & audit" when those parts are built.
+- The layouts are from the 2026-09-13 design copy and are re-checked when the re-synced files can be read.
+
+**Config:** `ADMIN_URL` (optional; unset, `WEB_URL` with `admin.` in front) is where invitation and reset links open.
+
+**Tests:**
+- **API:**
+  - `StaffManagementTest`: invitation, expiry and cancellation, role rules, suspension, reset, encrypted HR record, list
+    filters;
+  - `RolesMatrixTest`: custom role, reserved and system rules, revoke surviving `permissions:sync`;
+  - `StaffDocumentsTest`: encryption, 403 for everyone without the permission (the owner included), audited opening,
+    replacement, statuses, alerts once per occasion;
+  - `NavCountsContractTest` covers the Vault badge.
+- **Admin e2e:**
+  - `staff.spec.ts`: invitation to first sign-in in a separate browser, link used once; document upload, open and archive
+    with the badge; a custom role in the matrix;
+  - Staff and Vault in the row-actions matrix.

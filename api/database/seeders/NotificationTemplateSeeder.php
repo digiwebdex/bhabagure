@@ -194,6 +194,15 @@ class NotificationTemplateSeeder extends Seeder
                 "যাত্রা শেষে কম রেটিং: {{score}}/১০ · {{ref}}\n\n{{package}}\nগ্রাহক: {{customer}} {{phone}}\nমন্তব্য: {{comment}}\n\nগ্রাহকের যোগাযোগ লগে একটি ফলো-আপ যোগ হয়েছে। আজই ফোন করুন।",
                 "Low rating after a trip: {{score}}/10 · {{ref}}\n\n{{package}}\nCustomer: {{customer}} {{phone}}\nComment: {{comment}}\n\nA follow-up is on the customer's contact log. Please call them today.",
                 'কম রেটিং · {{ref}}', 'Low rating · {{ref}}'],
+
+            [NotificationEvent::StaffDocumentExpiringAlert, $wa,
+                "স্টাফ ডকুমেন্টের মেয়াদ: {{staff}} · {{document}}\nমেয়াদ {{expires}} ({{days}})\nনবায়নের ব্যবস্থা করুন: {{link}}",
+                "Staff document expiry: {{staff}} · {{document}}\nExpires {{expires}} ({{days}})\nArrange the renewal: {{link}}",
+                null, null],
+            [NotificationEvent::StaffDocumentExpiringAlert, $mail,
+                "স্টাফ ডকুমেন্টের মেয়াদ শেষ হচ্ছে।\n\nস্টাফ: {{staff}}\nডকুমেন্ট: {{document}}\nমেয়াদ: {{expires}} ({{days}})\n\nনবায়নের পর ভল্টে নতুন কপি দিয়ে পুরোনোটি বদলে দিন: {{link}}",
+                "A staff document is expiring.\n\nStaff: {{staff}}\nDocument: {{document}}\nExpires: {{expires}} ({{days}})\n\nOnce it is renewed, replace it with the new copy in the Vault: {{link}}",
+                'ডকুমেন্টের মেয়াদ · {{staff}}', 'Document expiry · {{staff}}'],
         ];
     }
 }

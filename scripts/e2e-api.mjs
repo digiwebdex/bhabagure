@@ -27,7 +27,7 @@ export function artisan(...args) {
  * and — when a website URL is given — revalidation calls to that website. `php artisan serve` drops most
  * environment variables, which is why the overrides live in a file.
  */
-export function writeE2eEnv({ origins, webUrl = '', portalUrl = '' }) {
+export function writeE2eEnv({ origins, webUrl = '', portalUrl = '', adminUrl = '' }) {
   const base = existsSync(resolve(API_DIR, '.env')) ? readFileSync(resolve(API_DIR, '.env'), 'utf8') : ''
   const overrides = {
     APP_ENV: 'e2e',
@@ -40,6 +40,8 @@ export function writeE2eEnv({ origins, webUrl = '', portalUrl = '' }) {
     WEB_URL: webUrl || 'http://localhost:3000',
     // Payments started in the customer portal return here (docs/phase-6-customer-portal.md).
     PORTAL_URL: portalUrl || 'http://customer.localhost:3000',
+    // Staff invitation and password-reset links open in the admin (docs/phase-7-hr-attendance-bonus-wallet.md §4.1).
+    ADMIN_URL: adminUrl || 'http://localhost:5173',
     WEB_REVALIDATE_URL: webUrl ? `${webUrl}/api/revalidate` : '',
     REVALIDATE_SECRET: E2E_REVALIDATE_SECRET,
     DB_GUARD_TRIGGERS: 'false',

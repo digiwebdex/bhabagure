@@ -11,6 +11,9 @@ export type Staff = {
   locale: 'bn' | 'en'
   must_change_password: boolean
   role: string | null
+  /** A custom role's own name; system roles are labelled from the admin's translations. */
+  role_name_en: string | null
+  role_name_bn: string | null
   is_super_admin: boolean
   permissions: string[]
 }

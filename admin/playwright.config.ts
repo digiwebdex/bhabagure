@@ -13,7 +13,7 @@ import { E2E_API_URL, e2eApiServer, isMainProcess, resetE2eDatabase, writeE2eEnv
 const ADMIN_PORT = 5174
 
 if (isMainProcess()) {
-  writeE2eEnv({ origins: [`http://localhost:${ADMIN_PORT}`] })
+  writeE2eEnv({ origins: [`http://localhost:${ADMIN_PORT}`], adminUrl: `http://localhost:${ADMIN_PORT}` })
   resetE2eDatabase()
 }
 

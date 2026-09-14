@@ -8,8 +8,8 @@ import type { Data, Paginated } from '../../lib/api/types'
 export type NotificationChannel = 'whatsapp' | 'email' | 'sms'
 export const CHANNELS: NotificationChannel[] = ['whatsapp', 'email', 'sms']
 export type NotificationStatus = 'pending' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'skipped' | 'cancelled'
-export type AlertEvent = 'new_booking_alert' | 'new_lead_alert' | 'low_seat_alert' | 'quote_accepted_alert' | 'support_ticket_alert' | 'nps_follow_up_alert'
-export const ALERT_EVENTS: AlertEvent[] = ['new_booking_alert', 'new_lead_alert', 'low_seat_alert', 'quote_accepted_alert', 'support_ticket_alert', 'nps_follow_up_alert']
+export type AlertEvent = 'new_booking_alert' | 'new_lead_alert' | 'low_seat_alert' | 'quote_accepted_alert' | 'support_ticket_alert' | 'nps_follow_up_alert' | 'staff_document_expiring_alert'
+export const ALERT_EVENTS: AlertEvent[] = ['new_booking_alert', 'new_lead_alert', 'low_seat_alert', 'quote_accepted_alert', 'support_ticket_alert', 'nps_follow_up_alert', 'staff_document_expiring_alert']
 
 export type NotificationMessage = {
   id: number
@@ -90,7 +90,7 @@ export type NotificationOverview = {
 
 export type AlertSettings = {
   alert_recipients: Record<AlertEvent, number[]>
-  eligible_staff: { id: number; name: string; role: string | null; whatsapp: string }[]
+  eligible_staff: { id: number; name: string; role: string | null; role_name_en: string | null; role_name_bn: string | null; whatsapp: string }[]
 }
 
 export type SmsEstimate = { encoding: 'gsm7' | 'ucs2'; units: number; parts: number; per_part: number; cost: number; warn: boolean; too_long: boolean }

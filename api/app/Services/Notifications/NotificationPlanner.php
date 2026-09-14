@@ -16,10 +16,13 @@ use App\Models\NpsResponse;
 use App\Models\PackageDeparture;
 use App\Models\Quotation;
 use App\Models\Staff;
+use App\Models\StaffDocument;
 use App\Models\SupportMessage;
 use App\Models\SupportTicket;
 use App\Models\Transaction;
 use App\Services\Booking\DepartureSeats;
+use Closure;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
@@ -134,6 +137,17 @@ final class NotificationPlanner
     public function leadReceived(Inquiry $inquiry): void
     {
         $this->toStaff(NotificationEvent::NewLeadAlert, $inquiry);
+    }
+
+    /**
+     * A staff document, once when it comes within 30 days of expiry (`soon`) and once on the day it expires, or the first
+     * run after (`due`). It goes to the alert's list or, with nobody on it, to everyone active who manages staff
+     * documents: this alert has no record owner to fall back on.
+     */
+    public function staffDocumentExpiring(StaffDocument $document, string $occasion): void
+    {
+        $this->toStaff(NotificationEvent::StaffDocumentExpiringAlert, $document, occasion: ":{$occasion}",
+            fallback: fn () => Staff::permission('staff_documents.manage')->where('status', 'active')->get());
     }
 
     /** Trip messages still waiting are cancelled with the booking. */
@@ -283,16 +297,23 @@ final class NotificationPlanner
         }
     }
 
-    private function toStaff(NotificationEvent $event, Model $related, ?Staff $alsoAssigned = null, array $extra = []): void
+    /**
+     * @param  string  $occasion  appended to the dedupe key when one record raises the same alert more than once
+     * @param  (Closure(): Collection<int, Staff>)|null  $fallback  recipients when nobody is on the alert's list
+     */
+    private function toStaff(NotificationEvent $event, Model $related, ?Staff $alsoAssigned = null, array $extra = [], string $occasion = '', ?Closure $fallback = null): void
     {
         $staff = NotificationSettings::recipientsFor($event);
+        if ($staff->isEmpty() && $fallback !== null) {
+            $staff = $fallback();
+        }
         if ($alsoAssigned && $alsoAssigned->canSignIn() && ! $staff->contains('id', $alsoAssigned->id)) {
             $staff->push($alsoAssigned);
         }
 
         foreach ($staff as $member) {
             // Sales alerts never go by SMS.
-            $base = "{$event->value}:{$related->getMorphClass()}:{$related->getKey()}";
+            $base = "{$event->value}:{$related->getMorphClass()}:{$related->getKey()}{$occasion}";
             if ($member->verifiedWhatsAppNumber()) {
                 $this->plan($event, NotificationChannel::WhatsApp, $related, $member, $member->verifiedWhatsAppNumber(), $member->locale ?? 'bn',
                     $extra, null, "{$base}:whatsapp:staff:{$member->id}", null, "{$base}:staff:{$member->id}");
