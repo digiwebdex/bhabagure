@@ -200,6 +200,7 @@
       "finance": "হিসাব"
     },
     "items": {
+      "dashboard": "ড্যাশবোর্ড",
       "bookings": "বুকিং",
       "customers": "গ্রাহক ও লিড",
       "packages": "প্যাকেজ",
@@ -1284,5 +1285,47 @@
     "voidReverseFirst": "আগে ক্যাশ বুকে এর পেমেন্টগুলো রিভার্স করুন",
     "voidDeal": "ডিল বাতিল",
     "voidTitle": "{{number}} বাতিল করবেন?"
+  },
+  "dashboard": {
+    "title": "ড্যাশবোর্ড",
+    "collected": "আদায় · এই মাসে",
+    "invoiced": "ইনভয়েস করা বিক্রয় {{amount}}",
+    "bookings": "বুকিং · এই মাসে",
+    "change": "গত মাসের একই সময়ের তুলনায় {{sign}}{{n}}",
+    "awaiting": "{{n}}টি পেমেন্টের অপেক্ষায়",
+    "departures": "আসন্ন যাত্রা",
+    "next": "পরবর্তী: {{date}}",
+    "noDepartures": "আগামী ৩০ দিনে কোনো যাত্রা নেই",
+    "newLeads": "নতুন লিড",
+    "waiting": "{{n}}টি ২৪ ঘণ্টার বেশি অপেক্ষায়",
+    "seatsLeft": "খালি সিট",
+    "acrossGroups_one": "{{n}}টি গ্রুপে",
+    "acrossGroups_other": "{{n}}টি গ্রুপে",
+    "passportsMissing": "বাকি পাসপোর্ট",
+    "upcomingTrips": "আসন্ন নিশ্চিত যাত্রায়",
+    "noAlerts": "এই মুহূর্তে মনোযোগ দেওয়ার মতো কিছু নেই।",
+    "alert": {
+      "passports_one": "{{n}} জন যাত্রীর পাসপোর্ট নম্বর নেই · {{reference}}",
+      "passports_other": "{{n}} জন যাত্রীর পাসপোর্ট নম্বর নেই · {{reference}}",
+      "whatsapp": "WhatsApp সংযুক্ত নেই ({{status}})",
+      "review_one": "{{n}}টি অনলাইন পেমেন্ট যাচাই দরকার",
+      "review_other": "{{n}}টি অনলাইন পেমেন্ট যাচাই দরকার",
+      "reviewMeta": "SSLCommerz · পেমেন্ট ও হিসাব খুলুন",
+      "leads_one": "{{n}}টি লিড ২৪ ঘণ্টার বেশি উত্তরহীন",
+      "leads_other": "{{n}}টি লিড ২৪ ঘণ্টার বেশি উত্তরহীন",
+      "leadsMeta": "যোগাযোগের কোনো লগ নেই এমন নতুন লিড",
+      "failed_one": "গত ২৪ ঘণ্টায় {{n}}টি বার্তা ব্যর্থ",
+      "failed_other": "গত ২৪ ঘণ্টায় {{n}}টি বার্তা ব্যর্থ",
+      "failedMeta": "বার্তার লগ খুলুন"
+    },
+    "departs": "যাত্রা {{date}}",
+    "checkedAt": "যাচাই {{when}}",
+    "seats": "{{booked}}/{{total}} বুকড · {{left}}টি খালি",
+    "noSeatLimit": "সিটের সীমা নেই",
+    "thisMonth": "এই মাসে",
+    "nothingCollected": "এই মাসে এখনো কোনো আদায় নেই।",
+    "other": "অন্যান্য",
+    "allBookings": "সব বুকিং",
+    "recentBookings": "সাম্প্রতিক বুকিং"
   }
 }

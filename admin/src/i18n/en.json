@@ -200,6 +200,7 @@
       "finance": "Finance"
     },
     "items": {
+      "dashboard": "Dashboard",
       "bookings": "Bookings",
       "customers": "Customers & leads",
       "packages": "Packages",
@@ -1284,5 +1285,47 @@
     "voidReverseFirst": "Reverse its payments in the cash book first",
     "voidDeal": "Void deal",
     "voidTitle": "Void {{number}}?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "collected": "আদায় · Collected (this month)",
+    "invoiced": "Invoiced sales {{amount}}",
+    "bookings": "বুকিং · Bookings (this month)",
+    "change": "{{sign}}{{n}} vs same days last month",
+    "awaiting": "{{n}} awaiting payment",
+    "departures": "আসন্ন যাত্রা · Departures",
+    "next": "next: {{date}}",
+    "noDepartures": "No departures in the next 30 days",
+    "newLeads": "নতুন লিড · New leads",
+    "waiting": "{{n}} waiting over 24 h",
+    "seatsLeft": "খালি সিট · Seats left",
+    "acrossGroups_one": "across {{n}} group",
+    "acrossGroups_other": "across {{n}} groups",
+    "passportsMissing": "বাকি কাগজ · Passports missing",
+    "upcomingTrips": "on upcoming confirmed trips",
+    "noAlerts": "Nothing needs attention right now.",
+    "alert": {
+      "passports_one": "{{n}} traveller missing a passport number · {{reference}}",
+      "passports_other": "{{n}} travellers missing passport numbers · {{reference}}",
+      "whatsapp": "WhatsApp is not connected ({{status}})",
+      "review_one": "{{n}} online payment needs review",
+      "review_other": "{{n}} online payments need review",
+      "reviewMeta": "SSLCommerz · open Payments & invoices",
+      "leads_one": "{{n}} lead unanswered for over 24 hours",
+      "leads_other": "{{n}} leads unanswered for over 24 hours",
+      "leadsMeta": "New leads with no contact logged",
+      "failed_one": "{{n}} message failed in the last 24 hours",
+      "failed_other": "{{n}} messages failed in the last 24 hours",
+      "failedMeta": "Open the message log"
+    },
+    "departs": "departs {{date}}",
+    "checkedAt": "checked {{when}}",
+    "seats": "{{booked}}/{{total}} booked · {{left}} left",
+    "noSeatLimit": "No seat limit",
+    "thisMonth": "This month",
+    "nothingCollected": "Nothing collected yet this month.",
+    "other": "Other",
+    "allBookings": "All bookings",
+    "recentBookings": "Recent bookings"
   }
 }

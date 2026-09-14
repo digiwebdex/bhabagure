@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router'
 
 import { Loading } from '../components/ui/layout'
 import { LoginPage } from '../features/auth/LoginPage'
-import { Home, NotFound, Require } from './guards'
+import { NotFound, Require } from './guards'
 import { Shell } from './Shell'
 
 /** Each screen is its own chunk: signing in doesn't download the rich text editor. */
@@ -24,6 +24,7 @@ const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'),
 const ChangePasswordPage = page(() => import('../features/auth/ChangePasswordPage'), 'ChangePasswordPage')
 const CustomerProfilePage = page(() => import('../features/customers/CustomerProfilePage'), 'CustomerProfilePage')
 const CustomersPage = page(() => import('../features/customers/CustomersPage'), 'CustomersPage')
+const DashboardPage = page(() => import('../features/dashboard/DashboardPage'), 'DashboardPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
@@ -62,7 +63,8 @@ export const router = createBrowserRouter([
       </Require>
     ),
     children: [
-      { index: true, element: <Home /> },
+      // The Dashboard for everyone; the API leaves out the widgets a role may not see (§4.1).
+      { index: true, element: <DashboardPage /> },
       { path: 'bookings', element: <Require permissions={bookings}><BookingListPage /></Require> },
       { path: 'bookings/new', element: <Require permissions={['bookings.create']}><NewBookingPage /></Require> },
       { path: 'bookings/:id', element: <Require permissions={bookings}><BookingDetailPage /></Require> },

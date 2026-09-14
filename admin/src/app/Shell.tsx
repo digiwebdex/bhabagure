@@ -9,7 +9,7 @@ import { useTheme } from '../lib/useTheme'
 import { useAuth, useStaff } from './auth'
 import { HeaderSearch } from './HeaderSearch'
 import { badgeHref, useNavCounts } from './navCounts'
-import { NAV_GROUPS } from './navigation'
+import { allowed, NAV_GROUPS } from './navigation'
 
 /** Admin shell from the prototype: navy sidebar (a drawer below 1024px), bilingual nav, controls at the foot. */
 export function Shell() {
@@ -17,8 +17,8 @@ export function Shell() {
   const [navOpen, setNavOpen] = useState(false)
   const location = useLocation()
   const { can } = useAuth()
-  // The header search covers bookings and customers; staff who see neither get no search box.
-  const searchable = can('bookings.view_all', 'bookings.view_own', 'customers.view')
+  // The header search covers bookings, customers and quotations; staff who see none of them get no search box.
+  const searchable = can('bookings.view_all', 'bookings.view_own', 'customers.view', 'quotations.view_all', 'quotations.view_own')
 
   // Close the drawer after navigating.
   const [lastPath, setLastPath] = useState(location.pathname)
@@ -110,17 +110,18 @@ function SidebarContent() {
 
       <nav className="flex flex-col gap-1.5">
         {NAV_GROUPS.map((group) => {
-          const items = group.items.filter((item) => can(...item.permissions))
+          const items = group.items.filter((item) => allowed(item, can))
           if (items.length === 0) return null
           return (
             <div key={group.key} className="flex flex-col gap-1">
-              <div className="px-3 pt-4 pb-1.5 font-display text-10 font-extrabold tracking-eyebrow text-white/40 uppercase">{t(`nav.groups.${group.key}`)}</div>
+              {group.heading === false ? null : <div className="px-3 pt-4 pb-1.5 font-display text-10 font-extrabold tracking-eyebrow text-white/40 uppercase">{t(`nav.groups.${group.key}`)}</div>}
               {items.map((item) => {
                 const badge = item.badge ? counts.data?.[item.badge] : undefined
                 return (
                   <div key={item.path} className="relative flex items-center">
                     <NavLink
                       to={item.path}
+                      end={item.path === '/'}
                       className={({ isActive }) =>
                         `flex w-full items-center gap-2.5 rounded-10 px-3 py-2.5 text-left text-15 font-medium hover:bg-white/8 hover:text-white ${badge?.count ? 'pr-12' : ''} ${isActive ? 'bg-white/10 text-white' : 'text-app-nav-text'}`
                       }

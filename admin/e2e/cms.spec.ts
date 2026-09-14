@@ -5,7 +5,8 @@ import { API_URL, password, PHOTO, signIn } from './helpers'
 test.describe('access', () => {
   test('a tour operator sees bookings and the catalogue, not the website screens', async ({ page }) => {
     await signIn(page, 'tour_operator')
-    await expect(page).toHaveURL(/\/bookings$/)
+    // Everyone lands on the Dashboard (docs/phase-5-admin-core.md §4.1).
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
     const nav = page.getByRole('navigation')
     await expect(nav.getByRole('link', { name: /Packages/ })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Pricing/ })).toBeVisible()
@@ -17,7 +18,7 @@ test.describe('access', () => {
 
   test('a sales agent sees bookings and no website screens', async ({ page }) => {
     await signIn(page, 'sales_agent')
-    await expect(page).toHaveURL(/\/bookings$/)
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
     const nav = page.getByRole('navigation')
     await expect(nav.getByRole('link', { name: /Bookings/ })).toBeVisible()
     await expect(nav.getByRole('link', { name: /Packages|Blog|Pricing/ })).toHaveCount(0)
@@ -33,7 +34,7 @@ test.describe('access', () => {
     await page.getByLabel(/^New password/).fill('a-brand-new-password')
     await page.getByLabel('Repeat the new password').fill('a-brand-new-password')
     await page.getByRole('button', { name: 'Change password' }).click()
-    await expect(page).toHaveURL(/\/bookings$/)
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   })
 
   test('the session survives a reload straight after navigating (refresh cookie, grace window)', async ({ page }) => {

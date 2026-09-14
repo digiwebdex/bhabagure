@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BookingTraveller extends Model
 {
@@ -39,5 +40,10 @@ class BookingTraveller extends Model
     public static function passportHash(string $number): string
     {
         return hash_hmac('sha256', strtoupper(preg_replace('/\s+/', '', $number)), (string) config('app.key'));
+    }
+
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class);
     }
 }

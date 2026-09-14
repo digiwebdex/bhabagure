@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\PaymentAttemptStatus;
 use App\Enums\TransactionDirection;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminCashEntry;
 use App\Models\Account;
-use App\Models\Invoice;
 use App\Models\OpeningBalance;
 use App\Models\PaymentAttempt;
 use App\Models\Transaction;
 use App\Services\AuditLogger;
 use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
+use App\Services\Ledger\PaymentFigures;
 use App\Support\Ledger\CashCategories;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,29 +38,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class PaymentsController extends Controller
 {
     /** Method cards (§4.6): customer money received in a Dhaka month, net of reversals, grouped as the design shows them. */
-    private const METHOD_GROUPS = [
-        'bkash' => ['bkash'],
-        'nagad' => ['nagad'],
-        'sslcommerz' => ['sslcommerz'],
-        'cash_bank' => ['cash', 'bank_transfer', 'cheque', 'card_terminal'],
-        'rocket' => ['rocket'],
-    ];
-
     public function summary(Request $request, LedgerService $ledger): JsonResponse
     {
         $month = $request->validate(['month' => ['nullable', 'date_format:Y-m']])['month'] ?? now('Asia/Dhaka')->format('Y-m');
-        [$from, $to] = self::monthRange($month);
-
-        $rows = Transaction::query()->toBase()->where('category', LedgerService::CATEGORY_PAYMENT)->whereBetween('occurred_at', [$from, $to])
-            ->groupBy('method')
-            ->selectRaw("method, SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END) AS net, SUM(CASE WHEN direction = 'in' AND reverses_transaction_id IS NULL THEN 1 ELSE 0 END) AS payments")
-            ->get()->keyBy('method');
-        $cards = collect(self::METHOD_GROUPS)->map(fn (array $methods, string $key) => [
-            'key' => $key,
-            'amount' => Money::toNumber($rows->only($methods)->sum(fn ($row) => (float) $row->net)),
-            'payments' => (int) $rows->only($methods)->sum(fn ($row) => (int) $row->payments),
-        ])->filter(fn (array $card) => $card['key'] !== 'rocket' || $card['payments'] > 0)->values();
-
+        $cards = PaymentFigures::methodCards($month);
         $staff = $request->user('staff');
 
         return response()->json(['data' => [
@@ -70,8 +50,8 @@ class PaymentsController extends Controller
             // "Collected": the cash that arrived — the Dashboard shows the same figure.
             'collected' => Money::toNumber($cards->sum('amount')),
             // Invoiced sales in the month, beside it, so both meanings of "revenue" are labelled.
-            'invoiced' => Money::toNumber(Invoice::query()->where('status', Invoice::ISSUED)->whereBetween('issued_on', [substr($month, 0, 7).'-01', Carbon::parse("{$month}-01")->endOfMonth()->toDateString()])->sum('total_amount')),
-            'review_count' => self::reviewQueue()->count(),
+            'invoiced' => PaymentFigures::invoiced($month),
+            'review_count' => PaymentFigures::reviewQueue()->count(),
             'balance' => $staff->can('ledger.view_company_balance') ? $this->balances($ledger) : null,
         ]]);
     }
@@ -88,7 +68,7 @@ class PaymentsController extends Controller
     {
         $filters = $request->validate([
             'direction' => ['nullable', Rule::in(['in', 'out'])],
-            'method' => ['nullable', Rule::in(array_keys(self::METHOD_GROUPS))],
+            'method' => ['nullable', Rule::in(array_keys(PaymentFigures::METHOD_GROUPS))],
             'category' => ['nullable', Rule::in(CashCategories::all())],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d'],
@@ -187,7 +167,7 @@ class PaymentsController extends Controller
     /** Online payments a person must look at: held for review, or settled with more collected than the customer was shown. */
     public function reviewIndex(Request $request): JsonResponse
     {
-        $attempts = self::reviewQueue()->with('booking:id,reference,customer_id', 'booking.customer:id,name,phone')->oldest('id')->limit(100)->get();
+        $attempts = PaymentFigures::reviewQueue()->with('booking:id,reference,customer_id', 'booking.customer:id,name,phone')->oldest('id')->limit(100)->get();
 
         return response()->json(['data' => $attempts->map(fn (PaymentAttempt $attempt) => [
             'id' => $attempt->id,
@@ -209,7 +189,7 @@ class PaymentsController extends Controller
     {
         $staff = $request->user('staff');
         $note = $request->validate(['note' => ['required', 'string', 'min:3', 'max:300']])['note'];
-        $attempt = self::reviewQueue()->findOrFail($id);
+        $attempt = PaymentFigures::reviewQueue()->findOrFail($id);
         $attempt->forceFill(['reviewed_at' => now(), 'reviewed_by_staff_id' => $staff->id, 'review_note' => $note])->save();
         $audit->record('payment.reviewed', $staff, $attempt->booking, ['tran_id' => $attempt->tran_id, 'note' => $note]);
 
@@ -269,7 +249,7 @@ class PaymentsController extends Controller
 
         return Transaction::query()
             ->when($filters['direction'] ?? null, fn (Builder $q, string $direction) => $q->where('direction', $direction))
-            ->when($filters['method'] ?? null, fn (Builder $q, string $group) => $q->whereIn('method', self::METHOD_GROUPS[$group]))
+            ->when($filters['method'] ?? null, fn (Builder $q, string $group) => $q->whereIn('method', PaymentFigures::METHOD_GROUPS[$group]))
             ->when($filters['category'] ?? null, fn (Builder $q, string $category) => $q->where('category', $category))
             ->when($filters['from'] ?? null, fn (Builder $q, string $from) => $q->where('occurred_at', '>=', Carbon::parse($from, 'Asia/Dhaka')->startOfDay()->utc()))
             ->when($filters['to'] ?? null, fn (Builder $q, string $to) => $q->where('occurred_at', '<=', Carbon::parse($to, 'Asia/Dhaka')->endOfDay()->utc()))
@@ -278,21 +258,6 @@ class PaymentsController extends Controller
                 ->orWhereHas('booking', fn (Builder $b) => $b->where('reference', 'like', "%{$search}%"))
                 ->orWhereHas('invoice', fn (Builder $i) => $i->where('invoice_number', 'like', "%{$search}%"))
                 ->orWhereHas('customer', fn (Builder $c) => $c->where('name', 'like', "%{$search}%"))));
-    }
-
-    private static function reviewQueue(): Builder
-    {
-        return PaymentAttempt::query()->whereNull('reviewed_at')->where(fn (Builder $q) => $q
-            ->where('status', PaymentAttemptStatus::NeedsReview)
-            ->orWhere(fn (Builder $settled) => $settled->where('status', PaymentAttemptStatus::Settled)->where('gateway_surcharge', '>', 0)));
-    }
-
-    /** @return array{0: Carbon, 1: Carbon} the Dhaka month as UTC instants */
-    private static function monthRange(string $month): array
-    {
-        $start = Carbon::parse("{$month}-01", 'Asia/Dhaka')->startOfMonth();
-
-        return [$start->copy()->utc(), $start->copy()->endOfMonth()->utc()];
     }
 
     /** Today's entries at the moment they're made; a backdated one at noon that day in Dhaka. */

@@ -395,7 +395,7 @@ Admin dates are always Dhaka calendar dates (§10).
 
 ## 14. As built (in progress)
 
-Steps 1–6 of §13 are built; Dashboard, the Air ticketing screen and My commission follow.
+Steps 1–7 of §13 are built; the Air ticketing screen and My commission follow.
 
 **Ownership and the pool (steps 1, 3, 4)**
 - The pools are: bookings that are unassigned inquiries; unassigned leads; unassigned open air-ticket enquiries. Quotations have no pool — staff make every one.
@@ -454,3 +454,24 @@ Steps 1–6 of §13 are built; Dashboard, the Air ticketing screen and My commis
 7. **No transfer between money accounts yet** (for example, cash banked). It belongs with the Accounting screen. Until then, two manual entries would misstate income and expense, so none is offered.
 8. **Receipts are taken on manual entries and deal payments only**, not on payments recorded from a booking page.
 9. **The cash book has no detail view:** ◉ opens the booking, and a deal's rows point to the Deals card.
+
+**Dashboard (step 7)**
+- **Where:** `GET /admin/dashboard` computes everything at request time in Dhaka time. A widget the staff member may not see is absent from the response, not zeroed. `/` is the Dashboard for everyone, and the sidebar lists it first, with no group heading.
+- **Collected:** the same figure as the Payments method cards (one shared `PaymentFigures` service), with invoiced sales below. Needs `payments.view`.
+- **Bookings:** confirmed in this Dhaka month, against the same elapsed time last month, plus how many are awaiting payment (not cancelled, not fully paid). Scoped like the Bookings list.
+- **Departures and Seats left:** scheduled departures in the next 30 days; seats left = total − confirmed pax − active holds.
+- **New leads:** leads with no contact, quotation or booking, and how many have waited over 24 hours. Scoped like the Customers list.
+- **Passports missing:** travellers on upcoming confirmed trips with no passport number (the documents-pending rule).
+- **Alerts**, each with its permission and linking to its record:
+  - one per booking departing within 7 days that still lacks passports;
+  - online payments needing review;
+  - leads unanswered over 24 hours;
+  - notifications failed in the last 24 hours;
+  - WhatsApp not connected (only when WhatsApp is switched on).
+- **Upcoming departures:** up to five, with seat bars.
+- **Collected by destination:** this month; deals and bookings without a package are "Other".
+- **Recent bookings:** the last eight, on the shared row-actions table.
+- **Tested** at 02:00 on 1 October in Dhaka (still 30 September in UTC): the month and the previous-month comparison follow Dhaka, and sales agents and tour operators get no money figures.
+
+**Deviation (open to veto)**
+10. **Recent bookings carry five actions** (contact, PDF, view), not all seven. Delete and edit stay on the Bookings list and the booking page.

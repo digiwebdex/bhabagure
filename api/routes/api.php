@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController;
+use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DealController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
@@ -192,6 +193,8 @@ Route::prefix('v1')->group(function () {
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).
         Route::get('nav-counts', NavCountController::class);
+        // The Dashboard (§4.2): every widget computed now, each behind its permission.
+        Route::get('dashboard', DashboardController::class);
         Route::get('assignable-staff', AssignableStaffController::class);
         // Header search: top five of each kind, through the same visibility scopes (§4.1).
         Route::get('search', SearchController::class)->middleware('throttle:public-read');

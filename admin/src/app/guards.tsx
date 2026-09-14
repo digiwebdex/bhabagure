@@ -4,7 +4,6 @@ import { Navigate, useLocation } from 'react-router'
 
 import { EmptyState, Loading } from '../components/ui/layout'
 import { useAuth } from './auth'
-import { firstAllowedPath } from './navigation'
 
 /** Signed in, password already changed, and holding one of the permissions. */
 export function Require({ permissions, children }: { permissions?: string[]; children: ReactNode }) {
@@ -20,12 +19,6 @@ export function Require({ permissions, children }: { permissions?: string[]; chi
   return children
 }
 
-export function Home() {
-  const { can } = useAuth()
-  const { t } = useTranslation()
-  const path = firstAllowedPath(can)
-  return path ? <Navigate to={path} replace /> : <EmptyState title={t('errors.noScreensTitle')} note={t('errors.noScreensNote')} />
-}
 export function NotFound() {
   const { t } = useTranslation()
   return <EmptyState title={t('errors.notFoundTitle')} />

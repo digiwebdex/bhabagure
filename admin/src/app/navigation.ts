@@ -2,10 +2,13 @@
  * Sidebar groups in the design's order, built screens only (docs/phase-5-admin-core.md §4.1).
  * `permissions`: any one of them grants access (api/routes/api.php uses the same rules).
  * `badge`: a key of GET /admin/nav-counts — the count is derived from data, never written here.
+ * No permissions: every signed-in staff member (the Dashboard, whose widgets the API filters).
  */
 export type NavItem = { key: string; path: string; icon: string; permissions: string[]; badge?: string }
 
-export const NAV_GROUPS: { key: string; items: NavItem[] }[] = [
+export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = [
+  // Dashboard, with no group heading (§4.1).
+  { key: 'home', heading: false, items: [{ key: 'dashboard', path: '/', icon: 'D', permissions: [] }] },
   {
     key: 'sales',
     items: [
@@ -39,5 +42,4 @@ export const NAV_GROUPS: { key: string; items: NavItem[] }[] = [
   },
 ]
 
-export const firstAllowedPath = (can: (...permissions: string[]) => boolean): string | null =>
-  NAV_GROUPS.flatMap((group) => group.items).find((item) => can(...item.permissions))?.path ?? null
+export const allowed = (item: NavItem, can: (...permissions: string[]) => boolean): boolean => item.permissions.length === 0 || can(...item.permissions)
