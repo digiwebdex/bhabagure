@@ -44,7 +44,8 @@ class PortalDocumentsTest extends TestCase
         $documents = $this->actingAsApi($me)->getJson('/api/v1/portal/documents')->assertOk()->json('data');
         $this->assertSame([$booking->reference], array_column($documents['trips'], 'reference'));
         $this->assertSame(4, $documents['toDo']);
-        $this->assertSame([['passport_scan', 'missing'], ['photo', 'missing'], ['visa', 'pending'], ['insurance', 'pending']],
+        // Nepal gives the visa on arrival: visa and insurance start as not required.
+        $this->assertSame([['passport_scan', 'missing'], ['photo', 'missing'], ['visa', 'not_required'], ['insurance', 'not_required']],
             array_map(fn ($slot) => [$slot['kind'], $slot['status']], $documents['trips'][0]['travellers'][0]['documents']));
         $this->assertStringNotContainsString('A01234567', json_encode($documents));
 
@@ -125,7 +126,7 @@ class PortalDocumentsTest extends TestCase
     }
 
     #[Test]
-    public function readiness_follows_verified_documents_and_the_visa_and_insurance_staff_track(): void
+    public function readiness_follows_verified_documents_and_the_visa_and_insurance_staff_set(): void
     {
         $booking = $this->websiteBooking('01711-000001');
         [$lead, $second] = $booking->travellers->sortBy('sort_order')->values();
@@ -133,7 +134,8 @@ class PortalDocumentsTest extends TestCase
         $readiness = fn () => collect($this->actingAsApi($booking->customer)->getJson("/api/v1/portal/trips/{$booking->reference}")->assertOk()->json('data.readiness.checks'))
             ->mapWithKeys(fn ($c) => [$c['key'] => $c['waitingOn']])->all();
 
-        $this->assertSame(['paid' => [], 'passports' => [], 'documents' => ['Tanvir Hasan', 'Nusrat Jahan']], $readiness());
+        // Mustang includes the airfare, so e-tickets are checked too (BookingTicketsTest).
+        $this->assertSame(['paid' => [], 'passports' => [], 'documents' => ['Tanvir Hasan', 'Nusrat Jahan'], 'visa' => [], 'insurance' => [], 'etickets' => ['Tanvir Hasan', 'Nusrat Jahan']], $readiness());
 
         foreach ([$lead, $second] as $traveller) {
             foreach (TravellerDocument::UPLOADS as $kind) {
@@ -144,13 +146,14 @@ class PortalDocumentsTest extends TestCase
             ->each(fn (TravellerDocument $d) => $this->actingAsApi($admin)->postJson("/api/v1/admin/traveller-documents/{$d->id}/review", ['decision' => 'verified'])->assertOk());
         $this->assertSame(['Tanvir Hasan'], $readiness()['documents']);
 
-        // Staff start tracking the visa: the check appears and waits on whoever isn't settled yet.
+        // Staff note the lead's visa and ask the second traveller for one: the check waits on whoever isn't settled.
         $this->actingAsApi($admin)->putJson("/api/v1/admin/booking-travellers/{$lead->id}/documents/visa", ['status' => 'issued', 'note' => 'Nepal — visa on arrival'])
             ->assertOk()->assertJsonPath('data.2.status', 'issued');
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/booking-travellers/{$second->id}/documents/visa", ['status' => 'pending'])->assertOk();
         $this->assertSame(['Nusrat Jahan'], $readiness()['visa']);
         $this->actingAsApi($admin)->putJson("/api/v1/admin/booking-travellers/{$second->id}/documents/visa", ['status' => 'not_required'])->assertOk();
         $this->assertSame([], $readiness()['visa']);
-        $this->assertArrayNotHasKey('insurance', $readiness());
+        $this->assertSame([], $readiness()['insurance']);
         $this->actingAsApi($admin)->putJson("/api/v1/admin/booking-travellers/{$second->id}/documents/passport_scan", ['status' => 'issued'])->assertNotFound();
         $this->actingAsApi($this->staff('accountant'))->putJson("/api/v1/admin/booking-travellers/{$second->id}/documents/insurance", ['status' => 'issued'])->assertForbidden();
 

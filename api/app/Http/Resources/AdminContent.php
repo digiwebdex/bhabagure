@@ -135,7 +135,7 @@ final class AdminContent
 
     public static function destination(Destination $destination): array
     {
-        return $destination->only(['id', 'slug', 'name_bn', 'name_en', 'country_code', 'region', 'sort_order']);
+        return $destination->only(['id', 'slug', 'name_bn', 'name_en', 'country_code', 'region', 'visa_on_arrival', 'sort_order']);
     }
 
     public static function category(BlogCategory $category): array

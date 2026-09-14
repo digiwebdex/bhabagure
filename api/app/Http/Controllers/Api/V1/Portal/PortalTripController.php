@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api\V1\Portal;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PublicBooking;
 use App\Models\Booking;
+use App\Models\BookingTicket;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\PackageItineraryDay;
+use App\Services\Documents\BookingTickets;
 use App\Services\Portal\TripReadiness;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -52,6 +55,9 @@ class PortalTripController extends Controller
             : collect();
 
         return response()->json(['data' => PublicBooking::make($booking) + [
+            // Issued e-tickets, per traveller; the PDF comes from tickets/{id}/file.
+            'tickets' => $booking->tickets()->issued()->with('traveller')->get()
+                ->map(fn (BookingTicket $ticket) => BookingTickets::row($ticket) + ['traveller' => $ticket->traveller->full_name])->all(),
             'upcoming' => TripReadiness::isUpcoming($booking),
             'daysToGo' => TripReadiness::daysToGo($booking),
             'readiness' => TripReadiness::for($booking),
@@ -62,6 +68,16 @@ class PortalTripController extends Controller
                 'body' => $day->localized('body')[$en ? 'en' : 'bn'],
             ])->all(),
         ]]);
+    }
+
+    /** An issued e-ticket on one of the customer's bookings, never cached. Anything else is 404. */
+    public function ticketFile(Request $request, int $ticketId, BookingTickets $tickets): HttpResponse
+    {
+        $ticket = BookingTicket::query()->issued()->whereNotNull('path')->whereKey($ticketId)
+            ->whereHas('booking', fn ($q) => $q->where('customer_id', self::customer($request)->id))->first();
+        abort_if($ticket === null, Response::HTTP_NOT_FOUND, __('portal.not_found'));
+
+        return PortalDocumentController::inline($tickets->contents($ticket), (string) $ticket->mime, "e-ticket-{$ticket->ticket_number}");
     }
 
     /** @return \Illuminate\Database\Eloquent\Builder<Booking> */

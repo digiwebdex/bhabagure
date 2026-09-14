@@ -4,8 +4,10 @@ namespace App\Services\Portal;
 
 use App\Enums\BookingStatus;
 use App\Models\Booking;
+use App\Models\BookingTicket;
 use App\Models\BookingTraveller;
 use App\Models\TravellerDocument;
+use App\Services\Documents\TravellerDocuments;
 use Carbon\CarbonImmutable;
 
 /**
@@ -17,10 +19,12 @@ final class TripReadiness
     /** @return array{checks: list<array{key: string, done: bool, waitingOn: list<string>}>, done: int, total: int} */
     public static function for(Booking $booking): array
     {
-        $booking->loadMissing('travellers.documents');
+        $booking->loadMissing(['travellers.documents', 'tickets', 'package.destination']);
         $travellers = $booking->travellers->sortBy('sort_order')->values();
+        $onArrival = TravellerDocuments::onArrival($booking);
         $waiting = fn (callable $missing) => $travellers->filter($missing)->map(fn (BookingTraveller $t) => $t->full_name)->values()->all();
-        $status = fn (BookingTraveller $t, string $kind) => $t->documents->firstWhere('kind', $kind)?->status;
+        // A slot nobody has touched counts as its default: visa and insurance are "not required" on an on-arrival trip.
+        $status = fn (BookingTraveller $t, string $kind) => $t->documents->firstWhere('kind', $kind)?->status ?? TravellerDocuments::defaultStatus($kind, $onArrival);
 
         $check = fn (string $key, array $waitingOn) => ['key' => $key, 'done' => $waitingOn === [], 'waitingOn' => $waitingOn];
         $checks = [
@@ -28,11 +32,14 @@ final class TripReadiness
             $check('passports', $waiting(fn (BookingTraveller $t) => blank($t->passport_number))),
             $check('documents', $waiting(fn (BookingTraveller $t) => collect(TravellerDocument::UPLOADS)->contains(fn (string $kind) => $status($t, $kind) !== TravellerDocument::VERIFIED))),
         ];
-        // Visa and insurance count only on trips where staff track them: someone set a status for a traveller.
         foreach (TravellerDocument::ISSUED as $kind) {
-            if ($travellers->contains(fn (BookingTraveller $t) => $status($t, $kind) !== null)) {
-                $checks[] = $check($kind, $waiting(fn (BookingTraveller $t) => ! in_array($status($t, $kind), [TravellerDocument::ISSUED_STATUS, TravellerDocument::NOT_REQUIRED], true)));
-            }
+            $checks[] = $check($kind, $waiting(fn (BookingTraveller $t) => ! in_array($status($t, $kind), [TravellerDocument::ISSUED_STATUS, TravellerDocument::NOT_REQUIRED], true)));
+        }
+
+        // E-tickets: on packages that include the airfare, and on any trip where staff have recorded a ticket.
+        $tickets = $booking->tickets->filter(fn (BookingTicket $ticket) => $ticket->voided_at === null);
+        if ($booking->package?->includes_airfare || $booking->tickets->isNotEmpty()) {
+            $checks[] = $check('etickets', $waiting(fn (BookingTraveller $t) => ! $tickets->contains('booking_traveller_id', $t->id)));
         }
 
         return [

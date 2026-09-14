@@ -26,7 +26,7 @@ class PortalDocumentController extends Controller
     {
         $bookings = PortalTripController::bookingsOf(PortalTripController::customer($request))
             ->whereIn('status', [BookingStatus::Inquiry, BookingStatus::Confirmed])
-            ->with(['travellers.documents'])->get()
+            ->with(['travellers.documents', 'package.destination'])->get()
             ->filter(fn (Booking $b) => TripReadiness::isUpcoming($b))
             ->sortBy(fn (Booking $b) => $b->travel_start?->toDateString() ?? '9999')->values();
         $en = app()->getLocale() === 'en';
@@ -40,7 +40,7 @@ class PortalDocumentController extends Controller
                 'name' => $t->full_name,
                 'isLead' => $t->is_lead,
                 'passportOnFile' => filled($t->passport_number),
-                'documents' => TravellerDocuments::slots($t),
+                'documents' => TravellerDocuments::slots($t, TravellerDocuments::onArrival($booking)),
             ])->values()->all(),
         ])->all();
 
@@ -62,7 +62,7 @@ class PortalDocumentController extends Controller
             return response()->json(['message' => __("documents.{$e->reason}"), 'code' => $e->reason], Response::HTTP_CONFLICT);
         }
 
-        return response()->json(['data' => TravellerDocuments::slots($traveller->fresh())], Response::HTTP_CREATED);
+        return response()->json(['data' => TravellerDocuments::slots($traveller->fresh(), TravellerDocuments::onArrival($traveller->booking))], Response::HTTP_CREATED);
     }
 
     public function file(Request $request, int $travellerId, string $kind, TravellerDocuments $documents): HttpResponse

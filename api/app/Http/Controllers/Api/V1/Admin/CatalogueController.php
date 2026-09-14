@@ -60,6 +60,7 @@ class CatalogueController extends Controller
             'name_en' => ['required', 'string', 'max:80'],
             'country_code' => ['nullable', 'string', 'size:2', 'alpha'],
             'region' => ['required', Rule::in(['international', 'domestic'])],
+            'visa_on_arrival' => ['sometimes', 'boolean'],
         ]);
     }
 

@@ -50,6 +50,7 @@ class ContentSeeder extends Seeder
                 'name_en' => $row['name']['en'],
                 'country_code' => $row['countryCode'],
                 'region' => $row['region'],
+                'visa_on_arrival' => (bool) ($row['visaOnArrival'] ?? false),
                 'sort_order' => $index + 1,
             ]);
         }

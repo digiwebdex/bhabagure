@@ -208,9 +208,21 @@ Kept from the plan, open to veto:
   - paid in full;
   - passport numbers;
   - passport scan and photo verified;
-  - visa and insurance, only on trips where staff have set a status for someone.
+  - visa and insurance for every traveller;
+  - e-tickets, on packages that include airfare or once any ticket is recorded on the booking.
 
-  There is no e-ticket check: nothing records e-tickets yet.
+### Closed after the first release
+Two gaps from the first cut were closed rather than deferred:
+- **E-tickets are recorded on bookings.** The booking page's E-tickets card (`bookings.update`, owner rule as for
+  payments) records airline, PNR, ticket number, route, flight date and an optional PDF or image. The file is
+  encrypted on the private disk like a passport scan.
+  - A wrong ticket is voided with a reason. It stays listed, struck through, and both steps are in the audit log.
+  - The customer sees issued tickets on the trip page and can download the file.
+  - Readiness waits on each traveller without an issued ticket.
+- **Visa on arrival.** A destination has a *Visa on arrival* switch (CMS → Packages → Destinations). On its bookings, a
+  traveller's visa and insurance start as *not needed* instead of *pending*, so the checklist isn't blank on most
+  trips. Staff can still set either for one traveller. The seed turns it on for Nepal and Thailand; it is a
+  per-destination setting, to be corrected in the CMS wherever it doesn't hold for the travellers' passports.
 - **Accepting a quotation books nothing:** its owner is alerted and converts it with the customer, as planned.
 - **Loyalty and referral stay deferred** (decision 4). The design's loyalty card isn't shown.
 - **Still a gap from Phase 5:** custom-trip and air quotations. The portal lists package quotations only.
@@ -222,6 +234,7 @@ Kept from the plan, open to veto:
   - `PortalDocumentsTest`;
   - `SupportTicketsTest`;
   - `PortalProfileTest`;
+  - `BookingTicketsTest` (record, void, file access by owner, readiness, the visa-on-arrival defaults and override);
   - `NavCountsContractTest` covers the two new badges.
 - **Web e2e (`web/e2e/portal.spec.ts`):**
   - sign in by code, pay and come back signed in, sign out;
@@ -232,4 +245,5 @@ Kept from the plan, open to veto:
 
   The test browser maps `*.e2e.example.com` to the machine, so the portal and the API share a site as they do in
   production.
-- **Admin e2e:** `portal-queues.spec.ts`, and both new tables in the row-actions matrix.
+- **Admin e2e:** `portal-queues.spec.ts` (including recording, opening and voiding an e-ticket), and both new tables in
+  the row-actions matrix.

@@ -55,11 +55,15 @@ class PortalTripsTest extends TestCase
             ['key' => 'paid', 'done' => false, 'waitingOn' => []],
             ['key' => 'passports', 'done' => false, 'waitingOn' => ['Nusrat Jahan']],
             ['key' => 'documents', 'done' => false, 'waitingOn' => ['Tanvir Hasan', 'Nusrat Jahan']],
+            // Nepal: visa on arrival, so nothing to wait for. Mustang includes the airfare: e-tickets are checked.
+            ['key' => 'visa', 'done' => true, 'waitingOn' => []],
+            ['key' => 'insurance', 'done' => true, 'waitingOn' => []],
+            ['key' => 'etickets', 'done' => false, 'waitingOn' => ['Tanvir Hasan', 'Nusrat Jahan']],
         ], $trips['next']['readiness']['checks']);
 
         $this->actingAsApi($me)->getJson("/api/v1/portal/trips/{$mine->reference}")->assertOk()
             ->assertJsonPath('data.reference', $mine->reference)->assertJsonPath('data.total', 153000)
-            ->assertJsonPath('data.itinerary.0.day', 1)->assertJsonPath('data.readiness.done', 0)
+            ->assertJsonPath('data.itinerary.0.day', 1)->assertJsonPath('data.readiness.done', 2)
             ->assertJsonMissingPath('data.travellers.0.passportNumber');
         $this->actingAsApi($me)->getJson("/api/v1/portal/trips/{$theirs->reference}")->assertNotFound();
         $this->actingAsApi($me)->getJson('/api/v1/portal/trips/BH-NOPE')->assertNotFound();

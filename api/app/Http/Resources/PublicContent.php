@@ -31,6 +31,8 @@ final class PublicContent
             'name' => $destination->localized('name'),
             'countryCode' => $destination->country_code,
             'region' => $destination->region,
+            // Only where it's true, as the content seed lists it.
+            ...($destination->visa_on_arrival ? ['visaOnArrival' => true] : []),
         ];
     }
 

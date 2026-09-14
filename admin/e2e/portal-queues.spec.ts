@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { artisan } from '../../scripts/e2e-api.mjs'
-import { PHOTO, signIn, websiteBooking } from './helpers'
+import { FIRST_LOAD, PHOTO, signIn, websiteBooking } from './helpers'
 
 /**
  * docs/phase-6-customer-portal.md §3.3, §3.5, §3.7 from the admin side: the Documents queue (open, verify, reject with
@@ -54,7 +54,9 @@ test('a portal photo is opened, refused to an agent who does not own the trip, r
   await page.getByTestId('document-reviews-table').locator('tbody tr').filter({ hasText: name }).getByRole('link', { name: `Open booking — ${name} · Photo` }).click()
   const travellers = page.locator('[data-testid^="traveller-documents-"]').first()
   await expect(travellers).toContainText('Photo · Rejected')
-  await expect(travellers).toContainText('Visa · Pending')
+  // Nepal gives the visa on arrival: visa and insurance start as not needed, and staff can still set either.
+  await expect(travellers).toContainText('Visa · Not needed')
+  await expect(travellers).toContainText('Insurance · Not needed')
 
   // Visa set from the booking: the customer sees the note in the portal.
   await travellers.getByRole('button', { name: `Set Visa — ${name}` }).click()
@@ -108,4 +110,48 @@ test('an overdue support ticket is counted, answered by WhatsApp and email, and 
   await expect(card).toContainText('Sign-in turned off')
   await card.getByRole('button', { name: 'Turn sign-in back on' }).click()
   await expect(page.getByText('Portal sign-in turned back on')).toBeVisible()
+})
+
+test('an e-ticket is recorded on a booking with its file, opened, and voided with a reason that stays on the booking', async ({ page }) => {
+  const name = `Ticket Traveller ${String(Date.now()).slice(-4)}`
+  const { reference } = await websiteBooking(page, name)
+
+  await signIn(page, 'admin')
+  await page.goto('/bookings')
+  await page.getByRole('link', { name: reference, exact: true }).click({ timeout: FIRST_LOAD.timeout })
+  const tickets = page.locator('section').filter({ has: page.getByRole('heading', { name: 'E-tickets' }) })
+  await expect(tickets).toContainText('No e-tickets recorded yet.', FIRST_LOAD)
+
+  await tickets.getByRole('button', { name: '+ E-ticket' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Record an e-ticket' })
+  await expect(dialog.getByLabel('Traveller')).toHaveValue(/\d+/)
+  await dialog.getByLabel('Airline').fill('Biman Bangladesh')
+  await dialog.getByLabel('PNR').fill('k7xq2m')
+  await expect(dialog.getByLabel('PNR')).toHaveValue('K7XQ2M')
+  await dialog.getByLabel('Ticket number').fill('057-2841993012')
+  await dialog.getByLabel('Route').fill('DAC–KTM–DAC')
+  await dialog.getByLabel('E-ticket file (optional)').setInputFiles(PHOTO)
+  await dialog.getByRole('button', { name: 'Save e-ticket' }).click()
+  await expect(page.getByText('E-ticket recorded — the customer sees it in the portal')).toBeVisible()
+
+  const row = tickets.getByTestId('booking-tickets').locator('li').filter({ hasText: '057-2841993012' })
+  await expect(row).toContainText(name)
+  await expect(row).toContainText('Issued')
+  await expect(row).toContainText('Biman Bangladesh · PNR K7XQ2M · 057-2841993012 · DAC–KTM–DAC')
+
+  // The file is private: it opens decrypted in a new tab.
+  const popup = page.waitForEvent('popup')
+  await row.getByRole('button', { name: 'Open e-ticket 057-2841993012' }).click()
+  await expect.poll(async () => (await popup).url()).toMatch(/^blob:/)
+  await (await popup).close()
+
+  await row.getByRole('button', { name: 'Void e-ticket 057-2841993012' }).click()
+  const voiding = page.getByRole('dialog', { name: 'Void e-ticket 057-2841993012?' })
+  await expect(voiding.getByRole('button', { name: 'Void', exact: true })).toBeDisabled()
+  await voiding.getByLabel('Why it is void').fill('Surname misspelt — reissued')
+  await voiding.getByRole('button', { name: 'Void', exact: true }).click()
+  await expect(page.getByText('E-ticket voided')).toBeVisible()
+  await expect(row).toContainText('Void')
+  await expect(row).toContainText(/Voided by .+: Surname misspelt — reissued/)
+  await expect(row.getByRole('button', { name: 'Void e-ticket 057-2841993012' })).toHaveCount(0)
 })

@@ -45,6 +45,8 @@ export type Destination = {
   name_en: string
   country_code: string | null
   region: 'international' | 'domestic'
+  /** Travellers get the visa on arrival: their visa and insurance default to not required. */
+  visa_on_arrival: boolean
   sort_order: number
   packages_count?: number
 }

@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\BookingLine;
+use App\Models\BookingTicket;
 use App\Models\BookingTraveller;
 use App\Models\Invoice;
 use App\Models\NotificationMessage;
@@ -12,6 +13,7 @@ use App\Models\PaymentAttempt;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Services\Booking\BookingQuoteEditor;
+use App\Services\Documents\BookingTickets;
 use App\Services\Documents\TravellerDocuments;
 use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\MessageRenderer;
@@ -54,13 +56,14 @@ final class AdminBooking
     /** @return array<string, mixed> */
     public static function detail(Booking $booking, Staff $viewer): array
     {
-        $booking->loadMissing(['customer', 'lines', 'travellers.documents', 'assignedStaff', 'package']);
+        $booking->loadMissing(['customer', 'lines', 'travellers.documents', 'assignedStaff', 'package.destination', 'tickets.issuedBy', 'tickets.voidedBy']);
         $invoices = Invoice::query()->where('booking_id', $booking->id)->latest('id')->get();
         $current = $invoices->firstWhere('status', Invoice::ISSUED);
         $open = ! $booking->status->isFinal();
         // Staff who don't see every booking work only what they own; a pool booking is claimed first (BookingController::find).
         $works = Booking::seesAll($viewer) || $booking->assigned_staff_id === $viewer->id;
         $can = fn (string $permission) => $works && $viewer->can($permission);
+        $onArrival = TravellerDocuments::onArrival($booking);
 
         // array_replace, not `+`: the detail's fuller `customer` must win over the summary's.
         return array_replace(self::summary($booking), [
@@ -103,7 +106,13 @@ final class AdminBooking
                 'nationality' => $t->nationality, 'passport_number' => $t->passport_number, 'passport_expiry' => $t->passport_expiry?->toDateString(),
                 'phone' => $t->phone, 'email' => $t->email, 'has_scan' => $t->passport_scan_path !== null, 'ocr_filled' => $t->ocr_filled_at !== null,
                 // Portal documents: the slot shape the portal shows, plus the row id staff review by.
-                'documents' => collect(TravellerDocuments::slots($t))->map(fn (array $slot) => $slot + ['id' => $t->documents->firstWhere('kind', $slot['kind'])?->id])->all(),
+                'documents' => collect(TravellerDocuments::slots($t, $onArrival))->map(fn (array $slot) => $slot + ['id' => $t->documents->firstWhere('kind', $slot['kind'])?->id])->all(),
+            ])->values(),
+            // E-tickets, voided ones too, oldest first (BookingTickets).
+            'visa_on_arrival' => $onArrival,
+            'tickets' => $booking->tickets->map(fn (BookingTicket $ticket) => BookingTickets::row($ticket) + [
+                'issuedBy' => $ticket->issuedBy?->name, 'voidedAt' => $ticket->voided_at?->toIso8601String(),
+                'voidedBy' => $ticket->voidedBy?->name, 'voidReason' => $ticket->void_reason,
             ])->values(),
             'invoices' => $invoices->map(fn (Invoice $invoice) => [
                 'id' => $invoice->id, 'invoice_number' => $invoice->invoice_number, 'status' => $invoice->status,
@@ -145,6 +154,7 @@ final class AdminBooking
                 'assign' => $viewer->can('records.assign'),
                 // Verify or reject portal uploads, and set visa and insurance (DocumentReviewController, same rule).
                 'review_documents' => $can('bookings.update'),
+                'manage_tickets' => $can('bookings.update'),
             ],
             // Inputs for @bhabaghure/pricing on the draft-invoice controls — the same the server recomputes with.
             'quote_inputs' => [

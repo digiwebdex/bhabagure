@@ -2,6 +2,7 @@
 
 namespace App\Services\Documents;
 
+use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\Staff;
@@ -36,27 +37,44 @@ final class TravellerDocuments
     }
 
     /**
-     * The four slots, in order. A missing upload is `missing`; visa and insurance nobody has set yet are `pending`.
+     * The four slots, in order. A missing upload is `missing`. Visa and insurance nobody has set yet are `pending` —
+     * or `not_required` when the trip's destination gives the visa on arrival (onArrival()).
      *
      * @return list<array{kind: string, status: string, note: ?string, uploadedAt: ?string, reviewedAt: ?string, hasFile: bool}>
      */
-    public static function slots(BookingTraveller $traveller): array
+    public static function slots(BookingTraveller $traveller, bool $onArrival = false): array
     {
         $rows = $traveller->relationLoaded('documents') ? $traveller->documents : $traveller->documents()->get();
 
-        return array_map(function (string $kind) use ($rows) {
+        return array_map(function (string $kind) use ($rows, $onArrival) {
             /** @var TravellerDocument|null $row */
             $row = $rows->firstWhere('kind', $kind);
 
             return [
                 'kind' => $kind,
-                'status' => $row?->status ?? (in_array($kind, TravellerDocument::UPLOADS, true) ? 'missing' : TravellerDocument::PENDING),
+                'status' => $row?->status ?? self::defaultStatus($kind, $onArrival),
                 'note' => $row?->note,
                 'uploadedAt' => $row?->uploaded_at?->toIso8601String(),
                 'reviewedAt' => $row?->reviewed_at?->toIso8601String(),
                 'hasFile' => $row?->path !== null,
             ];
         }, TravellerDocument::KINDS);
+    }
+
+    /** A slot's status before anyone has uploaded or set it. */
+    public static function defaultStatus(string $kind, bool $onArrival): string
+    {
+        if (in_array($kind, TravellerDocument::UPLOADS, true)) {
+            return 'missing';
+        }
+
+        return $onArrival ? TravellerDocument::NOT_REQUIRED : TravellerDocument::PENDING;
+    }
+
+    /** Travellers on this booking get the visa on arrival (the package's destination says so, decided 2026-09-15). */
+    public static function onArrival(Booking $booking): bool
+    {
+        return (bool) $booking->loadMissing('package.destination')->package?->destination?->visa_on_arrival;
     }
 
     /**

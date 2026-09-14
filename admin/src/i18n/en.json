@@ -399,7 +399,9 @@
     "photoN": "photo {{n}}",
     "photoAdded": "Photo added",
     "photoRemoved": "Photo removed (it stays in the media library)",
-    "photoHelp": "Landscape photos work best. The cover appears on the package card; all photos appear in the gallery."
+    "photoHelp": "Landscape photos work best. The cover appears on the package card; all photos appear in the gallery.",
+    "visaOnArrival": "Visa on arrival",
+    "visaOnArrivalHint": "Travellers’ visa and insurance start as “not needed” on this destination’s bookings. Staff can still set either for one traveller."
   },
   "departures": {
     "none": "No scheduled departures. The website hides the departures section when there are none.",
@@ -1525,5 +1527,35 @@
     "unblock": "Turn sign-in back on",
     "unblocked": "Portal sign-in turned back on",
     "nps": "Ratings after trips"
+  },
+  "tickets": {
+    "add": "+ E-ticket",
+    "none": "No e-tickets recorded yet.",
+    "issued": "Issued",
+    "void": "Void",
+    "voidedBecause": "Voided by {{name}}: {{reason}}",
+    "open": "Open e-ticket",
+    "openNamed": "Open e-ticket {{number}}",
+    "openFailed": "The e-ticket could not be opened. Try again.",
+    "voidAction": "Void",
+    "voidNamed": "Void e-ticket {{number}}",
+    "addTitle": "Record an e-ticket",
+    "traveller": "Traveller",
+    "airline": "Airline",
+    "pnr": "PNR",
+    "ticketNumber": "Ticket number",
+    "ticketNumberHint": "For example 057-2841993",
+    "departsOn": "Flight date",
+    "route": "Route",
+    "routeHint": "For example DAC–KTM–DAC",
+    "file": "E-ticket file (optional)",
+    "fileHint": "PDF or image, up to 5 MB · kept private, shown to the customer in the portal",
+    "tooBig": "This file is over 5 MB.",
+    "save": "Save e-ticket",
+    "added": "E-ticket recorded — the customer sees it in the portal",
+    "voidTitle": "Void e-ticket {{number}}?",
+    "voidNote": "It stays on the booking, struck through, with your reason. Record the correct ticket afterwards.",
+    "reason": "Why it is void",
+    "voided": "E-ticket voided"
   }
 }

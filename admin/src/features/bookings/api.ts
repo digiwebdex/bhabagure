@@ -81,6 +81,10 @@ export type BookingDetail = BookingSummary & {
     /** Portal documents (docs/phase-6-customer-portal.md §3.3): passport scan, photo, visa, insurance. */
     documents: DocumentSlot[]
   }[]
+  /** The trip's destination gives the visa on arrival: visa and insurance default to not required. */
+  visa_on_arrival: boolean
+  /** E-tickets per traveller, voided ones included. */
+  tickets: { id: number; travellerId: number; airline: string; pnr: string; ticketNumber: string; route: string | null; departsOn: string | null; hasFile: boolean; issuedAt: string; issuedBy: string | null; voidedAt: string | null; voidedBy: string | null; voidReason: string | null }[]
   /** The customer's rating after the trip, from the portal. */
   nps: { score: number; comment: string | null; created_at: string } | null
   invoices: {
@@ -124,7 +128,7 @@ export type BookingDetail = BookingSummary & {
     created_at: string
     settled_at: string | null
   }[]
-  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents', boolean>
+  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets', boolean>
   quote_inputs: { list_price: number; addons: Addon[]; config: PricingConfig }
   payment_methods: string[]
   vat_rates: number[]

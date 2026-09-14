@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { buttonClass } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
-import { portalCall } from '@/lib/customer-api';
+import { openPortalFile, portalCall } from '@/lib/customer-api';
 import { useFormatters } from '@/lib/use-formatters';
 import type { PaymentMethod } from '@/state/booking';
 
@@ -165,6 +165,28 @@ export function TripDetailView({ reference }: { reference: string }) {
                   {t('openDocuments')}
                 </Link>
               ) : null}
+            </Card>
+          ) : null}
+          {trip.tickets.length > 0 ? (
+            <Card>
+              <Heading title={t('etickets')} />
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="portal-tickets">
+                {trip.tickets.map((ticket) => (
+                  <li key={ticket.id} className="flex flex-col gap-0.5 rounded-12 bg-app-surface-2 px-3.5 py-2.75 text-14">
+                    <strong className="font-semibold">{ticket.traveller}</strong>
+                    <span className="font-display text-13 text-app-muted">
+                      {ticket.airline} · PNR {ticket.pnr} · {f.digits(ticket.ticketNumber)}
+                      {ticket.route ? ` · ${ticket.route}` : ''}
+                      {ticket.departsOn ? ` · ${f.date(ticket.departsOn)}` : ''}
+                    </span>
+                    {ticket.hasFile ? (
+                      <button type="button" onClick={() => void openPortalFile(`portal/tickets/${ticket.id}/file`, locale)} className="cursor-pointer self-start text-13 font-semibold text-blue hover:text-orange">
+                        {t('downloadTicket')}
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </Card>
           ) : null}
           <Card>

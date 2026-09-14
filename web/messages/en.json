@@ -581,12 +581,16 @@
           "waiting": "Documents to verify: {names}"
         },
         "visa": {
-          "done": "Visas ready",
+          "done": "Visa: nothing left to arrange",
           "waiting": "Visa pending: {names}"
         },
         "insurance": {
-          "done": "Insurance ready",
+          "done": "Insurance: nothing left to arrange",
           "waiting": "Insurance pending: {names}"
+        },
+        "etickets": {
+          "done": "E-tickets issued",
+          "waiting": "E-ticket to issue: {names}"
         }
       },
       "departsToday": "You travel today — have a great trip!",
@@ -629,7 +633,9 @@
       "openDocuments": "Go to documents",
       "travellers": "Travellers",
       "itinerary": "Planned itinerary",
-      "itineraryNote": "The package plan; your guide confirms the details."
+      "itineraryNote": "The package plan; your guide confirms the details.",
+      "etickets": "E-tickets",
+      "downloadTicket": "Download e-ticket"
     },
     "quotation": {
       "back": "My trips",

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Admin\AssignableStaffController;
 use App\Http\Controllers\Api\V1\Admin\BlogCategoryController;
 use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
+use App\Http\Controllers\Api\V1\Admin\BookingTicketController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
@@ -78,6 +79,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('portal')->middleware(['auth:customer', 'portal.access', 'throttle:portal'])->group(function () {
         Route::get('trips', [PortalTripController::class, 'index']);
         Route::get('trips/{reference}', [PortalTripController::class, 'show']);
+        Route::get('tickets/{ticketId}/file', [PortalTripController::class, 'ticketFile'])->whereNumber('ticketId');
         Route::get('payments', [PortalPaymentController::class, 'index']);
         Route::get('quotations', [PortalQuotationController::class, 'index']);
         Route::get('quotations/{number}', [PortalQuotationController::class, 'show']);
@@ -328,6 +330,10 @@ Route::prefix('v1')->group(function () {
             Route::get('bookings/options', [StaffBookingController::class, 'options']);
             Route::post('bookings', [StaffBookingController::class, 'store']);
             Route::get('bookings/{id}', 'show')->whereNumber('id');
+            // E-tickets per traveller (docs/phase-6-customer-portal.md §8).
+            Route::post('bookings/{id}/tickets', [BookingTicketController::class, 'store'])->whereNumber('id');
+            Route::post('booking-tickets/{ticketId}/void', [BookingTicketController::class, 'void'])->whereNumber('ticketId');
+            Route::get('booking-tickets/{ticketId}/file', [BookingTicketController::class, 'file'])->whereNumber('ticketId');
             // Traveller documents from the portal (docs/phase-6-customer-portal.md §3.3).
             Route::get('document-reviews', [DocumentReviewController::class, 'index']);
             Route::get('traveller-documents/{id}/file', [DocumentReviewController::class, 'file'])->whereNumber('id');

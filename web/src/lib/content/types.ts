@@ -11,6 +11,8 @@ export interface Destination {
   name: Localized;
   countryCode: string | null;
   region: 'international' | 'domestic';
+  /** Travellers get the visa on arrival (set in the CMS). */
+  visaOnArrival?: boolean;
 }
 
 export interface ContentImage {

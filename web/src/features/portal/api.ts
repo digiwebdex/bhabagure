@@ -10,7 +10,7 @@ import type { PublicBooking } from '@/lib/booking-api';
 
 export type BookingStatus = 'inquiry' | 'confirmed' | 'completed' | 'cancelled';
 
-export type ReadinessCheck = { key: 'paid' | 'passports' | 'documents' | 'visa' | 'insurance'; done: boolean; waitingOn: string[] };
+export type ReadinessCheck = { key: 'paid' | 'passports' | 'documents' | 'visa' | 'insurance' | 'etickets'; done: boolean; waitingOn: string[] };
 export type Readiness = { checks: ReadinessCheck[]; done: number; total: number };
 
 export type TripSummary = {
@@ -30,7 +30,10 @@ export type TripSummary = {
 
 export type TripsData = { next: (TripSummary & { readiness: Readiness; daysToGo: number | null }) | null; trips: TripSummary[] };
 
+export type ETicket = { id: number; travellerId: number; traveller: string; airline: string; pnr: string; ticketNumber: string; route: string | null; departsOn: string | null; hasFile: boolean; issuedAt: string };
+
 export type TripDetail = PublicBooking & {
+  tickets: ETicket[];
   upcoming: boolean;
   daysToGo: number | null;
   readiness: Readiness;

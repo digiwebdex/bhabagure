@@ -6,7 +6,8 @@
       "en": "Nepal"
     },
     "countryCode": "NP",
-    "region": "international"
+    "region": "international",
+    "visaOnArrival": true
   },
   {
     "slug": "thailand",
@@ -15,7 +16,8 @@
       "en": "Thailand"
     },
     "countryCode": "TH",
-    "region": "international"
+    "region": "international",
+    "visaOnArrival": true
   },
   {
     "slug": "maldives",

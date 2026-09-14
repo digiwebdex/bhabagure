@@ -133,6 +133,12 @@ class Booking extends Model
         return $this->hasMany(BookingTraveller::class)->orderBy('sort_order');
     }
 
+    /** Airline tickets per traveller, voided ones included (docs/phase-6-customer-portal.md §8). */
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(BookingTicket::class)->orderBy('id');
+    }
+
     public function paymentAttempts(): HasMany
     {
         return $this->hasMany(PaymentAttempt::class)->latest('id');

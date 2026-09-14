@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next'
 
 import { buttonClass } from '../../../components/ui/button'
 import { Dialog, ErrorNotice, useToast } from '../../../components/ui/feedback'
-import { Pair, SelectInput, TextInput } from '../../../components/ui/fields'
+import { Pair, SelectInput, Switch, TextInput } from '../../../components/ui/fields'
 import { Card, CardTitle, Loading } from '../../../components/ui/layout'
 import { api, ApiError } from '../../../lib/api/client'
 import type { Destination } from '../../../lib/api/types'
 import { useFormat } from '../../../lib/useFormat'
 import { slugify, useDestinations } from './api'
 
-type DestinationForm = Pick<Destination, 'slug' | 'name_bn' | 'name_en' | 'country_code' | 'region'>
+type DestinationForm = Pick<Destination, 'slug' | 'name_bn' | 'name_en' | 'country_code' | 'region' | 'visa_on_arrival'>
 
 /** Destinations drive the website's region chips and search select. */
 export function DestinationsCard() {
@@ -48,7 +48,9 @@ function DestinationDialog({ destination, onClose }: { destination: Destination 
   const toast = useToast()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<DestinationForm>(
-    destination ? { slug: destination.slug, name_bn: destination.name_bn, name_en: destination.name_en, country_code: destination.country_code, region: destination.region } : { slug: '', name_bn: '', name_en: '', country_code: '', region: 'international' },
+    destination
+      ? { slug: destination.slug, name_bn: destination.name_bn, name_en: destination.name_en, country_code: destination.country_code, region: destination.region, visa_on_arrival: destination.visa_on_arrival }
+      : { slug: '', name_bn: '', name_en: '', country_code: '', region: 'international', visa_on_arrival: false },
   )
   const save = useMutation({
     mutationFn: () => {
@@ -74,6 +76,7 @@ function DestinationDialog({ destination, onClose }: { destination: Destination 
         <TextInput label={t('packages.countryCode')} value={form.country_code} maxLength={2} onChange={(country_code) => setForm({ ...form, country_code })} error={error('country_code')} hint={t('packages.countryCodeHint')} />
       </Pair>
       <SelectInput label={t('packages.region')} value={form.region} onChange={(region) => setForm({ ...form, region: region as Destination['region'] })} options={[{ value: 'international', label: t('packages.international') }, { value: 'domestic', label: t('packages.domestic') }]} />
+      <Switch label={t('packages.visaOnArrival')} hint={t('packages.visaOnArrivalHint')} checked={form.visa_on_arrival} onChange={(visa_on_arrival) => setForm({ ...form, visa_on_arrival })} />
       {save.error instanceof ApiError && save.error.status === 422 ? null : <ErrorNotice error={save.error} />}
       <div className="flex justify-end gap-2">
         <button type="button" className={buttonClass('outline')} onClick={onClose}>{t('common.cancel')}</button>

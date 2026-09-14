@@ -20,6 +20,7 @@ import { useOpenDocument } from '../documents/useOpenDocument'
 import { ChannelGroups } from '../notifications/MessageList'
 import { bookingActions, useBooking, useBookingAction, type BookingDetail } from './api'
 import { BookingStatusBadge, PaymentBadge } from './badges'
+import { TicketsCard } from './TicketsCard'
 
 export function BookingDetailPage() {
   const id = Number(useParams().id)
@@ -85,6 +86,7 @@ function BookingView({ booking }: { booking: BookingDetail }) {
         <div className="flex min-w-0 flex-col gap-4.5">
           <PaymentsCard booking={booking} />
           <TravellersCard booking={booking} />
+          <TicketsCard booking={booking} />
           <MessagesCard booking={booking} />
           <AttemptsCard booking={booking} />
         </div>

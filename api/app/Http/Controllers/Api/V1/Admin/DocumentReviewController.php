@@ -87,7 +87,7 @@ class DocumentReviewController extends Controller
 
         $documents->setIssued($traveller, $kind, $data['status'], $data['note'] ?? null, $staff);
 
-        return response()->json(['data' => TravellerDocuments::slots($traveller->fresh())]);
+        return response()->json(['data' => TravellerDocuments::slots($traveller->fresh(), TravellerDocuments::onArrival($traveller->booking))]);
     }
 
     /** @return array<string, mixed> */
