@@ -110,20 +110,20 @@ test.describe('CMS to website', () => {
 
       // Review: 1,53,000 + the online payment charge (2.5% = 3,825) = 1,56,825, before the customer commits.
       await expect(dialog.getByText('Online payment charge (2.5%)')).toBeVisible();
-      await expect(dialog).toContainText('BDT 3,825');
-      await expect(dialog.getByTestId('booking-total')).toHaveText('BDT 1,56,825');
+      await expect(dialog).toContainText('৳ 3,825');
+      await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 1,56,825');
       await dialog.getByRole('checkbox').check();
       await dialog.getByRole('button', { name: 'Next step →' }).click();
 
-      await expect(dialog.getByTestId('booking-total')).toHaveText('BDT 1,56,825');
-      await dialog.getByRole('button', { name: 'Pay BDT 1,56,825 with SSLCommerz →' }).click();
+      await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 1,56,825');
+      await dialog.getByRole('button', { name: 'Pay ৳ 1,56,825 with SSLCommerz →' }).click();
 
       // The gateway is asked for exactly the reviewed total — nothing added in between.
       await expect(page.locator('body')).toContainText('BDT 156,825.00');
       await page.getByRole('button', { name: 'Pay', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Payment received — you’re booked!' })).toBeVisible();
       // The booking itself is still 1,53,000: the charge is not booking money.
-      await expect(page.locator('main')).toContainText('BDT 1,53,000');
+      await expect(page.locator('main')).toContainText('৳ 1,53,000');
     } finally {
       await setCharge(0);
     }

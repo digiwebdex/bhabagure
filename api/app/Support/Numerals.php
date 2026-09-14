@@ -7,7 +7,8 @@ use InvalidArgumentException;
 /**
  * PHP twin of @bhabaghure/format, for text the API renders itself (invoice PDFs, messages). Held to
  * packages/format/fixtures.json by tests/Unit/NumeralsTest, so the invoice prints ৳ ১,৫৩,০০০ exactly as the admin does.
- * Grouping is en-IN; Bangla mode uses Bengali digits. Identifiers (invoice numbers, phones) never pass through here.
+ * Grouping is en-IN; Bangla mode uses Bengali digits; "৳" in both languages. Identifiers (invoice numbers, phones)
+ * never pass through here. Only the SMS channel asks for currency 'code' ("BDT"): "৳" would make an SMS Unicode.
  */
 final class Numerals
 {
@@ -15,7 +16,16 @@ final class Numerals
 
     private const MINUS = '−';
 
-    private const CURRENCY_PREFIX = ['bn' => '৳ ', 'en' => 'BDT '];
+    private const CURRENCY_PREFIX = ['symbol' => '৳ ', 'code' => 'BDT '];
+
+    private const LAKH = 100000;
+
+    private const CRORE = 10000000;
+
+    private const SCALE_SUFFIX = [
+        'bn' => ['lakh' => ' লাখ', 'crore' => ' কোটি'],
+        'en' => ['lakh' => 'L', 'crore' => 'Cr'],
+    ];
 
     private const MONTHS = [
         'bn' => ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'],
@@ -36,11 +46,47 @@ final class Numerals
         return ($negative ? self::MINUS : '').self::localizeDigits($digits, $locale);
     }
 
-    public static function bdt(int|float|string $value, string $locale, int|string $decimals = 'auto'): string
+    /** @param 'symbol'|'code' $currency */
+    public static function bdt(int|float|string $value, string $locale, int|string $decimals = 'auto', string $currency = 'symbol'): string
     {
         [$negative, $digits] = self::grouped($value, $decimals);
 
-        return ($negative ? self::MINUS : '').self::CURRENCY_PREFIX[$locale].self::localizeDigits($digits, $locale);
+        return ($negative ? self::MINUS : '').self::CURRENCY_PREFIX[$currency].self::localizeDigits($digits, $locale);
+    }
+
+    /**
+     * "৳ 14.2L" / "৳ ১৪.২ লাখ", "৳ 2.4Cr" / "৳ ২.৪ কোটি"; below one lakh the whole amount in taka. Same integer rounding
+     * as formatBdtCompact, so both twins agree at every boundary.
+     *
+     * @param  'symbol'|'code'  $currency
+     */
+    public static function bdtCompact(int|float|string $value, string $locale, string $currency = 'symbol'): string
+    {
+        $n = self::finite($value);
+        $taka = (int) round(abs($n));
+        $prefix = ($n < 0 && $taka !== 0 ? self::MINUS : '').self::CURRENCY_PREFIX[$currency];
+
+        if ($taka < self::LAKH) {
+            return $prefix.self::localizeDigits(self::groupIndian((string) $taka), $locale);
+        }
+        $lakhTenths = intdiv($taka + intdiv(self::LAKH, 20), intdiv(self::LAKH, 10));
+        if ($lakhTenths < 1000) {
+            return $prefix.self::tenths($lakhTenths, $locale).self::SCALE_SUFFIX[$locale]['lakh'];
+        }
+        $croreTenths = intdiv($taka + intdiv(self::CRORE, 20), intdiv(self::CRORE, 10));
+
+        return $prefix.self::tenths($croreTenths, $locale).self::SCALE_SUFFIX[$locale]['crore'];
+    }
+
+    private static function tenths(int $count, string $locale): string
+    {
+        return self::localizeDigits(self::groupIndian((string) intdiv($count, 10)).'.'.($count % 10), $locale);
+    }
+
+    private static function groupIndian(string $whole): string
+    {
+        return strlen($whole) <= 3 ? $whole
+            : preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', substr($whole, 0, -3)).','.substr($whole, -3);
     }
 
     /** 12 → "১২%" · 2.5 → "2.5%" · 1.85 → "1.85%": up to two decimals, never trailing zeros. */
@@ -64,6 +110,16 @@ final class Numerals
     /** @return array{0: bool, 1: string} */
     private static function grouped(int|float|string $value, int|string $decimals): array
     {
+        $value = self::finite($value);
+        $places = $decimals === 'auto' ? (floor($value) == $value ? 0 : 2) : (int) $decimals;
+        $fixed = number_format(abs($value), $places, '.', '');
+        [$whole, $fraction] = array_pad(explode('.', $fixed), 2, null);
+
+        return [$value < 0 && (float) $fixed != 0, self::groupIndian($whole).($fraction !== null ? ".{$fraction}" : '')];
+    }
+
+    private static function finite(int|float|string $value): float
+    {
         if (is_string($value)) {
             if (trim($value) === '' || ! is_numeric(trim($value))) {
                 throw new InvalidArgumentException("Not a finite number: \"{$value}\"");
@@ -74,13 +130,6 @@ final class Numerals
             throw new InvalidArgumentException('Not a finite number');
         }
 
-        $places = $decimals === 'auto' ? (floor((float) $value) == $value ? 0 : 2) : (int) $decimals;
-        $fixed = number_format(abs((float) $value), $places, '.', '');
-        [$whole, $fraction] = array_pad(explode('.', $fixed), 2, null);
-
-        $grouped = strlen($whole) <= 3 ? $whole
-            : preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', substr($whole, 0, -3)).','.substr($whole, -3);
-
-        return [(float) $value < 0 && (float) $fixed != 0, $grouped.($fraction !== null ? ".{$fraction}" : '')];
+        return (float) $value;
     }
 }

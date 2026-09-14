@@ -60,7 +60,7 @@ test.describe('packages', () => {
     await page.getByLabel('Days').fill('৪') // Bengali digits are accepted
     await page.getByLabel('Nights').fill('3')
     await page.getByLabel('Regular price per person').fill('32000')
-    await expect(page.getByText('BDT 32,000 per person')).toBeVisible()
+    await expect(page.getByText('৳ 32,000 per person')).toBeVisible()
 
     await page.getByRole('button', { name: '+ Add day' }).click()
     await page.getByLabel('Title (English)', { exact: true }).nth(1).fill('DHAKA ➔ POKHARA')
@@ -172,8 +172,8 @@ test.describe('website content', () => {
 
     const example = page.getByRole('table')
     // 1 traveller in a shared room: list price, no uplift. 75,000 + 2% service = 76,500.
-    await expect(example.getByRole('row').nth(1)).toContainText('BDT 75,000')
-    await expect(example.getByRole('row').nth(1)).toContainText('BDT 76,500')
+    await expect(example.getByRole('row').nth(1)).toContainText('৳ 75,000')
+    await expect(example.getByRole('row').nth(1)).toContainText('৳ 76,500')
 
     await page.getByLabel('Supplement % of the per-person rate').fill('15')
     await page.getByRole('button', { name: 'Save', exact: true }).click()

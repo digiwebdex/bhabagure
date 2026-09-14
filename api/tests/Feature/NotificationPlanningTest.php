@@ -59,7 +59,7 @@ class NotificationPlanningTest extends TestCase
         $this->assertSame('8801711000001', $toCustomer['to']);
         $this->assertStringStartsWith(self::SENDER_LINE, $toCustomer['text']);
         $this->assertStringContainsString($booking['reference'], $toCustomer['text']);
-        $this->assertStringContainsString('BDT 1,53,000', $toCustomer['text']);
+        $this->assertStringContainsString('৳ 1,53,000', $toCustomer['text']);
         $this->assertStringNotContainsString('http', $toCustomer['text']);
 
         // The sales alert goes to the agent's verified number.
@@ -128,8 +128,8 @@ class NotificationPlanningTest extends TestCase
         $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/payments", ['amount' => 50000, 'method' => 'cash'])->assertOk();
 
         $payment = NotificationMessage::query()->where('event', 'payment_received')->where('channel', 'whatsapp')->firstOrFail();
-        $this->assertStringContainsString('BDT 50,000', $payment->body);
-        $this->assertStringContainsString('BDT 1,03,000', $payment->body);
+        $this->assertStringContainsString('৳ 50,000', $payment->body);
+        $this->assertStringContainsString('৳ 1,03,000', $payment->body);
         $this->assertTrue(NotificationMessage::query()->where('event', 'payment_received')->where('channel', 'email')->where('status', 'sent')->exists());
 
         $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$booking->id}/confirm")->assertOk();

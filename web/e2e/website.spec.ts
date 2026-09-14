@@ -49,14 +49,14 @@ test.describe('search and package grid', () => {
   test('rapid stepper clicks are all counted and drive per-person slab pricing on the cards', async ({ page }) => {
     await page.goto('/en');
     const mustangPrice = page.locator('#packages article').filter({ hasText: 'NEPAL MUSTANG' }).locator('.text-price');
-    await expect(mustangPrice).toHaveText('BDT 75,000');
+    await expect(mustangPrice).toHaveText('৳ 75,000');
 
     // Eight clicks dispatched in one tick: a stepper reading a captured render value would drop most of them.
     await page.getByRole('button', { name: 'One more traveller' }).evaluate((button: HTMLButtonElement) => {
       for (let i = 0; i < 8; i += 1) button.click();
     });
     await expect(page.locator('#search output')).toHaveText('10');
-    await expect(mustangPrice).toHaveText('BDT 66,000'); // 10+ travellers: −12%
+    await expect(mustangPrice).toHaveText('৳ 66,000'); // 10+ travellers: −12%
     await expect(page.locator('#search-results-summary').first()).toContainText('per-person price for 10 travellers');
   });
 
@@ -86,7 +86,7 @@ test.describe('package detail', () => {
     await page.locator('#packages article').filter({ hasText: 'NEPAL MUSTANG' }).getByRole('link', { name: /NEPAL MUSTANG/ }).click();
     const dialog = page.getByRole('dialog', { name: /NEPAL MUSTANG/ });
     await dialog.getByRole('button', { name: /^4 people/ }).click();
-    await expect(dialog.getByText('Group total').locator('..')).toContainText('BDT 2,82,000'); // 70,500 × 4
+    await expect(dialog.getByText('Group total').locator('..')).toContainText('৳ 2,82,000'); // 70,500 × 4
     await dialog.getByRole('button', { name: /^1 person/ }).click();
     await expect(dialog).toContainText('a single room adds 12% at booking');
   });
@@ -103,7 +103,7 @@ test.describe('language', () => {
     await page.goto('/');
     await expect(page.locator('#packages')).toContainText('৳ ৭৫,০০০');
     await page.goto('/en');
-    await expect(page.locator('#packages')).toContainText('BDT 75,000');
+    await expect(page.locator('#packages')).toContainText('৳ 75,000');
     await expect(page.locator('#packages')).not.toContainText('৭৫');
   });
 
@@ -150,18 +150,18 @@ test.describe('booking', () => {
 
     // Step 3: 75,000 × 2 + 2% service charge = 1,53,000 — the same numbers as the card.
     await expect(dialog.getByRole('heading', { name: 'Review your booking' })).toBeVisible();
-    await expect(dialog).toContainText('BDT 1,50,000');
-    await expect(dialog).toContainText('BDT 3,000');
-    await expect(dialog.getByTestId('booking-total')).toHaveText('BDT 1,53,000');
+    await expect(dialog).toContainText('৳ 1,50,000');
+    await expect(dialog).toContainText('৳ 3,000');
+    await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 1,53,000');
     await dialog.getByRole('button', { name: 'Next step →' }).click();
     await expect(dialog.getByText('Please accept the terms to continue.')).toBeVisible();
     await dialog.getByRole('checkbox').check();
     await dialog.getByRole('button', { name: 'Next step →' }).click();
 
     // Step 4: the total is unchanged; paying creates the booking and opens the gateway.
-    await expect(dialog.getByTestId('booking-total')).toHaveText('BDT 1,53,000');
+    await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 1,53,000');
     await dialog.getByLabel('Nagad').check();
-    await dialog.getByRole('button', { name: 'Pay BDT 1,53,000 with SSLCommerz →' }).click();
+    await dialog.getByRole('button', { name: 'Pay ৳ 1,53,000 with SSLCommerz →' }).click();
 
     await expect(page.getByText('Fake SSLCommerz')).toBeVisible();
     await expect(page.locator('body')).toContainText('BDT 153,000.00 · nagad');
@@ -200,7 +200,7 @@ test.describe('booking', () => {
     await dialog.getByRole('button', { name: 'Next step →' }).click();
     await dialog.getByRole('checkbox').check();
     await dialog.getByRole('button', { name: 'Next step →' }).click();
-    await dialog.getByRole('button', { name: /^Pay BDT 1,53,000 with SSLCommerz/ }).click();
+    await dialog.getByRole('button', { name: /^Pay ৳ 1,53,000 with SSLCommerz/ }).click();
 
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'The payment didn’t go through' })).toBeVisible();

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { formatBdt, formatDate, formatNumber, formatPercent, localizeDigits, type NumberFormatOptions } from '@bhabaghure/format'
+import { formatBdt, formatBdtCompact, formatDate, formatNumber, formatPercent, localizeDigits, type NumberFormatOptions } from '@bhabaghure/format'
 
 import type { AppLocale } from '../i18n'
 
@@ -26,7 +26,10 @@ export function useFormat() {
   return useMemo(
     () => ({
       locale,
-      bdt: (value: number | string, options?: NumberFormatOptions) => formatBdt(value, locale, options),
+      // Decimals only: "BDT" is for SMS text, which the API writes; every screen shows "৳".
+      bdt: (value: number | string, options?: NumberFormatOptions) => formatBdt(value, locale, { decimals: options?.decimals }),
+      /** Summary figures: '৳ 14.2L' / '৳ ১৪.২ লাখ', '৳ 2.4Cr' / '৳ ২.৪ কোটি'; below one lakh the full amount. */
+      bdtCompact: (value: number | string) => formatBdtCompact(value, locale),
       number: (value: number | string, options?: NumberFormatOptions) => formatNumber(value, locale, options),
       percent: (value: number) => formatPercent(value, locale),
       /** 'YYYY-MM-DD' (or an ISO timestamp, taken on its Dhaka date) → '24 Sep 2026' / '২৪ সেপ্টেম্বর ২০২৬'. */

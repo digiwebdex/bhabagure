@@ -16,7 +16,6 @@ use App\Models\PackageDeparture;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Services\Booking\DepartureSeats;
-use App\Support\Numerals;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
@@ -59,7 +58,7 @@ final class NotificationPlanner
     public function paymentReceived(Booking $booking, Transaction $payment): void
     {
         $this->toCustomer(NotificationEvent::PaymentReceived, $booking,
-            extra: ['amount' => Numerals::bdt($payment->amount, $booking->locale)], dedupeSuffix: "payment:{$payment->id}");
+            extra: ['amount' => $payment->amount], dedupeSuffix: "payment:{$payment->id}");
     }
 
     public function leadReceived(Inquiry $inquiry): void
@@ -186,7 +185,7 @@ final class NotificationPlanner
         // The one value only the event knew: which payment this was.
         $extra = [];
         if (preg_match('/:payment:(\d+)$/', $whatsApp->dedupe_key, $m) === 1 && ($payment = Transaction::query()->find((int) $m[1]))) {
-            $extra['amount'] = Numerals::bdt($payment->amount, $whatsApp->locale);
+            $extra['amount'] = $payment->amount;
         }
 
         return $this->plan($whatsApp->event, NotificationChannel::Sms, $booking, $booking->customer, $whatsApp->to_address, $whatsApp->locale,
@@ -194,7 +193,7 @@ final class NotificationPlanner
     }
 
     /**
-     * @param  array<string, string>  $extra
+     * @param  array<string, string|int|float>  $extra
      */
     private function toCustomer(NotificationEvent $event, Booking $booking, array $extra = [], ?string $attachment = null, ?string $dedupeSuffix = null, ?Carbon $scheduledFor = null): void
     {
@@ -233,7 +232,7 @@ final class NotificationPlanner
         }
     }
 
-    /** @param array<string, string> $extra */
+    /** @param array<string, string|int|float> $extra */
     private function plan(NotificationEvent $event, NotificationChannel $channel, Model $related, Model $recipient, ?string $address, string $locale, array $extra, ?string $attachment, string $dedupeKey, ?Carbon $scheduledFor, ?string $groupKey = null, ?int $fallbackOf = null): NotificationMessage
     {
         $due = $scheduledFor === null || ! $scheduledFor->isFuture();
@@ -261,9 +260,9 @@ final class NotificationPlanner
         if ($due) {
             $template = NotificationTemplate::query()->where('event', $event->value)->where('channel', $channel->value)->first();
             if ($template) {
-                $body = $this->renderer->fill($template->body($locale), $this->variables->for($event, $related, $locale, $extra));
+                $body = $this->renderer->fill($template->body($locale), $this->variables->for($event, $related, $locale, $channel, $extra));
                 $row['body'] = $channel === NotificationChannel::WhatsApp ? $this->renderer->whatsApp($body) : $body;
-                $row['title'] = $channel === NotificationChannel::Email ? $this->renderer->fill((string) $template->subject($locale), $this->variables->for($event, $related, $locale, $extra)) : null;
+                $row['title'] = $channel === NotificationChannel::Email ? $this->renderer->fill((string) $template->subject($locale), $this->variables->for($event, $related, $locale, $channel, $extra)) : null;
             }
         }
 

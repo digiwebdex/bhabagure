@@ -1,10 +1,9 @@
 /**
  * The one place a number becomes text.
  *
- * README: Bangla mode renders Bengali digits (৳ ৭৫,০০০); English mode renders Latin
- * (BDT 75,000); centralise the conversion in one function. Admin, website and portal
- * all format through this module. The Laravel API (invoice PDFs, WhatsApp text) has
- * a PHP twin held to the same `fixtures.json`, so the two cannot drift.
+ * Bangla mode renders Bengali digits (৳ ১,৫০,০০০); English mode renders Latin (৳ 1,50,000). "৳" is a currency
+ * symbol, not a language choice, so both languages use it. Admin, website and portal all format through this module.
+ * The Laravel API (invoice PDFs, messages) has a PHP twin held to the same `fixtures.json`, so the two cannot drift.
  *
  * Rules:
  * - Grouping is en-IN (1,50,000). It is computed here rather than by `Intl`, so every
@@ -12,6 +11,8 @@
  * - Identifiers are not numbers. Booking references, invoice numbers, phone and
  *   passport numbers never go through `formatNumber` / `formatBdt`.
  * - Never store formatted strings. Format at render time only.
+ * - SMS is the one place money reads "BDT" (`currency: 'code'`): "৳" is not in the GSM-7 alphabet, so it would turn
+ *   every English SMS into Unicode at 70 characters a part. Only the API's SMS channel passes it.
  */
 
 export type Locale = 'bn' | 'en';
@@ -21,9 +22,20 @@ export interface NumberFormatOptions {
   decimals?: number | 'auto';
 }
 
+export interface MoneyFormatOptions extends NumberFormatOptions {
+  /** `'symbol'` (default): "৳ ". `'code'`: "BDT " — for SMS only. */
+  currency?: 'symbol' | 'code';
+}
+
 const BENGALI_DIGITS = '০১২৩৪৫৬৭৮৯';
 const MINUS = '−';
-const CURRENCY_PREFIX: Record<Locale, string> = { bn: '৳ ', en: 'BDT ' };
+const CURRENCY_PREFIX = { symbol: '৳ ', code: 'BDT ' } as const;
+const LAKH = 100_000;
+const CRORE = 10_000_000;
+const SCALE_SUFFIX: Record<Locale, { lakh: string; crore: string }> = {
+  bn: { lakh: ' লাখ', crore: ' কোটি' },
+  en: { lakh: 'L', crore: 'Cr' },
+};
 
 /**
  * The single digit conversion. `bn`: Latin → Bengali. `en`: Bengali → Latin, which
@@ -51,10 +63,38 @@ export function formatPercent(value: number, locale: Locale): string {
   return `${formatNumber(n, locale, { decimals: places })}%`;
 }
 
-/** 75000 → "৳ ৭৫,০০০" (bn) / "BDT 75,000" (en). Negative amounts: "−৳ ৪৮,০০০". */
-export function formatBdt(value: number | string, locale: Locale, options: NumberFormatOptions = {}): string {
+/** 75000 → "৳ ৭৫,০০০" (bn) / "৳ 75,000" (en). Negative amounts: "−৳ ৪৮,০০০". */
+export function formatBdt(value: number | string, locale: Locale, options: MoneyFormatOptions = {}): string {
   const { negative, digits } = toGroupedDigits(value, options.decimals ?? 'auto');
-  return (negative ? MINUS : '') + CURRENCY_PREFIX[locale] + localizeDigits(digits, locale);
+  return (negative ? MINUS : '') + CURRENCY_PREFIX[options.currency ?? 'symbol'] + localizeDigits(digits, locale);
+}
+
+/**
+ * Summary figures: 1420000 → "৳ 14.2L" / "৳ ১৪.২ লাখ"; 24000000 → "৳ 2.4Cr" / "৳ ২.৪ কোটি"; below one lakh the whole
+ * amount in taka ("৳ 99,999"). One decimal, as the design computes it. Crore is chosen after rounding, so 99,96,000
+ * reads "৳ 1.0Cr", never "৳ 100.0L". Rounding is done on whole taka in integers (half away from zero), so the PHP twin
+ * gives the same digits for every amount.
+ */
+export function formatBdtCompact(value: number | string, locale: Locale, options: Pick<MoneyFormatOptions, 'currency'> = {}): string {
+  const n = toFiniteNumber(value);
+  const taka = Math.round(Math.abs(n)); // half away from zero for the magnitude
+  const sign = n < 0 && taka !== 0 ? MINUS : '';
+  const prefix = sign + CURRENCY_PREFIX[options.currency ?? 'symbol'];
+
+  if (taka < LAKH) {
+    return prefix + localizeDigits(groupIndian(String(taka)), locale);
+  }
+  const lakhTenths = Math.floor((taka + LAKH / 20) / (LAKH / 10));
+  if (lakhTenths < 1000) {
+    return prefix + tenths(lakhTenths, locale) + SCALE_SUFFIX[locale].lakh;
+  }
+  const croreTenths = Math.floor((taka + CRORE / 20) / (CRORE / 10));
+  return prefix + tenths(croreTenths, locale) + SCALE_SUFFIX[locale].crore;
+}
+
+/** 142 → "14.2" / "১৪.২"; the whole part keeps en-IN grouping (12345 crore tenths → "1,234.5"). */
+function tenths(count: number, locale: Locale): string {
+  return localizeDigits(`${groupIndian(String(Math.floor(count / 10)))}.${count % 10}`, locale);
 }
 
 function toGroupedDigits(value: number | string, decimals: number | 'auto'): { negative: boolean; digits: string } {

@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Enums\InquiryType;
+use App\Enums\NotificationChannel;
 use App\Enums\NotificationEvent;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
@@ -17,19 +18,28 @@ use Illuminate\Support\Str;
 
 /**
  * The values for an event's {{variables}}, in the recipient's language. Amounts and dates go through Numerals (the PHP
- * twin of the site's formatter), so a message says ৳ ১,৫৩,০০০ exactly as the website and invoice do. Phone numbers and
- * references stay in Latin digits so WhatsApp makes them tappable.
+ * twin of the site's formatter), so a message says ৳ ১,৫৩,০০০ exactly as the website and invoice do — except SMS, which
+ * says BDT ১,৫৩,০০০: "৳" is not in the GSM-7 alphabet and would make every English SMS Unicode (70 characters a part
+ * instead of 160). That choice is made here and nowhere else. Phone numbers and references stay in Latin digits so
+ * WhatsApp makes them tappable.
  */
 final class NotificationVariables
 {
     /**
-     * @param  array<string, string>  $extra  values only the caller knows (the private booking link, a payment amount)
+     * @param  array<string, string|int|float>  $extra  values only the caller knows (the private booking link; a payment
+     *                                                   `amount` as a number — it is formatted here, for the channel)
      * @return array<string, string>
      */
-    public function for(NotificationEvent $event, object $related, string $locale, array $extra = []): array
+    public function for(NotificationEvent $event, object $related, string $locale, NotificationChannel $channel, array $extra = []): array
     {
+        $currency = $channel === NotificationChannel::Sms ? 'code' : 'symbol';
+        $money = fn (int|float|string $amount): string => Numerals::bdt($amount, $locale, currency: $currency);
+        if (isset($extra['amount'])) {
+            $extra['amount'] = $money($extra['amount']);
+        }
+
         $values = match (true) {
-            $related instanceof Booking => $this->booking($related, $locale),
+            $related instanceof Booking => $this->booking($related, $locale, $money),
             $related instanceof Inquiry => $this->inquiry($related, $locale),
             $related instanceof PackageDeparture => $this->departure($related, $locale),
             default => [],
@@ -38,8 +48,11 @@ final class NotificationVariables
         return array_intersect_key($extra + $values + $this->company($locale), array_flip($event->variables()));
     }
 
-    /** @return array<string, string> */
-    private function booking(Booking $booking, string $locale): array
+    /**
+     * @param  callable(int|float|string): string  $money
+     * @return array<string, string>
+     */
+    private function booking(Booking $booking, string $locale, callable $money): array
     {
         $booking->loadMissing(['customer', 'travellers', 'departure.groupLeader']);
         $lead = $booking->travellers->firstWhere('is_lead', true);
@@ -51,9 +64,9 @@ final class NotificationVariables
             'package' => $locale === 'en' ? $booking->package_title_en : ($booking->package_title_bn ?: $booking->package_title_en),
             'ref' => $booking->reference,
             'date' => $booking->travel_start ? Numerals::date($booking->travel_start->toDateString(), $locale) : '—',
-            'total' => Numerals::bdt($booking->total_amount, $locale),
-            'paid' => Numerals::bdt($booking->paid_amount, $locale),
-            'due' => Numerals::bdt($booking->due_amount, $locale),
+            'total' => $money($booking->total_amount),
+            'paid' => $money($booking->paid_amount),
+            'due' => $money($booking->due_amount),
             'invoice' => $invoice?->invoice_number ?? '',
             'link' => $invoice ? url("/api/v1/public/invoices/{$invoice->share_token}") : '',
             // For SMS: the full share link alone would take most of a Bangla SMS part.

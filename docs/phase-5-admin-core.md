@@ -1,7 +1,47 @@
 # Phase 5 — Admin core: shell, Dashboard, Bookings, Customers, Quotations, Payments
 
-**Status (2026-09-14): plan for review. No Phase 5 feature code is written.** Four questions in §12 need answers first.
-Three small date defects found on the way were fixed now (§10, marked *fixed*).
+**Status (2026-09-14): approved, being built.** Three small date defects found on the way were fixed during planning
+(§10, marked *fixed*).
+
+## 0. Decisions (2026-09-14)
+
+**Answers to §12**
+1. **Ownership.** A booking belongs to the staff member who created it; an admin can reassign it. Website bookings,
+   website leads and air-ticket enquiries have no creator: they sit in a **shared pool** every sales agent sees, and a
+   **claim** makes the claimant the owner. Claims and reassignments are written to the audit trail, because commission
+   follows the booking — it is money.
+2. **Quotations:** staff-side lifecycle (§12 option a).
+3. **Payments in the books:** full double entry — money account + category for manual entries, one audited opening
+   balance per money account, deals as standalone invoices (§12 option a).
+4. **Badges:** Bookings (inquiries you can see), Quotations (sent, expiring within 48 h), and **Air ticketing**
+   (enquiries not marked quoted, older than 24 h — the rows the queue flags).
+
+**Added to Phase 5 by the design re-sync**
+- **Air ticketing, queue only** (§4.7). The website's air-ticket enquiries become visible. Row actions: WhatsApp and
+  email only (no SMS, consistent with the SMS rule) and **Mark as quoted**. No "Quote" button: an air quote is a
+  different shape and gets its own type with the rest of air ticketing (PNRs, fares, commission) later.
+- **My commission, read-only half** (§4.8): own sales, commission earned and pending. The withdrawal form shows
+  "coming soon" until the Phase 7 bonus ledger exists. Company balance, other staff's commission and profit figures
+  answer **403** to roles without the permission — enforced in the API, not by hiding buttons.
+- Staff documents (Vault) stay with the Vault module; when built: private storage, signed-in access, encrypted
+  numbers, and a staff member reads only their own documents unless they manage staff.
+
+**Money formatting (global)**
+- "৳" in every interface in both languages: `৳ 1,50,000` (en) / `৳ ১,৫০,০০০` (bn) — website, admin, invoice PDF,
+  email, WhatsApp.
+- Short forms: `৳ 14.2L` / `৳ 2.4Cr` (en), `৳ ১৪.২ লাখ` / `৳ ২.৪ কোটি` (bn). One decimal, as the design's own code
+  computes it (`(amount / 100000).toFixed(1) + 'L'`), lakh from 1,00,000 and crore from 1,00,00,000, deciding the
+  unit after rounding (99,96,000 → `৳ 1.0Cr`, never `৳ 100.0L`). Below one lakh the full amount.
+- **SMS is the one exception:** `BDT` in both languages (`BDT 1,53,000` / `BDT ১,৫৩,০০০`), because "৳" is not in the
+  GSM-7 alphabet and would make every English SMS Unicode (70 characters a part instead of 160). The switch lives in
+  the SMS channel only.
+- Money is stored and sent as numbers and formatted when shown. The message log keeps the exact text that was sent
+  (a record). Typed-in visa fees in package excludes, blog copy and the FAQ move to a setting when that copy is next
+  touched.
+
+**Kept from the plan, open to veto:** the seven-icon column on Bookings, Customers and Quotations keeps ✉ SMS as the
+device's own `sms:` link (unlogged, costs the company nothing), as §3.3 describes; the air-ticket queue has no SMS
+button, as decided above.
 
 **How this plan was made.** Nine read-only investigators worked in parallel:
 - `_design/README.md` §2 and the rest of the README;
@@ -178,6 +218,28 @@ Every number is computed in Dhaka time, so there are no literal values.
 - **Saved references:** preset labels for the reference field (e.g. "Office rent", "Pokhara Grande advance"), editable by staff with `transactions.create_manual`.
 - **Evidence uploads:** receipts, bank slips or bKash screenshots as images or PDF. They go to the private disk and are served only through an authenticated route, never the public media pipeline.
 
+### 4.7 Air ticketing — enquiry queue only
+
+- **Source:** the website's air-ticket form already stores `inquiries` rows of type `air_quote` (from, to, dates,
+  passengers, cabin class, contact). Nothing else about air ticketing is built.
+- **Queue:** open enquiries first, oldest first; rows older than 24 h (Dhaka time, not marked quoted) flagged, with the
+  age shown ("26 h" / "২৬ ঘণ্টা"). Filters: open · quoted · all, in the URL.
+- **Row actions** on the shared table: ◉ view details, ✆ WhatsApp and @ email to the number and address on the enquiry,
+  **Mark as quoted** (records who and when, audited; can be undone by the same person or an admin). No SMS, no Quote.
+- **Ownership:** unclaimed enquiries are in the shared pool; claiming works as for bookings (§0).
+- **Badge:** open, unquoted enquiries older than 24 h that the staff member can see — the same query as the flagged rows.
+- **Permission:** new `air_inquiries.view` / `air_inquiries.manage` (admin, sales agent).
+- **Layout:** from the re-synced design once it can be read here; built after the rest of Phase 5.
+
+### 4.8 My commission — read-only half
+
+- Own sales, commission earned and commission pending, for the signed-in staff member only; the route takes no staff
+  id, so no parameter can point it at someone else.
+- Withdrawal form: shown disabled with "coming soon" until the Phase 7 bonus ledger.
+- Company balance, other staff's commission and profit: `ledger.view_company_balance` / `commission.view_all` checked
+  in the API; a sales agent calling those endpoints directly gets 403 (tested per endpoint).
+- **Commission rules and layout:** from the re-synced design once it can be read here; built after the rest of Phase 5.
+
 ## 5. Data model
 
 | Change | Purpose |
@@ -233,7 +295,8 @@ The route test that refuses any PUT, PATCH or DELETE on ledger paths stays in fo
 
 ## 8. Formatting (`@bhabaghure/format` + PHP `Numerals`, fixture-held)
 
-- **`formatBdtCompact`:** "BDT 14.2L" / "৳ ১৪.২ লাখ", and crore above that.
+- **`formatBdt`:** "৳" in both languages (was "BDT " in English); SMS passes `{ currency: 'code' }` for "BDT" (§0).
+- **`formatBdtCompact`:** "৳ 14.2L" / "৳ ১৪.২ লাখ", "৳ 2.4Cr" / "৳ ২.৪ কোটি" (§0).
 - **`formatWeekdayDate`:** "Tuesday, 22 September 2026" / "মঙ্গলবার, ২২ সেপ্টেম্বর ২০২৬".
 - **`formatDateRange`:** "12–16 Oct 2026".
 - **`formatRelativeAge`:** "26 h" / "২৬ ঘণ্টা", "3 days".
@@ -281,7 +344,7 @@ Admin dates are always Dhaka calendar dates (§10).
   - Bangla and English, light and dark.
 - **Formatting:** new fixtures in both twins.
 
-## 12. Questions
+## 12. Questions (answered 2026-09-14 — see §0)
 
 1. **Leads and ownership.** What is a lead, and who owns website bookings and leads, so that sales agents see anything?
    - **(a) Recommended.**

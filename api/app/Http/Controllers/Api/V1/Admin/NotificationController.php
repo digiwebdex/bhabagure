@@ -24,7 +24,6 @@ use App\Services\Notifications\NotificationVariables;
 use App\Services\Notifications\Sms\DisabledSmsGateway;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
-use App\Support\Numerals;
 use App\Support\Sms\SmsParts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -211,7 +210,7 @@ class NotificationController extends Controller
         }
         RateLimiter::hit($key, 60);
 
-        $values = $variables->for($template->event, $sample, $locale, $extra);
+        $values = $variables->for($template->event, $sample, $locale, $template->channel, $extra);
         $body = $renderer->fill($template->body($locale), $values);
         $row = NotificationMessage::query()->create([
             'event' => $template->event, 'channel' => $template->channel, 'to_address' => $address,
@@ -245,7 +244,7 @@ class NotificationController extends Controller
         $subject = $isEmail ? (string) ($data['subject'] ?? '') : '';
 
         [$sample, $extra] = $this->sample($template->event, $data['locale']);
-        $values = $sample ? $variables->for($template->event, $sample, $data['locale'], $extra) : [];
+        $values = $sample ? $variables->for($template->event, $sample, $data['locale'], $template->channel, $extra) : [];
         $filled = $renderer->fill($body, $values);
         $isWhatsApp = $template->channel === NotificationChannel::WhatsApp;
 
@@ -336,7 +335,7 @@ class NotificationController extends Controller
      * The newest record a template can be filled from, and the values only a live event carries (a payment's amount,
      * the private booking link — shown with its token masked).
      *
-     * @return array{0: Booking|Inquiry|PackageDeparture|null, 1: array<string, string>}
+     * @return array{0: Booking|Inquiry|PackageDeparture|null, 1: array<string, string|int|float>}
      */
     private function sample(NotificationEvent $event, string $locale): array
     {
@@ -346,7 +345,7 @@ class NotificationController extends Controller
             default => Booking::query()->latest('id')->first(),
         };
         $extra = $sample instanceof Booking ? [
-            'amount' => Numerals::bdt($sample->paid_amount, $locale),
+            'amount' => $sample->paid_amount,
             'link' => rtrim((string) config('bhabaghure.web_url'), '/')."/booking/{$sample->reference}#t=sample",
         ] : [];
 

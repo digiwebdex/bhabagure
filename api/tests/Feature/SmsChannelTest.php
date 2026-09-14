@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\NotificationChannel;
+use App\Enums\NotificationEvent;
 use App\Jobs\LinkWhatsAppMessageId;
 use App\Mail\AdminAlertMail;
 use App\Models\Booking;
@@ -16,6 +18,7 @@ use App\Services\Invoices\InvoiceIssuer;
 use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\NotificationPlanner;
 use App\Services\Notifications\NotificationSettings;
+use App\Services\Notifications\NotificationVariables;
 use App\Services\Notifications\Sms\BulkSmsBdGateway;
 use App\Services\Notifications\Sms\DisabledSmsGateway;
 use App\Services\Notifications\Sms\FakeSmsGateway;
@@ -23,6 +26,7 @@ use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\FakeWhatsAppGateway;
 use App\Services\Notifications\WhatsApp\WaSenderGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
+use App\Support\Sms\SmsParts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as HttpRequest;
@@ -330,6 +334,28 @@ class SmsChannelTest extends TestCase
         $this->assertSame($confirmation['channels']['whatsapp']['id'], $confirmation['channels']['sms']['fallback_of_id']);
         $created = $groups->firstWhere('event', 'booking_created');
         $this->assertNull($created['channels']['sms']);
+    }
+
+    #[Test]
+    public function money_reads_bdt_in_sms_only_and_the_taka_sign_in_whatsapp_and_email_in_both_languages(): void
+    {
+        $booking = $this->confirmedBooking();
+        $variables = app(NotificationVariables::class);
+        $amounts = fn (string $locale, NotificationChannel $channel) => array_intersect_key(
+            $variables->for(NotificationEvent::PaymentReceived, $booking, $locale, $channel, ['amount' => 50000]),
+            array_flip(['amount', 'due']));
+
+        $this->assertSame(['amount' => 'BDT 50,000', 'due' => 'BDT 0'], $amounts('en', NotificationChannel::Sms));
+        $this->assertSame(['amount' => 'BDT ৫০,০০০', 'due' => 'BDT ০'], $amounts('bn', NotificationChannel::Sms));
+        foreach ([NotificationChannel::WhatsApp, NotificationChannel::Email] as $channel) {
+            $this->assertSame(['amount' => '৳ 50,000', 'due' => '৳ 0'], $amounts('en', $channel), $channel->value);
+            $this->assertSame(['amount' => '৳ ৫০,০০০', 'due' => '৳ ০'], $amounts('bn', $channel), $channel->value);
+        }
+
+        // Why: the English SMS stays GSM-7 (160 characters a part); the same text with "৳" is Unicode (70).
+        $due = $amounts('en', NotificationChannel::Sms)['due'];
+        $this->assertSame('gsm7', SmsParts::count("Booking {$booking->reference} confirmed. Balance due {$due}.")['encoding']);
+        $this->assertSame('ucs2', SmsParts::count("Booking {$booking->reference} confirmed. Balance due ৳ 0.")['encoding']);
     }
 
     private function confirmedBooking(string $reference = 'first'): Booking

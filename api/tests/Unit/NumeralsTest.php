@@ -26,7 +26,10 @@ class NumeralsTest extends TestCase
             $this->assertSame($case['expected'], Numerals::number($case['value'], $case['locale'], $case['options']['decimals'] ?? 'auto'), json_encode($case));
         }
         foreach ($f['formatBdt'] as $case) {
-            $this->assertSame($case['expected'], Numerals::bdt($case['value'], $case['locale'], $case['options']['decimals'] ?? 'auto'), json_encode($case));
+            $this->assertSame($case['expected'], Numerals::bdt($case['value'], $case['locale'], $case['options']['decimals'] ?? 'auto', $case['options']['currency'] ?? 'symbol'), json_encode($case));
+        }
+        foreach ($f['formatBdtCompact'] as $case) {
+            $this->assertSame($case['expected'], Numerals::bdtCompact($case['value'], $case['locale'], $case['options']['currency'] ?? 'symbol'), json_encode($case));
         }
         foreach ($f['formatPercent'] as $case) {
             $this->assertSame($case['expected'], Numerals::percent($case['value'], $case['locale']), json_encode($case));

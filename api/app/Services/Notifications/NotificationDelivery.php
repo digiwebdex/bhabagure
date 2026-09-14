@@ -247,7 +247,7 @@ final class NotificationDelivery
         if (! $template || ! $row->related) {
             return false;
         }
-        $values = $this->variables->for($row->event, $row->related, $row->locale);
+        $values = $this->variables->for($row->event, $row->related, $row->locale, $row->channel);
         $body = $this->renderer->fill($template->body($row->locale), $values);
         $row->forceFill([
             'body' => $row->channel === NotificationChannel::WhatsApp ? $this->renderer->whatsApp($body) : $body,
