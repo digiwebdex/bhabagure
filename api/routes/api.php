@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\AirInquiryController;
+use App\Http\Controllers\Api\V1\Admin\AssignableStaffController;
 use App\Http\Controllers\Api\V1\Admin\BlogCategoryController;
 use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
+use App\Http\Controllers\Api\V1\Admin\CustomerController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -181,8 +183,24 @@ Route::prefix('v1')->group(function () {
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).
         Route::get('nav-counts', NavCountController::class);
+        Route::get('assignable-staff', AssignableStaffController::class);
         // Header search: top five of each kind, through the same visibility scopes (§4.1).
         Route::get('search', SearchController::class)->middleware('throttle:public-read');
+
+        // Customers & leads (§4.4). Per-action permissions and ownership are checked in the controller.
+        Route::middleware('permission:customers.view,staff')->controller(CustomerController::class)->group(function () {
+            Route::get('customers', 'index');
+            Route::get('customers/board', 'board');
+            Route::post('customers', 'store');
+            Route::get('customers/{id}', 'show')->whereNumber('id');
+            Route::put('customers/{id}', 'update')->whereNumber('id');
+            Route::delete('customers/{id}', 'destroy')->whereNumber('id');
+            Route::post('customers/{id}/contacts', 'logContact')->whereNumber('id');
+            Route::post('customers/{id}/lost', 'markLost')->whereNumber('id');
+            Route::delete('customers/{id}/lost', 'reopen')->whereNumber('id');
+            Route::post('customers/{id}/claim', 'claim')->whereNumber('id');
+            Route::post('customers/{id}/assign', 'assign')->whereNumber('id');
+        });
 
         // The Air ticketing queue: website air-ticket enquiries (§4.7). Per-action permissions are checked in the controller.
         Route::middleware('permission:air_inquiries.view,staff')->controller(AirInquiryController::class)->group(function () {

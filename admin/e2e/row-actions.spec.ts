@@ -3,13 +3,23 @@ import { expect, test, type Page } from '@playwright/test'
 import { signIn, websiteBooking } from './helpers'
 
 /**
- * docs/phase-5-admin-core.md §3.2: the sticky row-actions cell, measured on the real Bookings table — the eight failure
- * modes F1–F8 at 1024 px (icons) and 390 px ("⋯"), light and dark, at rest / hovered / selected, scrolled 0, 50 and
- * 100 %. Checks use computed styles, bounding boxes, elementFromPoint hit-tests and pixels sampled from screenshots.
+ * docs/phase-5-admin-core.md §3.2: the sticky row-actions cell, measured on the real admin tables — the eight failure
+ * modes F1–F8 with icons (at a width where each table overflows) and at 390 px ("⋯"), light and dark, at rest /
+ * hovered / selected, scrolled 0, 50 and 100 %. Checks use computed styles, bounding boxes, elementFromPoint hit-tests
+ * and pixels sampled from screenshots.
  */
 test.describe.configure({ mode: 'serial' })
 
 type Theme = 'light' | 'dark'
+
+/** Every admin table with row actions, at a width where its columns overflow the card. */
+const TABLES = [
+  { name: 'Bookings', url: '/bookings', testId: 'bookings-table', width: 1024 },
+  { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700 },
+] as const
+
+/** The table the helpers below measure. */
+let current: (typeof TABLES)[number] = TABLES[0]
 
 test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage()
@@ -23,14 +33,14 @@ async function openBookings(page: Page, width: number, theme: Theme) {
   await page.setViewportSize({ width, height: 860 })
   await signIn(page, 'admin')
   await page.evaluate((value) => localStorage.setItem('bh-theme', value), theme)
-  await page.goto('/bookings')
-  await expect(page.getByTestId('bookings-table').getByRole('row').nth(1)).toBeVisible()
+  await page.goto(current.url)
+  await expect(page.getByTestId(current.testId).getByRole('row').nth(1)).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 }
 
 /** Scrolls the table's own scroll container to a fraction of its horizontal range. */
 async function scrollTo(page: Page, fraction: number) {
-  await page.getByTestId('bookings-table').evaluate((scroller, f) => {
+  await page.getByTestId(current.testId).evaluate((scroller, f) => {
     scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) * f
   }, fraction)
   await page.waitForTimeout(80) // the edge flag updates on the scroll event
@@ -38,7 +48,7 @@ async function scrollTo(page: Page, fraction: number) {
 
 /** Boxes and styles for one body row's actions cell. */
 async function measure(page: Page, rowIndex: number) {
-  return page.getByTestId('bookings-table').evaluate((scroller, index) => {
+  return page.getByTestId(current.testId).evaluate((scroller, index) => {
     const row = scroller.querySelectorAll('tbody tr')[index] as HTMLTableRowElement
     const cell = row.querySelector('td[data-sticky-actions]') as HTMLTableCellElement
     const th = scroller.querySelector('th[data-sticky-actions]') as HTMLTableCellElement
@@ -112,18 +122,21 @@ async function pixels(page: Page, points: { x: number; y: number }[]) {
 const rgb = (css: string) => (css.match(/\d+(\.\d+)?/g) ?? []).map(Number)
 const opaque = (css: string) => rgb(css).length === 3 || rgb(css)[3] === 1
 
-for (const theme of ['light', 'dark'] as const) {
-  test(`1024 px, ${theme}: the actions cell stays reachable, opaque and full height at every scroll position and state (F1–F8)`, async ({ page }) => {
-    await openBookings(page, 1024, theme)
+for (const table of TABLES) for (const theme of ['light', 'dark'] as const) {
+  test(`${table.name}, ${table.width} px, ${theme}: the actions cell stays reachable, opaque and full height at every scroll position and state (F1–F8)`, async ({ page }) => {
+    current = table
+    await openBookings(page, table.width, theme)
     const initial = await measure(page, 1)
     expect(initial.scrollWidth, 'the table must overflow for this test to mean anything').toBeGreaterThan(initial.clientWidth + 40)
 
     for (const fraction of [0, 0.5, 1]) {
       await scrollTo(page, fraction)
       for (const state of ['rest', 'hover', 'selected'] as const) {
-        const row = page.getByTestId('bookings-table').locator('tbody tr').nth(1)
+        const row = page.getByTestId(current.testId).locator('tbody tr').nth(1)
         await page.mouse.move(0, 0)
         await row.evaluate((tr, s) => tr.setAttribute('data-selected', String(s === 'selected')), state)
+        // Hit-tests and screenshots only see the viewport: bring the row into view (the lead board sits above the list).
+        await row.scrollIntoViewIfNeeded()
         if (state === 'hover') await row.locator('td').first().hover({ position: { x: 4, y: 4 } })
         const m = await measure(page, 1)
         const label = `${theme} scroll ${fraction * 100}% ${state}`
@@ -177,6 +190,7 @@ for (const theme of ['light', 'dark'] as const) {
 }
 
 test('390 px: one "⋯" button in the sticky cell opens the same actions, with the reason for each unavailable one', async ({ page }) => {
+  current = TABLES[0]
   await openBookings(page, 390, 'light')
   for (const fraction of [0, 0.5, 1]) {
     await scrollTo(page, fraction)
@@ -198,6 +212,7 @@ test('390 px: one "⋯" button in the sticky cell opens the same actions, with t
 })
 
 test('row clicks open the booking but never swallow a click on an action; unavailable actions say why', async ({ page }) => {
+  current = TABLES[0]
   await openBookings(page, 1440, 'light')
   const row = page.getByTestId('bookings-table').locator('tbody tr').first()
   const reference = (await row.locator('td').first().getByRole('link').textContent())!.trim()

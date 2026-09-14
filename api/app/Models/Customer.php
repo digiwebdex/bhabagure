@@ -14,7 +14,10 @@ class Customer extends Authenticatable implements JWTSubject
 {
     use OwnedByStaff, SoftDeletes;
 
-    protected $fillable = ['name', 'phone', 'email', 'password', 'stage', 'source', 'address', 'client_id', 'assigned_staff_id', 'locale', 'notes'];
+    /** The lead board's columns, plus Lost (docs/phase-5-admin-core.md §4.4). Derived — never stored. */
+    public const LEAD_STATES = ['new', 'contacted', 'quoted', 'converted', 'lost'];
+
+    protected $fillable = ['name', 'phone', 'email', 'password', 'stage', 'source', 'interest', 'address', 'client_id', 'assigned_staff_id', 'locale', 'notes'];
 
     protected $hidden = ['password', 'active_phone', 'active_email'];
 
@@ -26,7 +29,56 @@ class Customer extends Authenticatable implements JWTSubject
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'whatsapp_opted_out_at' => 'datetime',
+            'lost_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Where a lead is, from what happened to it: Lost if marked lost; Converted with a booking that isn't cancelled;
+     * Quoted with a quotation sent; Contacted with a contact logged; otherwise New.
+     */
+    public function scopeLeadState(Builder $query, string $state): void
+    {
+        $booked = fn (Builder $bookings) => $bookings->where('status', '!=', 'cancelled');
+        $open = fn (Builder $q) => $q->whereNull($this->qualifyColumn('lost_at'));
+
+        match ($state) {
+            'lost' => $query->whereNotNull($this->qualifyColumn('lost_at')),
+            'converted' => $query->where($open)->whereHas('bookings', $booked),
+            // Quotations arrive with the Quotations screen; until then nothing is Quoted.
+            'quoted' => $query->whereRaw('1 = 0'),
+            'contacted' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereHas('contacts'),
+            'new' => $query->where($open)->whereDoesntHave('bookings', $booked)->whereDoesntHave('contacts'),
+        };
+    }
+
+    /** The same rule for one loaded row (needs has_booking and has_contact from withExists). */
+    public function leadState(): string
+    {
+        return match (true) {
+            $this->lost_at !== null => 'lost',
+            (bool) $this->has_booking => 'converted',
+            (bool) ($this->has_quote ?? false) => 'quoted',
+            (bool) $this->has_contact => 'contacted',
+            default => 'new',
+        };
+    }
+
+    /** withExists columns the leadState() rule reads. */
+    public function scopeWithLeadFacts(Builder $query): void
+    {
+        $query->withExists(['bookings as has_booking' => fn (Builder $b) => $b->where('status', '!=', 'cancelled'), 'contacts as has_contact']);
+    }
+
+    /** Traveller rows that are this customer (the lead traveller on their bookings): where passports are on file. */
+    public function travellerRecords(): HasMany
+    {
+        return $this->hasMany(BookingTraveller::class);
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(CustomerContact::class)->orderByDesc('occurred_at')->orderByDesc('id');
     }
 
     /** Staff who see every booking see every customer; the matrix gives sales agents "own customers" (phase-1-schema §5). */

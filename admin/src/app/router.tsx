@@ -22,6 +22,8 @@ const BookingDetailPage = page(() => import('../features/bookings/BookingDetailP
 const BookingListPage = page(() => import('../features/bookings/BookingListPage'), 'BookingListPage')
 const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'), 'NewBookingPage')
 const ChangePasswordPage = page(() => import('../features/auth/ChangePasswordPage'), 'ChangePasswordPage')
+const CustomerProfilePage = page(() => import('../features/customers/CustomerProfilePage'), 'CustomerProfilePage')
+const CustomersPage = page(() => import('../features/customers/CustomersPage'), 'CustomersPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
@@ -60,6 +62,8 @@ export const router = createBrowserRouter([
       { path: 'bookings', element: <Require permissions={bookings}><BookingListPage /></Require> },
       { path: 'bookings/new', element: <Require permissions={['bookings.create']}><NewBookingPage /></Require> },
       { path: 'bookings/:id', element: <Require permissions={bookings}><BookingDetailPage /></Require> },
+      { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
+      { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'packages', element: <Require permissions={packages}><PackageListPage /></Require> },

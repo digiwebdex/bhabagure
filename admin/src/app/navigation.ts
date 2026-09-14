@@ -10,6 +10,7 @@ export const NAV_GROUPS: { key: string; items: NavItem[] }[] = [
     key: 'sales',
     items: [
       { key: 'bookings', path: '/bookings', icon: 'B', permissions: ['bookings.view_all', 'bookings.view_own'], badge: 'bookings' },
+      { key: 'customers', path: '/customers', icon: 'C', permissions: ['customers.view'] },
       { key: 'notifications', path: '/notifications', icon: 'N', permissions: ['notifications.manage'] },
     ],
   },

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { formatBdt, formatBdtCompact, formatDate, formatNumber, formatPercent, localizeDigits, type NumberFormatOptions } from '@bhabaghure/format'
+import { formatBdt, formatBdtCompact, formatDate, formatDateRange, formatNumber, formatPercent, formatRelativeAge, formatWeekdayDate, localizeDigits, type NumberFormatOptions } from '@bhabaghure/format'
 
 import type { AppLocale } from '../i18n'
 
@@ -41,6 +41,11 @@ export function useFormat() {
       },
       /** Identifiers (phone, codes): localized digits, never grouped. */
       digits: (text: string) => localizeDigits(text, locale),
+      /** How long something has waited, from whole minutes: '26 h' / '২৬ ঘণ্টা'. */
+      relativeAge: (minutes: number) => formatRelativeAge(minutes, locale),
+      /** 'Tuesday, 22 September 2026' — for 'YYYY-MM-DD', or today's Dhaka date when omitted. */
+      weekdayDate: (iso?: string) => formatWeekdayDate(iso ?? todayInDhaka(), locale),
+      dateRange: (start: string, end: string) => formatDateRange(start, end, locale),
     }),
     [locale],
   )

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Enums\InquiryType;
+use App\Enums\LeadSource;
 use App\Events\InquiryReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
@@ -53,7 +54,7 @@ class PublicFormController extends Controller
             'pax' => $data['travellers'] ?? null,
             'details' => array_filter(['message' => $data['message'] ?? null]) ?: null,
             'locale' => $data['locale'] ?? 'bn',
-            'customer_id' => $this->existingCustomerId($data['phone']),
+            'customer_id' => $this->leadFor($data['phone'], $data['name'], $data['email'] ?? null, $data['locale'] ?? 'bn'),
             'ip' => $request->ip(),
         ]);
         InquiryReceived::dispatch($inquiry);
@@ -95,7 +96,7 @@ class PublicFormController extends Controller
                 'cabinClass' => $data['cabin_class'],
             ],
             'locale' => $data['locale'] ?? 'bn',
-            'customer_id' => $this->existingCustomerId($data['phone']),
+            'customer_id' => $this->leadFor($data['phone'], $data['name'], $data['email'] ?? null, $data['locale'] ?? 'bn'),
             'ip' => $request->ip(),
         ]);
         InquiryReceived::dispatch($inquiry);
@@ -168,9 +169,23 @@ class PublicFormController extends Controller
         $request->merge(['phone' => Phone::normalizeBdMobile($request->input('phone')) ?? $request->input('phone')]);
     }
 
-    private function existingCustomerId(string $phone): ?int
+    /**
+     * The customer record for the enquiry's phone number — a new lead in the shared pool when the number is unknown
+     * (docs/phase-5-admin-core.md §0), so every website enquiry reaches a salesperson's lead board. The response is the
+     * same either way: the form tells a visitor nothing about whether the number was known.
+     */
+    private function leadFor(string $phone, string $name, ?string $email, string $locale): int
     {
-        return Customer::query()->where('phone', $phone)->value('id');
+        $existing = Customer::query()->where('phone', $phone)->value('id');
+        if ($existing !== null) {
+            return $existing;
+        }
+        $emailFree = $email !== null && ! Customer::query()->where('email', $email)->exists();
+
+        return Customer::query()->create([
+            'name' => $name, 'phone' => $phone, 'email' => $emailFree ? $email : null,
+            'stage' => 'lead', 'source' => LeadSource::WebsiteForm->value, 'locale' => $locale,
+        ])->id;
     }
 
     private function accepted(): JsonResponse
