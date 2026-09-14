@@ -92,7 +92,7 @@ test('a booking shows its messages; staff send a WhatsApp to the number on recor
 
   await signIn(page, 'admin')
   await page.goto('/bookings')
-  await page.getByRole('link', { name: reference }).click()
+  await page.getByRole('link', { name: reference, exact: true }).click()
   const messages = page.locator('section').filter({ has: page.getByRole('heading', { name: 'WhatsApp, email & SMS' }) })
   const rows = messages.getByTestId('notification-group')
   const received = rows.filter({ hasText: 'Booking received' })

@@ -145,6 +145,51 @@ export function formatDate(isoDate: string, locale: Locale): string {
   return localizeDigits(`${day} ${MONTHS[locale][month - 1]} ${match[1]}`, locale);
 }
 
+const WEEKDAYS: Record<Locale, readonly string[]> = {
+  bn: ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'],
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+};
+
+function parseDate(isoDate: string): { year: number; month: number; day: number } {
+  formatDate(isoDate, 'en'); // validates, with the same error
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return { year, month, day };
+}
+
+/** "2026-09-22" → "Tuesday, 22 September 2026" / "মঙ্গলবার, ২২ সেপ্টেম্বর ২০২৬". The weekday is computed, never typed. */
+export function formatWeekdayDate(isoDate: string, locale: Locale): string {
+  const { year, month, day } = parseDate(isoDate);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return `${WEEKDAYS[locale][weekday]}, ${formatDate(isoDate, locale)}`;
+}
+
+/**
+ * Trip dates: "12–16 October 2026", "30 September – 4 October 2026", "30 December 2026 – 3 January 2027"; one day is
+ * just the date. Bangla digits in Bangla.
+ */
+export function formatDateRange(startIso: string, endIso: string, locale: Locale): string {
+  const start = parseDate(startIso);
+  const end = parseDate(endIso);
+  if (startIso === endIso) return formatDate(startIso, locale);
+  if (start.year !== end.year) return `${formatDate(startIso, locale)} – ${formatDate(endIso, locale)}`;
+  const tail = `${MONTHS[locale][end.month - 1]} ${end.year}`;
+  const text = start.month === end.month ? `${start.day}–${end.day} ${tail}` : `${start.day} ${MONTHS[locale][start.month - 1]} – ${end.day} ${tail}`;
+  return localizeDigits(text, locale);
+}
+
+/**
+ * How long something has waited, from whole minutes: "45 min" / "৪৫ মিনিট" under an hour, "26 h" / "২৬ ঘণ্টা" under
+ * three days, then "3 days" / "৩ দিন". Rounded down, so "24 h" is never shown for 23 h 59 min.
+ */
+export function formatRelativeAge(minutes: number, locale: Locale): string {
+  const m = Math.max(0, Math.floor(toFiniteNumber(minutes)));
+  if (m < 60) return localizeDigits(locale === 'bn' ? `${m} মিনিট` : `${m} min`, locale);
+  const hours = Math.floor(m / 60);
+  if (hours < 72) return localizeDigits(locale === 'bn' ? `${hours} ঘণ্টা` : `${hours} h`, locale);
+  const days = Math.floor(hours / 24);
+  return localizeDigits(locale === 'bn' ? `${days} দিন` : `${days} days`, locale);
+}
+
 /** "1240000" → "12,40,000": the last three digits, then groups of two. */
 function groupIndian(whole: string): string {
   if (whole.length <= 3) return whole;

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 
+import { HeaderToolsContext } from '../components/ui/layout'
 import { useFormat } from '../lib/useFormat'
 import { useTheme } from '../lib/useTheme'
 import { useAuth, useStaff } from './auth'
+import { HeaderSearch } from './HeaderSearch'
+import { badgeHref, useNavCounts } from './navCounts'
 import { NAV_GROUPS } from './navigation'
 
 /** Admin shell from the prototype: navy sidebar (a drawer below 1024px), bilingual nav, controls at the foot. */
@@ -12,6 +15,9 @@ export function Shell() {
   const { t } = useTranslation()
   const [navOpen, setNavOpen] = useState(false)
   const location = useLocation()
+  const { can } = useAuth()
+  // The header search covers bookings and customers; staff who see neither get no search box.
+  const searchable = can('bookings.view_all', 'bookings.view_own', 'customers.view')
 
   // Close the drawer after navigating.
   const [lastPath, setLastPath] = useState(location.pathname)
@@ -55,7 +61,9 @@ export function Shell() {
           </button>
         </div>
         <main id="main" className="flex min-w-0 flex-1 flex-col gap-admin-gap px-admin-x py-admin-y">
-          <Outlet />
+          <HeaderToolsContext.Provider value={searchable ? <HeaderSearch /> : null}>
+            <Outlet />
+          </HeaderToolsContext.Provider>
         </main>
       </div>
     </div>
@@ -64,10 +72,11 @@ export function Shell() {
 
 function SidebarContent() {
   const { t, i18n } = useTranslation()
-  const { locale } = useFormat()
+  const { locale, number } = useFormat()
   const { theme, toggle } = useTheme()
   const { can, signOut } = useAuth()
   const staff = useStaff()
+  const counts = useNavCounts(NAV_GROUPS.some((group) => group.items.some((item) => item.badge && can(...item.permissions))))
   const isBn = locale === 'bn'
 
   const controlClass = 'flex cursor-pointer items-center gap-2 rounded-10 border border-white/15 bg-transparent px-3 py-2 text-left text-13 text-inherit'
@@ -92,25 +101,40 @@ function SidebarContent() {
           return (
             <div key={group.key} className="flex flex-col gap-1">
               <div className="px-3 pt-4 pb-1.5 font-display text-10 font-extrabold tracking-eyebrow text-white/40 uppercase">{t(`nav.groups.${group.key}`)}</div>
-              {items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex w-full items-center gap-2.5 rounded-10 px-3 py-2.5 text-left text-15 font-medium hover:bg-white/8 hover:text-white ${isActive ? 'bg-white/10 text-white' : 'text-app-nav-text'}`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span className={`flex size-5.5 shrink-0 items-center justify-center rounded-6 font-display text-11 font-extrabold text-white ${isActive ? 'bg-orange' : 'bg-white/10'}`}>{item.icon}</span>
-                      <span className="flex min-w-0 flex-1 flex-col leading-1.4">
-                        <span>{t(`nav.items.${item.key}`, { lng: isBn ? 'bn' : 'en' })}</span>
-                        {isBn ? <span className="font-display text-11 opacity-70">{t(`nav.items.${item.key}`, { lng: 'en' })}</span> : null}
-                      </span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+              {items.map((item) => {
+                const badge = item.badge ? counts.data?.[item.badge] : undefined
+                return (
+                  <div key={item.path} className="relative flex items-center">
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `flex w-full items-center gap-2.5 rounded-10 px-3 py-2.5 text-left text-15 font-medium hover:bg-white/8 hover:text-white ${badge?.count ? 'pr-12' : ''} ${isActive ? 'bg-white/10 text-white' : 'text-app-nav-text'}`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <span className={`flex size-5.5 shrink-0 items-center justify-center rounded-6 font-display text-11 font-extrabold text-white ${isActive ? 'bg-orange' : 'bg-white/10'}`}>{item.icon}</span>
+                          <span className="flex min-w-0 flex-1 flex-col leading-1.4">
+                            <span>{t(`nav.items.${item.key}`, { lng: isBn ? 'bn' : 'en' })}</span>
+                            {isBn ? <span className="font-display text-11 opacity-70">{t(`nav.items.${item.key}`, { lng: 'en' })}</span> : null}
+                          </span>
+                        </>
+                      )}
+                    </NavLink>
+                    {badge && badge.count > 0 ? (
+                      // Its own link: opens the list with exactly the filter this number counts.
+                      <Link
+                        to={badgeHref(item.path, badge.filter)}
+                        data-testid={`nav-badge-${item.badge}`}
+                        aria-label={t(`nav.badges.${item.badge}`, { count: badge.count, n: number(badge.count) })}
+                        className="absolute right-2.5 shrink-0 rounded-pill bg-orange px-1.75 py-0.5 text-11 font-bold text-white no-underline hover:bg-orange-press"
+                      >
+                        {number(badge.count)}
+                      </Link>
+                    ) : null}
+                  </div>
+                )
+              })}
             </div>
           )
         })}

@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Staff;
+use App\Models\Transaction;
 use App\Services\Admin\Ownership;
 use App\Services\Admin\OwnershipRefused;
 use App\Services\Booking\BookingCreator;
@@ -126,6 +127,32 @@ class OwnershipTest extends TestCase
 
         $this->actingAsApi($agent)->getJson('/api/v1/admin/bookings?owner=mine')->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $mine->id);
         $this->actingAsApi($agent)->getJson('/api/v1/admin/bookings?owner=pool')->assertOk()->assertJsonPath('meta.total', 1);
+    }
+
+    #[Test]
+    public function status_chip_counts_share_the_badge_query_and_delete_is_only_for_bookings_without_money(): void
+    {
+        $agent = $this->staff('sales_agent');
+        $admin = $this->staff('admin');
+        [$pool, $mine, $other] = [$this->booking(), $this->booking(), $this->booking()];
+        app(Ownership::class)->claim($mine, $agent);
+        app(Ownership::class)->claim($other, $this->staff('sales_agent'));
+        DB::table('bookings')->where('id', $mine->id)->update(['status' => 'confirmed']);
+
+        $meta = $this->actingAsApi($agent)->getJson('/api/v1/admin/bookings')->assertOk()->json('meta');
+        $this->assertSame(['inquiry' => 1, 'confirmed' => 1, 'completed' => 0, 'cancelled' => 0], $meta['status_counts']);
+        $this->assertSame($meta['status_counts']['inquiry'], $this->actingAsApi($agent)->getJson('/api/v1/admin/nav-counts')->json('data.bookings.count'));
+
+        // No invoice, no money: an admin may delete it (audited). With a payment recorded it must be cancelled instead.
+        $this->actingAsApi($agent)->deleteJson("/api/v1/admin/bookings/{$pool->id}")->assertForbidden();
+        $this->actingAsApi($admin)->getJson('/api/v1/admin/bookings')->assertJsonPath('data.2.has_payments', false);
+        $this->actingAsApi($admin)->deleteJson("/api/v1/admin/bookings/{$pool->id}")->assertNoContent();
+        $this->assertSoftDeleted('bookings', ['id' => $pool->id]);
+        $this->assertTrue(AuditLog::query()->where('action', 'booking.deleted')->where('auditable_id', $pool->id)->exists());
+
+        Transaction::query()->create(['booking_id' => $other->id, 'direction' => 'in', 'amount' => 5000, 'category' => 'customer_payment', 'method' => 'cash', 'description' => 'Advance', 'occurred_at' => now()]);
+        $this->actingAsApi($admin)->deleteJson("/api/v1/admin/bookings/{$other->id}")->assertStatus(409)->assertJsonPath('code', 'has_payments');
+        $this->assertNotSoftDeleted('bookings', ['id' => $other->id]);
     }
 
     private function request(string $who): BookingRequest

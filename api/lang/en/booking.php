@@ -15,5 +15,8 @@ return [
     'transition_not_allowed' => 'This booking cannot move to that status.',
     'transition_no_payment' => 'Record a payment before confirming the booking.',
     'transition_reason_required' => 'A cancellation needs a reason.',
+    'delete_has_invoice' => 'This booking has an invoice. Cancel it instead, so the books keep its record.',
+    'delete_has_payments' => 'Money was recorded against this booking. Cancel it instead.',
+    'delete_has_payment_attempts' => 'An online payment was started for this booking. Cancel it instead.',
     'scan_unreadable' => 'We could not read this file. Upload a JPEG, PNG or PDF of up to 5 MB.',
 ];

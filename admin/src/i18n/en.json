@@ -2,6 +2,36 @@
   "meta": {
     "title": "Bhabaghure Holidays — Admin"
   },
+  "table": {
+    "actions": "Actions",
+    "actionsFor": "Actions — {{name}}",
+    "whatsapp": "WhatsApp",
+    "sms": "Send SMS",
+    "email": "Email",
+    "pdf": "PDF",
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "noPhone": "No phone number on record",
+    "noEmail": "No email address on record"
+  },
+  "search": {
+    "placeholder": "Search bookings, customers, phone…",
+    "results": "Search results",
+    "nothing": "Nothing found for “{{query}}”",
+    "bookings": "Bookings",
+    "customers": "Customers"
+  },
+  "ownership": {
+    "pool": "Pool",
+    "poolNote": "Not assigned — any sales agent can claim it",
+    "mine": "Mine",
+    "all": "Everyone’s",
+    "claim": "Claim",
+    "claimed": "It’s yours now",
+    "owner": "Owner",
+    "unassigned": "Unassigned"
+  },
   "shell": {
     "brand": "Bhabaghure Holidays",
     "darkMode": "◐ Dark mode",
@@ -21,6 +51,12 @@
     "staff": "Staff"
   },
   "nav": {
+    "badges": {
+      "bookings_one": "{{n}} inquiry — open the list",
+      "bookings_other": "{{n}} inquiries — open the list",
+      "air_inquiries_one": "{{n}} enquiry waiting over 24 hours — open the queue",
+      "air_inquiries_other": "{{n}} enquiries waiting over 24 hours — open the queue"
+    },
     "groups": {
       "sales": "Sales",
       "catalogue": "Catalogue",
@@ -446,6 +482,17 @@
     "search": "Search by reference, name or phone",
     "empty": "No bookings yet",
     "emptyNote": "Bookings made on the website appear here as inquiries.",
+    "claimFirst": "Claim this booking first",
+    "contactSubject": "Your Bhabaghure Holidays booking {{reference}}",
+    "noInvoiceYet": "No invoice issued yet",
+    "pdfFailed": "The PDF could not be opened. Try again.",
+    "noEditPermission": "You can’t edit bookings",
+    "closedNoEdit": "Completed or cancelled",
+    "noDeletePermission": "You can’t delete bookings",
+    "deleteHasInvoice": "Has an invoice — cancel it instead",
+    "deleteHasPayments": "Money was recorded — cancel it instead",
+    "deleteConfirm": "Delete {{reference}}? Use this only for a booking made by mistake. It disappears from the lists; the audit log keeps a record.",
+    "deleted": "{{reference}} deleted",
     "reference": "Reference",
     "customer": "Customer",
     "package": "Package",

@@ -8,10 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminBooking;
 use App\Models\Booking;
 use App\Models\Invoice;
+use App\Models\SeatHold;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Services\Admin\Ownership;
 use App\Services\Admin\OwnershipRefused;
+use App\Services\AuditLogger;
 use App\Services\Booking\BookingQuoteEditor;
 use App\Services\Booking\BookingStateMachine;
 use App\Services\Booking\BookingTransitionRefused;
@@ -50,13 +52,45 @@ class BookingController extends Controller
         $page = $this->visible($staff)
             ->filtered($filters, $staff)
             ->with(['customer', 'assignedStaff'])
+            ->withExists(['invoices as has_invoice' => fn (Builder $q) => $q->where('status', Invoice::ISSUED)])
+            ->withExists(['transactions as has_payments'])
             ->latest('id')
             ->paginate(30);
 
+        // The status chips' numbers: the same visibility and filters with each status in turn, so the Inquiry chip and
+        // the sidebar badge (NavBadges 'bookings') are one number.
+        $statusCounts = $this->visible($staff)->filtered(['status' => null] + $filters, $staff)
+            ->toBase()->reorder()->selectRaw('status, COUNT(*) AS n')->groupBy('status')->pluck('n', 'status')->map(fn ($n) => (int) $n);
+
         return response()->json([
             'data' => collect($page->items())->map(AdminBooking::summary(...)),
-            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
+            'meta' => [
+                'current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(),
+                'status_counts' => collect(BookingStatus::cases())->mapWithKeys(fn (BookingStatus $s) => [$s->value => $statusCounts[$s->value] ?? 0]),
+            ],
         ]);
+    }
+
+    /**
+     * Deletes a booking made by mistake — only while nothing about money exists: no issued or voided invoice, no payment,
+     * no payment attempt. Anything else is cancelled through the state machine instead, so the books keep their record.
+     */
+    public function destroy(Request $request, int $id, AuditLogger $audit): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'bookings.delete');
+        $blocked = Invoice::query()->where('booking_id', $booking->id)->exists() ? 'has_invoice'
+            : ($booking->transactions()->exists() ? 'has_payments' : ($booking->paymentAttempts()->exists() ? 'has_payment_attempts' : null));
+        if ($blocked !== null) {
+            return $this->refused("booking.delete_{$blocked}", $blocked);
+        }
+
+        DB::transaction(function () use ($booking, $request, $audit) {
+            SeatHold::query()->where('booking_id', $booking->id)->whereNull('released_at')->update(['released_at' => now()]);
+            $booking->delete();
+            $audit->record('booking.deleted', $request->user('staff'), $booking, ['reference' => $booking->reference]);
+        });
+
+        return response()->json(null, Response::HTTP_NO_CONTENT);
     }
 
     public function show(Request $request, int $id): JsonResponse

@@ -2,7 +2,19 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import fixtures from '../fixtures.json' with { type: 'json' };
-import { formatBdt, formatBdtCompact, formatDate, formatNumber, formatPercent, localizeDigits, type Locale, type MoneyFormatOptions } from './index.ts';
+import {
+  formatBdt,
+  formatBdtCompact,
+  formatDate,
+  formatDateRange,
+  formatNumber,
+  formatPercent,
+  formatRelativeAge,
+  formatWeekdayDate,
+  localizeDigits,
+  type Locale,
+  type MoneyFormatOptions,
+} from './index.ts';
 
 type Case = { value: number | string; locale: Locale; options?: MoneyFormatOptions; expected: string };
 
@@ -34,6 +46,19 @@ test('formatBdtCompact matches the shared fixtures', () => {
   for (const c of fixtures.formatBdtCompact as Case[]) {
     assert.equal(formatBdtCompact(c.value, c.locale, c.options), c.expected, JSON.stringify(c));
   }
+});
+
+test('weekday dates, date ranges and ages match the shared fixtures', () => {
+  for (const c of fixtures.formatWeekdayDate as { date: string; locale: Locale; expected: string }[]) {
+    assert.equal(formatWeekdayDate(c.date, c.locale), c.expected, JSON.stringify(c));
+  }
+  for (const c of fixtures.formatDateRange as { start: string; end: string; locale: Locale; expected: string }[]) {
+    assert.equal(formatDateRange(c.start, c.end, c.locale), c.expected, JSON.stringify(c));
+  }
+  for (const c of fixtures.formatRelativeAge as { minutes: number; locale: Locale; expected: string }[]) {
+    assert.equal(formatRelativeAge(c.minutes, c.locale), c.expected, JSON.stringify(c));
+  }
+  assert.throws(() => formatWeekdayDate('22/09/2026', 'en'));
 });
 
 test('"৳" is the default in both languages; "BDT" only when asked for', () => {

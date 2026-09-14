@@ -14,7 +14,7 @@ export type BookingSummary = {
   reference: string
   status: BookingStatus
   payment_status: PaymentStatus
-  customer: { id: number; name: string; phone: string } | null
+  customer: { id: number; name: string; phone: string; email: string | null } | null
   package_title_en: string
   package_title_bn: string | null
   travel_start: string | null
@@ -23,6 +23,11 @@ export type BookingSummary = {
   paid_amount: number
   due_amount: number
   source: string
+  assigned_staff: { id: number; name: string } | null
+  /** In the shared pool: unowned and still an inquiry. */
+  claimable: boolean
+  has_invoice: boolean
+  has_payments: boolean
   created_at: string
 }
 
@@ -105,23 +110,46 @@ export type BookingDetail = BookingSummary & {
     created_at: string
     settled_at: string | null
   }[]
-  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out', boolean>
+  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign', boolean>
   quote_inputs: { list_price: number; addons: Addon[]; config: PricingConfig }
   payment_methods: string[]
   vat_rates: number[]
 }
 
-export type BookingFilters = { status: BookingStatus | 'all'; payment: PaymentStatus | 'all'; search: string; page: number }
+/** The list's filters live in the URL, so a sidebar badge can open exactly the list it counts. Same names as the API. */
+export type BookingFilters = { status: BookingStatus | 'all'; payment_status: PaymentStatus | 'all'; owner: 'mine' | 'pool' | 'all'; search: string; page: number }
 
-export function useBookings({ status, payment, search, page }: BookingFilters) {
+export type BookingList = Paginated<BookingSummary> & { meta: { status_counts: Record<BookingStatus, number> } }
+
+export function useBookings({ status, payment_status, owner, search, page }: BookingFilters) {
   const params = new URLSearchParams({ page: String(page) })
   if (status !== 'all') params.set('status', status)
-  if (payment !== 'all') params.set('payment_status', payment)
+  if (payment_status !== 'all') params.set('payment_status', payment_status)
+  if (owner !== 'all') params.set('owner', owner)
   if (search.trim()) params.set('search', search.trim())
   return useQuery({
-    queryKey: ['bookings', status, payment, search.trim(), page],
-    queryFn: ({ signal }) => api.get<Paginated<BookingSummary>>(`admin/bookings?${params}`, signal),
+    queryKey: ['bookings', status, payment_status, owner, search.trim(), page],
+    queryFn: ({ signal }) => api.get<BookingList>(`admin/bookings?${params}`, signal),
     placeholderData: (previous) => previous,
+  })
+}
+
+export function useClaimBooking() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.post<Data<BookingDetail>>(`admin/bookings/${id}/claim`),
+    onSuccess: (response) => {
+      client.setQueryData(['booking', response.data.id], response)
+      void client.invalidateQueries({ queryKey: ['bookings'] })
+    },
+  })
+}
+
+export function useDeleteBooking() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete<null>(`admin/bookings/${id}`),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['bookings'] }),
   })
 }
 

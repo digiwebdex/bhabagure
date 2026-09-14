@@ -30,7 +30,7 @@ final class AdminBooking
             'status' => $booking->status->value,
             'payment_status' => $booking->payment_status,
             'customer' => $booking->relationLoaded('customer') && $booking->customer
-                ? ['id' => $booking->customer->id, 'name' => $booking->customer->name, 'phone' => $booking->customer->phone] : null,
+                ? ['id' => $booking->customer->id, 'name' => $booking->customer->name, 'phone' => $booking->customer->phone, 'email' => $booking->customer->email] : null,
             'package_title_en' => $booking->package_title_en,
             'package_title_bn' => $booking->package_title_bn,
             'travel_start' => $booking->travel_start?->toDateString(),
@@ -43,6 +43,9 @@ final class AdminBooking
                 ? ['id' => $booking->assignedStaff->id, 'name' => $booking->assignedStaff->name] : null,
             // In the shared pool: unowned and still an inquiry (Booking::scopeClaimable).
             'claimable' => $booking->assigned_staff_id === null && $booking->status === BookingStatus::Inquiry,
+            // For the list's row actions: PDF needs an issued invoice; delete needs neither an invoice nor money.
+            'has_invoice' => (bool) ($booking->has_invoice ?? Invoice::query()->where('booking_id', $booking->id)->where('status', Invoice::ISSUED)->exists()),
+            'has_payments' => (bool) ($booking->has_payments ?? Transaction::query()->where('booking_id', $booking->id)->exists()),
             'created_at' => $booking->created_at?->toIso8601String(),
         ];
     }

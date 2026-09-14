@@ -5,7 +5,8 @@ import type { BookingStatus, PaymentStatus } from './api'
 
 export function BookingStatusBadge({ status }: { status: BookingStatus }) {
   const { t } = useTranslation()
-  const tone = status === 'confirmed' ? 'green' : status === 'completed' ? 'blue' : status === 'cancelled' ? 'slate' : 'orange'
+  // The prototype's colours: Confirmed blue, Completed green (docs/phase-5-admin-core.md §9).
+  const tone = status === 'confirmed' ? 'blue' : status === 'completed' ? 'green' : status === 'cancelled' ? 'slate' : 'orange'
   return <Badge tone={tone}>{t(`bookings.status.${status}`)}</Badge>
 }
 

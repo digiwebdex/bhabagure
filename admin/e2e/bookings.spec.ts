@@ -8,7 +8,7 @@ test('draft quote, issue, header on and off, record payment, confirm', async ({ 
   const { reference } = await websiteBooking(page, 'Arif Chowdhury', 'arif@example.test')
   await signIn(page, 'admin')
   await page.goto('/bookings')
-  await page.getByRole('link', { name: reference }).click()
+  await page.getByRole('link', { name: reference, exact: true }).click()
   await expect(page.getByRole('heading', { name: reference, level: 1 })).toBeVisible()
 
   // Draft controls: 3 travellers → slab −3% → 72,750 × 3 = 2,18,250; 5% VAT after a 1,000 discount = 10,863 → 2,28,113.

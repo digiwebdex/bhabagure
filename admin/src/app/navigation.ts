@@ -1,14 +1,15 @@
 /**
- * Phase 2 admin: the Website group only. Phase 5 adds sales, finance, operations and people groups.
+ * Sidebar groups in the design's order, built screens only (docs/phase-5-admin-core.md §4.1).
  * `permissions`: any one of them grants access (api/routes/api.php uses the same rules).
+ * `badge`: a key of GET /admin/nav-counts — the count is derived from data, never written here.
  */
-export type NavItem = { key: string; path: string; icon: string; permissions: string[] }
+export type NavItem = { key: string; path: string; icon: string; permissions: string[]; badge?: string }
 
 export const NAV_GROUPS: { key: string; items: NavItem[] }[] = [
   {
     key: 'sales',
     items: [
-      { key: 'bookings', path: '/bookings', icon: 'B', permissions: ['bookings.view_all', 'bookings.view_own'] },
+      { key: 'bookings', path: '/bookings', icon: 'B', permissions: ['bookings.view_all', 'bookings.view_own'], badge: 'bookings' },
       { key: 'notifications', path: '/notifications', icon: 'N', permissions: ['notifications.manage'] },
     ],
   },

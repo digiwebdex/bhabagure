@@ -1,5 +1,9 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+
+/** What the admin shell puts at the right of every screen header (search, "+ New booking"); empty outside the shell. */
+// eslint-disable-next-line react-refresh/only-export-components -- the context belongs with the header that reads it
+export const HeaderToolsContext = createContext<ReactNode>(null)
 
 /** White card with the prototype's 16px radius and hairline border. */
 export function Card({ children, className = '', padded = true }: { children: ReactNode; className?: string; padded?: boolean }) {
@@ -30,13 +34,19 @@ export function CardTitle({ bn, en, aside, as: Tag = 'h2' }: { bn: string; en: s
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+  const tools = useContext(HeaderToolsContext)
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0 flex-1">
         <h1 className="m-0 text-fluid-21-28 font-bold tracking-heading">{title}</h1>
         {subtitle ? <p className="mt-0.5 mb-0 font-display text-15 text-app-muted">{subtitle}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2.5">{actions}</div> : null}
+      {actions || tools ? (
+        <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+          {tools}
+          {actions}
+        </div>
+      ) : null}
     </header>
   )
 }

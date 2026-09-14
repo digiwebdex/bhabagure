@@ -260,6 +260,28 @@
       "expected": "১৪ ফেব্রুয়ারি ২০২৬"
     }
   ],
+  "formatWeekdayDate": [
+    { "date": "2026-09-22", "locale": "en", "expected": "Tuesday, 22 September 2026" },
+    { "date": "2026-09-22", "locale": "bn", "expected": "মঙ্গলবার, ২২ সেপ্টেম্বর ২০২৬" },
+    { "date": "2026-09-14", "locale": "en", "expected": "Monday, 14 September 2026" },
+    { "date": "2027-01-01", "locale": "bn", "expected": "শুক্রবার, ১ জানুয়ারি ২০২৭" }
+  ],
+  "formatDateRange": [
+    { "start": "2026-10-12", "end": "2026-10-16", "locale": "en", "expected": "12–16 October 2026" },
+    { "start": "2026-10-12", "end": "2026-10-16", "locale": "bn", "expected": "১২–১৬ অক্টোবর ২০২৬" },
+    { "start": "2026-09-30", "end": "2026-10-04", "locale": "en", "expected": "30 September – 4 October 2026" },
+    { "start": "2026-12-30", "end": "2027-01-03", "locale": "en", "expected": "30 December 2026 – 3 January 2027" },
+    { "start": "2026-10-12", "end": "2026-10-12", "locale": "bn", "expected": "১২ অক্টোবর ২০২৬" }
+  ],
+  "formatRelativeAge": [
+    { "minutes": 0, "locale": "en", "expected": "0 min" },
+    { "minutes": 45, "locale": "bn", "expected": "৪৫ মিনিট" },
+    { "minutes": 1439, "locale": "en", "expected": "23 h" },
+    { "minutes": 1560, "locale": "bn", "expected": "২৬ ঘণ্টা" },
+    { "minutes": 4319, "locale": "en", "expected": "71 h" },
+    { "minutes": 4320, "locale": "en", "expected": "3 days" },
+    { "minutes": 20160, "locale": "bn", "expected": "১৪ দিন" }
+  ],
   "invalidDates": [
     "",
     "10/09/2026",

@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Admin\PackageImageController;
 use App\Http\Controllers\Api\V1\Admin\PricingController;
 use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
+use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
@@ -179,6 +180,8 @@ Route::prefix('v1')->group(function () {
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).
         Route::get('nav-counts', NavCountController::class);
+        // Header search: top five of each kind, through the same visibility scopes (§4.1).
+        Route::get('search', SearchController::class)->middleware('throttle:public-read');
 
         // The Air ticketing queue: website air-ticket enquiries (§4.7). Per-action permissions are checked in the controller.
         Route::middleware('permission:air_inquiries.view,staff')->controller(AirInquiryController::class)->group(function () {
@@ -194,6 +197,7 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:bookings.view_all|bookings.view_own,staff')->controller(BookingController::class)->group(function () {
             Route::get('bookings', 'index');
             Route::get('bookings/{id}', 'show')->whereNumber('id');
+            Route::delete('bookings/{id}', 'destroy')->whereNumber('id');
             Route::put('bookings/{id}/quote', 'updateQuote')->whereNumber('id');
             Route::post('bookings/{id}/invoice', 'issueInvoice')->whereNumber('id');
             Route::get('bookings/{id}/invoice/print', 'invoiceHtml')->whereNumber('id');

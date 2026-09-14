@@ -334,6 +334,8 @@
   --spacing-dialog-h: calc(100dvh - 32px);        /* admin dialog height cap (max-h-dialog-h) */
   --spacing-editor: 280px;                        /* rich text editing area minimum (min-h-editor) */
   --spacing-thumb: 72px;                          /* media thumbnails in lists (size-thumb) */
+  --spacing-header-search: 300px;                 /* admin header search field (w-header-search), as in the prototype */
+  --spacing-header-search-panel: 380px;           /* its grouped results panel */
   --aspect-a4: 210 / 297;                         /* invoice preview frame (aspect-a4) */
 
   /* Fluid spacing used by the website sections, read off the prototype: fluid-{min}-{max} */
@@ -435,6 +437,10 @@
   --color-app-line: var(--bh-app-line);
   --color-app-nav: var(--bh-app-nav);
   --color-app-nav-text: var(--bh-app-nav-text);
+  /* Table rows: opaque, so the sticky actions cell that inherits them never shows content through it. */
+  --color-app-selected: var(--bh-app-selected);
+  /* The left edge of a sticky actions cell while columns are scrolled underneath it. */
+  --shadow-sticky-edge: var(--bh-sticky-edge);
 }
 
 :root,
@@ -447,6 +453,8 @@
   --bh-app-line: #E2E7F0;
   --bh-app-nav: #0F1E3A;
   --bh-app-nav-text: #C9D4EA;
+  --bh-app-selected: #EAF2FF;
+  --bh-sticky-edge: -12px 0 12px -10px rgba(20, 33, 61, .28);
 }
 
 /* Values from the admin prototype. The README's "admin dark" line
@@ -461,6 +469,8 @@
   --bh-app-line: #223050;
   --bh-app-nav: #080E1A;
   --bh-app-nav-text: #9AA8C2;
+  --bh-app-selected: #1C2B47;
+  --bh-sticky-edge: -12px 0 12px -10px rgba(0, 0, 0, .7);
 }
 
 /* `dark:` follows the admin's theme toggle, not the operating system. */
