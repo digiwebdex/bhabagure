@@ -1,0 +1,231 @@
+{
+  "$comment": "Shared cases for @bhabaghure/format (TypeScript) and api/app/Support/Numerals.php (PHP). Both implementations must pass every case. The minus sign is U+2212.",
+  "localizeDigits": [
+    {
+      "text": "24 Sep 2026",
+      "locale": "bn",
+      "expected": "২৪ Sep ২০২৬"
+    },
+    {
+      "text": "০১৭৪৩৯৩৯৩০০",
+      "locale": "en",
+      "expected": "01743939300"
+    },
+    {
+      "text": "৪ জন · 4 pax",
+      "locale": "en",
+      "expected": "4 জন · 4 pax"
+    },
+    {
+      "text": "কোনো সংখ্যা নেই",
+      "locale": "bn",
+      "expected": "কোনো সংখ্যা নেই"
+    }
+  ],
+  "formatNumber": [
+    {
+      "value": 0,
+      "locale": "bn",
+      "expected": "০"
+    },
+    {
+      "value": 7,
+      "locale": "en",
+      "expected": "7"
+    },
+    {
+      "value": 999,
+      "locale": "en",
+      "expected": "999"
+    },
+    {
+      "value": 1000,
+      "locale": "en",
+      "expected": "1,000"
+    },
+    {
+      "value": 100000,
+      "locale": "en",
+      "expected": "1,00,000"
+    },
+    {
+      "value": 1240000,
+      "locale": "bn",
+      "expected": "১২,৪০,০০০"
+    },
+    {
+      "value": 10000000,
+      "locale": "en",
+      "expected": "1,00,00,000"
+    },
+    {
+      "value": "12",
+      "locale": "bn",
+      "expected": "১২"
+    },
+    {
+      "value": 2.5,
+      "locale": "en",
+      "expected": "2.50"
+    },
+    {
+      "value": 7.5,
+      "locale": "bn",
+      "options": {
+        "decimals": 1
+      },
+      "expected": "৭.৫"
+    },
+    {
+      "value": -8400,
+      "locale": "en",
+      "expected": "−8,400"
+    }
+  ],
+  "formatBdt": [
+    {
+      "value": 75000,
+      "locale": "bn",
+      "expected": "৳ ৭৫,০০০"
+    },
+    {
+      "value": 75000,
+      "locale": "en",
+      "expected": "BDT 75,000"
+    },
+    {
+      "value": 150000,
+      "locale": "bn",
+      "expected": "৳ ১,৫০,০০০"
+    },
+    {
+      "value": 150000,
+      "locale": "en",
+      "expected": "BDT 1,50,000"
+    },
+    {
+      "value": 1240000,
+      "locale": "en",
+      "expected": "BDT 12,40,000"
+    },
+    {
+      "value": "75000.00",
+      "locale": "bn",
+      "expected": "৳ ৭৫,০০০"
+    },
+    {
+      "value": "131980.50",
+      "locale": "en",
+      "expected": "BDT 1,31,980.50"
+    },
+    {
+      "value": "131980.50",
+      "locale": "bn",
+      "expected": "৳ ১,৩১,৯৮০.৫০"
+    },
+    {
+      "value": 131980.5,
+      "locale": "en",
+      "options": {
+        "decimals": 0
+      },
+      "expected": "BDT 1,31,981"
+    },
+    {
+      "value": -48000,
+      "locale": "bn",
+      "expected": "−৳ ৪৮,০০০"
+    },
+    {
+      "value": -48000,
+      "locale": "en",
+      "expected": "−BDT 48,000"
+    },
+    {
+      "value": -0.004,
+      "locale": "en",
+      "options": {
+        "decimals": 2
+      },
+      "expected": "BDT 0.00"
+    },
+    {
+      "value": "999999999999.99",
+      "locale": "en",
+      "expected": "BDT 9,99,99,99,99,999.99"
+    }
+  ],
+  "formatPercent": [
+    {
+      "value": 12,
+      "locale": "bn",
+      "expected": "১২%"
+    },
+    {
+      "value": 2.5,
+      "locale": "en",
+      "expected": "2.5%"
+    },
+    {
+      "value": 1.85,
+      "locale": "en",
+      "expected": "1.85%"
+    },
+    {
+      "value": 7.5,
+      "locale": "bn",
+      "expected": "৭.৫%"
+    },
+    {
+      "value": 0,
+      "locale": "en",
+      "expected": "0%"
+    },
+    {
+      "value": 2.499,
+      "locale": "en",
+      "expected": "2.5%"
+    }
+  ],
+  "formatDate": [
+    {
+      "date": "2026-09-10",
+      "locale": "bn",
+      "expected": "১০ সেপ্টেম্বর ২০২৬"
+    },
+    {
+      "date": "2026-09-05",
+      "locale": "en",
+      "expected": "5 September 2026"
+    },
+    {
+      "date": "2026-08-28",
+      "locale": "bn",
+      "expected": "২৮ আগস্ট ২০২৬"
+    },
+    {
+      "date": "2027-01-01",
+      "locale": "en",
+      "expected": "1 January 2027"
+    },
+    {
+      "date": "2026-02-14",
+      "locale": "bn",
+      "expected": "১৪ ফেব্রুয়ারি ২০২৬"
+    }
+  ],
+  "invalidDates": [
+    "",
+    "10/09/2026",
+    "2026-13-01",
+    "2026-09-00",
+    "2026-9-10"
+  ],
+  "invalid": [
+    "",
+    "   ",
+    "75,000",
+    "৳ 75000",
+    "abc"
+  ]
+}

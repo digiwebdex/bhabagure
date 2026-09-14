@@ -1,0 +1,1125 @@
+[
+  {
+    "code": "Nepal 01",
+    "slug": "nepal-mustang-adventure-tour-8-days-7-nights",
+    "wpTripId": 6371,
+    "destination": "nepal",
+    "status": "published",
+    "title": {
+      "bn": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani",
+      "en": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani"
+    },
+    "summary": {
+      "bn": "ঢাকা–কাঠমান্ডু–ঢাকা রিটার্ন এয়ার টিকেট (বিমান), ৭ রাত ৩-স্টার হোটেল, সব লোকাল ট্রান্সপোর্ট, কাঠমান্ডু–পোখারা ডিলাক্স এসি সোফা বাস, প্রতিদিন ব্রেকফাস্ট ও ডিনার, প্রফেশনাল ট্যুর গাইড",
+      "en": "Dhaka–Kathmandu–Dhaka return air ticket (Biman Bangladesh Airlines), All local transportation, Kathmandu–Pokhara–Kathmandu deluxe AC sofa bus, Daily breakfast"
+    },
+    "durationDays": 8,
+    "durationNights": 7,
+    "regularPrice": 80000,
+    "salePrice": 75000,
+    "includesAirfare": true,
+    "groupMode": "group",
+    "minPax": null,
+    "departureMode": "regular",
+    "itinerary": [
+      {
+        "day": 1,
+        "title": {
+          "bn": "DHAKA ➔ KATHMANDU",
+          "en": "DHAKA ➔ KATHMANDU"
+        },
+        "body": {
+          "bn": "ত্রিভুবন আন্তর্জাতিক বিমানবন্দরে পৌঁছানো, হোটেল চেক-ইন। সাইটসিয়িং: Swayambhunath (Monkey Temple), Kathmandu Durbar Square, Pashupatinath Temple। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "Arrival at Tribhuvan International Airport. Hotel check-in. Sightseeing: Swayambhunath (Monkey Temple), Kathmandu Durbar Square, Pashupatinath Temple. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 2,
+        "title": {
+          "bn": "KATHMANDU ➔ POKHARA",
+          "en": "KATHMANDU ➔ POKHARA"
+        },
+        "body": {
+          "bn": "ডিলাক্স এসি সোফা বাসে পোখারা। হোটেল চেক-ইন, Phewa Lake-এ অবসর সময়। ঐচ্ছিক বোটিং (নিজ খরচে)। পোখারার নাইটলাইফ। রাত্রিযাপন পোখারায়।",
+          "en": "Deluxe AC sofa bus to Pokhara. Hotel check-in, free time at Phewa Lake. Optional boating at personal expense. Enjoy Pokhara nightlife. Overnight in Pokhara."
+        }
+      },
+      {
+        "day": 3,
+        "title": {
+          "bn": "POKHARA SIGHTSEEING",
+          "en": "POKHARA SIGHTSEEING"
+        },
+        "body": {
+          "bn": "Bindhyabasini Temple, Davis Falls, Gupteshwor Cave, World Peace Pagoda, Phewa Lake। রাত্রিযাপন পোখারায়।",
+          "en": "Bindhyabasini Temple, Davis Falls, Gupteshwor Cave, World Peace Pagoda, Phewa Lake. Overnight in Pokhara."
+        }
+      },
+      {
+        "day": 4,
+        "title": {
+          "bn": "POKHARA ➔ JOMSOM",
+          "en": "POKHARA ➔ JOMSOM"
+        },
+        "body": {
+          "bn": "ট্যুরিস্ট ভেহিকেলে জোমসম। পথে Rupse Waterfall, Kali Gandaki River, Marpha Village ও হিমালয়ের দৃশ্য। রাত্রিযাপন জোমসমে।",
+          "en": "Tourist vehicle to Jomsom. Scenic stops: Rupse Waterfall, Kali Gandaki River, Marpha Village, dramatic Himalayan landscapes. Overnight in Jomsom."
+        }
+      },
+      {
+        "day": 5,
+        "title": {
+          "bn": "JOMSOM ➔ MUKTINATH ➔ TATOPANI",
+          "en": "JOMSOM ➔ MUKTINATH ➔ TATOPANI"
+        },
+        "body": {
+          "bn": "Muktinath Temple, Kagbeni Village, Dumba Lake দর্শন। এরপর তাতোপানি। রাত্রিযাপন তাতোপানিতে।",
+          "en": "Visit Muktinath Temple, Kagbeni Village, Dumba Lake. Continue to Tatopani. Overnight in Tatopani."
+        }
+      },
+      {
+        "day": 6,
+        "title": {
+          "bn": "TATOPANI ➔ KUSMA ➔ POKHARA",
+          "en": "TATOPANI ➔ KUSMA ➔ POKHARA"
+        },
+        "body": {
+          "bn": "সকালে যাত্রা, Kusma Adventure Point-এ বিরতি। ঐচ্ছিক অ্যাডভেঞ্চার অ্যাক্টিভিটি। রাত্রিযাপন পোখারায়।",
+          "en": "Morning departure. Stop at Kusma Adventure Point. Optional adventure activities. Overnight in Pokhara."
+        }
+      },
+      {
+        "day": 7,
+        "title": {
+          "bn": "POKHARA ➔ KATHMANDU",
+          "en": "POKHARA ➔ KATHMANDU"
+        },
+        "body": {
+          "bn": "ডিলাক্স এসি সোফা বাসে কাঠমান্ডু, হোটেল চেক-ইন। কেনাকাটার জন্য অবসর সময়। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "Deluxe AC sofa bus to Kathmandu, hotel check-in. Free time for shopping and local markets. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 8,
+        "title": {
+          "bn": "KATHMANDU ➔ DHAKA",
+          "en": "KATHMANDU ➔ DHAKA"
+        },
+        "body": {
+          "bn": "হোটেলে ব্রেকফাস্ট, ত্রিভুবন বিমানবন্দরে ট্রান্সফার, ঢাকায় ফিরতি ফ্লাইট।",
+          "en": "Breakfast at hotel. Transfer to Tribhuvan International Airport. Return flight to Dhaka."
+        }
+      }
+    ],
+    "includes": [
+      {
+        "bn": "ঢাকা–কাঠমান্ডু–ঢাকা রিটার্ন এয়ার টিকেট (বিমান বাংলাদেশ এয়ারলাইন্স)",
+        "en": "Dhaka–Kathmandu–Dhaka return air ticket (Biman Bangladesh Airlines)"
+      },
+      {
+        "bn": "সব লোকাল ট্রান্সপোর্টেশন",
+        "en": "All local transportation"
+      },
+      {
+        "bn": "কাঠমান্ডু–পোখারা–কাঠমান্ডু ডিলাক্স এসি সোফা বাস",
+        "en": "Kathmandu–Pokhara–Kathmandu deluxe AC sofa bus"
+      },
+      {
+        "bn": "প্রতিদিন ব্রেকফাস্ট",
+        "en": "Daily breakfast"
+      },
+      {
+        "bn": "প্রতিদিন ডিনার",
+        "en": "Daily dinner"
+      },
+      {
+        "bn": "৭ রাত স্ট্যান্ডার্ড ৩-স্টার হোটেল (টুইন/ট্রিপল শেয়ারিং)",
+        "en": "Seven nights in standard 3-star hotels (twin/triple sharing)"
+      },
+      {
+        "bn": "প্রফেশনাল ট্যুর গাইড",
+        "en": "Professional tour guide"
+      }
+    ],
+    "excludes": [
+      {
+        "bn": "লাঞ্চ",
+        "en": "Lunch"
+      },
+      {
+        "bn": "Mustang পারমিট ফি (USD 10)",
+        "en": "Mustang permit fee (USD 10)"
+      },
+      {
+        "bn": "সব এন্ট্রি ফি",
+        "en": "All entrance fees"
+      },
+      {
+        "bn": "অ্যাডভেঞ্চার অ্যাক্টিভিটি",
+        "en": "Adventure activities"
+      },
+      {
+        "bn": "ব্যক্তিগত খরচ",
+        "en": "Personal expenses"
+      },
+      {
+        "bn": "প্যাকেজে উল্লেখ নেই এমন কিছু",
+        "en": "Anything not mentioned under package includes"
+      }
+    ],
+    "activities": [
+      "Boating",
+      "City Tour",
+      "Hiking"
+    ],
+    "tripTypes": [
+      "Budget Travel",
+      "Cultural",
+      "High Altitude",
+      "Nature Friendly"
+    ],
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/5291526/pexels-photo-5291526.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by N. Voitkevich on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/5291526/",
+        "alt": {
+          "bn": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani",
+          "en": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37710833/pexels-photo-37710833.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Alix Lee on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37710833/",
+        "alt": {
+          "bn": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani",
+          "en": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37355142/pexels-photo-37355142.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Tusar Gautam on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37355142/",
+        "alt": {
+          "bn": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani",
+          "en": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/14020725/pexels-photo-14020725.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Quang Nguyen Vinh on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/14020725/",
+        "alt": {
+          "bn": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani",
+          "en": "NEPAL MUSTANG ADVENTURE TOUR — Kathmandu · Pokhara · Jomsom · Muktinath · Tatopani"
+        },
+        "isPlaceholder": true
+      }
+    ]
+  },
+  {
+    "code": "Nepal 03",
+    "slug": "nature-cultural-scenic-tour-5-nights-6-days-kathmandu-pokhara-nagarkot-without-air-ticket",
+    "wpTripId": 6394,
+    "destination": "nepal",
+    "status": "published",
+    "title": {
+      "bn": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot",
+      "en": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot"
+    },
+    "summary": {
+      "bn": "এয়ারপোর্ট পিকআপ/ড্রপ, কাঠমান্ডুতে ২ রাত, পোখারায় ২ রাত, নাগরকোটে ১ রাত (BB), সব সাইটসিয়িং প্রাইভেট ভেহিকেলে, কাঠমান্ডু–পোখারা–নাগরকোট–কাঠমান্ডু প্রাইভেট গাড়ি",
+      "en": "Airport pickup/drop, Nepali style traditional welcome with khada or mala, Tour assistance and briefing at airport and hotel, 2 nights in Kathmandu (BB, double/twin/triple sharing)"
+    },
+    "durationDays": 6,
+    "durationNights": 5,
+    "regularPrice": 18000,
+    "salePrice": null,
+    "includesAirfare": false,
+    "groupMode": "any",
+    "minPax": null,
+    "departureMode": "any_date",
+    "itinerary": [
+      {
+        "day": 1,
+        "title": {
+          "bn": "আগমন ও কাঠমান্ডু সাইটসিয়িং",
+          "en": "Arrival & Kathmandu sightseeing"
+        },
+        "body": {
+          "bn": "কাঠমান্ডু বিমানবন্দরে আমাদের প্রতিনিধি গেস্ট নেম কার্ডসহ অপেক্ষা করবেন, হোটেলে ট্রান্সফার ও ট্যুর ব্রিফিং। Kathmandu Durbar Square ও Swayambhunath Stupa। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "Our representative meets you at Kathmandu airport with a guest name card, transfer to hotel and tour briefing. Kathmandu Durbar Square and Swayambhunath Stupa. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 2,
+        "title": {
+          "bn": "কাঠমান্ডু ➔ পোখারা",
+          "en": "Kathmandu ➔ Pokhara"
+        },
+        "body": {
+          "bn": "সকাল ৮টায় Chandragiri Hills হয়ে পোখারা (৭–৮ ঘণ্টা)। সন্ধ্যায় লেকসাইডে অবসর। রাত্রিযাপন পোখারায়।",
+          "en": "8:00 am drive to Pokhara via Chandragiri Hills (7–8 hours). Evening at the lakeside. Overnight in Pokhara."
+        }
+      },
+      {
+        "day": 3,
+        "title": {
+          "bn": "সারাংকোট সূর্যোদয় ও পোখারা",
+          "en": "Sarangkot sunrise & Pokhara"
+        },
+        "body": {
+          "bn": "ভোর ৫টায় Sarangkot-এ অন্নপূর্ণার সূর্যোদয়। Phewa Lake-এ বোটিং, Seti Gorge, Gupteshwor Cave, Devi's Fall। রাত্রিযাপন পোখারায়।",
+          "en": "5:00 am to Sarangkot for sunrise over the Annapurna range. Boating on Phewa Lake, Seti Gorge, Gupteshwor Cave, Devi's Fall. Overnight in Pokhara."
+        }
+      },
+      {
+        "day": 4,
+        "title": {
+          "bn": "পোখারা ➔ কাঠমান্ডু",
+          "en": "Pokhara ➔ Kathmandu"
+        },
+        "body": {
+          "bn": "সকাল ৮টায় কাঠমান্ডুর পথে (৮–৯ ঘণ্টা)। সন্ধ্যায় থামেলের প্রাণবন্ত পরিবেশ। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "8:00 am drive back to Kathmandu (8–9 hours). Evening in the streets of Thamel. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 5,
+        "title": {
+          "bn": "কাঠমান্ডু ➔ নাগরকোট",
+          "en": "Kathmandu ➔ Nagarkot"
+        },
+        "body": {
+          "bn": "সকাল ১১টায় Bhaktapur ও Rani Jhula ঝুলন্ত সেতু হয়ে নাগরকোট। Bhaktapur Durbar Square ও নেওয়া সংস্কৃতি। রাত্রিযাপন নাগরকোটে।",
+          "en": "11:00 am to Nagarkot via Bhaktapur and the Rani Jhula suspension bridge. Bhaktapur Durbar Square and local Newa culture. Overnight in Nagarkot."
+        }
+      },
+      {
+        "day": 6,
+        "title": {
+          "bn": "নাগরকোট সূর্যোদয় ও বিদায়",
+          "en": "Nagarkot sunrise & departure"
+        },
+        "body": {
+          "bn": "নাগরকোটে সূর্যোদয় দেখে ব্রেকফাস্ট, ফ্লাইটের ৩ ঘণ্টা আগে বিমানবন্দরে ট্রান্সফার।",
+          "en": "Wake early for sunrise in Nagarkot, breakfast at the hotel, transfer to the airport 3 hours before your flight."
+        }
+      }
+    ],
+    "includes": [
+      {
+        "bn": "এয়ারপোর্ট পিকআপ/ড্রপ",
+        "en": "Airport pickup/drop"
+      },
+      {
+        "bn": "নেপালি ঐতিহ্যবাহী বরণ (খাদা বা মালা)",
+        "en": "Nepali style traditional welcome with khada or mala"
+      },
+      {
+        "bn": "বিমানবন্দর ও হোটেলে ট্যুর অ্যাসিস্ট্যান্স ও ব্রিফিং",
+        "en": "Tour assistance and briefing at airport and hotel"
+      },
+      {
+        "bn": "কাঠমান্ডুতে ২ রাত (BB, ডাবল/টুইন/ট্রিপল শেয়ারিং)",
+        "en": "2 nights in Kathmandu (BB, double/twin/triple sharing)"
+      },
+      {
+        "bn": "পোখারায় ২ রাত (BB)",
+        "en": "2 nights in Pokhara (BB)"
+      },
+      {
+        "bn": "নাগরকোটে ১ রাত (BB)",
+        "en": "1 night in Nagarkot (BB)"
+      },
+      {
+        "bn": "সব সাইটসিয়িং ও অ্যাক্টিভিটি প্রাইভেট ভেহিকেলে",
+        "en": "All sightseeing and activities by private vehicle"
+      },
+      {
+        "bn": "কাঠমান্ডু–পোখারা–নাগরকোট–কাঠমান্ডু প্রাইভেট গাড়ি",
+        "en": "Kathmandu–Pokhara–Nagarkot–Kathmandu by private vehicle"
+      }
+    ],
+    "excludes": [
+      {
+        "bn": "আন্তর্জাতিক বিমানভাড়া",
+        "en": "International airfare"
+      },
+      {
+        "bn": "ট্যুর গাইড",
+        "en": "Tour guide"
+      },
+      {
+        "bn": "এন্ট্রি ফি ও অ্যাক্টিভিটি চার্জ",
+        "en": "Entry fees and activity charges"
+      },
+      {
+        "bn": "লাঞ্চ, ডিনার ও প্যাকেজে নেই এমন খাবার",
+        "en": "Lunch, dinner and meals not included in the package"
+      },
+      {
+        "bn": "Phewa বোটিং ও Chandragiri কেবল কার টিকেট",
+        "en": "Phewa boating and Chandragiri cable car tickets"
+      },
+      {
+        "bn": "ইটিনেরারির বাইরে অতিরিক্ত গাড়ি ব্যবহার",
+        "en": "Extra use of vehicle beyond the itinerary"
+      },
+      {
+        "bn": "ব্যক্তিগত খরচ ও বিলাসিতা",
+        "en": "Personal expenses and luxury"
+      }
+    ],
+    "activities": [
+      "Boating",
+      "City Tour"
+    ],
+    "tripTypes": [
+      "Budget Travel",
+      "Child-friendly",
+      "Nature Friendly"
+    ],
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/37355142/pexels-photo-37355142.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Tusar Gautam on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37355142/",
+        "alt": {
+          "bn": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot",
+          "en": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37120692/pexels-photo-37120692.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Sushant Bista on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37120692/",
+        "alt": {
+          "bn": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot",
+          "en": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/5291526/pexels-photo-5291526.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by N. Voitkevich on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/5291526/",
+        "alt": {
+          "bn": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot",
+          "en": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/34935558/pexels-photo-34935558.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Shahil Jung Karki on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/34935558/",
+        "alt": {
+          "bn": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot",
+          "en": "Nature & Cultural Scenic Tour — Kathmandu · Pokhara · Nagarkot"
+        },
+        "isPlaceholder": true
+      }
+    ]
+  },
+  {
+    "code": "Nepal 02",
+    "slug": "kathmandu-pokhara-tour-4-nights-5-days-without-air-ticket",
+    "wpTripId": 6382,
+    "destination": "nepal",
+    "status": "published",
+    "title": {
+      "bn": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake",
+      "en": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake"
+    },
+    "summary": {
+      "bn": "এয়ারপোর্ট পিকআপ/ড্রপ, কাঠমান্ডুতে ২ রাত, পোখারায় ২ রাত (BB), সব সাইটসিয়িং প্রাইভেট ভেহিকেলে, কাঠমান্ডু–পোখারা–কাঠমান্ডু প্রাইভেট গাড়ি",
+      "en": "Airport pickup/drop, Nepali style traditional welcome with khada or mala, Tour assistance at airport and hotel, 2 nights in Kathmandu (BB, double/twin/triple sharing)"
+    },
+    "durationDays": 5,
+    "durationNights": 4,
+    "regularPrice": 13800,
+    "salePrice": null,
+    "includesAirfare": false,
+    "groupMode": "any",
+    "minPax": null,
+    "departureMode": "any_date",
+    "itinerary": [
+      {
+        "day": 1,
+        "title": {
+          "bn": "আগমন",
+          "en": "Arrival"
+        },
+        "body": {
+          "bn": "কাঠমান্ডু বিমানবন্দরে প্রতিনিধি, হোটেলে ট্রান্সফার ও ট্যুর ব্রিফিং। চেক-ইন ও নিজের মতো ঘোরাঘুরির সময়। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "Representative at Kathmandu airport, transfer to hotel and tour briefing. Check in and free time to explore. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 2,
+        "title": {
+          "bn": "কাঠমান্ডু ➔ পোখারা",
+          "en": "Kathmandu ➔ Pokhara"
+        },
+        "body": {
+          "bn": "হোটেলের ছাদ থেকে সূর্যোদয়। সকাল ৮:৩০-এ Chandragiri Hills হয়ে পোখারা (৮–৯ ঘণ্টা)। সন্ধ্যায় লেকসাইড। দ্রষ্টব্য: ২০০ কিমি পথের ৯০ কিমি সম্প্রসারণাধীন।",
+          "en": "Sunrise from the hotel rooftop. 8:30 am drive to Pokhara via Chandragiri Hills (8–9 hours). Evening at the lakeside. Note: 90 km of the 200 km road is under expansion."
+        }
+      },
+      {
+        "day": 3,
+        "title": {
+          "bn": "সারাংকোট ও পোখারা সাইটসিয়িং",
+          "en": "Sarangkot & Pokhara sightseeing"
+        },
+        "body": {
+          "bn": "ভোর ৫টায় Sarangkot-এ অন্নপূর্ণার সূর্যোদয়। Phewa Lake বোটিং (Tal Barahi Temple), Seti Gorge, Gupteshwor Cave, Devi's Fall। রাত্রিযাপন পোখারায়।",
+          "en": "5:00 am to Sarangkot for sunrise over Annapurna. Boating on Phewa Lake to Tal Barahi Temple, Seti Gorge, Gupteshwor Cave, Devi's Fall. Overnight in Pokhara."
+        }
+      },
+      {
+        "day": 4,
+        "title": {
+          "bn": "পোখারা ➔ কাঠমান্ডু",
+          "en": "Pokhara ➔ Kathmandu"
+        },
+        "body": {
+          "bn": "সকাল ৮টায় কাঠমান্ডুর পথে (৮–৯ ঘণ্টা)। সন্ধ্যায় থামেলের বাজার ও নাইটলাইফ। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "8:00 am drive back to Kathmandu (8–9 hours). Evening in the markets and nightlife of Thamel. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 5,
+        "title": {
+          "bn": "বিদায়",
+          "en": "Departure"
+        },
+        "body": {
+          "bn": "শান্ত সকাল, হোটেলে ব্রেকফাস্ট, ফ্লাইটের ৩ ঘণ্টা আগে বিমানবন্দরে ট্রান্সফার।",
+          "en": "A quiet morning, breakfast at the hotel, transfer to the airport 3 hours before your flight."
+        }
+      }
+    ],
+    "includes": [
+      {
+        "bn": "এয়ারপোর্ট পিকআপ/ড্রপ",
+        "en": "Airport pickup/drop"
+      },
+      {
+        "bn": "নেপালি ঐতিহ্যবাহী বরণ (খাদা বা মালা)",
+        "en": "Nepali style traditional welcome with khada or mala"
+      },
+      {
+        "bn": "বিমানবন্দর ও হোটেলে ট্যুর অ্যাসিস্ট্যান্স",
+        "en": "Tour assistance at airport and hotel"
+      },
+      {
+        "bn": "কাঠমান্ডুতে ২ রাত (BB, ডাবল/টুইন/ট্রিপল শেয়ারিং)",
+        "en": "2 nights in Kathmandu (BB, double/twin/triple sharing)"
+      },
+      {
+        "bn": "পোখারায় ২ রাত (BB)",
+        "en": "2 nights in Pokhara (BB)"
+      },
+      {
+        "bn": "সব সাইটসিয়িং প্রাইভেট ভেহিকেলে",
+        "en": "All sightseeing by private vehicle"
+      },
+      {
+        "bn": "কাঠমান্ডু–পোখারা–কাঠমান্ডু প্রাইভেট গাড়ি",
+        "en": "Kathmandu–Pokhara–Kathmandu by private vehicle"
+      }
+    ],
+    "excludes": [
+      {
+        "bn": "আন্তর্জাতিক বিমানভাড়া",
+        "en": "International airfare"
+      },
+      {
+        "bn": "এন্ট্রি ফি ও অ্যাক্টিভিটি চার্জ",
+        "en": "Entry fees and activity charges"
+      },
+      {
+        "bn": "লাঞ্চ ও প্যাকেজে নেই এমন খাবার",
+        "en": "Lunch and meals not included in the package"
+      },
+      {
+        "bn": "Phewa বোটিং ও Chandragiri কেবল কার টিকেট",
+        "en": "Phewa boating and Chandragiri cable car tickets"
+      },
+      {
+        "bn": "ইটিনেরারির বাইরে অতিরিক্ত গাড়ি ব্যবহার",
+        "en": "Extra use of vehicle beyond the itinerary"
+      },
+      {
+        "bn": "ব্যক্তিগত খরচ ও বিলাসিতা",
+        "en": "Personal expenses and luxury"
+      }
+    ],
+    "activities": [
+      "Boating",
+      "City Tour"
+    ],
+    "tripTypes": [],
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/14020725/pexels-photo-14020725.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Quang Nguyen Vinh on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/14020725/",
+        "alt": {
+          "bn": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake",
+          "en": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/5291526/pexels-photo-5291526.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by N. Voitkevich on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/5291526/",
+        "alt": {
+          "bn": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake",
+          "en": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37710833/pexels-photo-37710833.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Alix Lee on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37710833/",
+        "alt": {
+          "bn": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake",
+          "en": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37355142/pexels-photo-37355142.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Tusar Gautam on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37355142/",
+        "alt": {
+          "bn": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake",
+          "en": "Kathmandu–Pokhara Tour — Sarangkot সূর্যোদয় · Phewa Lake"
+        },
+        "isPlaceholder": true
+      }
+    ]
+  },
+  {
+    "code": "Nepal 04",
+    "slug": "kathmandu-nagarkot-himalayan-tour-3-nights-4-days-without-air-ticket",
+    "wpTripId": 6404,
+    "destination": "nepal",
+    "status": "published",
+    "title": {
+      "bn": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula",
+      "en": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula"
+    },
+    "summary": {
+      "bn": "এয়ারপোর্ট পিকআপ/ড্রপ, নেপালি ঐতিহ্যবাহী বরণ, কাঠমান্ডুতে ২ রাত, নাগরকোটে ১ রাত (BB), সব সাইটসিয়িং প্রাইভেট ভেহিকেলে",
+      "en": "Airport pickup/drop, Nepali style traditional welcome with khada or mala, Tour assistance and briefing at airport and hotel, 2 nights in Kathmandu (BB, double/twin/triple sharing)"
+    },
+    "durationDays": 4,
+    "durationNights": 3,
+    "regularPrice": 13000,
+    "salePrice": null,
+    "includesAirfare": false,
+    "groupMode": "any",
+    "minPax": null,
+    "departureMode": "any_date",
+    "itinerary": [
+      {
+        "day": 1,
+        "title": {
+          "bn": "আগমন",
+          "en": "Arrival"
+        },
+        "body": {
+          "bn": "কাঠমান্ডু বিমানবন্দরে গেস্ট নেম কার্ডসহ প্রতিনিধি, হোটেলে ট্রান্সফার ও ট্যুর ব্রিফিং। চেক-ইন ও অবসর। রাত্রিযাপন কাঠমান্ডুতে।",
+          "en": "Representative with a guest name card at Kathmandu airport, transfer to hotel and tour briefing. Check in and free time. Overnight in Kathmandu."
+        }
+      },
+      {
+        "day": 2,
+        "title": {
+          "bn": "কাঠমান্ডু সাইটসিয়িং",
+          "en": "Kathmandu sightseeing"
+        },
+        "body": {
+          "bn": "সকাল ৯:৩০-এ Swayambhunath Stupa (Monkey Temple) দিয়ে শুরু, এরপর Kathmandu Durbar Square। সন্ধ্যায় থামেলের বাজার ও নাইটলাইফ।",
+          "en": "9:30 am start at Swayambhunath Stupa (Monkey Temple), then Kathmandu Durbar Square. Evening in the markets and nightlife of Thamel."
+        }
+      },
+      {
+        "day": 3,
+        "title": {
+          "bn": "কাঠমান্ডু ➔ নাগরকোট",
+          "en": "Kathmandu ➔ Nagarkot"
+        },
+        "body": {
+          "bn": "সকাল ৯:৩০-এ যাত্রা। পথে Bhaktapur Durbar Square ও ২৫০ মিটার লম্বা Rani Jhula ঝুলন্ত সেতু। রাত্রিযাপন নাগরকোটে।",
+          "en": "9:30 am departure. En route, Bhaktapur Durbar Square and the 250-metre Rani Jhula suspension bridge. Overnight in Nagarkot."
+        }
+      },
+      {
+        "day": 4,
+        "title": {
+          "bn": "সূর্যোদয় ও বিদায়",
+          "en": "Sunrise & departure"
+        },
+        "body": {
+          "bn": "হোটেলের রুম বা ছাদ থেকে ভোরের সূর্যোদয়, ব্রেকফাস্ট, ফ্লাইটের ৩ ঘণ্টা আগে বিমানবন্দরে ট্রান্সফার।",
+          "en": "Early morning sunrise from the hotel room or rooftop, breakfast, transfer to the airport 3 hours before your flight."
+        }
+      }
+    ],
+    "includes": [
+      {
+        "bn": "এয়ারপোর্ট পিকআপ/ড্রপ",
+        "en": "Airport pickup/drop"
+      },
+      {
+        "bn": "নেপালি ঐতিহ্যবাহী বরণ (খাদা বা মালা)",
+        "en": "Nepali style traditional welcome with khada or mala"
+      },
+      {
+        "bn": "বিমানবন্দর ও হোটেলে ট্যুর অ্যাসিস্ট্যান্স ও ব্রিফিং",
+        "en": "Tour assistance and briefing at airport and hotel"
+      },
+      {
+        "bn": "কাঠমান্ডুতে ২ রাত (BB, ডাবল/টুইন/ট্রিপল শেয়ারিং)",
+        "en": "2 nights in Kathmandu (BB, double/twin/triple sharing)"
+      },
+      {
+        "bn": "নাগরকোটে ১ রাত (BB)",
+        "en": "1 night in Nagarkot (BB)"
+      },
+      {
+        "bn": "সব সাইটসিয়িং প্রাইভেট ভেহিকেলে",
+        "en": "All sightseeing by private vehicle"
+      },
+      {
+        "bn": "কাঠমান্ডু–নাগরকোট–কাঠমান্ডু প্রাইভেট গাড়ি",
+        "en": "Kathmandu–Nagarkot–Kathmandu by private vehicle"
+      }
+    ],
+    "excludes": [
+      {
+        "bn": "আন্তর্জাতিক বিমানভাড়া",
+        "en": "International airfare"
+      },
+      {
+        "bn": "ট্যুর গাইড",
+        "en": "Tour guide"
+      },
+      {
+        "bn": "এন্ট্রি ফি ও অ্যাক্টিভিটি চার্জ",
+        "en": "Entry fees and activity charges"
+      },
+      {
+        "bn": "ইটিনেরারির বাইরে অতিরিক্ত গাড়ি ব্যবহার",
+        "en": "Extra use of vehicle beyond the itinerary"
+      },
+      {
+        "bn": "প্যাকেজে উল্লেখ নেই এমন খাবার",
+        "en": "Meals not mentioned in the package"
+      },
+      {
+        "bn": "ব্যক্তিগত খরচ ও বিলাসিতা",
+        "en": "Personal expenses and luxury"
+      }
+    ],
+    "activities": [
+      "City Tour"
+    ],
+    "tripTypes": [],
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/37120692/pexels-photo-37120692.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Sushant Bista on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37120692/",
+        "alt": {
+          "bn": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula",
+          "en": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/34935558/pexels-photo-34935558.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Shahil Jung Karki on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/34935558/",
+        "alt": {
+          "bn": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula",
+          "en": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37710833/pexels-photo-37710833.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Alix Lee on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37710833/",
+        "alt": {
+          "bn": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula",
+          "en": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/37355142/pexels-photo-37355142.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Tusar Gautam on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/37355142/",
+        "alt": {
+          "bn": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula",
+          "en": "Kathmandu & Nagarkot Himalayan Tour — Bhaktapur · Rani Jhula"
+        },
+        "isPlaceholder": true
+      }
+    ]
+  },
+  {
+    "code": "Thai 01",
+    "slug": "thailand-budget-escape-bangkok-pattaya-coral-island-with",
+    "wpTripId": 6360,
+    "destination": "thailand",
+    "status": "published",
+    "title": {
+      "bn": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise",
+      "en": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise"
+    },
+    "summary": {
+      "bn": "পাত্তায়ায় ২ রাত ও ব্যাংককে ২ রাত হোটেল, প্রতিদিন ব্রেকফাস্ট, লাঞ্চসহ কোরাল আইল্যান্ড ট্যুর, এয়ারপোর্ট ও ইন্টারসিটি ট্রান্সফার, White Orchid ডিনার ক্রুজ",
+      "en": "2 nights hotel accommodation in Pattaya, 2 nights hotel accommodation in Bangkok, Daily breakfast, Coral Island tour with lunch"
+    },
+    "durationDays": 5,
+    "durationNights": 4,
+    "regularPrice": 30000,
+    "salePrice": 27000,
+    "includesAirfare": false,
+    "groupMode": "any",
+    "minPax": null,
+    "departureMode": "any_date",
+    "itinerary": [
+      {
+        "day": 1,
+        "title": {
+          "bn": "আগমন ও পাত্তায়া ট্রান্সফার",
+          "en": "Arrival & transfer to Pattaya"
+        },
+        "body": {
+          "bn": "ব্যাংকক বিমানবন্দরে মিট অ্যান্ড গ্রিট। প্রাইভেট ট্রান্সফারে পাত্তায়া, হোটেল চেক-ইন। ঘুরে দেখার অবসর সময়।",
+          "en": "Meet and greet at Bangkok Airport. Private transfer to Pattaya, hotel check-in. Free time to explore."
+        }
+      },
+      {
+        "day": 2,
+        "title": {
+          "bn": "কোরাল আইল্যান্ড ট্যুর",
+          "en": "Coral Island tour"
+        },
+        "body": {
+          "bn": "হোটেলে ব্রেকফাস্ট। স্পিডবোটে Coral Island — স্বচ্ছ নীল জল ও সাদা বালির সৈকত। লাঞ্চ অন্তর্ভুক্ত। পাত্তায়ার হোটেলে প্রত্যাবর্তন।",
+          "en": "Breakfast at hotel. Speedboat transfer to Coral Island — crystal-clear waters and white sand beaches. Complimentary lunch included. Return to the Pattaya hotel."
+        }
+      },
+      {
+        "day": 3,
+        "title": {
+          "bn": "পাত্তায়া ➔ ব্যাংকক",
+          "en": "Pattaya to Bangkok"
+        },
+        "body": {
+          "bn": "ব্রেকফাস্ট ও চেক-আউট। প্রাইভেট ট্রান্সফারে ব্যাংকক, হোটেল চেক-ইন। কেনাকাটা ও অবসর।",
+          "en": "Breakfast and hotel check-out. Private transfer to Bangkok, hotel check-in. Shopping and leisure time."
+        }
+      },
+      {
+        "day": 4,
+        "title": {
+          "bn": "ডিনার ক্রুজ",
+          "en": "Dinner cruise"
+        },
+        "body": {
+          "bn": "White Orchid Dinner Cruise-এ আন্তর্জাতিক বুফে ডিনার। জাহাজে লাইভ বিনোদন।",
+          "en": "White Orchid Dinner Cruise international buffet dinner. Live entertainment onboard."
+        }
+      },
+      {
+        "day": 5,
+        "title": {
+          "bn": "বিদায়",
+          "en": "Departure"
+        },
+        "body": {
+          "bn": "হোটেলে ব্রেকফাস্ট, চেক-আউট, প্রাইভেট ট্রান্সফারে বিমানবন্দর।",
+          "en": "Breakfast at hotel, check-out, private transfer to the airport."
+        }
+      }
+    ],
+    "includes": [
+      {
+        "bn": "পাত্তায়ায় ২ রাত হোটেল",
+        "en": "2 nights hotel accommodation in Pattaya"
+      },
+      {
+        "bn": "ব্যাংককে ২ রাত হোটেল",
+        "en": "2 nights hotel accommodation in Bangkok"
+      },
+      {
+        "bn": "প্রতিদিন ব্রেকফাস্ট",
+        "en": "Daily breakfast"
+      },
+      {
+        "bn": "লাঞ্চসহ কোরাল আইল্যান্ড ট্যুর",
+        "en": "Coral Island tour with lunch"
+      },
+      {
+        "bn": "এয়ারপোর্ট ও ইন্টারসিটি ট্রান্সফার",
+        "en": "Airport and intercity transfers"
+      },
+      {
+        "bn": "White Orchid ডিনার ক্রুজ",
+        "en": "White Orchid Dinner Cruise"
+      }
+    ],
+    "excludes": [
+      {
+        "bn": "বিমানভাড়া",
+        "en": "Airfare"
+      },
+      {
+        "bn": "থাইল্যান্ড ভিসা ফি (আনুমানিক ৳৬,০০০)",
+        "en": "Thailand visa fee (approx. BDT 6,000)"
+      },
+      {
+        "bn": "ব্যক্তিগত খরচ",
+        "en": "Personal expenses"
+      },
+      {
+        "bn": "উল্লেখ নেই এমন খাবার",
+        "en": "Meals not mentioned"
+      },
+      {
+        "bn": "আর্লি চেক-ইন / লেট চেক-আউট চার্জ",
+        "en": "Early check-in / late check-out charges"
+      }
+    ],
+    "activities": [
+      "Boating",
+      "City Tour"
+    ],
+    "tripTypes": [
+      "Budget Travel",
+      "Nature Friendly"
+    ],
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/17265131/pexels-photo-17265131.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Maldives Local Adventure on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/17265131/",
+        "alt": {
+          "bn": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise",
+          "en": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/12228138/pexels-photo-12228138.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Vince on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/12228138/",
+        "alt": {
+          "bn": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise",
+          "en": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/35687404/pexels-photo-35687404.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Sergii on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/35687404/",
+        "alt": {
+          "bn": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise",
+          "en": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/32369561/pexels-photo-32369561.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Gulru Sude on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/32369561/",
+        "alt": {
+          "bn": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise",
+          "en": "THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise"
+        },
+        "isPlaceholder": true
+      }
+    ]
+  },
+  {
+    "code": "Thai 02",
+    "slug": "thailand-budget-trip-3-destinations-bangkok-pattaya-ko-lan-island",
+    "wpTripId": null,
+    "destination": "thailand",
+    "status": "draft",
+    "title": {
+      "bn": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island",
+      "en": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island"
+    },
+    "summary": {
+      "bn": "ব্যাংকক, পাত্তায়া ও কোহ লান — ৩ গন্তব্য, হোটেল, ব্রেকফাস্ট ও ট্রান্সফার",
+      "en": "Hotels in Bangkok and Pattaya, Daily breakfast, Ko Lan Island trip, Airport and intercity transfers"
+    },
+    "durationDays": 5,
+    "durationNights": null,
+    "regularPrice": 26000,
+    "salePrice": 22500,
+    "includesAirfare": false,
+    "groupMode": "any",
+    "minPax": null,
+    "departureMode": "any_date",
+    "itinerary": [
+      {
+        "day": 1,
+        "title": {
+          "bn": "আগমন ও পাত্তায়া",
+          "en": "Arrival & Pattaya"
+        },
+        "body": {
+          "bn": "ব্যাংকক বিমানবন্দরে অভ্যর্থনা, পাত্তায়ায় ট্রান্সফার ও হোটেল চেক-ইন।",
+          "en": "Welcome at Bangkok Airport, transfer to Pattaya and hotel check-in."
+        }
+      },
+      {
+        "day": 2,
+        "title": {
+          "bn": "কোহ লান আইল্যান্ড",
+          "en": "Ko Lan Island"
+        },
+        "body": {
+          "bn": "স্পিডবোটে Ko Lan Island — সৈকত ও জলক্রীড়া। সন্ধ্যায় পাত্তায়ায় ফেরা।",
+          "en": "Speedboat to Ko Lan Island — beaches and water sports. Return to Pattaya in the evening."
+        }
+      },
+      {
+        "day": 3,
+        "title": {
+          "bn": "পাত্তায়া সাইটসিয়িং",
+          "en": "Pattaya sightseeing"
+        },
+        "body": {
+          "bn": "শহরের দর্শনীয় স্থান ও অবসর সময়।",
+          "en": "City sights and leisure time."
+        }
+      },
+      {
+        "day": 4,
+        "title": {
+          "bn": "পাত্তায়া ➔ ব্যাংকক",
+          "en": "Pattaya ➔ Bangkok"
+        },
+        "body": {
+          "bn": "ব্যাংককে ট্রান্সফার, হোটেল চেক-ইন, কেনাকাটা।",
+          "en": "Transfer to Bangkok, hotel check-in, shopping."
+        }
+      },
+      {
+        "day": 5,
+        "title": {
+          "bn": "বিদায়",
+          "en": "Departure"
+        },
+        "body": {
+          "bn": "ব্রেকফাস্ট, চেক-আউট, বিমানবন্দরে ট্রান্সফার।",
+          "en": "Breakfast, check-out, transfer to the airport."
+        }
+      }
+    ],
+    "includes": [
+      {
+        "bn": "ব্যাংকক ও পাত্তায়ায় হোটেল",
+        "en": "Hotels in Bangkok and Pattaya"
+      },
+      {
+        "bn": "প্রতিদিন ব্রেকফাস্ট",
+        "en": "Daily breakfast"
+      },
+      {
+        "bn": "কোহ লান আইল্যান্ড ট্রিপ",
+        "en": "Ko Lan Island trip"
+      },
+      {
+        "bn": "এয়ারপোর্ট ও ইন্টারসিটি ট্রান্সফার",
+        "en": "Airport and intercity transfers"
+      }
+    ],
+    "excludes": [
+      {
+        "bn": "বিমানভাড়া",
+        "en": "Airfare"
+      },
+      {
+        "bn": "থাইল্যান্ড ভিসা ফি",
+        "en": "Thailand visa fee"
+      },
+      {
+        "bn": "ব্যক্তিগত খরচ",
+        "en": "Personal expenses"
+      },
+      {
+        "bn": "উল্লেখ নেই এমন খাবার",
+        "en": "Meals not mentioned"
+      }
+    ],
+    "activities": [
+      "Boating",
+      "City Tour"
+    ],
+    "tripTypes": [],
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/12228138/pexels-photo-12228138.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Vince on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/12228138/",
+        "alt": {
+          "bn": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island",
+          "en": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/17265131/pexels-photo-17265131.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Maldives Local Adventure on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/17265131/",
+        "alt": {
+          "bn": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island",
+          "en": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/32369561/pexels-photo-32369561.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Gulru Sude on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/32369561/",
+        "alt": {
+          "bn": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island",
+          "en": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island"
+        },
+        "isPlaceholder": true
+      },
+      {
+        "url": "https://images.pexels.com/photos/27638428/pexels-photo-27638428.jpeg?auto=compress&cs=tinysrgb&w=1600",
+        "credit": "Photo by Haim Charbit on Pexels",
+        "creditUrl": "https://www.pexels.com/photo/27638428/",
+        "alt": {
+          "bn": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island",
+          "en": "Thailand Budget Trip 3 Destinations — Bangkok · Pattaya · Ko Lan Island"
+        },
+        "isPlaceholder": true
+      }
+    ]
+  }
+]

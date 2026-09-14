@@ -1,0 +1,517 @@
+/*
+ * Bhabaghure design tokens — Tailwind v4 theme.
+ *
+ * Source of truth: _design/README.md → "Design tokens". Where the README gives a
+ * range ("card headings 16–19px") or is silent (admin/portal shell, wallet), the
+ * exact values were read off the .dc.html prototypes, which use literal values.
+ *
+ * Every Tailwind namespace with built-in defaults that the design also defines
+ * (colours, font sizes, letter-spacing, line-heights, radii, shadows, breakpoints)
+ * is reset first. `text-gray-500`, `text-sm`, `rounded-lg` and `sm:` (at 640px, in
+ * Tailwind's sense) do not exist. A value that is not here is not in the design —
+ * add it here deliberately rather than as an arbitrary `[…]` value in a component.
+ *
+ * Usage, in an app's global stylesheet:
+ *   @import "tailwindcss";
+ *   @import "@bhabaghure/tokens/theme.css";
+ */
+
+@theme {
+  /* ── Colour ──────────────────────────────────────────────────────────── */
+  --color-*: initial;
+
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  /* Core palette — README table, verbatim */
+  --color-ink: #14213D;              /* body text */
+  --color-ink-deep: #0F1E3A;         /* header, sidebar, footer */
+  --color-paper: #FBF7F1;            /* website background */
+  --color-paper-alt: #F7F2EA;        /* alternating sections, chips */
+  --color-hairline: #EAE3D8;         /* all borders */
+  --color-input: #DBD2C4;            /* form controls */
+  --color-muted: #5C6478;            /* secondary body text */
+  --color-muted-label: #6B7488;      /* subheads */
+  --color-blue: #0B5ED7;             /* primary action, links */
+  --color-blue-deep: #0357C9;        /* gradient end, hover */
+  --color-blue-tint: #E3F2FF;        /* info background */
+  --color-orange: #F26A1B;           /* accent, hover */
+  --color-orange-bright: #FF7A1F;    /* CTA gradient start */
+  --color-orange-deep: #F0500F;      /* prices, CTA gradient end */
+  --color-orange-tint: #FFF1E6;      /* warning background */
+  --color-green: #12A150;            /* success, paid */
+  --color-green-deep: #0E8A44;       /* gradient end */
+  --color-green-tint: #E6F7EC;       /* success background */
+  --color-red: #B91C1C;              /* destructive, unpaid */
+  --color-red-tint: #FEE2E2;         /* error background */
+  --color-amber: #C2410C;            /* attention, due */
+  --color-purple: #7C3AED;           /* SMS channel, wallet accent */
+
+  /* Supporting shades used in the prototypes but not listed in the README */
+  --color-ink-soft: #4A5A78;         /* invoice secondary text */
+  --color-navy-mid: #123166;         /* portal navy gradient end */
+  --color-navy-abyss: #031F4F;       /* dark footer base */
+  --color-blue-ink: #04347F;         /* contact section gradient middle */
+  --color-blue-abyss: #063E8F;       /* blue banner gradient end */
+  --color-blue-line: #9EC5FF;        /* OCR-filled field border, dashed reference box */
+  --color-blue-wash: #F4F8FF;        /* reference code box, invoice panels */
+  --color-blue-wash-line: #D6E4FF;   /* invoice panel border, dotted rules */
+  --color-rust: #7A2E0C;             /* contact section gradient end */
+  --color-orange-press: #D95A10;     /* hover on solid orange submit buttons */
+  --color-orange-soft: #FFB067;      /* loyalty progress, rings */
+  --color-orange-light: #FFB380;     /* phone link on dark grounds */
+  --color-orange-glow: #FFD1B3;      /* eyebrow labels on navy */
+  --color-orange-ink: #9A3412;       /* text inside orange notices */
+  --color-orange-line: #F3D9CB;      /* orange notice border */
+  --color-orange-panel: #FEF6F2;     /* soft orange panel */
+  --color-orange-wash: #FFF3E8;      /* FAQ section background */
+  --color-green-soft: #7EE2A8;       /* progress on dark, gradient end */
+  --color-green-line: #BFE8CE;       /* success notice border */
+  --color-green-panel: #F5FBF7;      /* soft green panel */
+  --color-green-panel-line: #CFE9D9; /* soft green panel border */
+  --color-green-wash: #F7FCF9;       /* settled / completed rows */
+  --color-red-line: #FCA5A5;         /* error notice border */
+  --color-purple-tint: #F3E8FF;      /* SMS, submitted, bonus chips */
+  --color-cyan: #0891B2;             /* transport and lead chips */
+  --color-cyan-tint: #E0F2FE;
+  --color-gold: #92400E;             /* agent Gold tier, activity chips */
+  --color-gold-tint: #FEF3C7;
+  --color-silver: #475569;           /* Silver tier */
+  --color-silver-tint: #F1F5F9;
+  --color-platinum: #6D28D9;         /* Platinum tier */
+  --color-platinum-tint: #EDE9FE;
+  --color-loyalty-gold: #B45309;     /* customer loyalty gold tier */
+  --color-slate-tint: #F1F3F7;       /* cancelled, paused, system chips */
+  --color-hairline-soft: #EDE5D9;    /* translucent header and bottom-bar border */
+  --color-hairline-hover: #DCD2C2;   /* package card border on hover */
+  --color-hairline-faint: #F2EDE4;   /* menu sheet row dividers */
+  --color-paper-soft: #FDFBF8;
+  --color-image-placeholder: #EFE9DF; /* photo slot before the image loads */
+  --color-row-alt: #FBFCFE;          /* zebra rows, chat panel */
+  --color-chevron: #C9CFDB;
+  --color-on-navy: #9FB3D4;          /* footer and inactive tab text on navy */
+  --color-on-navy-soft: #93A4C4;
+  --color-scrim: #031A40;            /* modal backdrop, hero scrim — use as bg-scrim/55 */
+  --color-serp-link: #1A0DAB;        /* Google result title in the SEO preview */
+
+  /* Customer portal surfaces that differ from the shared app shell */
+  --color-portal-line: #E1E7F2;
+  --color-portal-input: #CFD8E8;
+
+  /* Third-party brand colours — only where that brand is shown */
+  --color-whatsapp: #25D366;
+  --color-whatsapp-tint: #E9FBF0;
+  --color-facebook: #1877F2;
+  --color-bkash: #E2136E;
+  --color-nagad: #F6921E;
+
+  /* Super admin wallet — dark, purple-accented, deliberately unlike the admin */
+  --color-wallet-bg: #0E1526;
+  --color-wallet-surface: #16203A;
+  --color-wallet-bar: #111A2E;       /* header and footer */
+  --color-wallet-line: #24304A;
+  --color-wallet-input: #2C3A56;
+  --color-wallet-text: #EAF0FA;
+  --color-wallet-muted: #8FA3C8;
+  --color-wallet-faint: #6B7C9E;
+  --color-wallet-link: #7FB2FF;
+  --color-wallet-violet: #A78BFA;
+  --color-wallet-lilac: #C4B5FD;
+  --color-wallet-lavender: #DDD6FE;
+  --color-wallet-purple-deep: #5B21B6;
+  --color-wallet-plum: #4C1D95;
+  --color-wallet-plum-deep: #2E1065;
+  --color-wallet-in: #22C55E;
+  --color-wallet-in-deep: #16A34A;
+  --color-wallet-in-soft: #86EFAC;
+  --color-wallet-out: #EF4444;
+  --color-wallet-out-deep: #DC2626;
+  --color-wallet-out-soft: #FCA5A5;
+  --color-wallet-due: #FCD34D;
+
+  /* ── Typeface ────────────────────────────────────────────────────────── */
+  /* Hind Siliguri: Bangla + body, 400/500/600/700.
+     Bricolage Grotesque: display, numerals, labels, 400/600/800 (optical size axis).
+     Hind Siliguri stays in the display stack so Bengali digits inside Bricolage
+     elements (৳ ৭৫,০০০) render in the brand face rather than a system fallback. */
+  --font-sans: "Hind Siliguri", "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", "Hind Siliguri", system-ui, sans-serif;
+
+  /* ── Font size ───────────────────────────────────────────────────────── */
+  --text-*: initial;
+
+  /* Roles defined in the README */
+  --text-section: clamp(31px, 3.5vw, 43px);   /* section headings */
+  --text-section--line-height: 1.18;
+  --text-section--letter-spacing: -0.028em;
+  --text-section--font-weight: 700;
+  --text-lede: clamp(15px, 1.7vw, 17px);      /* line under a section heading */
+  --text-lede--letter-spacing: 0.005em;
+  --text-body: 15px;
+  --text-body--line-height: 1.65;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.65;
+  --text-small: 13px;                          /* small print */
+  --text-small--line-height: 1.55;
+  --text-small-xs: 12px;
+  --text-small-xs--line-height: 1.55;
+  --text-price: 29px;                          /* package card price — use with font-display */
+  --text-price--letter-spacing: -0.03em;
+  --text-price--font-weight: 800;
+  --text-label: 11px;                          /* uppercase labels — use with uppercase */
+  --text-label--letter-spacing: 0.12em;
+  --text-label--font-weight: 700;
+
+  /* Exact sizes used across the prototypes */
+  --text-8: 8px;
+  --text-10: 10px;
+  --text-10\.5: 10.5px;
+  --text-11: 11px;
+  --text-11\.5: 11.5px;
+  --text-12: 12px;
+  --text-12\.5: 12.5px;
+  --text-13: 13px;
+  --text-13\.5: 13.5px;
+  --text-14: 14px;
+  --text-14\.5: 14.5px;
+  --text-15: 15px;
+  --text-16: 16px;
+  --text-17: 17px;
+  --text-18: 18px;
+  --text-19: 19px;
+  --text-20: 20px;
+  --text-22: 22px;
+  --text-24: 24px;
+  --text-25: 25px;
+  --text-26: 26px;
+  --text-28: 28px;
+  --text-29: 29px;
+  --text-30: 30px;
+  --text-32: 32px;
+  --text-34: 34px;
+  --text-40: 40px;
+
+  /* Fluid headings: fluid-{min}-{max} */
+  --text-fluid-13-15: clamp(13px, 1.5vw, 15px);
+  --text-fluid-13\.5-15: clamp(13.5px, 1.4vw, 15px);
+  --text-fluid-19-22: clamp(19px, 2.4vw, 22px);
+  --text-fluid-19-23: clamp(19px, 2.4vw, 23px);
+  --text-fluid-19-24: clamp(19px, 2.4vw, 24px);
+  --text-fluid-19-25: clamp(19px, 2.4vw, 25px);
+  --text-fluid-19-26: clamp(19px, 2.4vw, 26px);
+  --text-fluid-20-26: clamp(20px, 2.4vw, 26px);
+  --text-fluid-21-28: clamp(21px, 4.4vw, 28px);
+  --text-fluid-30-40: clamp(30px, 4.4vw, 40px);
+  --text-fluid-30-42: clamp(30px, 3.6vw, 42px);
+  --text-hero: min(5.6vw, 40px);               /* one-line hero headline */
+  --text-hero-sm: min(4.6vw, 34px);
+
+  /* Printed A4 invoice */
+  --text-print-8: 8pt;
+  --text-print-8\.5: 8.5pt;
+  --text-print-9: 9pt;
+  --text-print-9\.5: 9.5pt;
+  --text-print-11: 11pt;
+  --text-print-13\.5: 13.5pt;
+  --text-print-15: 15pt;
+  --text-print-17: 17pt;
+
+  /* ── Letter spacing ──────────────────────────────────────────────────── */
+  --tracking-*: initial;
+  --tracking-price: -0.03em;         /* prices (README) */
+  --tracking-display: -0.028em;      /* section headings (README) */
+  --tracking-price-sm: -0.025em;     /* secondary price figures */
+  --tracking-title: -0.022em;        /* modal titles */
+  --tracking-heading: -0.02em;       /* card headings (README) */
+  --tracking-heading-sm: -0.018em;
+  --tracking-stat: -0.01em;          /* KPI values, INVOICE wordmark */
+  --tracking-lede: 0.005em;
+  --tracking-chip: 0.02em;
+  --tracking-menu: 0.04em;
+  --tracking-matrix: 0.05em;         /* permission matrix header, status pills */
+  --tracking-caps: 0.06em;           /* uppercase table headers */
+  --tracking-caps-print: 0.08em;     /* invoice table headers */
+  --tracking-step: 0.1em;            /* STEP n, badges */
+  --tracking-label: 0.12em;          /* uppercase labels (README) */
+  --tracking-eyebrow: 0.14em;
+  --tracking-stars: 0.15em;
+  --tracking-eyebrow-wide: 0.16em;
+  --tracking-barcode: 0.22em;
+
+  /* ── Line height ─────────────────────────────────────────────────────── */
+  --leading-*: initial;
+  --leading-display: 1.18;           /* section headings (README) */
+  --leading-body: 1.65;              /* body (README) */
+  --leading-small: 1.55;             /* small print (README) */
+  --leading-1: 1;
+  --leading-1\.15: 1.15;
+  --leading-1\.18: 1.18;
+  --leading-1\.2: 1.2;
+  --leading-1\.25: 1.25;
+  --leading-1\.3: 1.3;
+  --leading-1\.35: 1.35;
+  --leading-1\.4: 1.4;
+  --leading-1\.45: 1.45;
+  --leading-1\.5: 1.5;
+  --leading-1\.55: 1.55;
+  --leading-1\.6: 1.6;
+  --leading-1\.62: 1.62;
+  --leading-1\.625: 1.625;
+  --leading-1\.65: 1.65;
+  --leading-1\.7: 1.7;
+  --leading-1\.75: 1.75;
+
+  /* ── Radius ──────────────────────────────────────────────────────────── */
+  /* README: 7–9 controls · 10–14 inputs and inner cards · 16–22 cards and panels · 999 pills */
+  --radius-*: initial;
+  --radius-2: 2px;
+  --radius-3: 3px;
+  --radius-4: 4px;
+  --radius-5: 5px;
+  --radius-6: 6px;
+  --radius-7: 7px;
+  --radius-8: 8px;
+  --radius-9: 9px;
+  --radius-10: 10px;
+  --radius-11: 11px;
+  --radius-12: 12px;
+  --radius-13: 13px;
+  --radius-14: 14px;
+  --radius-16: 16px;
+  --radius-18: 18px;
+  --radius-20: 20px;
+  --radius-22: 22px;
+  --radius-pill: 999px;
+  --radius-fluid: clamp(14px, 4vw, 22px);
+
+  /* ── Shadow — layered neutral ink, except the branded CTA/FAB glows ──── */
+  --shadow-*: initial;
+  --shadow-card: 0 1px 2px rgba(20, 33, 61, .05), 0 24px 48px -20px rgba(20, 33, 61, .3);
+  --shadow-card-hover: 0 1px 2px rgba(20, 33, 61, .05), 0 26px 52px -20px rgba(20, 33, 61, .32);
+  --shadow-card-soft: 0 1px 2px rgba(20, 33, 61, .05), 0 18px 40px -24px rgba(20, 33, 61, .28);
+  --shadow-raised: 0 1px 3px rgba(20, 33, 61, .1), 0 10px 24px -10px rgba(20, 33, 61, .35);
+  --shadow-panel: 0 2px 6px rgba(20, 33, 61, .08), 0 28px 60px -24px rgba(20, 33, 61, .45);
+  --shadow-modal: 0 4px 10px rgba(20, 33, 61, .1), 0 40px 80px -28px rgba(20, 33, 61, .5);
+  --shadow-modal-strong: 0 4px 10px rgba(20, 33, 61, .18), 0 30px 60px -22px rgba(20, 33, 61, .6);
+  --shadow-popover: 0 4px 10px rgba(20, 33, 61, .2), 0 24px 48px -18px rgba(20, 33, 61, .55);
+  --shadow-drawer: 0 0 60px rgba(3, 26, 64, .5);
+  --shadow-hairline: 0 1px 3px rgba(20, 33, 61, .12);
+  --shadow-knob: 0 1px 2px rgba(20, 33, 61, .16);
+  --shadow-knob-soft: 0 1px 2px rgba(20, 33, 61, .14);
+  --shadow-cta: 0 10px 22px -8px rgba(240, 80, 15, .6);
+  --shadow-cta-hover: 0 10px 20px -8px rgba(240, 80, 15, .55);
+  --shadow-glow-orange: 0 8px 20px rgba(242, 106, 27, .35);
+  --shadow-glow-orange-soft: 0 8px 20px rgba(242, 106, 27, .3);
+  --shadow-dot-orange: 0 0 12px rgba(242, 106, 27, .6);
+  --shadow-fab-whatsapp: 0 10px 26px rgba(37, 211, 102, .45);
+  --shadow-fab-blue: 0 10px 26px rgba(11, 94, 215, .45);
+
+  /* ── Breakpoints ─────────────────────────────────────────────────────── */
+  --breakpoint-*: initial;
+  --breakpoint-sm: 40rem;     /* 640px */
+  --breakpoint-md: 56.25rem;  /* 900px  — website nav collapses into the ☰ sheet below this */
+  --breakpoint-lg: 64rem;     /* 1024px — admin sidebar becomes an off-canvas drawer below this */
+
+  /* ── Spacing and layout ──────────────────────────────────────────────── */
+  /* README scale 4 6 8 10 12 14 16 18 20 22 26 32 px maps onto Tailwind's
+     default 4px step as 1 · 1.5 · 2 · 2.5 · 3 · 3.5 · 4 · 4.5 · 5 · 5.5 · 6.5 · 8
+     (gap-3.5 = 14px, p-6.5 = 26px). */
+  --spacing-section-y: clamp(44px, 6vw, 72px);  /* py-section-y */
+  --spacing-section-x: clamp(16px, 4vw, 20px);  /* px-section-x */
+  --spacing-header: 73px;                        /* website header, desktop (row + 1px border) */
+  --spacing-header-mobile: 120px;                /* website header below 900px, two rows */
+  --spacing-header-row: 72px;
+  --spacing-header-row-mobile: 119px;
+  --spacing-glyph-fab: 58%;                      /* WhatsApp glyph inside its button */
+  --spacing-card-photo: 206px;                   /* package card photo height */
+  --spacing-logo-header: clamp(40px, 8.5vw, 54px); /* logo height in the website header */
+  --spacing-logo-footer: 38px;                   /* light logo in the footer and portal header */
+  --spacing-sidebar: 264px;                      /* admin sidebar width (w-sidebar) */
+  --spacing-admin-y: clamp(16px, 3.5vw, 28px);   /* admin main area, py-admin-y */
+  --spacing-admin-x: clamp(14px, 3.5vw, 32px);   /* admin main area, px-admin-x */
+  --spacing-admin-gap: clamp(16px, 2.5vw, 22px); /* between admin page blocks, gap-admin-gap */
+  --spacing-dialog-w: calc(100vw - 32px);         /* admin dialog width on small screens (w-dialog-w) */
+  --spacing-dialog-h: calc(100dvh - 32px);        /* admin dialog height cap (max-h-dialog-h) */
+  --spacing-editor: 280px;                        /* rich text editing area minimum (min-h-editor) */
+  --spacing-thumb: 72px;                          /* media thumbnails in lists (size-thumb) */
+  --aspect-a4: 210 / 297;                         /* invoice preview frame (aspect-a4) */
+
+  /* Fluid spacing used by the website sections, read off the prototype: fluid-{min}-{max} */
+  --spacing-fluid-8-10: clamp(8px, 2vw, 10px);        /* header vertical padding */
+  --spacing-fluid-9-12: clamp(9px, 2.4vw, 12px);      /* floating buttons gap */
+  --spacing-fluid-10-18: clamp(10px, 3vw, 18px);      /* floating buttons side/top offset */
+  --spacing-fluid-10-26: clamp(10px, 2.2vw, 26px);    /* header nav gap */
+  --spacing-fluid-12-18: clamp(12px, 3vw, 18px);      /* floating buttons bottom offset */
+  --spacing-fluid-12-24: clamp(12px, 2.5vw, 24px);    /* header column gap */
+  --spacing-fluid-12-28: clamp(12px, 3vw, 28px);      /* modal backdrop gutter */
+  --spacing-fluid-14-20: clamp(14px, 4vw, 20px);      /* header horizontal padding */
+  --spacing-fluid-16-22: clamp(16px, 3vw, 22px);      /* search card padding */
+  --spacing-fluid-16-26: clamp(16px, 4vw, 26px);      /* install prompt bottom offset */
+  --spacing-fluid-18-26: clamp(18px, 4vw, 26px);      /* small modal and inquiry form padding */
+  --spacing-fluid-18-28: clamp(18px, 4vw, 28px);      /* large modal horizontal padding */
+  --spacing-fluid-20-28: clamp(20px, 4vw, 28px);      /* booking modal body bottom */
+  --spacing-fluid-20-30: clamp(20px, 3.5vw, 30px);    /* newsletter card padding */
+  --spacing-fluid-20-32: clamp(20px, 3vw, 32px);      /* about columns gap */
+  --spacing-fluid-22-28: clamp(22px, 4vw, 28px);      /* detail modal body bottom */
+  --spacing-fluid-26-38: clamp(26px, 4vw, 38px);      /* search section vertical padding */
+  --spacing-fluid-28-40: clamp(28px, 4vw, 40px);      /* contact columns gap */
+  --spacing-fluid-28-44: clamp(28px, 5vw, 44px);      /* empty state padding */
+  --spacing-fluid-32-56: clamp(32px, 6vw, 56px);      /* hero bottom padding */
+  --spacing-fluid-72-110: clamp(72px, 14vw, 110px);   /* hero top padding */
+  --spacing-hero-x: clamp(16px, 5vw, 24px);           /* hero horizontal padding */
+  --spacing-detail-body-top: clamp(18px, 3.5vw, 26px);
+  --spacing-booking-body-top: clamp(16px, 3.5vw, 24px);
+  --spacing-hero-min: min(72vh, 620px);               /* min-h-hero-min */
+  --spacing-fab-sm: clamp(42px, 11vw, 48px);          /* back-to-top button */
+  --spacing-fab: clamp(48px, 13vw, 56px);             /* WhatsApp button */
+  --spacing-chat-panel: min(340px, calc(100vw - 104px));
+  --spacing-chat-max: calc(100dvh - 120px);
+  --spacing-install-card: min(420px, calc(100vw - 32px));
+
+  --container-site: 1200px;     /* website content column */
+  --container-modal-lg: 880px;  /* booking modal */
+  --container-modal-md: 820px;  /* package detail modal */
+  --container-modal-sm: 430px;  /* sign in / register */
+  --container-34ch: 34ch;       /* empty-state title measure */
+  --container-44ch: 44ch;       /* form note measure */
+  --container-48ch: 48ch;       /* empty-state note measure */
+  --container-bubble: 86%;      /* chat assistant message bubble */
+  --container-wallet: 1160px;
+  --container-portal: 1080px;
+  --container-narrow: 900px;
+  --container-invoice: 820px;
+  --container-form: 520px;
+  --container-sidebar-logo: 186px;  /* admin sidebar logo (max-w-sidebar-logo) */
+
+  /* ── Blur and drop shadow ────────────────────────────────────────────── */
+  --blur-header: 10px;          /* translucent sticky header */
+  --drop-shadow-hero: 0 2px 18px rgba(3, 26, 64, .6);   /* outlined hero headline */
+
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  --ease-lift: cubic-bezier(.2, .7, .3, 1);
+  --default-transition-duration: 150ms;  /* hover and colour (README .15s) */
+  /* card lift: duration-280 ease-lift · modal entry: animate-modal-in */
+
+  --animate-modal-in: bh-rise-26 .25s both;
+  --animate-section-in: bh-rise-26 .5s both;
+  /* README: reveals fade up 20px. (The website prototype's keyframe travels 26px.)
+     The 70ms-per-item stagger is set as animation-delay by the reveal hook. */
+  --animate-reveal: bh-rise-20 .6s both;
+  --animate-wallet-in: bh-rise-14 .45s both;
+  --animate-marquee: bh-marquee 28s linear infinite;
+  --animate-float: bh-float 3.6s ease-in-out infinite;
+
+  @keyframes bh-rise-26 {
+    from { opacity: 0; transform: translateY(26px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes bh-rise-20 {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes bh-rise-14 {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes bh-marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes bh-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-9px); }
+  }
+}
+
+/* ── Admin + customer portal shell: switches with [data-theme] ─────────── */
+/* `inline` makes utilities read the --bh-* variables directly, so a
+   [data-theme="dark"] subtree re-themes without re-declaring every colour. */
+@theme inline {
+  --color-app-bg: var(--bh-app-bg);
+  --color-app-surface: var(--bh-app-surface);
+  --color-app-surface-2: var(--bh-app-surface-2);
+  --color-app-text: var(--bh-app-text);
+  --color-app-muted: var(--bh-app-muted);
+  --color-app-line: var(--bh-app-line);
+  --color-app-nav: var(--bh-app-nav);
+  --color-app-nav-text: var(--bh-app-nav-text);
+}
+
+:root,
+[data-theme="light"] {
+  --bh-app-bg: #F4F6FB;
+  --bh-app-surface: #FFFFFF;
+  --bh-app-surface-2: #F7F9FD;
+  --bh-app-text: #0F1E3A;
+  --bh-app-muted: #5B6B88;
+  --bh-app-line: #E2E7F0;
+  --bh-app-nav: #0F1E3A;
+  --bh-app-nav-text: #C9D4EA;
+}
+
+/* Values from the admin prototype. The README's "admin dark" line
+   (#16203A / #0E1526 / #24304A / #8FA3C8) is the wallet palette — the wallet
+   must never look like the admin, so those stay under --color-wallet-*. */
+[data-theme="dark"] {
+  --bh-app-bg: #0B1220;
+  --bh-app-surface: #121B2E;
+  --bh-app-surface-2: #182338;
+  --bh-app-text: #EEF2F9;
+  --bh-app-muted: #9AA8C2;
+  --bh-app-line: #223050;
+  --bh-app-nav: #080E1A;
+  --bh-app-nav-text: #9AA8C2;
+}
+
+/* `dark:` follows the admin's theme toggle, not the operating system. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* README layout rule: grids use repeat(auto-fit, minmax(min(100%, Npx), 1fr)).
+   grid-auto-fit-300 → package grid. */
+@utility grid-auto-fit-* {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(--value(integer) * 1px)), 1fr));
+}
+
+/* Chips, tabs and slab buttons use a 1.5px border. */
+@utility border-chip {
+  border-width: 1.5px;
+  border-style: solid;
+}
+
+/* Outlined hero headline: white stroke, orange-soft on the highlighted word. */
+@utility text-stroke-hero {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, .92);
+}
+@utility text-stroke-highlight {
+  -webkit-text-stroke: 1.5px var(--color-orange-soft);
+}
+
+/* auto-fill keeps column widths when a filter leaves only a few cards (package grid, gallery). */
+@utility grid-auto-fill-* {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(--value(integer) * 1px)), 1fr));
+}
+
+/* Two-up on phones: min(48%, Npx) keeps two columns until each passes N px (stats, facts, gallery). */
+@utility grid-auto-fit-half-* {
+  grid-template-columns: repeat(auto-fit, minmax(min(48%, calc(--value(integer) * 1px)), 1fr));
+}
+@utility grid-auto-fill-half-* {
+  grid-template-columns: repeat(auto-fill, minmax(min(48%, calc(--value(integer) * 1px)), 1fr));
+}
+
+/* README: modals cap at the viewport with internal scroll. */
+@utility max-h-modal {
+  max-height: calc(100dvh - 26px);
+}
+
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}

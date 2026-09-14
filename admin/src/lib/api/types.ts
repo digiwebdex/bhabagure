@@ -1,0 +1,218 @@
+/** Shapes returned by the staff API (api/app/Http/Resources/AdminContent.php). Money is a number. */
+
+export type Data<T> = { data: T }
+
+export type Staff = {
+  id: number
+  employee_code: string
+  name: string
+  email: string
+  status: 'invited' | 'active' | 'suspended'
+  locale: 'bn' | 'en'
+  must_change_password: boolean
+  role: string | null
+  is_super_admin: boolean
+  permissions: string[]
+}
+
+export type TokenResponse = { access_token: string; expires_in: number; staff: Staff }
+
+export type MediaVariant = { url: string; width: number; height: number }
+
+export type Media = {
+  id: number
+  url: string | null
+  variants: Partial<Record<'thumb' | 'card' | 'detail' | 'full', MediaVariant>>
+  original_filename: string | null
+  mime: string
+  bytes: number
+  width: number | null
+  height: number | null
+  alt_bn: string | null
+  alt_en: string | null
+  credit: string | null
+  credit_url: string | null
+  is_placeholder: boolean
+  created_at: string | null
+}
+
+export type Paginated<T> = { data: T[]; meta: { current_page: number; last_page: number; total: number } }
+
+export type Destination = {
+  id: number
+  slug: string
+  name_bn: string
+  name_en: string
+  country_code: string | null
+  region: 'international' | 'domestic'
+  sort_order: number
+  packages_count?: number
+}
+
+export type PackageStatus = 'draft' | 'published' | 'archived'
+export type ContentStatus = 'draft' | 'published'
+
+export type PackageSummary = {
+  id: number
+  code: string
+  slug: string
+  title_bn: string | null
+  title_en: string
+  destination: Destination | null
+  duration_days: number
+  duration_nights: number | null
+  regular_price: number
+  sale_price: number | null
+  status: PackageStatus
+  published_at: string | null
+  is_featured: boolean
+  sort_order: number
+  missing_bangla: boolean
+  cover: Media | null
+  updated_at: string | null
+}
+
+export type ItineraryDay = { day_number: number; title_bn: string | null; title_en: string | null; body_bn: string | null; body_en: string }
+export type Inclusion = { text_bn: string | null; text_en: string }
+export type PackageImage = { id: number; sort_order: number; is_cover: boolean; media: Media }
+
+export type TourPackage = PackageSummary & {
+  wp_trip_id: number | null
+  destination_id: number
+  summary_bn: string | null
+  summary_en: string | null
+  includes_airfare: boolean | null
+  group_mode: 'group' | 'any'
+  min_pax: number | null
+  departure_mode: 'regular' | 'any_date' | 'on_request'
+  difficulty: string | null
+  seo_title_bn: string | null
+  seo_title_en: string | null
+  seo_description_bn: string | null
+  seo_description_en: string | null
+  itinerary: ItineraryDay[]
+  includes: Inclusion[]
+  excludes: Inclusion[]
+  activities: string[]
+  trip_types: string[]
+  images: PackageImage[]
+}
+
+export type Departure = {
+  id: number
+  tour_package_id: number
+  departs_on: string
+  returns_on: string | null
+  seats_total: number
+  seats_booked: number
+  is_guaranteed: boolean
+  status: 'scheduled' | 'closed' | 'departed' | 'cancelled'
+  group_leader_staff_id: number | null
+  notes: string | null
+}
+
+export type Tag = { id: number; type: 'activity' | 'trip_type'; slug: string; name_en: string; name_bn: string | null }
+
+export type BlogCategory = { id: number; slug: string; name_bn: string; name_en: string; tone: 'blue' | 'purple' | 'orange'; sort_order: number; posts_count?: number }
+
+export type BlogPost = {
+  id: number
+  slug: string
+  blog_category_id: number
+  category: BlogCategory | null
+  title_bn: string
+  title_en: string
+  excerpt_bn: string | null
+  excerpt_en: string | null
+  body_bn?: string | null
+  body_en?: string | null
+  author_bn: string | null
+  author_en: string | null
+  cover: Media | null
+  cover_media_id: number | null
+  reading_minutes: number
+  reading_minutes_override: boolean
+  seo_title_bn: string | null
+  seo_title_en: string | null
+  seo_description_bn: string | null
+  seo_description_en: string | null
+  status: ContentStatus
+  published_at: string | null
+  is_scheduled: boolean
+  updated_at: string | null
+}
+
+export type TeamMember = {
+  id: number
+  name_bn: string
+  name_en: string
+  role_bn: string
+  role_en: string
+  employee_code: string | null
+  photo_media_id: number | null
+  staff_id: number | null
+  sort_order: number
+  status: ContentStatus
+  photo: Media | null
+}
+
+export type Review = {
+  id: number
+  quote_bn: string
+  quote_en: string | null
+  reviewer_name: string
+  trip_label_bn: string | null
+  trip_label_en: string | null
+  rating: number
+  tour_package_id: number | null
+  sort_order: number
+  travelled_on: string | null
+  status: ContentStatus
+}
+
+export type GalleryItem = {
+  id: number
+  kind: 'reel' | 'photo'
+  url: string
+  caption_bn: string | null
+  caption_en: string | null
+  view_count: number | null
+  media_id: number | null
+  sort_order: number
+  status: ContentStatus
+  thumbnail: Media | null
+}
+
+export type Slab = { min_pax: number; discount_percent: number }
+
+export type Pricing = {
+  slabs: Slab[]
+  single_room_supplement_percent: number
+  service_charge_percent: number
+  max_travellers: number
+  /** 0 = the company absorbs the gateway fee; otherwise shown to the customer as its own line before paying. */
+  online_payment_charge_percent: number
+}
+
+export type Addon = { id: number; code: string; name_bn: string; name_en: string; price: number; unit: 'per_person' | 'per_booking'; is_active: boolean; sort_order: number }
+
+export type Localized = { bn: string; en: string }
+
+export type SiteSettings = {
+  company?: { name: Localized; brand: Localized }
+  contact?: {
+    phone: string
+    phoneAlt: string | null
+    whatsapp: string
+    /** The dedicated number automated WhatsApp messages come from, published beside the main line. */
+    notificationsWhatsapp?: string | null
+    email: string
+    facebook: string | null
+    instagram: string | null
+    website: string | null
+  }
+  address?: string
+  civilAviationNo?: string
+  hours?: { opens: number; closes: number }
+  stats?: { topReelViewsThousands: number; banglaSupportPercent: number }
+}

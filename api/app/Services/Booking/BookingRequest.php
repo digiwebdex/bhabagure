@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Services\Booking;
+
+/** What a customer (or staff member) asked for, already validated. Prices are never part of it — only the total they saw. */
+final class BookingRequest
+{
+    /**
+     * @param  list<string>  $addonCodes
+     * @param  list<array{name: string, passportNumber: ?string, dateOfBirth: ?string, passportExpiry: ?string, phone: ?string, email: ?string, passportScanToken?: ?string, ocrFilled?: bool}>  $travellers
+     */
+    public function __construct(
+        public readonly string $packageSlug,
+        public readonly string $travelDate,
+        public readonly int $pax,
+        public readonly string $room,
+        public readonly array $addonCodes,
+        public readonly array $travellers,
+        public readonly int|float $expectedTotal,
+        public readonly string $locale,
+        public readonly string $source,
+        public readonly bool $termsAccepted,
+    ) {}
+}

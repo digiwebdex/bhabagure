@@ -1,0 +1,565 @@
+{
+  "$comment": "Shared cases for @bhabaghure/pricing (TypeScript) and App\\Support\\Pricing\\PricingService (PHP). Both must pass every case.",
+  "config": {
+    "slabs": [
+      {
+        "minPax": 1,
+        "discountPercent": 0
+      },
+      {
+        "minPax": 3,
+        "discountPercent": 3
+      },
+      {
+        "minPax": 4,
+        "discountPercent": 6
+      },
+      {
+        "minPax": 6,
+        "discountPercent": 9
+      },
+      {
+        "minPax": 10,
+        "discountPercent": 12
+      }
+    ],
+    "singleRoomSupplementPercent": 12,
+    "serviceChargePercent": 2,
+    "maxTravellers": 20,
+    "onlinePaymentChargePercent": 0
+  },
+  "perPersonRate": [
+    {
+      "list": 75000,
+      "pax": 1,
+      "expected": 75000
+    },
+    {
+      "list": 75000,
+      "pax": 2,
+      "expected": 75000
+    },
+    {
+      "list": 75000,
+      "pax": 3,
+      "expected": 72750
+    },
+    {
+      "list": 75000,
+      "pax": 4,
+      "expected": 70500
+    },
+    {
+      "list": 75000,
+      "pax": 5,
+      "expected": 70500
+    },
+    {
+      "list": 75000,
+      "pax": 6,
+      "expected": 68250
+    },
+    {
+      "list": 75000,
+      "pax": 9,
+      "expected": 68250
+    },
+    {
+      "list": 75000,
+      "pax": 10,
+      "expected": 66000
+    },
+    {
+      "list": 75000,
+      "pax": 20,
+      "expected": 66000
+    },
+    {
+      "list": 13800,
+      "pax": 3,
+      "expected": 13386
+    },
+    {
+      "list": 22500,
+      "pax": 6,
+      "expected": 20475
+    },
+    {
+      "list": 12999,
+      "pax": 3,
+      "expected": 12609
+    }
+  ],
+  "quoteBooking": [
+    {
+      "input": {
+        "listPrice": 75000,
+        "pax": 2,
+        "room": "twin",
+        "addons": []
+      },
+      "expected": {
+        "perPerson": 75000,
+        "subtotal": 150000,
+        "singleSupplement": 0,
+        "addons": [],
+        "serviceCharge": 3000,
+        "total": 153000,
+        "discount": 0,
+        "chargePercent": 2,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 2,
+            "unitPrice": 75000,
+            "amount": 150000
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "A solo traveller in a shared (twin) room pays the list price: the slab never adds a solo uplift.",
+      "input": {
+        "listPrice": 75000,
+        "pax": 1,
+        "room": "twin",
+        "addons": []
+      },
+      "expected": {
+        "perPerson": 75000,
+        "subtotal": 75000,
+        "singleSupplement": 0,
+        "addons": [],
+        "serviceCharge": 1500,
+        "total": 76500,
+        "discount": 0,
+        "chargePercent": 2,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 1,
+            "unitPrice": 75000,
+            "amount": 75000
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "Single occupancy chosen: +12% of the per-person rate, per traveller, on top of the slab rate.",
+      "input": {
+        "listPrice": 75000,
+        "pax": 4,
+        "room": "single",
+        "addons": []
+      },
+      "expected": {
+        "perPerson": 70500,
+        "subtotal": 282000,
+        "singleSupplement": 33840,
+        "addons": [],
+        "serviceCharge": 6317,
+        "total": 322157,
+        "discount": 0,
+        "chargePercent": 2,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 4,
+            "unitPrice": 70500,
+            "amount": 282000
+          },
+          {
+            "kind": "single_supplement",
+            "code": null,
+            "quantity": 4,
+            "unitPrice": 8460,
+            "amount": 33840
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "listPrice": 75000,
+        "pax": 1,
+        "room": "single",
+        "addons": []
+      },
+      "expected": {
+        "perPerson": 75000,
+        "subtotal": 75000,
+        "singleSupplement": 9000,
+        "addons": [],
+        "serviceCharge": 1680,
+        "total": 85680,
+        "discount": 0,
+        "chargePercent": 2,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 1,
+            "unitPrice": 75000,
+            "amount": 75000
+          },
+          {
+            "kind": "single_supplement",
+            "code": null,
+            "quantity": 1,
+            "unitPrice": 9000,
+            "amount": 9000
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "listPrice": 27000,
+        "pax": 4,
+        "room": "twin",
+        "addons": [
+          {
+            "code": "travel-insurance",
+            "price": 1200,
+            "unit": "per_person"
+          },
+          {
+            "code": "airport-pickup",
+            "price": 800,
+            "unit": "per_booking"
+          }
+        ]
+      },
+      "expected": {
+        "perPerson": 25380,
+        "subtotal": 101520,
+        "singleSupplement": 0,
+        "addons": [
+          {
+            "code": "travel-insurance",
+            "amount": 4800
+          },
+          {
+            "code": "airport-pickup",
+            "amount": 800
+          }
+        ],
+        "serviceCharge": 2142,
+        "total": 109262,
+        "discount": 0,
+        "chargePercent": 2,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 4,
+            "unitPrice": 25380,
+            "amount": 101520
+          },
+          {
+            "kind": "addon",
+            "code": "travel-insurance",
+            "quantity": 4,
+            "unitPrice": 1200,
+            "amount": 4800
+          },
+          {
+            "kind": "addon",
+            "code": "airport-pickup",
+            "quantity": 1,
+            "unitPrice": 800,
+            "amount": 800
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "listPrice": 13800,
+        "pax": 3,
+        "room": "single",
+        "addons": [
+          {
+            "code": "local-sim",
+            "price": 600,
+            "unit": "per_person"
+          }
+        ]
+      },
+      "expected": {
+        "perPerson": 13386,
+        "subtotal": 40158,
+        "singleSupplement": 4818,
+        "addons": [
+          {
+            "code": "local-sim",
+            "amount": 1800
+          }
+        ],
+        "serviceCharge": 936,
+        "total": 47712,
+        "discount": 0,
+        "chargePercent": 2,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 3,
+            "unitPrice": 13386,
+            "amount": 40158
+          },
+          {
+            "kind": "single_supplement",
+            "code": null,
+            "quantity": 3,
+            "unitPrice": 1606,
+            "amount": 4818
+          },
+          {
+            "kind": "addon",
+            "code": "local-sim",
+            "quantity": 3,
+            "unitPrice": 600,
+            "amount": 1800
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "Invoice edit: 4 travellers, 5,000 discount, 5% VAT. VAT applies after the discount: (282,000 − 5,000) × 5% = 13,850.",
+      "input": {
+        "listPrice": 75000,
+        "pax": 4,
+        "room": "twin",
+        "addons": [],
+        "discount": 5000,
+        "chargePercent": 5
+      },
+      "expected": {
+        "perPerson": 70500,
+        "subtotal": 282000,
+        "singleSupplement": 0,
+        "addons": [],
+        "discount": 5000,
+        "chargePercent": 5,
+        "serviceCharge": 13850,
+        "total": 290850,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 4,
+            "unitPrice": 70500,
+            "amount": 282000
+          }
+        ]
+      }
+    }
+  ],
+  "invoiceTotals": [
+    {
+      "$comment": "No discount, 2%",
+      "input": {
+        "lines": [
+          {
+            "quantity": 2,
+            "unitPrice": 75000
+          },
+          {
+            "quantity": 2,
+            "unitPrice": 1200
+          },
+          {
+            "quantity": 1,
+            "unitPrice": 800
+          }
+        ],
+        "discount": 0,
+        "chargePercent": 2
+      },
+      "expected": {
+        "subtotal": 153200,
+        "discount": 0,
+        "taxable": 153200,
+        "chargePercent": 2,
+        "charge": 3064,
+        "total": 156264
+      }
+    },
+    {
+      "$comment": "Discount before VAT (the prototype invoice subtracted it after — decided otherwise)",
+      "input": {
+        "lines": [
+          {
+            "quantity": 2,
+            "unitPrice": 75000
+          }
+        ],
+        "discount": 10000,
+        "chargePercent": 15
+      },
+      "expected": {
+        "subtotal": 150000,
+        "discount": 10000,
+        "taxable": 140000,
+        "chargePercent": 15,
+        "charge": 21000,
+        "total": 161000
+      }
+    },
+    {
+      "$comment": "7.5% rounds half up per invoice",
+      "input": {
+        "lines": [
+          {
+            "quantity": 1,
+            "unitPrice": 13386
+          }
+        ],
+        "discount": 0,
+        "chargePercent": 7.5
+      },
+      "expected": {
+        "subtotal": 13386,
+        "discount": 0,
+        "taxable": 13386,
+        "chargePercent": 7.5,
+        "charge": 1004,
+        "total": 14390
+      }
+    },
+    {
+      "$comment": "A discount can never exceed the subtotal",
+      "input": {
+        "lines": [
+          {
+            "quantity": 1,
+            "unitPrice": 5000
+          }
+        ],
+        "discount": 9000,
+        "chargePercent": 2
+      },
+      "expected": {
+        "subtotal": 5000,
+        "discount": 5000,
+        "taxable": 0,
+        "chargePercent": 2,
+        "charge": 0,
+        "total": 0
+      }
+    },
+    {
+      "$comment": "Included items print at zero",
+      "input": {
+        "lines": [
+          {
+            "quantity": 2,
+            "unitPrice": 75000
+          },
+          {
+            "quantity": 2,
+            "unitPrice": 0
+          }
+        ],
+        "discount": 0,
+        "chargePercent": 0
+      },
+      "expected": {
+        "subtotal": 150000,
+        "discount": 0,
+        "taxable": 150000,
+        "chargePercent": 0,
+        "charge": 0,
+        "total": 150000
+      }
+    }
+  ],
+  "paymentStatus": [
+    {
+      "total": 153000,
+      "paid": 0,
+      "expected": "unpaid"
+    },
+    {
+      "total": 153000,
+      "paid": 76500,
+      "expected": "partial"
+    },
+    {
+      "total": 153000,
+      "paid": 153000,
+      "expected": "paid"
+    },
+    {
+      "$comment": "Overpaid still reads PAID; the refund is a separate ledger entry",
+      "total": 153000,
+      "paid": 160000,
+      "expected": "paid"
+    },
+    {
+      "total": 0,
+      "paid": 0,
+      "expected": "paid"
+    }
+  ],
+  "onlinePayment": [
+    {
+      "$comment": "Default: the company absorbs the gateway fee",
+      "amount": 153000,
+      "chargePercent": 0,
+      "expected": {
+        "amount": 153000,
+        "chargePercent": 0,
+        "charge": 0,
+        "total": 153000
+      }
+    },
+    {
+      "$comment": "2.5% — the SSLCommerz sandbox store fee",
+      "amount": 153000,
+      "chargePercent": 2.5,
+      "expected": {
+        "amount": 153000,
+        "chargePercent": 2.5,
+        "charge": 3825,
+        "total": 156825
+      }
+    },
+    {
+      "$comment": "Rounds half up to whole taka",
+      "amount": 76500,
+      "chargePercent": 1.5,
+      "expected": {
+        "amount": 76500,
+        "chargePercent": 1.5,
+        "charge": 1148,
+        "total": 77648
+      }
+    },
+    {
+      "amount": 174624,
+      "chargePercent": 1.85,
+      "expected": {
+        "amount": 174624,
+        "chargePercent": 1.85,
+        "charge": 3231,
+        "total": 177855
+      }
+    },
+    {
+      "$comment": "Nothing due, nothing charged",
+      "amount": 0,
+      "chargePercent": 2.5,
+      "expected": {
+        "amount": 0,
+        "chargePercent": 2.5,
+        "charge": 0,
+        "total": 0
+      }
+    }
+  ]
+}

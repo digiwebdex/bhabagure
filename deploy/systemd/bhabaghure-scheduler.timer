@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Bhabaghure scheduler every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Unit=bhabaghure-scheduler.service
+
+[Install]
+WantedBy=timers.target

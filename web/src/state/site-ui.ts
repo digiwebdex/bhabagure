@@ -1,0 +1,63 @@
+'use client';
+
+import { create } from 'zustand';
+
+import { clampTravellers } from '@bhabaghure/pricing';
+
+export type AuthTab = 'signIn' | 'register';
+
+/**
+ * Open panels and the package detail modal. The modal keeps its own traveller count, seeded from
+ * the search bar when it opens, so exploring slabs in the modal doesn't change the grid.
+ */
+export interface SiteUiState {
+  packageSlug: string | null;
+  /** How the modal was opened: by a click (we push a /packages/<slug> history entry) or by history. */
+  packageOpenedBy: 'click' | 'history' | null;
+  detailPax: number;
+  photoIndex: number;
+  menuOpen: boolean;
+  authOpen: boolean;
+  authTab: AuthTab;
+  chatOpen: boolean;
+
+  openPackage: (slug: string, pax: number, openedBy?: 'click' | 'history') => void;
+  closePackage: () => void;
+  increaseDetailPax: (max: number) => void;
+  decreaseDetailPax: () => void;
+  setDetailPax: (pax: number, max: number) => void;
+  setPhotoIndex: (index: number) => void;
+  toggleMenu: () => void;
+  closeMenu: () => void;
+  openAuth: (tab?: AuthTab) => void;
+  closeAuth: () => void;
+  setAuthTab: (tab: AuthTab) => void;
+  toggleChat: () => void;
+  closeChat: () => void;
+}
+
+export const useSiteUi = create<SiteUiState>()((set) => ({
+  packageSlug: null,
+  packageOpenedBy: null,
+  detailPax: 2,
+  photoIndex: 0,
+  menuOpen: false,
+  authOpen: false,
+  authTab: 'signIn',
+  chatOpen: false,
+
+  openPackage: (slug, pax, openedBy = 'click') =>
+    set({ packageSlug: slug, packageOpenedBy: openedBy, detailPax: Math.max(1, pax), photoIndex: 0, menuOpen: false }),
+  closePackage: () => set({ packageSlug: null, packageOpenedBy: null }),
+  increaseDetailPax: (max) => set((state) => ({ detailPax: clampTravellers(state.detailPax + 1, max) })),
+  decreaseDetailPax: () => set((state) => ({ detailPax: Math.max(1, state.detailPax - 1) })),
+  setDetailPax: (pax, max) => set({ detailPax: clampTravellers(pax, max) }),
+  setPhotoIndex: (photoIndex) => set({ photoIndex }),
+  toggleMenu: () => set((state) => ({ menuOpen: !state.menuOpen })),
+  closeMenu: () => set({ menuOpen: false }),
+  openAuth: (tab) => set((state) => ({ authOpen: true, authTab: tab ?? state.authTab, menuOpen: false })),
+  closeAuth: () => set({ authOpen: false }),
+  setAuthTab: (authTab) => set({ authTab }),
+  toggleChat: () => set((state) => ({ chatOpen: !state.chatOpen })),
+  closeChat: () => set({ chatOpen: false }),
+}));

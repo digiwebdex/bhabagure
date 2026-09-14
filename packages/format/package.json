@@ -1,0 +1,14 @@
+{
+  "name": "@bhabaghure/format",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The one place numbers become text: Bengali/Latin digits, en-IN grouping, BDT.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures.json": "./fixtures.json"
+  },
+  "scripts": {
+    "test": "node --test src/index.test.ts"
+  }
+}

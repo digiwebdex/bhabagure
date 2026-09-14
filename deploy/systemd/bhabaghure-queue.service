@@ -1,0 +1,71 @@
+# Queue worker for Bhabaghure (api): WhatsApp and email notifications (queue "notifications") and website revalidation
+# (queue "default"). One worker on purpose, so WhatsApp sends stay one at a time. docs/deployment.md §5.
+#
+# Installed on the shared VPS 2026-09-13 (approved): enabled; it starts once /var/www/Bhabagure/api/artisan exists.
+#   cp deploy/systemd/bhabaghure-queue.service /etc/systemd/system/
+#   systemd-analyze verify /etc/systemd/system/bhabaghure-queue.service
+#   systemctl daemon-reload && systemctl enable --now bhabaghure-queue.service
+# After the first deploy: systemctl start bhabaghure-queue.service. After every later deploy: php artisan queue:restart
+# (the worker finishes its current job and exits; systemd starts it again).
+[Unit]
+Description=Bhabaghure queue worker (php artisan queue:work redis)
+Documentation=https://github.com/digiwebdex/bhabagure/blob/main/docs/deployment.md
+After=network-online.target mysql.service redis-server.service
+Wants=network-online.target
+# Nothing to run until the API is deployed.
+ConditionPathExists=/var/www/Bhabagure/api/artisan
+# Crash-loop guard: a 6th start within 10 minutes is refused and the unit stays failed instead of spinning. Normal
+# exits (hourly --max-time, queue:restart on deploy) are a few an hour. A stopped worker is noticed by the scheduler:
+# messages unclaimed for 15 minutes email the admins (routes/console.php notifications:dispatch).
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/Bhabagure/api
+SyslogIdentifier=bhabaghure-queue
+
+# Refuses to start unless api/.env puts the queue on Redis database 12 and the cache on 13 (reserved for Bhabaghure;
+# 0 and 3 belong to other sites), both hold only bhabaghure_ keys, and REDIS_QUEUE_RETRY_AFTER > --timeout.
+ExecStartPre=/usr/bin/php /var/www/Bhabagure/api/artisan bhabaghure:queue-preflight --redis-db=12 --redis-cache-db=13 --job-timeout=120 --no-interaction
+# --timeout: a job running longer is killed (with its Chrome children) and the worker exits for a clean restart.
+# --memory: PHP exits between jobs past 192 MB. --max-time: a fresh process every hour.
+ExecStart=/usr/bin/php /var/www/Bhabagure/api/artisan queue:work redis --queue=notifications,default --sleep=3 --timeout=120 --memory=192 --max-time=3600 --no-interaction
+
+# Restart policy: back after 15 s, never faster; bounded by StartLimit* above.
+Restart=always
+RestartSec=15
+TimeoutStartSec=60
+# On stop, SIGTERM lets the current job finish (up to --timeout), then everything in the unit's cgroup is killed.
+KillMode=control-group
+TimeoutStopSec=150
+# Backstop for a process wedged outside a job, where --max-time is never checked.
+RuntimeMaxSec=7200
+
+# Resource limits: the box has 2 CPUs, 7.9 GB RAM and little free swap, shared with other sites.
+# Hard cap including invoice-PDF Chrome processes; no swap, so pressure lands on this worker, not the neighbours.
+MemoryHigh=450M
+MemoryMax=600M
+MemorySwapMax=0
+# At most half of one CPU, lower CPU and IO priority, a bounded number of threads, and first in line for the OOM killer.
+CPUQuota=50%
+Nice=10
+IOWeight=50
+TasksMax=192
+OOMScoreAdjust=500
+
+# Hardening that Chrome's sandbox and PHP both work with (Chrome checked under NoNewPrivileges on this server).
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

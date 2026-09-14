@@ -1,0 +1,12 @@
+{
+  "name": "@bhabaghure/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Design tokens from _design/README.md and the prototypes, as one Tailwind v4 theme file.",
+  "exports": {
+    "./theme.css": {
+      "style": "./theme.css",
+      "default": "./theme.css"
+    }
+  }
+}

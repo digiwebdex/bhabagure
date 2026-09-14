@@ -1,0 +1,32 @@
+{
+  "company": {
+    "name": {
+      "bn": "ভবঘুরে হলিডেজ এভিয়েশন",
+      "en": "Bhabaghure Holidays Aviation"
+    },
+    "brand": {
+      "bn": "ভবঘুরে হলিডেজ",
+      "en": "Bhabaghure Holidays"
+    }
+  },
+  "contact": {
+    "phone": "+8801743939300",
+    "phoneAlt": "+8801613939200",
+    "whatsapp": "+8801743939300",
+    "notificationsWhatsapp": "",
+    "email": "bhabaghureholidays@gmail.com",
+    "facebook": "https://www.facebook.com/bhabaghureholidays",
+    "instagram": "https://www.instagram.com/bhabaghureholidays",
+    "website": "https://bhabaghure.com.bd"
+  },
+  "address": "AMENA VILLA, 213/5, Lift-08, Flat-8C, 60 Feet Road, Agargaon, Dhaka 1207",
+  "civilAviationNo": "0017318",
+  "hours": {
+    "opens": 9,
+    "closes": 19
+  },
+  "stats": {
+    "topReelViewsThousands": 104,
+    "banglaSupportPercent": 100
+  }
+}

@@ -1,0 +1,259 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Admin;
+
+use App\Enums\BookingStatus;
+use App\Events\PaymentRecorded;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\AdminBooking;
+use App\Models\Booking;
+use App\Models\Invoice;
+use App\Models\Staff;
+use App\Models\Transaction;
+use App\Services\Booking\BookingQuoteEditor;
+use App\Services\Booking\BookingStateMachine;
+use App\Services\Booking\BookingTransitionRefused;
+use App\Services\Booking\PriceChanged;
+use App\Services\Booking\QuoteLocked;
+use App\Services\Invoices\InvoiceIssuer;
+use App\Services\Invoices\InvoicePdf;
+use App\Services\Ledger\LedgerService;
+use App\Services\Ledger\PaymentExceedsBalance;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use LogicException;
+
+/**
+ * Bookings, their invoice and the payments against it (docs/phase-3-booking.md §3, §6). Money is only ever written
+ * through LedgerService, status only through BookingStateMachine; nothing here accepts a paid amount or a status.
+ */
+class BookingController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'status' => ['nullable', Rule::enum(BookingStatus::class)],
+            'payment_status' => ['nullable', Rule::in(['unpaid', 'partial', 'paid'])],
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $page = $this->visible($request->user('staff'))
+            ->with('customer')
+            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['payment_status'] ?? null, fn ($q, $status) => $q->where('payment_status', $status))
+            ->when($filters['search'] ?? null, fn ($q, $search) => $q->where(fn ($inner) => $inner
+                ->where('reference', 'like', "%{$search}%")
+                ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))))
+            ->latest('id')
+            ->paginate(30);
+
+        return response()->json([
+            'data' => collect($page->items())->map(AdminBooking::summary(...)),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
+        ]);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        return $this->detail($request, $this->find($request, $id));
+    }
+
+    /** Draft-invoice controls. The admin screen sends the total it computed with @bhabaghure/pricing. */
+    public function updateQuote(Request $request, int $id, BookingQuoteEditor $editor): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'bookings.update');
+        $data = $request->validate([
+            'pax' => ['required', 'integer', 'min:1', 'max:99'],
+            'room' => ['required', Rule::in(['twin', 'triple', 'single'])],
+            'discount' => ['required', 'numeric', 'min:0', 'max:9999999999'],
+            'vat_rate' => ['required', 'numeric', Rule::in(BookingQuoteEditor::VAT_RATES)],
+            'expected_total' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        try {
+            $editor->update($booking, $data['pax'], $data['room'], $data['discount'], $data['vat_rate'], $data['expected_total'], $request->user('staff'));
+        } catch (PriceChanged $e) {
+            return response()->json(['message' => __('booking.price_changed'), 'code' => 'price_changed', 'quote' => $e->quote], 409);
+        } catch (QuoteLocked) {
+            return $this->refused('booking.quote_locked', 'quote_locked');
+        } catch (LogicException $e) {
+            return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    public function issueInvoice(Request $request, int $id, InvoiceIssuer $issuer): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'invoices.manage');
+        try {
+            $issuer->issueForBooking($booking, $request->user('staff'));
+        } catch (LogicException $e) {
+            return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    public function voidInvoice(Request $request, int $invoiceId, InvoiceIssuer $issuer): JsonResponse
+    {
+        $invoice = Invoice::query()->findOrFail($invoiceId);
+        $booking = $this->find($request, (int) $invoice->booking_id, 'invoices.manage');
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']]);
+
+        try {
+            $issuer->void($invoice, $data['reason'], $request->user('staff'));
+        } catch (LogicException $e) {
+            return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    /** "Record payment" — replaces the prototype's typed Paid field. Writes the cash book and the journal. */
+    public function recordPayment(Request $request, int $id, LedgerService $ledger): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'transactions.create_manual');
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999', 'decimal:0,2'],
+            'method' => ['required', Rule::in(LedgerService::STAFF_METHODS)],
+            'reference' => ['nullable', 'string', 'max:100'],
+            // A calendar date in Dhaka: "today" must be accepted between midnight and 06:00 Dhaka, when UTC is still yesterday.
+            'occurred_at' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
+            'note' => ['nullable', 'string', 'max:300'],
+        ]);
+        if ($booking->status->isFinal()) {
+            return $this->refused('booking.closed', 'booking_closed');
+        }
+
+        try {
+            $payment = DB::transaction(fn () => $ledger->recordPayment(
+                $booking, $data['amount'], $data['method'], ($data['note'] ?? null) ?: 'Payment recorded by staff',
+                // A wallet or bank reference is unique per method, like a gateway transaction.
+                externalRef: ($data['reference'] ?? null) ?: null, staff: $request->user('staff'), referenceLabel: $data['reference'] ?? null,
+                occurredAt: self::paidOn($data['occurred_at'] ?? null),
+            ));
+        } catch (PaymentExceedsBalance) {
+            return $this->refused('booking.payment_exceeds_balance', 'exceeds_balance', 422);
+        } catch (LogicException) {
+            return $this->refused('booking.no_invoice', 'no_invoice');
+        } catch (UniqueConstraintViolationException) {
+            return $this->refused('booking.duplicate_reference', 'duplicate_reference', 422);
+        }
+        PaymentRecorded::dispatch($booking->fresh(), $payment, false);
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    public function reversePayment(Request $request, int $transactionId, LedgerService $ledger): JsonResponse
+    {
+        $payment = Transaction::query()->findOrFail($transactionId);
+        $booking = $this->find($request, (int) $payment->booking_id, 'transactions.create_manual');
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']]);
+
+        try {
+            DB::transaction(fn () => $ledger->reversePayment($payment, $data['reason'], $request->user('staff')));
+        } catch (LogicException $e) {
+            return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    public function transition(Request $request, int $id, string $action, BookingStateMachine $machine): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'bookings.update');
+        $staff = $request->user('staff');
+
+        try {
+            match ($action) {
+                'confirm' => $machine->confirm($booking, $staff),
+                'complete' => $machine->complete($booking, $staff),
+                'cancel' => $machine->cancel($booking, $request->validate(['reason' => ['required', 'string', 'min:3', 'max:500']])['reason'], $staff),
+            };
+        } catch (BookingTransitionRefused $e) {
+            return response()->json(['message' => __("booking.transition_{$e->reason}"), 'code' => $e->reason], 409);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    /** The invoice as it prints: issued invoices from their snapshot, otherwise a preview of what issuing would print. */
+    public function invoiceHtml(Request $request, int $id, InvoiceIssuer $issuer, InvoicePdf $pdf): Response
+    {
+        [$invoice, $header, $locale] = $this->printable($request, $id, $issuer);
+
+        return response($pdf->html($invoice, $header, $locale))
+            ->header('Content-Type', 'text/html; charset=utf-8')
+            ->header('Cache-Control', 'no-store')
+            ->header('Content-Security-Policy', "default-src 'none'; img-src data:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com");
+    }
+
+    public function invoicePdf(Request $request, int $id, InvoiceIssuer $issuer, InvoicePdf $pdf): Response
+    {
+        [$invoice, $header, $locale] = $this->printable($request, $id, $issuer);
+        $name = ($invoice->invoice_number ?? 'draft-'.$request->route('id')).($header ? '' : '-pad').'.pdf';
+
+        return response($invoice->exists ? $pdf->pdf($invoice, $header, $locale) : $pdf->render($pdf->html($invoice, $header, $locale, forPdf: true)))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', "inline; filename=\"{$name}\"")
+            ->header('Cache-Control', 'no-store');
+    }
+
+    /** @return array{0: Invoice, 1: bool, 2: string} */
+    private function printable(Request $request, int $id, InvoiceIssuer $issuer): array
+    {
+        $booking = $this->find($request, $id);
+        $options = $request->validate([
+            'header' => ['nullable', 'boolean'],
+            'lang' => ['nullable', Rule::in(['bn', 'en'])],
+            'invoice_id' => ['nullable', 'integer'],
+        ]);
+        $invoice = isset($options['invoice_id'])
+            ? Invoice::query()->where('booking_id', $booking->id)->findOrFail($options['invoice_id'])
+            : (Invoice::query()->where('booking_id', $booking->id)->where('status', Invoice::ISSUED)->latest('id')->first() ?? $issuer->preview($booking));
+
+        return [$invoice, (bool) ($options['header'] ?? true), $options['lang'] ?? 'bn'];
+    }
+
+    private function detail(Request $request, Booking $booking): JsonResponse
+    {
+        return response()->json(['data' => AdminBooking::detail($booking, $request->user('staff'))]);
+    }
+
+    /** Bookings this staff member may see: all, or only those assigned to or created by them. */
+    private function visible(Staff $staff): Builder
+    {
+        return Booking::query()->when(! $staff->can('bookings.view_all'), fn (Builder $q) => $q->where(fn (Builder $inner) => $inner
+            ->where('assigned_staff_id', $staff->id)->orWhere('created_by_staff_id', $staff->id)));
+    }
+
+    private function find(Request $request, int $id, ?string $permission = null): Booking
+    {
+        $staff = $request->user('staff');
+        abort_if($permission !== null && ! $staff->can($permission), 403, __('auth.forbidden'));
+
+        return $this->visible($staff)->findOrFail($id);
+    }
+
+    /** The day the money arrived, in Dhaka: now for today, midday for an earlier day (never drifting across a date line). */
+    private static function paidOn(?string $date): ?Carbon
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        return $date === now('Asia/Dhaka')->toDateString() ? now() : Carbon::parse("{$date} 12:00", 'Asia/Dhaka')->utc();
+    }
+
+    private function refused(string $message, string $code, int $status = 409): JsonResponse
+    {
+        return response()->json(['message' => __($message), 'code' => $code], $status);
+    }
+}

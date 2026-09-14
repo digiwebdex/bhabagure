@@ -1,0 +1,10 @@
+{
+  "name": "@bhabaghure/content-seed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bilingual seed content: loaded by the Laravel seeders, and by the website in local seed mode. demo/ is never used in production.",
+  "exports": {
+    "./*.json": "./*.json",
+    "./demo/*.json": "./demo/*.json"
+  }
+}

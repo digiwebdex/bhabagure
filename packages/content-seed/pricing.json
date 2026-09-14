@@ -1,0 +1,66 @@
+{
+  "slabs": [
+    {
+      "minPax": 1,
+      "discountPercent": 0
+    },
+    {
+      "minPax": 3,
+      "discountPercent": 3
+    },
+    {
+      "minPax": 4,
+      "discountPercent": 6
+    },
+    {
+      "minPax": 6,
+      "discountPercent": 9
+    },
+    {
+      "minPax": 10,
+      "discountPercent": 12
+    }
+  ],
+  "singleRoomSupplementPercent": 12,
+  "serviceChargePercent": 2,
+  "maxTravellers": 20,
+  "onlinePaymentChargePercent": 0,
+  "addons": [
+    {
+      "code": "travel-insurance",
+      "name": {
+        "bn": "ট্রাভেল ইনস্যুরেন্স",
+        "en": "Travel insurance"
+      },
+      "price": 1200,
+      "unit": "per_person"
+    },
+    {
+      "code": "airport-pickup",
+      "name": {
+        "bn": "এয়ারপোর্ট পিকআপ",
+        "en": "Airport pickup"
+      },
+      "price": 800,
+      "unit": "per_booking"
+    },
+    {
+      "code": "extra-night",
+      "name": {
+        "bn": "অতিরিক্ত রাত",
+        "en": "Extra night"
+      },
+      "price": 4500,
+      "unit": "per_person"
+    },
+    {
+      "code": "local-sim",
+      "name": {
+        "bn": "লোকাল SIM",
+        "en": "Local SIM card"
+      },
+      "price": 600,
+      "unit": "per_person"
+    }
+  ]
+}

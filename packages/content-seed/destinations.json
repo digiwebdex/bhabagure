@@ -1,0 +1,47 @@
+[
+  {
+    "slug": "nepal",
+    "name": {
+      "bn": "নেপাল",
+      "en": "Nepal"
+    },
+    "countryCode": "NP",
+    "region": "international"
+  },
+  {
+    "slug": "thailand",
+    "name": {
+      "bn": "থাইল্যান্ড",
+      "en": "Thailand"
+    },
+    "countryCode": "TH",
+    "region": "international"
+  },
+  {
+    "slug": "maldives",
+    "name": {
+      "bn": "মালদ্বীপ",
+      "en": "Maldives"
+    },
+    "countryCode": "MV",
+    "region": "international"
+  },
+  {
+    "slug": "sri-lanka",
+    "name": {
+      "bn": "শ্রীলঙ্কা",
+      "en": "Sri Lanka"
+    },
+    "countryCode": "LK",
+    "region": "international"
+  },
+  {
+    "slug": "philippines",
+    "name": {
+      "bn": "ফিলিপাইন",
+      "en": "Philippines"
+    },
+    "countryCode": "PH",
+    "region": "international"
+  }
+]

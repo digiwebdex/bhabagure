@@ -1,0 +1,46 @@
+[
+  {
+    "packageCode": "Nepal 01",
+    "dateLabel": {
+      "bn": "তারিখ যোগাযোগ করুন",
+      "en": "Dates on request"
+    },
+    "departsOn": null,
+    "seatsTotal": 20,
+    "seatsBooked": 12,
+    "isGuaranteed": true
+  },
+  {
+    "packageCode": "Nepal 03",
+    "dateLabel": {
+      "bn": "যেকোনো তারিখ",
+      "en": "Any date"
+    },
+    "departsOn": null,
+    "seatsTotal": 20,
+    "seatsBooked": 8,
+    "isGuaranteed": true
+  },
+  {
+    "packageCode": "Thai 01",
+    "dateLabel": {
+      "bn": "যেকোনো তারিখ",
+      "en": "Any date"
+    },
+    "departsOn": null,
+    "seatsTotal": 12,
+    "seatsBooked": 6,
+    "isGuaranteed": true
+  },
+  {
+    "packageCode": "Thai 02",
+    "dateLabel": {
+      "bn": "যেকোনো তারিখ",
+      "en": "Any date"
+    },
+    "departsOn": null,
+    "seatsTotal": 12,
+    "seatsBooked": 5,
+    "isGuaranteed": true
+  }
+]

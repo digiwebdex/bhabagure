@@ -1,0 +1,176 @@
+# Deployment notes
+
+**Status (2026-09-13): not deployed.** On the VPS so far: Chrome for Testing, the scheduler timer (disabled) — see
+[`phase-3-booking.md` §0.5](phase-3-booking.md) — and the queue worker unit (enabled, waiting for the API; §5). DNS hosts and the shared-server rules are in
+`_design/DEPLOYMENT.md`; the short version is: nothing outside `/var/www/Bhabagure` without asking first, a new nginx
+file (never an edited one), reload never restart, a dedicated MySQL database and user, a project Redis index and prefix,
+systemd units named `bhabaghure-*`.
+
+---
+
+## 1. What runs where
+
+| Piece | How | State |
+|---|---|---|
+| API | nginx site file → php-fpm, root `api/public` | not deployed |
+| Admin | static `admin/dist` | not deployed |
+| Website + portal | Next.js on a free local port (check `ss -ltnp`) | not deployed |
+| Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **installed, disabled** |
+| Queue worker | `bhabaghure-queue.service` → `php artisan queue:work redis` (one worker, §5) | **installed and enabled 2026-09-13**; skipped until `api/artisan` exists |
+| Invoice PDFs | Chrome for Testing in `/var/www/Bhabagure/tools` | **installed** |
+| MySQL | database `bhabaghure`, user `bhabaghure_user` (never root) | to create |
+| Redis | the box's shared Redis 7.0 (localhost, 16 databases): **database 12 = queue, 13 = cache**, prefix `bhabaghure_`, client Predis | **reserved** — 0 and 3 hold other sites' keys; the worker refuses anything else |
+
+What the scheduler runs (`api/routes/console.php`): `payments:reconcile` (10 min), `bookings:complete-travelled`
+(02:30), `passport-scans:prune` (hourly), `notifications:dispatch` (every minute — scheduled trip messages, paced and
+retried sends) and `notifications:check-whatsapp` (5 min).
+
+## 2. `api/.env` on the server
+
+Never committed (the repository is public). Beyond the Laravel basics (`APP_ENV=production`, `APP_DEBUG=false`,
+`APP_KEY`, `JWT_SECRET`, `DB_*`):
+
+| Variable | Value |
+|---|---|
+| `QUEUE_CONNECTION=redis`, `CACHE_STORE=redis` | queue and cache on the shared Redis |
+| `REDIS_CLIENT=predis`, `REDIS_DB=12`, `REDIS_CACHE_DB=13`, `REDIS_PREFIX=bhabaghure_`, `REDIS_QUEUE_RETRY_AFTER=180` | our reserved databases (§5) — the server has no phpredis extension, and installing one is a system package |
+| `WEB_URL`, `WEB_REVALIDATE_URL`, `REVALIDATE_SECRET` | the website, for links in messages and CMS refreshes |
+| `SSLCOMMERZ_MODE=live`, `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD` | the client's store (phase 3) |
+| `PDF_CHROME_PATH` | `/var/www/Bhabagure/tools/chrome-for-testing/current/chrome-headless-shell-linux64/chrome-headless-shell` |
+| `MAIL_MAILER=smtp`, `MAIL_HOST=smtp.sendgrid.net`, `MAIL_PORT=587`, `MAIL_USERNAME=apikey`, `MAIL_PASSWORD` | SendGrid (§4) |
+| `MAIL_FROM_ADDRESS=noreply@bhabaghure.com.bd` | the authenticated domain |
+| `WASENDER_MODE=live`, `WASENDER_API_KEY`, `WASENDER_WEBHOOK_SECRET` | WhatsApp (§3) |
+| `BULKSMSBD_MODE=live`, `BULKSMSBD_API_KEY`, `BULKSMSBD_SENDER_ID`, `BULKSMSBD_COST_PER_PART` (+ `BULKSMSBD_LOCALE=bn` for a masking sender ID) | SMS (§4a) |
+| `NOTIFICATIONS_EMAIL=true` | keep on — it is the fallback |
+
+`api/.env.example` lists every variable with a comment.
+
+## 3. WhatsApp notifications (WaSenderAPI)
+
+### 3.1 Setting it up
+
+1. **A dedicated number**, not the main +8801743939300 — a SIM used normally on WhatsApp for a few weeks first
+   (warmed up) so a new number sending booking messages doesn't look like spam.
+2. In the WaSender dashboard: create a session for that number, scan the QR code with the phone, turn **Account
+   Protection on** (one message per 5 seconds). Keep message logging off unless the client wants WaSender to store
+   message text.
+3. Copy the **session API key** into `WASENDER_API_KEY`. Never the account's personal access token — it controls every
+   session and key. **Rotate the key that was exposed in the design bundle before go-live.**
+4. Webhook: URL `https://api.bhabaghure.com.bd/api/v1/webhooks/wasender`; events `messages.update`, `message.sent`,
+   `session.status`, `messages.received`; the secret is a long random string, the same in `WASENDER_WEBHOOK_SECRET`.
+5. Admin → **Site settings → Contact → Notifications WhatsApp number**: enter the number. Until it is there, customer
+   WhatsApp messages are held (emails still go) — a customer must be able to find the number on the website, invoice
+   and booking page before trusting a message from it.
+6. Admin → **Notifications**: "Check connection now" should say Connected. Each salesperson verifies their own number
+   under **My profile**; an admin then picks the alert recipients. Send a template test to your own number.
+
+### 3.2 Known risk: WaSenderAPI is unofficial
+
+WaSenderAPI drives a normal WhatsApp account; it is not WhatsApp's official Business Platform. Its terms say it is
+"not supported, endorsed, or affiliated with WhatsApp Inc.", that the customer accepts the risk of account bans, and
+that WaSender cannot help unblock a banned account. **If WhatsApp bans the notifications number, it is gone overnight**,
+and every automated WhatsApp message stops.
+
+What limits the damage, already built:
+
+- **Email is the always-on fallback.** Every message that matters to money — booking received, booking confirmed with
+  the invoice PDF, payment received, documents pending, pre-trip reminder — and every sales alert also goes by email,
+  independently of WhatsApp (`NOTIFICATIONS_EMAIL=true`). A ban degrades the service; it doesn't stop it. Only the
+  departure-day greeting, the post-trip review request and staff one-off messages are WhatsApp-only.
+- The sending code is behind one interface (`App\Services\Notifications\WhatsApp\WhatsAppGateway`); nothing else knows
+  which provider is used.
+- It is a separate number: a ban never takes the main business line with it.
+- Low ban risk by design: transactional messages only (no broadcasts), one send per 5 s plus random pauses, a daily cap,
+  STOP / বন্ধ opt-out honoured automatically, and every message starts with "ভবঘুরে হলিডেজ · Bhabaghure Holidays".
+- A dropped or banned session emails the people who manage notifications within 5 minutes (once an hour while it lasts).
+
+**Named fallback for the WhatsApp channel itself: the WhatsApp Business Platform (Meta Cloud API).** The official,
+supported route for automated business messages, but it needs Meta business verification, pre-approved message
+templates and is paid per message. Moving to it is one new `WhatsAppGateway` class plus template approval — no changes to bookings,
+templates in the admin, or the log.
+
+**If the number is banned — runbook:**
+
+1. Set `WASENDER_MODE=off` and run `php artisan config:cache`. WhatsApp messages are recorded as "not sent"; emails
+   carry on. (Left on, messages retry for about an hour and then show as failed.)
+2. Clear the notifications number in Site settings so the website and invoices stop publishing a dead number.
+3. Decide: a new warmed number on WaSender (steps 1–6 above, same day) or the Meta Cloud API (days to weeks for
+   verification and template approval).
+4. Publish the new number in Site settings — the website, invoice footer, booking page and confirmation emails pick it
+   up without a deploy.
+
+## 4. Email (SendGrid)
+
+1. SendGrid → Settings → **Sender Authentication → Authenticate your domain** for `bhabaghure.com.bd`. It gives three
+   CNAME records (a return-path host and two `_domainkey` hosts); add them at the DNS host and verify.
+2. Add DMARC: `TXT _dmarc` → `v=DMARC1; p=none; rua=mailto:<address the client reads>` first, then `p=quarantine` once
+   reports look clean.
+3. An API key with **Mail Send** permission only → `MAIL_PASSWORD` (username is literally `apikey`).
+4. Test: Admin → Notifications → pick an email template → "Send test to my email".
+
+Volume is low: a booking sends a handful of emails over its life (received, confirmed, reminders, alerts to each sales
+recipient). Check SendGrid's current plan limits against that when choosing the plan.
+
+## 4a. SMS (bulksmsbd.net)
+
+A fallback for money-critical messages WhatsApp can't deliver, and the departure-day message
+([`phase-4-whatsapp.md` §10](phase-4-whatsapp.md)).
+
+1. **The client's approved sender ID** → `BULKSMSBD_SENDER_ID`. Until it is set SMS stays disabled: operators silently
+   drop messages from an unapproved sender ID. A masking (brand-name) ID only accepts Bangla at bulksmsbd — then also set
+   `BULKSMSBD_LOCALE=bn`.
+2. The API key (the user rotates the one that was shared) → `BULKSMSBD_API_KEY`; `BULKSMSBD_MODE=live`.
+3. If IP whitelisting is on in the bulksmsbd panel, add the VPS's outbound IP.
+4. First real sends (to a staff phone, from Admin → Notifications → an SMS template → "Send a test SMS to my phone"):
+   one Bangla, one English. Check both arrive readable (if Bangla is garbled: `BULKSMSBD_UNICODE_TYPE=unicode`) and that
+   the balance dropped by the parts the editor showed; set `BULKSMSBD_COST_PER_PART` to the account's real price.
+
+**Transport — checked 2026-09-13, not a known risk.** bulksmsbd.net's documented URL is `http://` with the key in the
+query string. Tested with a fake key: HTTPS works with a valid certificate (Let's Encrypt, TLS 1.3) and POST form fields
+are parsed, so the client uses HTTPS + POST only and the key never appears in a URL. There is no automatic fallback to
+http — their server doesn't redirect http to https, so a downgrade would expose the key; a TLS failure retries and
+alerts instead. **If bulksmsbd ever stops serving HTTPS**, SMS stops (with an alert) rather than sending the key in
+clear: at that point treat the key as low-trust, decide whether to accept plain http explicitly, and rotate the key on a
+schedule. Also: their API echoes a wrong key back in its error text, so provider error messages are never stored or
+logged — only response codes.
+
+## 5. Queue worker
+
+Messages are queued after the database commit and sent by **one** worker, so WhatsApp sends stay serial; retries are
+stored on the message row (not in the queue), so a restart loses nothing.
+
+**Installed 2026-09-13** (approved) from `deploy/systemd/bhabaghure-queue.service` into `/etc/systemd/system`, verified
+with `systemd-analyze verify`, enabled. Until the API is deployed its start condition (`api/artisan` exists) is unmet,
+so it shows `inactive (dead)`. **After the first deploy run `systemctl start bhabaghure-queue.service`** (a condition is
+only checked when the unit starts); after every later deploy, `php artisan queue:restart`.
+
+| Rule on the shared box | How the unit keeps it |
+|---|---|
+| Namespaced | `bhabaghure-queue.service`, `SyslogIdentifier=bhabaghure-queue`, runs as `www-data` in `/var/www/Bhabagure/api` |
+| Our own Redis database | `ExecStartPre=… bhabaghure:queue-preflight --redis-db=12 --redis-cache-db=13 --job-timeout=120` refuses to start unless `api/.env` uses databases 12 and 13, prefix `bhabaghure_`, and both hold no other project's keys (it counts keys only; checked against this server's Redis: passes on 12/13, refuses 3 — "365 keys without the prefix") |
+| A slow job never runs twice | the preflight requires `REDIS_QUEUE_RETRY_AFTER` (180 s) > `--timeout` (120 s) |
+| Restarts can't thrash | `Restart=always` after `RestartSec=15`; `StartLimitBurst=5` in `StartLimitIntervalSec=600` — a crash loop stops after five tries and stays failed. Normal exits (hourly `--max-time`, `queue:restart`) are a few an hour |
+| A stopped worker is noticed | the scheduler's `notifications:dispatch` emails notification managers when messages sit unclaimed for 15 minutes (once an hour) |
+| A stuck job can't starve other sites | `--timeout=120` kills a long job and the worker restarts; `KillMode=control-group` takes Chrome children with it; `RuntimeMaxSec=2h` backstop |
+| Memory | `MemoryHigh=450M`, `MemoryMax=600M` including invoice-PDF Chrome, `MemorySwapMax=0` (the box's swap is nearly full); PHP also exits between jobs past `--memory=192` |
+| CPU, IO, threads | `CPUQuota=50%` (half of one of the two CPUs), `Nice=10`, `IOWeight=50`, `TasksMax=192`, `OOMScoreAdjust=500` (killed before other sites under memory pressure) |
+| Hardening | `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=full`, `ProtectHome`, `ProtectKernelTunables/Modules`, `ProtectControlGroups`, `RestrictSUIDSGID`, `LockPersonality`. Chrome's sandbox rendered the same PDF under `NoNewPrivileges` as `www-data` on this server; `RestrictNamespaces` and `MemoryDenyWriteExecute` are left off because Chrome's sandbox and V8/PHP JIT need them. `systemd-analyze security` scores it 7.5 (an unhardened service is 9.6) |
+
+Without the worker nothing is sent: the admin shows the messages as waiting, and the stall alert above goes out.
+
+## 6. Phase 4 go-live checklist
+
+- [ ] Rotated WaSender key in `api/.env`; the old one revoked in the dashboard
+- [ ] Dedicated number warmed up, session connected, Account Protection on
+- [ ] Webhook URL, events and secret set; a test message shows ✓✓ in Admin → Notifications → Message log
+- [ ] Notifications number entered in Site settings; visible on the website contact section, footer, booking page and
+      invoice footer
+- [ ] SendGrid domain authenticated, DMARC published, test email received and not in spam
+- [x] `bhabaghure-queue.service` installed and enabled (2026-09-13)
+- [ ] After the first deploy: `systemctl start bhabaghure-queue.service` → `active (running)`, "Queue preflight passed" in
+      `journalctl -u bhabaghure-queue`; `bhabaghure-scheduler.timer` enabled; a confirmation email arrives with its invoice
+      PDF (proves Chrome under the unit's hardening)
+- [ ] SMS: approved sender ID from the client in `BULKSMSBD_SENDER_ID`, rotated key, `BULKSMSBD_MODE=live`; a Bangla and
+      an English test SMS arrive readable and the balance drop matches the editor's part count
+- [ ] Sales staff verified their numbers; alert recipients chosen
+- [ ] One real booking on the live site: WhatsApp + email to the customer, alert to sales

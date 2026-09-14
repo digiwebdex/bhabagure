@@ -1,0 +1,122 @@
+{
+  "categories": [
+    {
+      "slug": "destinations",
+      "name": {
+        "bn": "গন্তব্য",
+        "en": "Destinations"
+      },
+      "tone": "blue"
+    },
+    {
+      "slug": "visa-rules",
+      "name": {
+        "bn": "ভিসা ও নিয়ম",
+        "en": "Visa & rules"
+      },
+      "tone": "purple"
+    },
+    {
+      "slug": "offers",
+      "name": {
+        "bn": "অফার",
+        "en": "Offers"
+      },
+      "tone": "orange"
+    }
+  ],
+  "posts": [
+    {
+      "slug": "nagarkot-a-himalayan-sunrise-two-hours-from-kathmandu",
+      "category": "destinations",
+      "publishedAt": "2026-09-10",
+      "title": {
+        "bn": "নাগরকোট: কাঠমান্ডু থেকে দুই ঘণ্টায় হিমালয়ের সূর্যোদয়",
+        "en": "Nagarkot: a Himalayan sunrise two hours from Kathmandu"
+      },
+      "excerpt": {
+        "bn": "কাঠমান্ডু থেকে মাত্র ৩২ কিলোমিটার দূরে নাগরকোট। পরিষ্কার সকালে হোটেলের ছাদ থেকেই এভারেস্ট রেঞ্জ দেখা যায়। আমাদের Kathmandu & Nagarkot প্যাকেজে (৩ রাত ৪ দিন) পথে ভক্তপুর দরবার স্কয়ার ও ২৫০ মিটার লম্বা রানী ঝুলা ঝুলন্ত সেতু পড়ে। অক্টোবর থেকে ডিসেম্বর সবচেয়ে ভালো সময় — আকাশ পরিষ্কার থাকে।",
+        "en": "Nagarkot sits just 32 km from Kathmandu, and on a clear morning you can see the Everest range from the hotel roof. Our Kathmandu & Nagarkot package (3 nights, 4 days) stops at Bhaktapur Durbar Square and the 250-metre Rani Jhula suspension bridge on the way. October to December is the best window, when the skies stay clear."
+      },
+      "body": {
+        "bn": "<p>কাঠমান্ডু থেকে মাত্র ৩২ কিলোমিটার দূরে নাগরকোট। পরিষ্কার সকালে হোটেলের ছাদ থেকেই এভারেস্ট রেঞ্জ দেখা যায়। আমাদের Kathmandu &amp; Nagarkot প্যাকেজে (৩ রাত ৪ দিন) পথে ভক্তপুর দরবার স্কয়ার ও ২৫০ মিটার লম্বা রানী ঝুলা ঝুলন্ত সেতু পড়ে। অক্টোবর থেকে ডিসেম্বর সবচেয়ে ভালো সময় — আকাশ পরিষ্কার থাকে।</p>",
+        "en": "<p>Nagarkot sits just 32 km from Kathmandu, and on a clear morning you can see the Everest range from the hotel roof. Our Kathmandu &amp; Nagarkot package (3 nights, 4 days) stops at Bhaktapur Durbar Square and the 250-metre Rani Jhula suspension bridge on the way. October to December is the best window, when the skies stay clear.</p>"
+      },
+      "author": {
+        "bn": "ভবঘুরে টিম",
+        "en": "Bhabaghure team"
+      },
+      "readingMinutes": 3,
+      "status": "published"
+    },
+    {
+      "slug": "nepal-and-thailand-on-a-bangladeshi-passport-the-visa-maths",
+      "category": "visa-rules",
+      "publishedAt": "2026-09-05",
+      "title": {
+        "bn": "বাংলাদেশি পাসপোর্টে নেপাল ও থাইল্যান্ড — ভিসার হিসাব",
+        "en": "Nepal and Thailand on a Bangladeshi passport — the visa maths"
+      },
+      "excerpt": {
+        "bn": "নেপাল বাংলাদেশি নাগরিকদের অন-অ্যারাইভাল ভিসা দেয়, ফি লাগে না। থাইল্যান্ডের জন্য আগে ভিসা করাতে হয় — ফি আনুমানিক ৳৬,০০০, যা প্যাকেজে অন্তর্ভুক্ত নয়। দুই ক্ষেত্রেই পাসপোর্টের মেয়াদ ন্যূনতম ছয় মাস থাকতে হবে। আমরা ফর্ম পূরণ থেকে অ্যাপয়েন্টমেন্ট পর্যন্ত পুরো প্রক্রিয়ায় সহায়তা করি।",
+        "en": "Nepal grants Bangladeshi citizens a visa on arrival at no fee. Thailand needs a visa in advance — roughly BDT 6,000, not included in the package price. Either way your passport must have at least six months of validity left. We help with the whole process, from filling the form to the appointment."
+      },
+      "body": {
+        "bn": "<p>নেপাল বাংলাদেশি নাগরিকদের অন-অ্যারাইভাল ভিসা দেয়, ফি লাগে না। থাইল্যান্ডের জন্য আগে ভিসা করাতে হয় — ফি আনুমানিক ৳৬,০০০, যা প্যাকেজে অন্তর্ভুক্ত নয়। দুই ক্ষেত্রেই পাসপোর্টের মেয়াদ ন্যূনতম ছয় মাস থাকতে হবে। আমরা ফর্ম পূরণ থেকে অ্যাপয়েন্টমেন্ট পর্যন্ত পুরো প্রক্রিয়ায় সহায়তা করি।</p>",
+        "en": "<p>Nepal grants Bangladeshi citizens a visa on arrival at no fee. Thailand needs a visa in advance — roughly BDT 6,000, not included in the package price. Either way your passport must have at least six months of validity left. We help with the whole process, from filling the form to the appointment.</p>"
+      },
+      "author": {
+        "bn": "ভিসা ডেস্ক",
+        "en": "Visa desk"
+      },
+      "readingMinutes": 4,
+      "status": "published"
+    },
+    {
+      "slug": "6-off-mustang-adventure-september-group-departure",
+      "category": "offers",
+      "publishedAt": "2026-09-01",
+      "title": {
+        "bn": "Mustang Adventure-এ ৬% ছাড় — সেপ্টেম্বরের গ্রুপ ডিপার্চার",
+        "en": "6% off Mustang Adventure — September group departure"
+      },
+      "excerpt": {
+        "bn": "৭ রাত ৮ দিনের Mustang Valley Adventure এখন ৳৮০,০০০ থেকে কমে ৳৭৫,০০০ (জনপ্রতি, ঢাকা–কাঠমান্ডু–ঢাকা এয়ার টিকেটসহ)। কাঠমান্ডু, পোখারা, জোমসম, মুক্তিনাথ ও তাতোপানি — সবই একসাথে। চার জন বা বেশি হলে অতিরিক্ত গ্রুপ ছাড় প্রযোজ্য।",
+        "en": "The 7-night, 8-day Mustang Valley Adventure is down from BDT 80,000 to BDT 75,000 per person, including the Dhaka–Kathmandu–Dhaka air ticket. Kathmandu, Pokhara, Jomsom, Muktinath and Tatopani in one trip. Groups of four or more get a further discount."
+      },
+      "body": {
+        "bn": "<p>৭ রাত ৮ দিনের Mustang Valley Adventure এখন ৳৮০,০০০ থেকে কমে ৳৭৫,০০০ (জনপ্রতি, ঢাকা–কাঠমান্ডু–ঢাকা এয়ার টিকেটসহ)। কাঠমান্ডু, পোখারা, জোমসম, মুক্তিনাথ ও তাতোপানি — সবই একসাথে। চার জন বা বেশি হলে অতিরিক্ত গ্রুপ ছাড় প্রযোজ্য।</p>",
+        "en": "<p>The 7-night, 8-day Mustang Valley Adventure is down from BDT 80,000 to BDT 75,000 per person, including the Dhaka–Kathmandu–Dhaka air ticket. Kathmandu, Pokhara, Jomsom, Muktinath and Tatopani in one trip. Groups of four or more get a further discount.</p>"
+      },
+      "author": {
+        "bn": "সেলস টিম",
+        "en": "Sales team"
+      },
+      "readingMinutes": 2,
+      "status": "published"
+    },
+    {
+      "slug": "ko-lan-island-clear-water-beaches-next-to-pattaya",
+      "category": "destinations",
+      "publishedAt": "2026-08-28",
+      "title": {
+        "bn": "কোহ লান আইল্যান্ড: পাত্তায়ার পাশে স্বচ্ছ জলের সৈকত",
+        "en": "Ko Lan Island: clear water beaches next to Pattaya"
+      },
+      "excerpt": {
+        "bn": "পাত্তায়া থেকে স্পিডবোটে ৪৫ মিনিট। কোহ লানের সৈকতগুলো ভিড় কম আর জল অনেক পরিষ্কার। আমাদের Thailand Budget Trip প্যাকেজে (৫ দিন, ৳২২,৫০০) ব্যাংকক ও পাত্তায়ার সাথে এই দ্বীপটিও আছে। স্নরকেলিং ও প্যারাসেইলিং আলাদা খরচে করা যায়।",
+        "en": "Forty-five minutes by speedboat from Pattaya. Ko Lan's beaches are quieter and the water noticeably clearer. Our Thailand Budget Trip package (5 days, BDT 22,500) covers the island alongside Bangkok and Pattaya. Snorkelling and parasailing are available at extra cost."
+      },
+      "body": {
+        "bn": "<p>পাত্তায়া থেকে স্পিডবোটে ৪৫ মিনিট। কোহ লানের সৈকতগুলো ভিড় কম আর জল অনেক পরিষ্কার। আমাদের Thailand Budget Trip প্যাকেজে (৫ দিন, ৳২২,৫০০) ব্যাংকক ও পাত্তায়ার সাথে এই দ্বীপটিও আছে। স্নরকেলিং ও প্যারাসেইলিং আলাদা খরচে করা যায়।</p>",
+        "en": "<p>Forty-five minutes by speedboat from Pattaya. Ko Lan's beaches are quieter and the water noticeably clearer. Our Thailand Budget Trip package (5 days, BDT 22,500) covers the island alongside Bangkok and Pattaya. Snorkelling and parasailing are available at extra cost.</p>"
+      },
+      "author": {
+        "bn": "ভবঘুরে টিম",
+        "en": "Bhabaghure team"
+      },
+      "readingMinutes": 3,
+      "status": "published"
+    }
+  ]
+}

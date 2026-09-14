@@ -1,0 +1,30 @@
+[
+  {
+    "employeeCode": "BH-EMP-001",
+    "name": {
+      "bn": "MD. AWLAD HOSSAIN",
+      "en": "MD. AWLAD HOSSAIN"
+    },
+    "role": {
+      "bn": "স্বত্বাধিকারী",
+      "en": "Proprietor"
+    },
+    "photo": null,
+    "sortOrder": 1,
+    "isVisible": true
+  },
+  {
+    "employeeCode": "BH-EMP-002",
+    "name": {
+      "bn": "HABIB RAHMAN",
+      "en": "HABIB RAHMAN"
+    },
+    "role": {
+      "bn": "ট্যুর অপারেটর",
+      "en": "Tour operator"
+    },
+    "photo": null,
+    "sortOrder": 2,
+    "isVisible": true
+  }
+]

@@ -1,9 +1,59 @@
-﻿_design/
+# This repository is PUBLIC. Anything with credentials or customer data stays out.
+
+# Design handoff — local reference only
+_design/
+
+# Secrets. Example files (placeholders only) are the one exception.
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+auth.json
+
+# Dependencies
 node_modules/
 vendor/
-storage/
-bootstrap/cache/
+
+# Laravel runtime — passport scans, payment evidence and invoice PDFs live here. Every file under
+# storage/ is ignored; only the empty directory skeleton (its .gitignore files) is kept so a fresh
+# clone boots.
+api/storage/**/*
+!api/storage/**/
+!api/storage/**/.gitignore
+api/bootstrap/cache/*
+!api/bootstrap/cache/.gitignore
+public/storage
 public/uploads/
 *.sqlite
+.phpunit.cache/
+.phpunit.result.cache
+
+# Build output
+.next/
+dist/
+out/
+coverage/
+*.tsbuildinfo
+
+# Logs, OS and editor clutter
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Playwright output and e2e credentials (random, local)
+**/e2e/.state/
+test-results/
+playwright-report/
+
+# Local-only overrides
+docker-compose.override.yml
+
+# Local MySQL data directory (see api/README.md)
+.devdb/
+
+# Server-side tools unpacked on the VPS (Chrome for Testing for invoice PDFs)
+/tools/

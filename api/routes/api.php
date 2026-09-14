@@ -1,0 +1,237 @@
+<?php
+
+use App\Http\Controllers\Api\V1\Admin\BlogCategoryController;
+use App\Http\Controllers\Api\V1\Admin\BlogPostController;
+use App\Http\Controllers\Api\V1\Admin\BookingController;
+use App\Http\Controllers\Api\V1\Admin\CatalogueController;
+use App\Http\Controllers\Api\V1\Admin\DepartureController;
+use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
+use App\Http\Controllers\Api\V1\Admin\MediaController;
+use App\Http\Controllers\Api\V1\Admin\NotificationController;
+use App\Http\Controllers\Api\V1\Admin\PackageController;
+use App\Http\Controllers\Api\V1\Admin\PackageImageController;
+use App\Http\Controllers\Api\V1\Admin\PricingController;
+use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
+use App\Http\Controllers\Api\V1\Admin\ReviewController;
+use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
+use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
+use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
+use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
+use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
+use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
+use App\Http\Controllers\Api\V1\Public\PublicBookingController;
+use App\Http\Controllers\Api\V1\Public\PublicContentController;
+use App\Http\Controllers\Api\V1\Public\PublicFormController;
+use App\Http\Controllers\Api\V1\Public\PublicInvoiceController;
+use App\Http\Controllers\Api\V1\Public\PublicPassportScanController;
+use App\Http\Controllers\Api\V1\Webhooks\WaSenderWebhookController;
+use Illuminate\Support\Facades\Route;
+
+/*
+ * All routes are under /api/v1. Route parameters named {id} are numeric database ids; public content is
+ * addressed by slug. See docs/phase-2-cms-api.md for the endpoint list and permissions.
+ */
+Route::prefix('v1')->group(function () {
+
+    // ── Authentication ───────────────────────────────────────────────────────────────────────────────
+    Route::prefix('staff/auth')->controller(StaffAuthController::class)->group(function () {
+        Route::post('login', 'login');
+        Route::post('refresh', 'refresh')->middleware('throttle:auth-refresh');
+        Route::post('logout', 'logout');
+        Route::middleware('auth:staff')->group(function () {
+            Route::get('me', 'me');
+            Route::post('change-password', 'changePassword');
+        });
+    });
+
+    Route::prefix('customer/auth')->controller(CustomerAuthController::class)->group(function () {
+        Route::post('register', 'register')->middleware('throttle:customer-register');
+        Route::post('login', 'login');
+        Route::post('refresh', 'refresh')->middleware('throttle:auth-refresh');
+        Route::post('logout', 'logout');
+        Route::get('me', 'me')->middleware('auth:customer');
+    });
+
+    // ── Public website content (read) ────────────────────────────────────────────────────────────────
+    Route::prefix('public')->group(function () {
+        Route::controller(PublicContentController::class)->middleware('throttle:public-read')->group(function () {
+            Route::get('destinations', 'destinations');
+            Route::get('packages', 'packages');
+            Route::get('packages/{slug}', 'package');
+            Route::get('departures', 'departures');
+            Route::get('posts', 'posts');
+            Route::get('posts/{slug}', 'post');
+            Route::get('team', 'team');
+            Route::get('reviews', 'reviews');
+            Route::get('gallery', 'gallery');
+            Route::get('pricing', 'pricing');
+            Route::get('settings', 'settings');
+        });
+
+        Route::controller(PublicFormController::class)->middleware('throttle:public-forms')->group(function () {
+            Route::post('inquiries', 'inquiry');
+            Route::post('air-quotes', 'airQuote');
+            Route::post('newsletter', 'subscribe');
+        });
+
+        // Booking (docs/phase-3-booking.md). Guests pass the booking's private token in X-Booking-Token.
+        Route::controller(PublicBookingController::class)->group(function () {
+            Route::post('bookings', 'store')->middleware('throttle:public-bookings');
+            Route::get('bookings/{reference}', 'show')->middleware('throttle:public-read');
+            Route::post('bookings/{reference}/payments', 'pay')->middleware('throttle:public-bookings');
+        });
+        Route::post('passport-scans', [PublicPassportScanController::class, 'store'])->middleware('throttle:passport-scans');
+
+        Route::controller(PublicInvoiceController::class)->middleware('throttle:public-read')->group(function () {
+            Route::get('invoices/{token}', 'show');
+            Route::get('invoices/{token}/pdf', 'pdf');
+        });
+
+        // Signed-link actions: separate from the form limit so a shared office IP can always unsubscribe.
+        Route::controller(PublicFormController::class)->middleware('throttle:newsletter-unsubscribe')->group(function () {
+            Route::get('newsletter/unsubscribe/{token}', 'unsubscribeStatus');
+            Route::post('newsletter/unsubscribe/{token}', 'unsubscribe');
+        });
+    });
+
+    // ── Payment gateway callbacks (server-to-server IPN, and the customer's browser) ────────────────
+    Route::prefix('payments')->middleware('throttle:payment-callbacks')->group(function () {
+        Route::controller(SslCommerzCallbackController::class)->prefix('sslcommerz')->group(function () {
+            Route::post('ipn', 'ipn');
+            Route::post('success', 'success');
+            Route::post('fail', 'fail');
+            Route::post('cancel', 'cancel');
+        });
+        Route::get('fake-gateway/{tranId}', [FakeGatewayController::class, 'show']);
+    });
+
+    // ── Provider webhooks ─────────────────────────────────────────────────────────────────────────────
+    // WaSenderAPI delivery status, session status and STOP replies. Refused without the shared secret.
+    Route::post('webhooks/wasender', WaSenderWebhookController::class)->middleware('throttle:webhooks');
+
+    // ── CMS (staff) ──────────────────────────────────────────────────────────────────────────────────
+    Route::prefix('admin')->middleware(['auth:staff', 'staff.can-work'])->group(function () {
+
+        Route::middleware('permission:packages.manage|cms.manage,staff')->controller(MediaController::class)->group(function () {
+            Route::get('media', 'index');
+            Route::post('media', 'store')->middleware('throttle:media-upload');
+            Route::patch('media/{id}', 'update')->whereNumber('id');
+            Route::delete('media/{id}', 'destroy')->whereNumber('id');
+        });
+
+        Route::middleware('permission:packages.manage,staff')->group(function () {
+            Route::controller(PackageController::class)->group(function () {
+                Route::get('packages', 'index');
+                Route::post('packages', 'store');
+                Route::put('packages/order', 'reorder');
+                Route::get('packages/{id}', 'show')->whereNumber('id');
+                Route::put('packages/{id}', 'update')->whereNumber('id');
+                Route::delete('packages/{id}', 'destroy')->whereNumber('id');
+                Route::post('packages/{id}/publish', 'publish')->whereNumber('id');
+                Route::post('packages/{id}/unpublish', 'unpublish')->whereNumber('id');
+                Route::post('packages/{id}/archive', 'archive')->whereNumber('id');
+            });
+
+            Route::controller(PackageImageController::class)->group(function () {
+                Route::post('packages/{packageId}/images', 'store')->whereNumber('packageId');
+                Route::put('packages/{packageId}/images/order', 'reorder')->whereNumber('packageId');
+                Route::delete('packages/{packageId}/images/{imageId}', 'destroy')->whereNumber(['packageId', 'imageId']);
+            });
+
+            Route::controller(DepartureController::class)->group(function () {
+                Route::get('packages/{packageId}/departures', 'index')->whereNumber('packageId');
+                Route::post('packages/{packageId}/departures', 'store')->whereNumber('packageId');
+                Route::put('departures/{id}', 'update')->whereNumber('id');
+                Route::delete('departures/{id}', 'destroy')->whereNumber('id');
+            });
+
+            Route::controller(CatalogueController::class)->group(function () {
+                Route::get('destinations', 'destinations');
+                Route::post('destinations', 'storeDestination');
+                Route::put('destinations/{id}', 'updateDestination')->whereNumber('id');
+                Route::get('tags', 'tags');
+            });
+        });
+
+        // A staff member's own WhatsApp number (verified with a code) — for alerts and template test sends.
+        Route::controller(ProfileWhatsAppController::class)->group(function () {
+            Route::get('profile/whatsapp', 'show');
+            Route::post('profile/whatsapp', 'start');
+            Route::post('profile/whatsapp/verify', 'verify');
+            Route::delete('profile/whatsapp', 'destroy');
+        });
+
+        // WhatsApp and email notifications (docs/phase-4-whatsapp.md). Numbers always come from records.
+        Route::post('notifications/whatsapp', [NotificationController::class, 'send'])->middleware('permission:notifications.send,staff');
+        Route::post('customers/{customerId}/whatsapp-opt-out', [NotificationController::class, 'setCustomerOptOut'])->whereNumber('customerId');
+        Route::middleware('permission:notifications.manage,staff')->controller(NotificationController::class)->group(function () {
+            Route::get('notifications/overview', 'overview');
+            Route::get('notifications', 'index');
+            Route::get('notification-templates', 'templates');
+            Route::put('notification-templates/{id}', 'updateTemplate')->whereNumber('id');
+            Route::post('notification-templates/{id}/test', 'testTemplate')->whereNumber('id');
+            Route::post('notification-templates/{id}/preview', 'previewTemplate')->whereNumber('id');
+            Route::get('notification-settings', 'settings');
+            Route::put('notification-settings', 'updateSettings');
+        });
+
+        // Bookings, invoices and payments. Per-action permissions are checked in the controller.
+        Route::middleware('permission:bookings.view_all|bookings.view_own,staff')->controller(BookingController::class)->group(function () {
+            Route::get('bookings', 'index');
+            Route::get('bookings/{id}', 'show')->whereNumber('id');
+            Route::put('bookings/{id}/quote', 'updateQuote')->whereNumber('id');
+            Route::post('bookings/{id}/invoice', 'issueInvoice')->whereNumber('id');
+            Route::get('bookings/{id}/invoice/print', 'invoiceHtml')->whereNumber('id');
+            Route::get('bookings/{id}/invoice/pdf', 'invoicePdf')->whereNumber('id');
+            Route::post('bookings/{id}/payments', 'recordPayment')->whereNumber('id');
+            Route::post('bookings/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['confirm', 'complete', 'cancel']);
+            Route::post('invoices/{invoiceId}/void', 'voidInvoice')->whereNumber('invoiceId');
+            Route::post('transactions/{transactionId}/reverse', 'reversePayment')->whereNumber('transactionId');
+        });
+
+        Route::middleware('permission:pricing.manage,staff')->controller(PricingController::class)->group(function () {
+            Route::get('pricing', 'show');
+            Route::put('pricing', 'update');
+            Route::get('addons', 'addons');
+            Route::post('addons', 'storeAddon');
+            Route::put('addons/{id}', 'updateAddon')->whereNumber('id');
+        });
+
+        Route::middleware('permission:cms.manage,staff')->group(function () {
+            Route::controller(BlogPostController::class)->group(function () {
+                Route::get('posts', 'index');
+                Route::post('posts', 'store');
+                Route::get('posts/{id}', 'show')->whereNumber('id');
+                Route::put('posts/{id}', 'update')->whereNumber('id');
+                Route::delete('posts/{id}', 'destroy')->whereNumber('id');
+                Route::post('posts/{id}/publish', 'publish')->whereNumber('id');
+                Route::post('posts/{id}/unpublish', 'unpublish')->whereNumber('id');
+            });
+
+            Route::controller(BlogCategoryController::class)->group(function () {
+                Route::get('blog-categories', 'index');
+                Route::post('blog-categories', 'store');
+                Route::put('blog-categories/{id}', 'update')->whereNumber('id');
+                Route::delete('blog-categories/{id}', 'destroy')->whereNumber('id');
+            });
+
+            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class] as $path => $controller) {
+                Route::controller($controller)->group(function () use ($path) {
+                    Route::get($path, 'index');
+                    Route::post($path, 'store');
+                    Route::put("{$path}/order", 'reorder');
+                    Route::get("{$path}/{id}", 'show')->whereNumber('id');
+                    Route::put("{$path}/{id}", 'update')->whereNumber('id');
+                    Route::delete("{$path}/{id}", 'destroy')->whereNumber('id');
+                    Route::post("{$path}/{id}/publish", 'publish')->whereNumber('id');
+                    Route::post("{$path}/{id}/unpublish", 'unpublish')->whereNumber('id');
+                });
+            }
+
+            Route::controller(SiteSettingController::class)->group(function () {
+                Route::get('settings', 'index');
+                Route::put('settings/{key}', 'update');
+            });
+        });
+    });
+});

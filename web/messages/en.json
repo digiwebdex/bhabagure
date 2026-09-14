@@ -1,0 +1,588 @@
+{
+  "meta": {
+    "siteTitle": "Bhabaghure Holidays — tour packages, air tickets and visas",
+    "siteDescription": "Tour packages to Nepal and Thailand, air tickets, hotels and visa support — Agargaon, Dhaka.",
+    "portalTitle": "My account · Bhabaghure Holidays",
+    "notFoundTitle": "Page not found"
+  },
+  "common": {
+    "brand": "Bhabaghure Holidays",
+    "homeLink": "Bhabaghure Holidays — back to the home page",
+    "language": "Language",
+    "switchLanguage": "বাংলায় দেখুন",
+    "perPerson": "Per person",
+    "wasPrice": "was {amount}",
+    "myAccount": "My account",
+    "close": "Close",
+    "backToHome": "← Back to the home page",
+    "notFoundNote": "The link may have changed. You can find all our packages on the home page.",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "services": "Services",
+    "packages": "Packages",
+    "departures": "Departures",
+    "about": "About",
+    "news": "News",
+    "book": "Book",
+    "contact": "Contact",
+    "signIn": "Sign in",
+    "menu": "Menu",
+    "sheet": {
+      "services": "Services",
+      "packages": "Packages",
+      "departures": "Departures",
+      "about": "About us",
+      "news": "News & guides",
+      "book": "Book now",
+      "how": "How booking works",
+      "faq": "FAQ",
+      "gallery": "Gallery"
+    }
+  },
+  "hero": {
+    "before": "See the world, ",
+    "highlight": "worry-free",
+    "after": ""
+  },
+  "search": {
+    "tabTrip": "Find a tour package",
+    "tabAir": "Air ticket quote",
+    "destination": "Destination",
+    "allDestinations": "All destinations",
+    "date": "Travel date",
+    "travellers": "Travellers",
+    "fewer": "One fewer traveller",
+    "more": "One more traveller",
+    "budget": "Budget per person",
+    "budgetAny": "Any budget",
+    "budgetLow": "Up to {max}",
+    "budgetMid": "{min} – {max}",
+    "budgetHigh": "{min}+",
+    "counter": "{count, plural, one {{countText} package matches} other {{countText} packages match}} · per-person price for {pax, plural, one {{paxText} traveller} other {{paxText} travellers}}",
+    "counterNone": "No packages match these filters — try changing them",
+    "reset": "↺ Reset",
+    "show": "Show packages"
+  },
+  "air": {
+    "from": "From",
+    "fromPh": "Dhaka (DAC)",
+    "to": "To",
+    "toPh": "Kathmandu (KTM)",
+    "depart": "Departure",
+    "return": "Return (optional)",
+    "passengers": "Passengers",
+    "passengerOption": "{count, plural, one {{countText} person} other {{countText} people}}",
+    "passengerOptionMax": "{countText}+ people",
+    "class": "Class",
+    "economy": "Economy",
+    "premium": "Premium economy",
+    "business": "Business",
+    "name": "Your name",
+    "phone": "Mobile / WhatsApp",
+    "email": "Email (optional)",
+    "note": "Give us the route and dates and we will compare fares across airlines and send you the best price.",
+    "submit": "Request a quote",
+    "sentTitle": "Quote request sent",
+    "sentNote": "Your request has reached our ticketing team. During office hours ({open} AM – {close} PM) we usually reply with a fare within 30 minutes.",
+    "returnBeforeDepart": "The return date must be after the departure date."
+  },
+  "marquee": [
+    "NEPAL · কাঠমান্ডু",
+    "POKHARA · সারাংকোট",
+    "MUKTINATH · মুক্তিনাথ",
+    "THAILAND · ব্যাংকক",
+    "PATTAYA · কোহ লার্ন",
+    "PHI PHI · ফি ফি",
+    "KO LAN · কোহ লান",
+    "NAGARKOT · নাগরকোট",
+    "JOMSOM · জোমসম"
+  ],
+  "sections": {
+    "services": {
+      "heading": "Our services",
+      "lede": ""
+    },
+    "packages": {
+      "heading": "Tour packages",
+      "lede": ""
+    },
+    "departures": {
+      "heading": "Upcoming group departures",
+      "lede": ""
+    },
+    "whyUs": {
+      "heading": "Why Bhabaghure Holidays",
+      "lede": ""
+    },
+    "how": {
+      "heading": "How booking works",
+      "lede": ""
+    },
+    "reviews": {
+      "heading": "What travellers say",
+      "lede": ""
+    },
+    "faq": {
+      "heading": "Frequently asked questions",
+      "lede": ""
+    },
+    "gallery": {
+      "heading": "Stories from the road",
+      "lede": ""
+    },
+    "about": {
+      "heading": "About us",
+      "lede": ""
+    },
+    "blog": {
+      "heading": "News & travel guides",
+      "lede": ""
+    },
+    "contact": {
+      "heading": "Let us plan your next trip",
+      "lede": ""
+    }
+  },
+  "services": [
+    {
+      "title": "Domestic tours",
+      "subtitle": "",
+      "desc": "Sylhet, Cox's Bazar, Sundarbans, Bandarban, Rangamati, Kuakata"
+    },
+    {
+      "title": "International tours",
+      "subtitle": "",
+      "desc": "Nepal, Thailand, India, Maldives, Sri Lanka, Malaysia, Singapore, Dubai"
+    },
+    {
+      "title": "Airline ticketing",
+      "subtitle": "",
+      "desc": "Domestic and international flight booking"
+    },
+    {
+      "title": "Hotel reservations",
+      "subtitle": "",
+      "desc": "A nationwide hotel booking network"
+    },
+    {
+      "title": "Visa services",
+      "subtitle": "",
+      "desc": "Tourist and business visa processing"
+    },
+    {
+      "title": "Corporate travel",
+      "subtitle": "",
+      "desc": "Incentive tours and corporate group travel, with 24/7 support"
+    }
+  ],
+  "packages": {
+    "all": "All",
+    "durationNights": "{nightsText}N/{daysText}D",
+    "durationDays": "{days, plural, one {{daysText} Day} other {{daysText} Days}}",
+    "airIncluded": "✈ Air ticket included",
+    "landOnly": "Land package only",
+    "airAsk": "Ticket: ask us",
+    "groupTour": "Group tour",
+    "anySize": "Any group size",
+    "minPax": "Min {countText} pax",
+    "departure": "Departure",
+    "departureRegular": "regular departures",
+    "departureAnyDate": "any date",
+    "departureOnRequest": "dates on request",
+    "viewDetails": "View full details →",
+    "from": "From",
+    "book": "Book now",
+    "slabCaption": "per person · {paxText}-pax slab",
+    "photoCredit": "{credit}",
+    "empty": {
+      "kicker": "No results",
+      "title": "No ready-made package fits these filters",
+      "note": "Try another destination or budget. Or tell us where and when you want to go and we will build a package around your budget.",
+      "reset": "↺ Clear filters",
+      "cta": "Request a custom package"
+    }
+  },
+  "detail": {
+    "pricing": "Price by group size",
+    "slabNoteOne": "Standard rate · a single room adds {percent} at booking",
+    "slabNoteTwo": "Standard rate for two",
+    "slabNoteGroup": "Group slab for {paxText} — per-person discount applied",
+    "slabChip": "{pax, plural, one {{paxText} person} other {{paxText} people}}",
+    "slabChipPlus": "{paxText}+ people",
+    "travellers": "Travellers",
+    "perPerson": "Per person",
+    "groupTotal": "Group total",
+    "headNote": "for {pax, plural, one {{paxText} traveller} other {{paxText} travellers}} · total {total}",
+    "itinerary": "Day-by-day itinerary",
+    "day": "DAY",
+    "includes": "What is included",
+    "excludes": "Not included",
+    "askWhatsapp": "Ask on WhatsApp",
+    "whatsappMessage": "Hello, I would like more details about {title}.",
+    "foot": "Pick your group size above — the price updates instantly",
+    "photoCounter": "{current} / {total}",
+    "viewPhoto": "View photo {n}",
+    "placeholderPhoto": "Sample photo — real photos coming soon"
+  },
+  "departures": {
+    "seatsLeft": "{leftText} of {totalText} seats left",
+    "almostFull": "Almost full",
+    "guaranteed": "Guaranteed departure",
+    "book": "Book a seat"
+  },
+  "whyUs": {
+    "packages": "Tour packages",
+    "destinations": "Destination countries",
+    "reelViews": "Top reel views",
+    "bangla": "Bangla support",
+    "trust": [
+      {
+        "icon": "৳",
+        "title": "Transparent pricing",
+        "desc": "Exactly what is and is not included, written down before you pay. No hidden charges."
+      },
+      {
+        "icon": "◆",
+        "title": "Your own group leader",
+        "desc": "A Bangla-speaking operator with every group, reachable 24/7."
+      },
+      {
+        "icon": "✈",
+        "title": "Air ticket included",
+        "desc": "Flights from Dhaka, hotels and transfers booked together."
+      },
+      {
+        "icon": "⛨",
+        "title": "Secure payment",
+        "desc": "bKash, Nagad and SSLCommerz — your invoice arrives by email."
+      }
+    ]
+  },
+  "how": {
+    "step": "STEP {n}",
+    "items": [
+      {
+        "title": "Pick a package",
+        "desc": "Browse destinations and dates, then send us an inquiry."
+      },
+      {
+        "title": "Confirm your seat",
+        "desc": "Your invoice and confirmation arrive by email once payment clears."
+      },
+      {
+        "title": "Send your documents",
+        "desc": "Give us your passport and photo — we handle the visa and tickets."
+      },
+      {
+        "title": "Travel",
+        "desc": "A reminder and your full itinerary land 24 hours before departure."
+      }
+    ]
+  },
+  "faq": [
+    {
+      "q": "What does the package price include?",
+      "a": "Hotels, all transfers, the meals listed, and the sightseeing written into the package. Whether the air ticket is included is stated on each package card."
+    },
+    {
+      "q": "Do I need a visa for Nepal or Thailand?",
+      "a": "Nepal grants a visa on arrival to Bangladeshi passport holders. The Thailand visa fee is around BDT 6,000 and is not included in the package. We help with the whole process."
+    },
+    {
+      "q": "How do I pay?",
+      "a": "bKash, Nagad, SSLCommerz or bank transfer. Your invoice is emailed as soon as the payment clears."
+    },
+    {
+      "q": "How large are the groups?",
+      "a": "Usually 12 to 20 travellers. Mustang Adventure runs as a group departure; the other packages can be taken privately or as a family on any date."
+    },
+    {
+      "q": "What happens if I cancel?",
+      "a": "Cancel more than 21 days before departure and you are refunded everything except the non-refundable portion of the air ticket and hotels. The full policy comes with your invoice."
+    },
+    {
+      "q": "Can I travel alone?",
+      "a": "Yes. You can join a group departure on your own; a single room adds a {percent} supplement."
+    }
+  ],
+  "gallery": {
+    "views": "▶ {viewsText}K views",
+    "photo": "Photo",
+    "openOnFacebook": "Open on Facebook"
+  },
+  "about": {
+    "paras": [
+      "Bhabaghure Holidays Aviation is a travel agency and tour operator working out of Agargaon, Dhaka. Group tours to Nepal and Thailand, domestic packages, air tickets, hotel bookings and visa support — all in one place.",
+      "Every group travels with our own Bangla-speaking operator, present from departure to return. What is and is not included is written down before you pay — there are no hidden charges.",
+      "Civil Aviation registration no. {licence}. We accept bKash, Nagad and SSLCommerz, and email an invoice for every booking."
+    ],
+    "facts": {
+      "packages": "Tour packages",
+      "destinations": "Destination countries",
+      "licence": "Civil Aviation no.",
+      "hours": "Open every day"
+    },
+    "team": "Our team",
+    "idLabel": "ID"
+  },
+  "blog": {
+    "all": "All",
+    "readingTime": "{minutesText} min read",
+    "readMore": "Read the full post →",
+    "backToNews": "← All news & guides"
+  },
+  "newsletter": {
+    "title": "Get new packages and offers first",
+    "note": "Once a month — new departures, early-bird discounts and travel news you can use. Unsubscribe any time.",
+    "placeholder": "Your email",
+    "cta": "Subscribe",
+    "sent": "Thank you — you are on the list."
+  },
+  "contact": {
+    "phone": "Phone",
+    "email": "Email",
+    "hours": "Hours",
+    "hoursValue": "{open}:00 AM – {close}:00 PM daily",
+    "facebook": "Facebook",
+    "website": "Website",
+    "address": "Address",
+    "formTitle": "Send an inquiry",
+    "formTitleSub": "",
+    "name": "Name",
+    "phoneField": "Phone / WhatsApp",
+    "package": "Package",
+    "choosePackage": "Choose a package",
+    "packageOption": "{title} — {price}",
+    "travellers": "Travellers",
+    "submit": "Send inquiry",
+    "sent": "✓ Sent — we will call you shortly",
+    "paymentNote": "Secure payment via SSLCommerz after confirmation",
+    "notifications": "Notifications",
+    "notificationsNote": "Automated WhatsApp messages about bookings come only from this number."
+  },
+  "footer": {
+    "copyright": "© {year} Bhabaghure Holidays Aviation · Bangladesh",
+    "licence": "Civil Aviation registration no. {licence}",
+    "explore": "Explore",
+    "reach": "Get in touch"
+  },
+  "booking": {
+    "title": "Book online",
+    "subtitle": "Passport scan auto-fill · secure SSLCommerz payment",
+    "steps": [
+      "Package",
+      "Travellers",
+      "Review",
+      "Payment"
+    ],
+    "packageHeading": "Package and travel date",
+    "package": "Package",
+    "date": "Departure date",
+    "travellers": "Travellers",
+    "room": "Room",
+    "roomTwin": "Twin sharing",
+    "roomSingle": "Single (+{percent})",
+    "roomTriple": "Triple sharing",
+    "addonPerPerson": "{price} / person",
+    "addonPerBooking": "{price} / booking",
+    "travellersHeading": "Traveller details",
+    "travellersNote": "{pax, plural, one {{paxText} traveller} other {{paxText} travellers}} · upload a passport scan to fill these in",
+    "traveller": "Traveller {n}",
+    "statusMissing": "Details needed",
+    "statusFilled": "Filled in",
+    "upload": "Upload passport scan",
+    "uploadHint": "JPG, PNG or PDF, up to 5 MB",
+    "name": "Name (as on passport)",
+    "passport": "Passport number",
+    "dob": "Date of birth",
+    "expiry": "Passport expiry",
+    "datePh": "DD/MM/YYYY",
+    "phone": "Mobile · WhatsApp",
+    "email": "Email",
+    "expiryWarning": "This passport will have less than 6 months left on the travel date — it needs renewing.",
+    "reviewHeading": "Review your booking",
+    "lineBase": "{title} × {paxText}",
+    "lineSingle": "Single supplement (+{percent})",
+    "lineService": "Service charge and VAT ({percent})",
+    "total": "Total",
+    "travellersSummary": "Travellers",
+    "dateSummary": "Travel date",
+    "dateNotChosen": "Not chosen yet",
+    "payButton": "Pay {total} with SSLCommerz →",
+    "whatsappConfirm": "Ask on WhatsApp",
+    "whatsappMessage": "Hello, I would like to book: {title} · {paxText} travellers · {room} · travelling {date} · total {total}",
+    "secure": "Secure payment through SSLCommerz · card details are never stored on our servers",
+    "back": "← Back",
+    "next": "Next step →",
+    "fixErrors": "Fix the fields marked in red to continue.",
+    "scanConsent": "Passport scans are sent securely, stored encrypted and used only for this booking. A scan you don’t book with is deleted within 24 hours.",
+    "scan": {
+      "uploading": "Reading the passport…",
+      "read": "Filled in from the passport. Please check every field.",
+      "partial": "Filled in from the passport, but some characters could not be verified — check the fields marked below.",
+      "unavailable": "The passport could not be read automatically. Please type the details below.",
+      "error": "This file could not be used. Upload a JPG, PNG or PDF of up to 5 MB, or type the details below."
+    },
+    "scanConfirm": "Please confirm this against your passport.",
+    "scanConfirmed": "It’s correct",
+    "termsLinks": "I have read and agree to the <terms>booking terms</terms>, the <refund>cancellation and refund policy</refund> and the <privacy>privacy policy</privacy>.",
+    "termsRequired": "Please accept the terms to continue.",
+    "paymentHeading": "Payment",
+    "totalToPay": "Total to pay",
+    "methodHeading": "How would you like to pay?",
+    "methods": {
+      "bkash": "bKash",
+      "nagad": "Nagad",
+      "card": "Card",
+      "bank": "Internet banking"
+    },
+    "methodNote": "You will pay on the secure SSLCommerz page and can change the method there. SSLCommerz may add a convenience fee, shown before you pay.",
+    "paying": "Opening SSLCommerz…",
+    "whatsappHelp": "Hello, I have a question about booking {title}.",
+    "priceChanged": "The price changed while you were booking. The new total is {total}. Nothing has been charged.",
+    "refreshPrices": "Show the new price",
+    "seatsUnavailable": "{count, plural, =0 {This departure is now full.} one {Only {countText} seat is left on this departure.} other {Only {countText} seats are left on this departure.}} Choose fewer travellers or another date.",
+    "paymentUnavailable": "Online payment is not available right now. Please contact us to pay.",
+    "rateLimited": "Too many attempts. Please wait a minute and try again.",
+    "invalidBooking": "Some details were not accepted. Go back and check the travellers’ details.",
+    "bookingFailed": "Something went wrong. Please try again or contact us on WhatsApp.",
+    "createdButNotPaid": "Your booking {reference} is saved and nothing has been charged. <link>Open your booking</link> to try the payment again later.",
+    "lineOnlineCharge": "Online payment charge ({percent})",
+    "updatesNotice": "We’ll send booking updates to the lead traveller’s WhatsApp and email, and an SMS when WhatsApp can’t reach them.",
+    "updatesNoticeFrom": "We’ll send booking updates to the lead traveller’s WhatsApp and email, and an SMS when WhatsApp can’t reach them. Automated WhatsApp messages come only from our notifications number {number}."
+  },
+  "auth": {
+    "signInTitle": "Sign in to your account",
+    "signInSubtitle": "See your bookings, invoices and itineraries in one place.",
+    "registerTitle": "Create an account",
+    "registerSubtitle": "Once you have an account, your details carry over to every future booking.",
+    "tabSignIn": "Sign in",
+    "tabRegister": "Register",
+    "identifier": "Mobile or email",
+    "password": "Password",
+    "fullName": "Full name as on passport",
+    "fullNamePh": "e.g. Md Tanvir Hasan",
+    "mobile": "Mobile · WhatsApp",
+    "email": "Email",
+    "newPassword": "Password ({minText}+ characters)",
+    "signInCta": "Sign in",
+    "registerCta": "Create account",
+    "signedInTitle": "Welcome back",
+    "signedInNote": "Head to the portal to see your bookings and invoices.",
+    "registeredTitle": "Account created",
+    "registeredNote": "You can open your portal right away. Your bookings and invoices will appear there.",
+    "goPortal": "Open my portal →",
+    "legal": "By continuing you agree to our terms and privacy policy.",
+    "invalidCredentials": "That mobile/email and password do not match.",
+    "unavailable": "Signing in is not available right now — please try again shortly.",
+    "contactUs": "To open an account with this number, please contact us.",
+    "contactUsEmail": "To open an account with this email address, please contact us.",
+    "contactUsWhatsapp": "Message us on WhatsApp",
+    "contactUsMessage": "Hello, I would like to open an account on the Bhabaghure website."
+  },
+  "assistant": {
+    "title": "Bhabaghure assistant",
+    "subtitle": "Replies instantly",
+    "open": "Ask us",
+    "greeting": "Hello! Welcome to Bhabaghure Holidays. Which destination would you like to know about?",
+    "placeholder": "Type your question…",
+    "send": "Send",
+    "quickDestination": "{destination} packages",
+    "quickPrices": "Prices",
+    "quickVisa": "Do I need a visa?",
+    "quickBooking": "How do I book?",
+    "destinationPackages": "{count, plural, one {{countText} package} other {{countText} packages}} in {destination}: {list}.",
+    "packageLine": "{title} ({duration}, {price}{air})",
+    "withAir": ", air ticket included",
+    "noPackages": "We have no ready-made package for {destination} right now — tell us in the form below and we will build one for you.",
+    "prices": "Prices run from {min} to {max} per person, depending on the package.",
+    "discounts": " Current offers: {list}.",
+    "discountLine": "{percentText}% off {title}",
+    "howToBook": "Fill in the inquiry form below or message us on WhatsApp. Once you pay to confirm your seat, the invoice arrives by email.",
+    "fallback": "Thank you! Leave your number in the inquiry form below or call/WhatsApp {phone} — our team is available from {open} AM to {close} PM."
+  },
+  "floating": {
+    "backToTop": "Back to top",
+    "whatsapp": "Chat on WhatsApp"
+  },
+  "validation": {
+    "required": "Please fill in this field.",
+    "phone": "Enter a valid mobile number (e.g. 01XXXXXXXXX).",
+    "email": "Enter a valid email address.",
+    "identifier": "Enter your mobile number or email.",
+    "passport": "That passport number does not look right (e.g. BW0912345).",
+    "date": "Enter the date as DD/MM/YYYY.",
+    "dateFuture": "This date needs to be in the future.",
+    "datePast": "This date needs to be in the past.",
+    "minLength": "Use at least {minText} characters.",
+    "travellers": "Enter between 1 and {maxText} travellers.",
+    "confirmScan": "Please check this against your passport, then press “It’s correct” or fix it."
+  },
+  "errors": {
+    "sendFailed": "We could not send that — please try again shortly or call {phone}.",
+    "tooMany": "Too many attempts — please wait a moment and try again."
+  },
+  "portal": {
+    "tabs": {
+      "trips": "My trips",
+      "docs": "Documents",
+      "payments": "Payments",
+      "support": "Support",
+      "profile": "Profile"
+    },
+    "comingSoon": "The customer portal is on its way — your bookings, documents and payments will appear here soon."
+  },
+  "unsubscribe": {
+    "title": "Unsubscribe from the newsletter",
+    "checking": "Checking your link…",
+    "confirm": "Stop sending newsletters to {email}?",
+    "cta": "Unsubscribe",
+    "done": "Done — you will not receive our newsletter any more.",
+    "invalid": "This unsubscribe link is not valid. Use the link from our latest email, or contact us.",
+    "unavailable": "We could not reach our server. Please try again shortly.",
+    "contact": "Contact us on WhatsApp"
+  },
+  "bookingStatus": {
+    "title": "Your booking",
+    "checking": "Checking your booking…",
+    "noToken": "Open this page from the link in your booking confirmation. For your privacy, bookings can’t be opened by reference number alone.",
+    "notFound": "We could not find this booking. Use the link from your booking confirmation, or contact us.",
+    "unavailable": "We could not load your booking right now. Please try again in a moment.",
+    "headline": {
+      "paid": "Payment received — you’re booked!",
+      "checking": "Confirming your payment…",
+      "not-paid": "The payment didn’t go through",
+      "unpaid": "Your booking is saved",
+      "cancelled": "This booking is cancelled"
+    },
+    "note": {
+      "paid": "Thank you. Your booking is confirmed and your invoice is ready. We will be in touch before you travel.",
+      "checking": "SSLCommerz is confirming the payment. This usually takes a few seconds — please keep this page open.",
+      "not-paid": "No money has been taken for this attempt. Your booking is still saved: try again below or contact us.",
+      "unpaid": "Your booking is saved but not paid yet. Pay below to confirm it, or contact us.",
+      "cancelled": "Contact us if you have questions about this booking."
+    },
+    "package": "Package",
+    "travelDate": "Travel date",
+    "travellers": "Travellers",
+    "total": "Total",
+    "paid": "Paid",
+    "due": "Balance due",
+    "viewInvoice": "View invoice {number}",
+    "downloadPdf": "Download PDF",
+    "payNow": "Pay the balance: {amount}",
+    "payButton": "Pay with SSLCommerz →",
+    "retryFailed": "The payment could not be started. Please try again in a moment, or contact us.",
+    "privateLinkTitle": "Your private booking link",
+    "privateLinkNote": "Save this link to come back to your booking. Anyone with the link can see the booking, so don’t share it.",
+    "contactUs": "Contact us on WhatsApp",
+    "whatsappText": "Hello, I have a question about my booking {reference}.",
+    "payNowBreakdown": "Balance {balance} + online payment charge {charge} ({percent})",
+    "notificationsNote": "Automated WhatsApp messages about this booking come only from our notifications number {number}. Our main number is {main}."
+  },
+  "legal": {
+    "draftTitle": "Draft — pending review by the company’s lawyer",
+    "draftNote": "This page is a draft and is not final. Items marked [CLIENT TO CONFIRM] are still to be decided. Contact us with any questions before booking."
+  }
+}

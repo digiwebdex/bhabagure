@@ -1,0 +1,23 @@
+# Laravel scheduler for Bhabaghure (api/routes/console.php): payment reconciliation every 10 minutes, completing
+# finished trips daily, pruning unused passport scans hourly. Started every minute by bhabaghure-scheduler.timer.
+#
+# Install (as root, on the VPS):
+#   cp deploy/systemd/bhabaghure-scheduler.{service,timer} /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now bhabaghure-scheduler.timer      # once the API is deployed
+[Unit]
+Description=Bhabaghure scheduler (php artisan schedule:run)
+After=network-online.target mysql.service
+Wants=network-online.target
+# Nothing to run until the API is deployed.
+ConditionPathExists=/var/www/Bhabagure/api/artisan
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/Bhabagure/api
+ExecStart=/usr/bin/php /var/www/Bhabagure/api/artisan schedule:run --no-interaction
+# A shared box: lower priority than the other sites, and never more than a few minutes per run.
+Nice=10
+TimeoutStartSec=15min

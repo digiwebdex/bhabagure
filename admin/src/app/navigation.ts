@@ -1,0 +1,36 @@
+/**
+ * Phase 2 admin: the Website group only. Phase 5 adds sales, finance, operations and people groups.
+ * `permissions`: any one of them grants access (api/routes/api.php uses the same rules).
+ */
+export type NavItem = { key: string; path: string; icon: string; permissions: string[] }
+
+export const NAV_GROUPS: { key: string; items: NavItem[] }[] = [
+  {
+    key: 'sales',
+    items: [
+      { key: 'bookings', path: '/bookings', icon: 'B', permissions: ['bookings.view_all', 'bookings.view_own'] },
+      { key: 'notifications', path: '/notifications', icon: 'N', permissions: ['notifications.manage'] },
+    ],
+  },
+  {
+    key: 'catalogue',
+    items: [
+      { key: 'packages', path: '/packages', icon: 'P', permissions: ['packages.manage'] },
+      { key: 'pricing', path: '/pricing', icon: '%', permissions: ['pricing.manage'] },
+    ],
+  },
+  {
+    key: 'website',
+    items: [
+      { key: 'posts', path: '/posts', icon: 'B', permissions: ['cms.manage'] },
+      { key: 'team', path: '/team', icon: 'T', permissions: ['cms.manage'] },
+      { key: 'reviews', path: '/reviews', icon: 'R', permissions: ['cms.manage'] },
+      { key: 'gallery', path: '/gallery', icon: 'G', permissions: ['cms.manage'] },
+      { key: 'media', path: '/media', icon: 'M', permissions: ['packages.manage', 'cms.manage'] },
+      { key: 'settings', path: '/settings', icon: 'S', permissions: ['cms.manage'] },
+    ],
+  },
+]
+
+export const firstAllowedPath = (can: (...permissions: string[]) => boolean): string | null =>
+  NAV_GROUPS.flatMap((group) => group.items).find((item) => can(...item.permissions))?.path ?? null
