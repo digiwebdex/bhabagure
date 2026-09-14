@@ -152,6 +152,31 @@ export async function portalCall<T>(path: string, locale: string, init: RequestI
   return { ok: false, reason: 'failed', ...detail };
 }
 
+/**
+ * Opens a private file (the customer's own document upload) in a new tab. It needs the session's token, so it is
+ * fetched here and shown from memory; nothing is cached (the API answers no-store).
+ */
+export async function openPortalFile(path: string, locale: string): Promise<boolean> {
+  if (!base()) return false;
+  // Opened before the request so the browser treats it as the user's click, not a pop-up.
+  const tab = window.open('', '_blank');
+  const fetchWith = (token: string | null) =>
+    fetch(`${base()}/api/v1/${path}`, { headers: { 'X-Locale': locale, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+  try {
+    let res = await fetchWith(useCustomerSession.getState().accessToken);
+    if (res.status === 401 && (await restoreSession(locale))) res = await fetchWith(useCustomerSession.getState().accessToken);
+    if (!res.ok) throw new Error(String(res.status));
+    const url = URL.createObjectURL(await res.blob());
+    if (tab) tab.location.href = url;
+    else window.location.assign(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return true;
+  } catch {
+    tab?.close();
+    return false;
+  }
+}
+
 function establish(body: TokenBody) {
   writeHint(true);
   useCustomerSession.getState().establish(body.access_token, body.customer);

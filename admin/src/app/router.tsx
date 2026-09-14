@@ -26,6 +26,7 @@ const ChangePasswordPage = page(() => import('../features/auth/ChangePasswordPag
 const CustomerProfilePage = page(() => import('../features/customers/CustomerProfilePage'), 'CustomerProfilePage')
 const CustomersPage = page(() => import('../features/customers/CustomersPage'), 'CustomersPage')
 const DashboardPage = page(() => import('../features/dashboard/DashboardPage'), 'DashboardPage')
+const DocumentsPage = page(() => import('../features/documents/DocumentsPage'), 'DocumentsPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
@@ -40,6 +41,8 @@ const QuotationsPage = page(() => import('../features/quotations/QuotationsPage'
 const ProfilePage = page(() => import('../features/profile/ProfilePage'), 'ProfilePage')
 const ReviewsPage = page(() => import('../features/cms/reviews/ReviewsPage'), 'ReviewsPage')
 const SettingsPage = page(() => import('../features/cms/settings/SettingsPage'), 'SettingsPage')
+const SupportPage = page(() => import('../features/support/SupportPage'), 'SupportPage')
+const SupportTicketPage = page(() => import('../features/support/SupportTicketPage'), 'SupportTicketPage')
 const TeamPage = page(() => import('../features/cms/team/TeamPage'), 'TeamPage')
 
 const packages = ['packages.manage']
@@ -74,6 +77,9 @@ export const router = createBrowserRouter([
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'air-ticketing', element: <Require permissions={['air_inquiries.view']}><AirTicketingPage /></Require> },
+      { path: 'documents', element: <Require permissions={bookings}><DocumentsPage /></Require> },
+      { path: 'support', element: <Require permissions={['support.manage']}><SupportPage /></Require> },
+      { path: 'support/:id', element: <Require permissions={['support.manage']}><SupportTicketPage /></Require> },
       { path: 'payments', element: <Require permissions={['payments.view']}><PaymentsPage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },
       { path: 'profile', element: <ProfilePage /> },

@@ -193,14 +193,19 @@
       "air_inquiries_one": "{{n}} enquiry waiting over 24 hours — open the queue",
       "air_inquiries_other": "{{n}} enquiries waiting over 24 hours — open the queue",
       "quotations_one": "{{n}} quotation expiring within 48 hours — open the list",
-      "quotations_other": "{{n}} quotations expiring within 48 hours — open the list"
+      "quotations_other": "{{n}} quotations expiring within 48 hours — open the list",
+      "documents_one": "{{n}} document waiting for review — open the queue",
+      "documents_other": "{{n}} documents waiting for review — open the queue",
+      "support_one": "{{n}} ticket waiting over 24 hours — open the queue",
+      "support_other": "{{n}} tickets waiting over 24 hours — open the queue"
     },
     "groups": {
       "sales": "Sales",
       "catalogue": "Catalogue",
       "website": "Website",
       "finance": "Finance",
-      "services": "Services"
+      "services": "Services",
+      "communication": "Communication"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -217,7 +222,9 @@
       "notifications": "Notifications",
       "quotations": "Quotations",
       "payments": "Payments & invoices",
-      "air_ticketing": "Air ticketing"
+      "air_ticketing": "Air ticketing",
+      "documents": "Documents",
+      "support": "Support"
     }
   },
   "status": {
@@ -766,7 +773,8 @@
       "customer_payment": "Payment",
       "online_payment_charge": "online payment charge",
       "gateway_fee": "gateway fee"
-    }
+    },
+    "nps": "Rated {{score}}/10 after the trip"
   },
   "profile": {
     "title": "My profile",
@@ -1395,5 +1403,127 @@
     "remove": "Remove the receipt",
     "open": "Receipt",
     "openFailed": "The receipt could not be opened. Try again."
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Passport scans and photos from the customer portal — open each one, then verify or reject it",
+    "states": {
+      "uploaded": "Waiting",
+      "rejected": "Rejected",
+      "verified": "Verified"
+    },
+    "status": {
+      "missing": "Missing",
+      "uploaded": "To review",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "pending": "Pending",
+      "issued": "Issued",
+      "not_required": "Not needed"
+    },
+    "kinds": {
+      "passport_scan": "Passport scan",
+      "photo": "Photo",
+      "visa": "Visa",
+      "insurance": "Insurance"
+    },
+    "sources": {
+      "booking": "with the website booking",
+      "portal": "from the portal",
+      "staff": "by staff"
+    },
+    "queueNote": "Oldest first · the customer sees the result in the portal",
+    "traveller": "Traveller",
+    "booking": "Booking",
+    "open": "Open file",
+    "openNamed": "Open {{kind}} — {{name}}",
+    "openFailed": "The file could not be opened. Try again.",
+    "verify": "Verify",
+    "verifyNamed": "Verify {{kind}} — {{name}}",
+    "verified": "{{name}}’s document verified",
+    "reject": "Reject",
+    "rejectNamed": "Reject {{kind}} — {{name}}",
+    "rejectTitle": "Reject {{name}}’s upload",
+    "rejectNote": "The customer reads this reason in the portal and uploads again.",
+    "reason": "What needs to change",
+    "rejected": "Rejected — the customer will see why",
+    "alreadyReviewed": "Already reviewed",
+    "cannotReview": "Only someone who can edit this booking can review it",
+    "openBooking": "Open booking",
+    "setNamed": "Set {{kind}} — {{name}}",
+    "setTitle": "{{kind}} for {{name}}",
+    "note": "Note for the customer",
+    "noteHint": "For example “Nepal — visa on arrival” or “Green Delta, policy issued”",
+    "statusSaved": "Saved — the customer sees it in the portal",
+    "empty": "Nothing here",
+    "emptyNote": "Uploads from the customer portal and scans from website bookings appear here."
+  },
+  "support": {
+    "title": "Support",
+    "subtitle": "Requests from the customer portal — reply within 24 hours; replies go by WhatsApp and email",
+    "states": {
+      "open": "Waiting for us",
+      "answered": "Answered",
+      "closed": "Closed",
+      "all": "All"
+    },
+    "status": {
+      "open": "Waiting",
+      "answered": "Answered",
+      "closed": "Closed"
+    },
+    "overdue": "Over 24 hours",
+    "waiting": "Waiting {{age}}",
+    "waitingFilter": "Waiting",
+    "anyAge": "Any age",
+    "over24h": "Over 24 hours",
+    "queueNote": "Oldest waiting first · flagged after 24 hours",
+    "search": "Search by number, subject, name or phone",
+    "subject": "Request",
+    "customer": "Customer",
+    "tripOwner": "Trip owner",
+    "messages_one": "{{n}} message",
+    "messages_other": "{{n}} messages",
+    "openTicket": "Open ticket",
+    "openCustomer": "Open customer",
+    "contactMessage": "Hello {{name}}, about your request {{number}} — Bhabaghure Holidays",
+    "empty": "No tickets here",
+    "emptyNote": "Requests customers send from the portal appear here.",
+    "back": "Support",
+    "close": "Close ticket",
+    "closed": "Ticket closed",
+    "staff": "Staff",
+    "reply": "Reply to the customer",
+    "replyHint": "{{n}} / 4000 · sent by WhatsApp and email, and shown in the portal",
+    "sendReply": "Send reply",
+    "replied": "Reply sent",
+    "opened": "Opened",
+    "lastCustomer": "Customer last wrote",
+    "lastReply": "Last reply"
+  },
+  "portal": {
+    "active": "Using the portal",
+    "notClaimed": "Not signed in yet",
+    "blocked": "Sign-in turned off",
+    "claimedAt": "First sign-in",
+    "lastLogin": "Last sign-in",
+    "events": {
+      "auth_customer_portal_claimed": "First sign-in",
+      "auth_customer_login": "Signed in",
+      "auth_customer_login_blocked": "Sign-in refused (turned off)",
+      "customer_portal_disabled": "Sign-in turned off",
+      "customer_portal_enabled": "Sign-in turned back on"
+    },
+    "invite": "Send portal invite",
+    "inviteTitle": "Invite to the customer portal",
+    "numberFromRecord": "The customer’s number on record. It can’t be changed here.",
+    "optedOut": "The customer turned WhatsApp messages off",
+    "block": "Turn sign-in off",
+    "blockTitle": "Turn portal sign-in off for {{name}}?",
+    "blockNote": "They are signed out everywhere at once and can’t sign in until it is turned back on. Nothing else about the customer changes.",
+    "blockedToast": "Portal sign-in turned off",
+    "unblock": "Turn sign-in back on",
+    "unblocked": "Portal sign-in turned back on",
+    "nps": "Ratings after trips"
   }
 }

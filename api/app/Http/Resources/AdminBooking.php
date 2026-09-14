@@ -143,6 +143,8 @@ final class AdminBooking
                 'toggle_whatsapp_opt_out' => $viewer->can('customers.manage'),
                 'claim' => $booking->assigned_staff_id === null && $booking->status === BookingStatus::Inquiry && $viewer->can('bookings.update'),
                 'assign' => $viewer->can('records.assign'),
+                // Verify or reject portal uploads, and set visa and insurance (DocumentReviewController, same rule).
+                'review_documents' => $can('bookings.update'),
             ],
             // Inputs for @bhabaghure/pricing on the draft-invoice controls — the same the server recomputes with.
             'quote_inputs' => [

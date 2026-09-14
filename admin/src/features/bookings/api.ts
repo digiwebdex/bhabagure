@@ -4,6 +4,7 @@ import type { Addon, PricingConfig, RoomType } from '@bhabaghure/pricing'
 
 import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
+import type { DocumentSlot } from '../documents/api'
 import type { NotificationGroup } from '../notifications/api'
 
 /** api/app/Services/Booking/BookingFormOptions.php — what the staff booking form and the quotation editor price with. */
@@ -77,7 +78,11 @@ export type BookingDetail = BookingSummary & {
     email: string | null
     has_scan: boolean
     ocr_filled: boolean
+    /** Portal documents (docs/phase-6-customer-portal.md §3.3): passport scan, photo, visa, insurance. */
+    documents: DocumentSlot[]
   }[]
+  /** The customer's rating after the trip, from the portal. */
+  nps: { score: number; comment: string | null; created_at: string } | null
   invoices: {
     id: number
     invoice_number: string | null
@@ -119,7 +124,7 @@ export type BookingDetail = BookingSummary & {
     created_at: string
     settled_at: string | null
   }[]
-  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign', boolean>
+  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents', boolean>
   quote_inputs: { list_price: number; addons: Addon[]; config: PricingConfig }
   payment_methods: string[]
   vat_rates: number[]

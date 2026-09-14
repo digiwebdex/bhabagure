@@ -14,6 +14,9 @@ import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui
 import { ApiError, fetchDocument } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { sendBookingWhatsApp, setCustomerOptOut } from '../notifications/api'
+import { useReviewDocument, useSetIssuedStatus, type DocumentSlot, type IssuedKind, type IssuedStatus } from '../documents/api'
+import { RejectDocumentDialog } from '../documents/DocumentReview'
+import { useOpenDocument } from '../documents/useOpenDocument'
 import { ChannelGroups } from '../notifications/MessageList'
 import { bookingActions, useBooking, useBookingAction, type BookingDetail } from './api'
 import { BookingStatusBadge, PaymentBadge } from './badges'
@@ -503,9 +506,104 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
   )
 }
 
+/**
+ * A traveller's portal documents (docs/phase-6-customer-portal.md §3.3): uploads to open, verify or reject; visa and
+ * insurance statuses to set. The same rows the Documents queue lists.
+ */
+function TravellerDocuments({ booking, traveller }: { booking: BookingDetail; traveller: BookingDetail['travellers'][number] }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const open = useOpenDocument()
+  const review = useReviewDocument()
+  const setIssued = useSetIssuedStatus(booking.id)
+  const [rejecting, setRejecting] = useState<number | null>(null)
+  const [editing, setEditing] = useState<{ kind: IssuedKind; status: IssuedStatus; note: string } | null>(null)
+  const may = booking.actions.review_documents
+  const tone = (status: DocumentSlot['status']) =>
+    status === 'verified' || status === 'issued' ? 'green' : status === 'rejected' ? 'red' : status === 'uploaded' ? 'blue' : status === 'missing' ? 'orange' : 'slate'
+
+  return (
+    <div className="flex flex-col gap-1.5" data-testid={`traveller-documents-${traveller.id}`}>
+      <div className="flex flex-wrap gap-1.5">
+        {traveller.documents.map((slot) => (
+          <span key={slot.kind} className="inline-flex items-center gap-1">
+            <Badge tone={tone(slot.status)}>
+              {t(`documents.kinds.${slot.kind}`)} · {t(`documents.status.${slot.status}`)}
+            </Badge>
+            {slot.hasFile && slot.id !== null ? (
+              <button type="button" className="cursor-pointer text-12 font-semibold text-blue" onClick={() => void open(slot.id!)} aria-label={t('documents.openNamed', { kind: t(`documents.kinds.${slot.kind}`), name: traveller.full_name })}>
+                ◉
+              </button>
+            ) : null}
+            {may && slot.status === 'uploaded' && slot.id !== null ? (
+              <>
+                <button
+                  type="button"
+                  className="cursor-pointer text-12 font-semibold text-green"
+                  disabled={review.isPending}
+                  aria-label={t('documents.verifyNamed', { kind: t(`documents.kinds.${slot.kind}`), name: traveller.full_name })}
+                  onClick={() => review.mutate({ id: slot.id!, decision: 'verified' }, { onSuccess: () => toast(t('documents.verified', { name: traveller.full_name })) })}
+                >
+                  ✓
+                </button>
+                <button type="button" className="cursor-pointer text-12 font-semibold text-red" onClick={() => setRejecting(slot.id)} aria-label={t('documents.rejectNamed', { kind: t(`documents.kinds.${slot.kind}`), name: traveller.full_name })}>
+                  ✕
+                </button>
+              </>
+            ) : null}
+            {may && (slot.kind === 'visa' || slot.kind === 'insurance') ? (
+              <button
+                type="button"
+                className="cursor-pointer text-12 text-app-muted"
+                aria-label={t('documents.setNamed', { kind: t(`documents.kinds.${slot.kind}`), name: traveller.full_name })}
+                onClick={() => setEditing({ kind: slot.kind as IssuedKind, status: slot.status === 'missing' ? 'pending' : (slot.status as IssuedStatus), note: slot.note ?? '' })}
+              >
+                ✎
+              </button>
+            ) : null}
+          </span>
+        ))}
+      </div>
+      {traveller.documents.filter((slot) => slot.status === 'rejected' && slot.note).map((slot) => (
+        <span key={slot.kind} className="text-12 text-red">
+          {t(`documents.kinds.${slot.kind}`)}: {slot.note}
+        </span>
+      ))}
+      <RejectDocumentDialog id={rejecting} name={traveller.full_name} onClose={() => setRejecting(null)} />
+      <Dialog open={editing !== null} onClose={() => setEditing(null)} title={editing ? t('documents.setTitle', { kind: t(`documents.kinds.${editing.kind}`), name: traveller.full_name }) : ''}>
+        {editing ? (
+          <>
+            <SelectInput
+              label={t('common.status')}
+              value={editing.status}
+              onChange={(status) => setEditing({ ...editing, status: status as IssuedStatus })}
+              options={(['pending', 'issued', 'not_required'] as const).map((value) => ({ value, label: t(`documents.status.${value}`) }))}
+            />
+            <TextInput label={t('documents.note')} hint={t('documents.noteHint')} value={editing.note} onChange={(note) => setEditing({ ...editing, note })} maxLength={300} />
+            {setIssued.error ? <ErrorNotice error={setIssued.error} /> : null}
+            <div className="flex justify-end gap-2">
+              <button type="button" className={buttonClass('outline')} onClick={() => setEditing(null)}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className={buttonClass('primary')}
+                disabled={setIssued.isPending}
+                onClick={() => setIssued.mutate({ travellerId: traveller.id, ...editing }, { onSuccess: () => { setEditing(null); toast(t('documents.statusSaved')) } })}
+              >
+                {t('common.save')}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </Dialog>
+    </div>
+  )
+}
+
 function TravellersCard({ booking }: { booking: BookingDetail }) {
   const { t } = useTranslation()
-  const { date, digits } = useFormat()
+  const { date, digits, number } = useFormat()
 
   return (
     <Card>
@@ -519,7 +617,7 @@ function TravellersCard({ booking }: { booking: BookingDetail }) {
       ) : null}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {booking.travellers.map((traveller) => (
-          <li key={traveller.id} className="flex flex-col gap-0.5 rounded-10 bg-app-surface-2 px-3 py-2 text-13">
+          <li key={traveller.id} className="flex flex-col gap-1.5 rounded-10 bg-app-surface-2 px-3 py-2 text-13">
             <span className="flex flex-wrap items-center gap-1.5 font-medium">
               {traveller.full_name}
               {traveller.is_lead ? <Badge tone="blue">{t('bookings.lead')}</Badge> : null}
@@ -529,9 +627,16 @@ function TravellersCard({ booking }: { booking: BookingDetail }) {
               {traveller.passport_number ?? '—'}
               {traveller.passport_expiry ? ` · ${t('bookings.expires', { date: date(traveller.passport_expiry) })}` : ''}
             </span>
+            <TravellerDocuments booking={booking} traveller={traveller} />
           </li>
         ))}
       </ul>
+      {booking.nps ? (
+        <p className="m-0 flex flex-wrap items-center gap-2 text-13" data-testid="booking-nps">
+          <Badge tone={booking.nps.score >= 9 ? 'green' : booking.nps.score >= 7 ? 'slate' : 'red'}>{t('bookings.nps', { score: number(booking.nps.score) })}</Badge>
+          {booking.nps.comment ? <span className="text-app-muted">“{booking.nps.comment}”</span> : null}
+        </p>
+      ) : null}
       {booking.terms_accepted_at ? <p className="m-0 text-12 text-app-muted">{t('bookings.termsAccepted', { date: date(booking.terms_accepted_at), version: booking.terms_version })}</p> : null}
     </Card>
   )

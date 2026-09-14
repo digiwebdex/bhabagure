@@ -205,6 +205,11 @@ export function sendBookingWhatsApp(body: { booking_id: number; text: string; at
   return api.post<Data<NotificationMessage>>('admin/notifications/whatsapp', body)
 }
 
+/** A staff message to a customer from their profile (the portal invite): the number comes from the record. */
+export function sendCustomerWhatsApp(body: { customer_id: number; text: string }) {
+  return api.post<Data<NotificationMessage>>('admin/notifications/whatsapp', body)
+}
+
 export function setCustomerOptOut(customerId: number, optedOut: boolean) {
   return api.post<Data<{ customer_id: number; whatsapp_opted_out: boolean }>>(`admin/customers/${customerId}/whatsapp-opt-out`, { opted_out: optedOut })
 }

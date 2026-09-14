@@ -45,7 +45,28 @@ export type ContactEntry = {
   staff: { id: number; name: string } | null
 }
 
-export type CustomerDetail = CustomerRow & { address: string | null; notes: string | null; locale: 'bn' | 'en'; contacts: ContactEntry[]; bookings: BookingSummary[]; quotations: QuotationRow[] }
+/** The customer portal (docs/phase-6-customer-portal.md §3.7). */
+export type PortalStatus = {
+  claimed_at: string | null
+  last_login_at: string | null
+  disabled_at: string | null
+  phone_verified_at: string | null
+  sign_ins: { action: 'auth.customer.portal_claimed' | 'auth.customer.login' | 'auth.customer.login_blocked' | 'customer.portal_disabled' | 'customer.portal_enabled'; at: string; channel: string | null }[]
+  /** Localized to the customer's language, with the portal address: prefills the WhatsApp invite. */
+  invite_text: string
+  actions: { block: boolean }
+}
+
+export type CustomerDetail = CustomerRow & {
+  address: string | null
+  notes: string | null
+  locale: 'bn' | 'en'
+  contacts: ContactEntry[]
+  bookings: BookingSummary[]
+  quotations: QuotationRow[]
+  portal: PortalStatus
+  nps: { booking_reference: string; booking_id: number; score: number; comment: string | null; created_at: string }[]
+}
 
 export type BoardColumn = { count: number; cards: CustomerRow[] }
 export type Board = Record<'new' | 'contacted' | 'quoted' | 'converted', BoardColumn>
@@ -99,6 +120,7 @@ export const customerActions = {
   lost: (id: number) => (reason: string) => api.post<Data<CustomerDetail>>(`admin/customers/${id}/lost`, { reason }),
   reopen: (id: number) => () => api.delete<Data<CustomerDetail>>(`admin/customers/${id}/lost`),
   claim: (id: number) => api.post<Data<CustomerDetail>>(`admin/customers/${id}/claim`),
+  portalAccess: (id: number) => (enabled: boolean) => api.post<Data<CustomerDetail>>(`admin/customers/${id}/portal-access`, { enabled }),
 }
 
 export function useDeleteCustomer() {

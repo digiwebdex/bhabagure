@@ -12,7 +12,7 @@ import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import { useAuth } from '../../app/auth'
 import { BookingStatusBadge, PaymentBadge } from '../bookings/badges'
-import { setCustomerOptOut } from '../notifications/api'
+import { sendCustomerWhatsApp, setCustomerOptOut } from '../notifications/api'
 import { QuotationStatusBadge } from '../quotations/QuotationStatusBadge'
 import { CONTACT_CHANNELS, CONTACT_OUTCOMES, customerActions, useCustomer, useCustomerAction, type CustomerDetail } from './api'
 import { PassportChip, SourcePill } from './CustomersPage'
@@ -92,7 +92,10 @@ function Profile({ customer }: { customer: CustomerDetail }) {
           <QuotationsCard customer={customer} />
           <BookingsCard customer={customer} />
         </div>
-        <ContactLogCard customer={customer} />
+        <div className="flex flex-col gap-admin-gap">
+          <PortalCard customer={customer} />
+          <ContactLogCard customer={customer} />
+        </div>
       </div>
 
       <LostDialog customer={customer} open={lostOpen} onClose={() => setLostOpen(false)} />
@@ -142,6 +145,136 @@ function DetailsCard({ customer }: { customer: CustomerDetail }) {
       </form>
       <Switch label={t('notifications.customerWhatsApp')} hint={t('notifications.customerWhatsAppHint')} checked={!customer.whatsapp_opted_out} onChange={(on) => !optOut.isPending && optOut.mutate(!on)} />
     </Card>
+  )
+}
+
+/**
+ * The customer portal (docs/phase-6-customer-portal.md §3.7): claimed or not, recent sign-ins, turning sign-in off (which
+ * ends open sessions at once), a WhatsApp invite with the portal address, and NPS answers after trips.
+ */
+function PortalCard({ customer }: { customer: CustomerDetail }) {
+  const { t } = useTranslation()
+  const { dateTime, number } = useFormat()
+  const { can } = useAuth()
+  const toast = useToast()
+  const access = useCustomerAction(customerActions.portalAccess(customer.id))
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [confirmBlock, setConfirmBlock] = useState(false)
+  const { portal } = customer
+
+  return (
+    <Card>
+      <CardTitle
+        bn="কাস্টমার পোর্টাল"
+        en="Customer portal"
+        aside={<Badge tone={portal.disabled_at ? 'red' : portal.claimed_at ? 'green' : 'slate'}>{portal.disabled_at ? t('portal.blocked') : portal.claimed_at ? t('portal.active') : t('portal.notClaimed')}</Badge>}
+      />
+      <dl className="m-0 grid gap-1.5 text-13">
+        <div className="flex justify-between gap-3">
+          <dt className="text-app-muted">{t('portal.claimedAt')}</dt>
+          <dd className="m-0">{portal.claimed_at ? dateTime(portal.claimed_at) : '—'}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-app-muted">{t('portal.lastLogin')}</dt>
+          <dd className="m-0">{portal.last_login_at ? dateTime(portal.last_login_at) : '—'}</dd>
+        </div>
+      </dl>
+      {portal.sign_ins.length > 0 ? (
+        <ul className="m-0 flex list-none flex-col gap-1 p-0 text-12 text-app-muted" data-testid="portal-sign-ins">
+          {portal.sign_ins.map((entry, i) => (
+            <li key={i}>
+              {t(`portal.events.${entry.action.replace(/\./g, '_')}`)} · {dateTime(entry.at)}
+              {entry.channel ? ` · ${entry.channel.toUpperCase()}` : ''}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {access.error ? <ErrorNotice error={access.error} /> : null}
+      <div className="flex flex-wrap gap-2">
+        {can('notifications.send') && !portal.disabled_at ? (
+          <button type="button" className={buttonClass('outline', 'sm')} disabled={customer.whatsapp_opted_out} title={customer.whatsapp_opted_out ? t('portal.optedOut') : undefined} onClick={() => setInviteOpen(true)}>
+            {t('portal.invite')}
+          </button>
+        ) : null}
+        {portal.actions.block ? (
+          portal.disabled_at ? (
+            <button type="button" className={buttonClass('outline', 'sm')} disabled={access.isPending} onClick={() => access.mutate(true, { onSuccess: () => toast(t('portal.unblocked')) })}>
+              {t('portal.unblock')}
+            </button>
+          ) : (
+            <button type="button" className={buttonClass('danger', 'sm')} onClick={() => setConfirmBlock(true)}>
+              {t('portal.block')}
+            </button>
+          )
+        ) : null}
+      </div>
+
+      {customer.nps.length > 0 ? (
+        <div className="flex flex-col gap-1.5 border-t border-app-line pt-3" data-testid="customer-nps">
+          <span className="text-12 font-semibold text-app-muted">{t('portal.nps')}</span>
+          {customer.nps.map((answer) => (
+            <span key={answer.booking_id} className="flex flex-wrap items-center gap-2 text-13">
+              <Badge tone={answer.score >= 9 ? 'green' : answer.score >= 7 ? 'slate' : 'red'}>{number(answer.score)}/{number(10)}</Badge>
+              <Link to={`/bookings/${answer.booking_id}`} className="font-display">
+                {answer.booking_reference}
+              </Link>
+              {answer.comment ? <span className="text-app-muted">“{answer.comment}”</span> : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <Dialog open={confirmBlock} onClose={() => setConfirmBlock(false)} title={t('portal.blockTitle', { name: customer.name })}>
+        <p className="m-0 text-13 leading-1.6 text-app-muted">{t('portal.blockNote')}</p>
+        <div className="flex justify-end gap-2">
+          <button type="button" className={buttonClass('outline')} onClick={() => setConfirmBlock(false)}>
+            {t('common.cancel')}
+          </button>
+          <button type="button" className={buttonClass('danger')} disabled={access.isPending} onClick={() => access.mutate(false, { onSuccess: () => { setConfirmBlock(false); toast(t('portal.blockedToast')) } })}>
+            {t('portal.block')}
+          </button>
+        </div>
+      </Dialog>
+      {inviteOpen ? <InviteDialog customer={customer} onClose={() => setInviteOpen(false)} /> : null}
+    </Card>
+  )
+}
+
+function InviteDialog({ customer, onClose }: { customer: CustomerDetail; onClose: () => void }) {
+  const { t } = useTranslation()
+  const { digits, number } = useFormat()
+  const toast = useToast()
+  const client = useQueryClient()
+  const [text, setText] = useState(customer.portal.invite_text)
+  const send = useMutation({
+    mutationFn: () => sendCustomerWhatsApp({ customer_id: customer.id, text: text.trim() }),
+    onSuccess: (response) => {
+      void client.invalidateQueries({ queryKey: ['customer', customer.id] })
+      toast(t(response.data.status === 'pending' ? 'notifications.queued' : 'notifications.sent'))
+      onClose()
+    },
+  })
+
+  return (
+    <Dialog open onClose={onClose} title={t('portal.inviteTitle')}>
+      <div className="flex flex-col gap-0.5 rounded-10 bg-app-surface-2 px-3 py-2.5 text-13">
+        <span className="text-12 text-app-muted">{t('notifications.to')}</span>
+        <strong>
+          {customer.name} · <span className="font-display">{digits(customer.phone.replace(/^88/, ''))}</span>
+        </strong>
+        <span className="text-12 text-app-muted">{t('portal.numberFromRecord')}</span>
+      </div>
+      <TextArea label={t('notifications.message')} value={text} onChange={setText} rows={5} maxLength={1000} hint={`${number(text.length)} / ${number(1000)}`} />
+      {send.error ? <ErrorNotice error={send.error} /> : null}
+      <div className="flex justify-end gap-2">
+        <button type="button" className={buttonClass('outline')} onClick={onClose}>
+          {t('common.cancel')}
+        </button>
+        <button type="button" className={buttonClass('primary')} disabled={text.trim().length < 2 || send.isPending} onClick={() => send.mutate()}>
+          {t('notifications.send')}
+        </button>
+      </div>
+    </Dialog>
   )
 }
 

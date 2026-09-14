@@ -20,7 +20,15 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
   },
   {
     key: 'services',
-    items: [{ key: 'air_ticketing', path: '/air-ticketing', icon: 'A', permissions: ['air_inquiries.view'], badge: 'air_inquiries' }],
+    items: [
+      { key: 'air_ticketing', path: '/air-ticketing', icon: 'A', permissions: ['air_inquiries.view'], badge: 'air_inquiries' },
+      { key: 'documents', path: '/documents', icon: 'V', permissions: ['bookings.view_all', 'bookings.view_own'], badge: 'documents' },
+    ],
+  },
+  // Portal support tickets (docs/phase-6-customer-portal.md §3.5); the design's Communication group.
+  {
+    key: 'communication',
+    items: [{ key: 'support', path: '/support', icon: 'M', permissions: ['support.manage'], badge: 'support' }],
   },
   {
     key: 'finance',
