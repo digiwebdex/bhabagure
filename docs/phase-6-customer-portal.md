@@ -221,8 +221,10 @@ Two gaps from the first cut were closed rather than deferred:
   - Readiness waits on each traveller without an issued ticket.
 - **Visa on arrival.** A destination has a *Visa on arrival* switch (CMS → Packages → Destinations). On its bookings, a
   traveller's visa and insurance start as *not needed* instead of *pending*, so the checklist isn't blank on most
-  trips. Staff can still set either for one traveller. The seed turns it on for Nepal and Thailand; it is a
-  per-destination setting, to be corrected in the CMS wherever it doesn't hold for the travellers' passports.
+  trips. Staff can still set either for one traveller. The seed turns it on for Nepal only; it is a per-destination
+  setting, to be corrected in the CMS wherever it doesn't hold for the travellers' passports. (Thailand was on at first;
+  the client confirmed on 2026-09-15 that Bangladeshi passports need the Thai visa in advance, and a data migration,
+  `2026_09_15_150000_thailand_visa_in_advance`, turned it off with an audit entry.)
 - **Accepting a quotation books nothing:** its owner is alerted and converts it with the customer, as planned.
 - **Loyalty and referral stay deferred** (decision 4). The design's loyalty card isn't shown.
 - **Still a gap from Phase 5:** custom-trip and air quotations. The portal lists package quotations only.

@@ -25,6 +25,8 @@ class BookingTicketsTest extends TestCase
 
     private const WITHOUT_AIR = 'kathmandu-pokhara-tour-4-nights-5-days-without-air-ticket';
 
+    private const THAILAND = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -100,8 +102,9 @@ class BookingTicketsTest extends TestCase
     #[Test]
     public function visa_and_insurance_default_to_not_required_where_the_visa_is_given_on_arrival(): void
     {
+        // Nepal gives the visa on arrival; Thailand needs it in advance (the client, 2026-09-15).
         $this->assertTrue(Destination::query()->where('slug', 'nepal')->value('visa_on_arrival'));
-        $this->assertTrue(Destination::query()->where('slug', 'thailand')->value('visa_on_arrival'));
+        $this->assertFalse(Destination::query()->where('slug', 'thailand')->value('visa_on_arrival'));
         $booking = $this->book(self::WITHOUT_AIR, '01711-000001');
         $admin = $this->staff('admin');
         [$lead] = $booking->travellers->sortBy('sort_order')->values();
@@ -127,6 +130,28 @@ class BookingTicketsTest extends TestCase
         ])->assertOk()->assertJsonPath('data.visa_on_arrival', false);
         $this->assertSame(['visa' => 'pending', 'insurance' => 'pending'], $slots());
         $this->assertSame(['visa' => false, 'insurance' => false], $readiness());
+
+        // Thailand: the visa is applied for in advance, so it waits for staff from the start.
+        $thailand = $this->book(self::THAILAND, '01711-000002');
+        $this->actingAsApi($admin)->getJson("/api/v1/admin/bookings/{$thailand->id}")->assertOk()
+            ->assertJsonPath('data.visa_on_arrival', false)->assertJsonPath('data.travellers.0.documents.2.status', 'pending');
+    }
+
+    #[Test]
+    public function the_thailand_migration_turns_the_visa_on_arrival_off_once_and_audits_it(): void
+    {
+        $thailand = Destination::query()->where('slug', 'thailand')->firstOrFail();
+        $thailand->forceFill(['visa_on_arrival' => true])->save();
+        $migration = require database_path('migrations/2026_09_15_150000_thailand_visa_in_advance.php');
+
+        $migration->up();
+        $migration->up();
+
+        $this->assertFalse($thailand->fresh()->visa_on_arrival);
+        $this->assertTrue(Destination::query()->where('slug', 'nepal')->value('visa_on_arrival'));
+        $logs = AuditLog::query()->where('action', 'cms.destination.updated')->where('auditable_id', $thailand->id)->get();
+        $this->assertCount(1, $logs);
+        $this->assertEquals(['from' => true, 'to' => false], $logs->first()->changes['visa_on_arrival']);
     }
 
     /** A website booking for two, at whatever the package costs today. */

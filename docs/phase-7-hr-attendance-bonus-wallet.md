@@ -657,7 +657,7 @@ through the API (`role_name_en` / `role_name_bn`).
   own finalised months (`/profile/payslips`).
 - **Permissions:** `payroll.view` (Accountant) and `payroll.manage` (Admin), as §9.
 
-**Decisions made while building, open to veto:**
+**Decisions made while building, approved by the client on 2026-09-15:**
 - **No base salary, not on the payroll.** Someone employed in a month without a base salary (the proprietor, say) isn't
   in it. The draft lists them, the finalise dialog names them, and a month where nobody has a salary can't be finalised.
 - **Nobody handles their own pay.** Setting your own salary, adjusting your own pay or marking it paid is refused (403
