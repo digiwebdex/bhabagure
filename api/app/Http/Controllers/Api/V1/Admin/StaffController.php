@@ -12,6 +12,7 @@ use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\StaffInvitation;
 use App\Models\StaffProfile;
+use App\Services\Bonus\BonusDesk;
 use App\Services\Hr\HrRefused;
 use App\Services\Hr\StaffDirectory;
 use App\Services\Hr\StaffInvitations;
@@ -49,9 +50,12 @@ class StaffController extends Controller
         $ids = collect($page->items())->pluck('id')->all();
         $sales = self::closedSalesThisMonth($ids);
         $attention = $viewer->can('staff_documents.view') ? self::documentsNeedingAttention($ids) : null;
+        // The design's bonus column (§7), for those who see everyone's commission.
+        $bonuses = $viewer->can('bonus.manage') || $viewer->can('commission.view_all') ? BonusDesk::balancesFor($ids) : null;
 
         return response()->json([
-            'data' => collect($page->items())->map(fn (Staff $staff) => self::row($staff, $sales[$staff->id] ?? 0, $attention === null ? null : ($attention[$staff->id] ?? 0)))->all(),
+            'data' => collect($page->items())->map(fn (Staff $staff) => self::row($staff, $sales[$staff->id] ?? 0, $attention === null ? null : ($attention[$staff->id] ?? 0))
+                + ['bonus' => $bonuses === null ? null : ($bonuses[$staff->id] ?? 0.0)])->all(),
             'meta' => [
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
@@ -270,31 +274,31 @@ class StaffController extends Controller
 
         return self::row($staff, self::closedSalesThisMonth([$staff->id])[$staff->id] ?? 0,
             $canDocuments ? (self::documentsNeedingAttention([$staff->id])[$staff->id] ?? 0) : null) + [
-                    'locale' => $staff->locale,
-                    'profile' => [
-                        'designation' => $profile?->designation,
-                        'joined_on' => $profile?->joined_on?->toDateString(),
-                        'left_on' => $profile?->left_on?->toDateString(),
-                        'date_of_birth' => $profile?->date_of_birth?->toDateString(),
-                        'nid_number' => $profile?->nid_number,
-                        'address' => $profile?->address,
-                        'emergency_contact_name' => $profile?->emergency_contact_name,
-                        'emergency_contact_phone' => $profile?->emergency_contact_phone,
-                        'payout_method' => $profile?->payout_method,
-                        'payout_account' => $profile?->payout_account,
-                    ],
-                    'documents' => $documents?->map(fn (StaffDocument $document) => StaffDocumentController::row($document, $today))->values()->all(),
-                    'actions' => [
-                        'edit' => $may,
-                        'change_email' => $may && ($staff->status === StaffStatus::Invited || $viewer->isSuperAdmin()),
-                        'change_role' => $may && ! $mine,
-                        'suspend' => $may && ! $mine && $staff->status !== StaffStatus::Suspended,
-                        'reactivate' => $may && $staff->status === StaffStatus::Suspended,
-                        'reinvite' => $may && $staff->status === StaffStatus::Invited,
-                        'password_reset' => $may && ! $mine && $staff->status === StaffStatus::Active,
-                        'upload_documents' => $viewer->can('staff_documents.manage'),
-                    ],
-                ];
+                'locale' => $staff->locale,
+                'profile' => [
+                    'designation' => $profile?->designation,
+                    'joined_on' => $profile?->joined_on?->toDateString(),
+                    'left_on' => $profile?->left_on?->toDateString(),
+                    'date_of_birth' => $profile?->date_of_birth?->toDateString(),
+                    'nid_number' => $profile?->nid_number,
+                    'address' => $profile?->address,
+                    'emergency_contact_name' => $profile?->emergency_contact_name,
+                    'emergency_contact_phone' => $profile?->emergency_contact_phone,
+                    'payout_method' => $profile?->payout_method,
+                    'payout_account' => $profile?->payout_account,
+                ],
+                'documents' => $documents?->map(fn (StaffDocument $document) => StaffDocumentController::row($document, $today))->values()->all(),
+                'actions' => [
+                    'edit' => $may,
+                    'change_email' => $may && ($staff->status === StaffStatus::Invited || $viewer->isSuperAdmin()),
+                    'change_role' => $may && ! $mine,
+                    'suspend' => $may && ! $mine && $staff->status !== StaffStatus::Suspended,
+                    'reactivate' => $may && $staff->status === StaffStatus::Suspended,
+                    'reinvite' => $may && $staff->status === StaffStatus::Invited,
+                    'password_reset' => $may && ! $mine && $staff->status === StaffStatus::Active,
+                    'upload_documents' => $viewer->can('staff_documents.manage'),
+                ],
+            ];
     }
 
     /** @return array{url: string, email: string, expires_at: string} */

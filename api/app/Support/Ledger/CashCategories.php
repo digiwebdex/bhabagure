@@ -21,6 +21,7 @@ final class CashCategories
         'salaries' => ['out', Account::SALARIES],
         'utilities' => ['out', Account::UTILITIES],
         'marketing' => ['out', Account::MARKETING],
+        'staff_bonuses' => ['out', Account::STAFF_BONUSES],
         'other_expense' => ['out', Account::OTHER_EXPENSES],
         'owner_drawings' => ['out', Account::OWNER_DRAWINGS],
         // Corrects a money account against Opening balances — the only fix for a wrong opening balance.

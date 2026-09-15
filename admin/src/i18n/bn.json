@@ -249,7 +249,9 @@
       "staff_documents_one": "{{n}}টি স্টাফ ডকুমেন্টে মনোযোগ দরকার — ভল্ট খুলুন",
       "staff_documents_other": "{{n}}টি স্টাফ ডকুমেন্টে মনোযোগ দরকার — ভল্ট খুলুন",
       "leave_requests_one": "{{n}}টি ছুটির আবেদন অপেক্ষায় — তালিকা খুলুন",
-      "leave_requests_other": "{{n}}টি ছুটির আবেদন অপেক্ষায় — তালিকা খুলুন"
+      "leave_requests_other": "{{n}}টি ছুটির আবেদন অপেক্ষায় — তালিকা খুলুন",
+      "bonus_withdrawals_one": "{{n}}টি বোনাস উইথড্র অপেক্ষায় — স্টাফ স্ক্রিন খুলুন",
+      "bonus_withdrawals_other": "{{n}}টি বোনাস উইথড্র অপেক্ষায় — স্টাফ স্ক্রিন খুলুন"
     },
     "groups": {
       "sales": "বিক্রয়",
@@ -284,7 +286,8 @@
       "roles": "রোল ও পারমিশন",
       "attendance": "হাজিরা",
       "my_attendance": "আমার হাজিরা",
-      "payroll": "বেতন"
+      "payroll": "বেতন",
+      "my_commission": "আমার কমিশন"
     }
   },
   "status": {
@@ -1306,7 +1309,8 @@
       "marketing": "মার্কেটিং",
       "other_expense": "অন্যান্য খরচ",
       "owner_drawings": "মালিকের উত্তোলন",
-      "balance_adjustment": "ব্যালেন্স সমন্বয়"
+      "balance_adjustment": "ব্যালেন্স সমন্বয়",
+      "staff_bonuses": "স্টাফ বোনাস ও কমিশন"
     },
     "line": {
       "tours": "ট্যুর",
@@ -1654,7 +1658,8 @@
       "person": "স্টাফ",
       "role": "রোল",
       "sales": "এই মাসের বিক্রি",
-      "documents": "ডকুমেন্ট"
+      "documents": "ডকুমেন্ট",
+      "bonus": "বোনাস"
     },
     "documentsAttention_one": "{{n}}টিতে মনোযোগ দরকার",
     "documentsAttention_other": "{{n}}টিতে মনোযোগ দরকার",
@@ -2186,5 +2191,92 @@
     "paidOn": "{{date}} পরিশোধিত",
     "open": "খুলুন",
     "openNamed": "{{month}}-এর পে-স্লিপ খুলুন"
+  },
+  "bonus": {
+    "status": {
+      "pending": "অপেক্ষমাণ",
+      "approved": "অনুমোদিত",
+      "rejected": "প্রত্যাখ্যাত",
+      "cancelled": "বাতিল",
+      "paid": "পরিশোধিত"
+    },
+    "filters": {
+      "open": "অপেক্ষায়",
+      "paid": "পরিশোধিত",
+      "rejected": "প্রত্যাখ্যাত",
+      "cancelled": "বাতিল",
+      "all": "সব"
+    },
+    "kinds": {
+      "commission": "কমিশন",
+      "manual": "বোনাস",
+      "withdrawal": "উইথড্র",
+      "reversal": "রিভার্স"
+    },
+    "noneOpen": "কোনো উইথড্র অপেক্ষায় নেই।",
+    "none": "এখানে কিছু নেই।",
+    "requestedOn": "{{date}} অনুরোধ",
+    "decisionNote": "{{name}}: {{note}}",
+    "paidLine": "✓ {{date}} তারিখে {{name}} পরিশোধ করেছেন · বোনাস অ্যাকাউন্ট থেকে কাটা হয়েছে",
+    "approve": "অনুমোদন",
+    "reject": "প্রত্যাখ্যান",
+    "markPaid": "পরিশোধিত চিহ্নিত করুন",
+    "approveNamed": "{{name}}-এর উইথড্র অনুমোদন",
+    "rejectNamed": "{{name}}-এর উইথড্র প্রত্যাখ্যান",
+    "payNamed": "{{name}}-এর উইথড্র পরিশোধিত চিহ্নিত করুন",
+    "titles": {
+      "approve": "{{name}}-এর {{amount}} অনুমোদন",
+      "reject": "{{name}}-এর {{amount}} প্রত্যাখ্যান",
+      "pay": "{{name}}-কে পরিশোধ · {{amount}}"
+    },
+    "theirNote": "তাঁর নোট: {{note}}",
+    "rejectWhy": "কারণ (কর্মী দেখবেন)",
+    "noteOptional": "নোট (ঐচ্ছিক)",
+    "done": {
+      "approve": "{{name}}-এর উইথড্র অনুমোদিত",
+      "reject": "{{name}}-এর উইথড্র প্রত্যাখ্যাত",
+      "pay": "{{name}}-এর উইথড্র পরিশোধিত · ক্যাশ বুকে স্টাফ বোনাস খাতে"
+    },
+    "payNote": "এই রসিদসহ ক্যাশ বুকে স্টাফ বোনাস খাতে নগদ খরচ হিসেবে লেখা হবে, আর বোনাস অ্যাকাউন্ট থেকে কাটা হবে। ভুল হলে ক্যাশ বুকে রিভার্স করুন: টাকা অ্যাকাউন্টে ফিরে আসবে।",
+    "credit": "+ বোনাস জমা",
+    "creditTitle": "বোনাস জমা · {{name}}",
+    "creditReasonHint": "তাঁর লেজারে দেখানো হবে, যেমন “মুস্তাং গ্রুপ বোনাস”।",
+    "credited": "{{name}}-এর অ্যাকাউন্টে বোনাস জমা হয়েছে",
+    "balance": "ব্যালেন্স",
+    "held": "অনুরোধে আটকে আছে",
+    "available": "ব্যবহারযোগ্য",
+    "noEntries": "এখনো কোনো বোনাস এন্ট্রি নেই।",
+    "reversed": "রিভার্স করা",
+    "reverse": "রিভার্স",
+    "reverseNamed": "এন্ট্রি রিভার্স করুন: {{reason}}",
+    "reverseTitle": "{{amount}} রিভার্স",
+    "reverseNote": "আপনার কারণসহ উল্টো দিকে একটি এন্ট্রি যোগ হবে; মূল এন্ট্রি লেজারে থাকবে, রিভার্স চিহ্নসহ।",
+    "reversedToast": "এন্ট্রি রিভার্স হয়েছে",
+    "withdrawalNumber": "উইথড্র #{{id}}",
+    "withdrawalLine": "{{date}} উইথড্র অনুরোধ"
+  },
+  "myCommission": {
+    "title": "আমার কমিশন",
+    "subtitle": "আপনার বিক্রি, বোনাস অ্যাকাউন্ট ও উইথড্র",
+    "available": "তোলা যাবে",
+    "availableNote": "ব্যালেন্স {{balance}} · অনুরোধে আটকে {{held}}",
+    "salesThisMonth": "এই মাসে আপনার বিক্রি",
+    "salesLastMonth": "গত মাস",
+    "salesCount_one": "{{n}}টি নিশ্চিত বুকিং",
+    "salesCount_other": "{{n}}টি নিশ্চিত বুকিং",
+    "commissionThisMonth": "এই মাসের কমিশন",
+    "commissionTotal": "আপনার অ্যাকাউন্টে জমা · মোট {{amount}}",
+    "noWithdrawals": "এখনো কোনো উইথড্র অনুরোধ নেই।",
+    "paidOn": "✓ {{date}} পরিশোধিত",
+    "cancel": "অনুরোধ বাতিল",
+    "cancelConfirm": "{{amount}}-এর অনুরোধ বাতিল করবেন?",
+    "cancelled": "অনুরোধ বাতিল হয়েছে",
+    "formNote": "কমপক্ষে {{min}}, সর্বোচ্চ {{available}}। অ্যাডমিন অনুমোদনের পর পরিশোধ করবেন।",
+    "notEnough": "কমপক্ষে {{min}} ব্যবহারযোগ্য হলে অনুরোধ করা যাবে।",
+    "belowMin": "কমপক্ষে {{min}}",
+    "overAvailable": "সর্বোচ্চ {{available}}",
+    "note": "নোট (ঐচ্ছিক)",
+    "send": "অনুরোধ পাঠান",
+    "requested": "উইথড্র অনুরোধ পাঠানো হয়েছে"
   }
 }

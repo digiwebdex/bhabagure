@@ -25,6 +25,8 @@ export type StaffRow = {
   closed_sales_month: number
   /** Expired or expiring documents; null when the viewer can't see staff documents. */
   documents_attention: number | null
+  /** Bonus account balance; null when the viewer can't see everyone's commission. */
+  bonus: number | null
 }
 
 export type PayoutMethod = 'bank' | 'bkash' | 'nagad' | 'rocket' | 'cash'

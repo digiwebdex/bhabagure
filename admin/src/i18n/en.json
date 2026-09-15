@@ -249,7 +249,9 @@
       "staff_documents_one": "{{n}} staff document needs attention — open the vault",
       "staff_documents_other": "{{n}} staff documents need attention — open the vault",
       "leave_requests_one": "{{n}} leave request waiting — open the queue",
-      "leave_requests_other": "{{n}} leave requests waiting — open the queue"
+      "leave_requests_other": "{{n}} leave requests waiting — open the queue",
+      "bonus_withdrawals_one": "{{n}} bonus withdrawal waiting — open the staff screen",
+      "bonus_withdrawals_other": "{{n}} bonus withdrawals waiting — open the staff screen"
     },
     "groups": {
       "sales": "Sales",
@@ -284,7 +286,8 @@
       "roles": "Roles & permissions",
       "attendance": "Attendance",
       "my_attendance": "My attendance",
-      "payroll": "Salary"
+      "payroll": "Salary",
+      "my_commission": "My commission"
     }
   },
   "status": {
@@ -1306,7 +1309,8 @@
       "marketing": "Marketing",
       "other_expense": "Other expense",
       "owner_drawings": "Owner’s drawings",
-      "balance_adjustment": "Balance adjustment"
+      "balance_adjustment": "Balance adjustment",
+      "staff_bonuses": "Staff bonuses & commission"
     },
     "line": {
       "tours": "Tours",
@@ -1654,7 +1658,8 @@
       "person": "Staff member",
       "role": "Role",
       "sales": "Sales this month",
-      "documents": "Documents"
+      "documents": "Documents",
+      "bonus": "Bonus"
     },
     "documentsAttention_one": "{{n}} needs attention",
     "documentsAttention_other": "{{n}} need attention",
@@ -2186,5 +2191,92 @@
     "paidOn": "Paid {{date}}",
     "open": "Open",
     "openNamed": "Open the payslip for {{month}}"
+  },
+  "bonus": {
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled",
+      "paid": "Paid"
+    },
+    "filters": {
+      "open": "Waiting",
+      "paid": "Paid",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled",
+      "all": "All"
+    },
+    "kinds": {
+      "commission": "Commission",
+      "manual": "Bonus",
+      "withdrawal": "Withdrawal",
+      "reversal": "Reversal"
+    },
+    "noneOpen": "No withdrawal is waiting.",
+    "none": "Nothing here.",
+    "requestedOn": "Asked {{date}}",
+    "decisionNote": "{{name}}: {{note}}",
+    "paidLine": "✓ Paid {{date}} by {{name}} · taken from the bonus account",
+    "approve": "Approve",
+    "reject": "Reject",
+    "markPaid": "Mark paid",
+    "approveNamed": "Approve {{name}}’s withdrawal",
+    "rejectNamed": "Reject {{name}}’s withdrawal",
+    "payNamed": "Mark {{name}}’s withdrawal paid",
+    "titles": {
+      "approve": "Approve {{amount}} for {{name}}",
+      "reject": "Reject {{amount}} for {{name}}",
+      "pay": "Pay {{name}} · {{amount}}"
+    },
+    "theirNote": "Their note: {{note}}",
+    "rejectWhy": "Reason (they will see it)",
+    "noteOptional": "Note (optional)",
+    "done": {
+      "approve": "{{name}}’s withdrawal approved",
+      "reject": "{{name}}’s withdrawal rejected",
+      "pay": "{{name}}’s withdrawal paid · in the cash book under Staff bonuses"
+    },
+    "payNote": "Recorded in the cash book as a cash-out under Staff bonuses, with this receipt, and taken from the bonus account. If it was a mistake, reverse it in the cash book: the money goes back into the account.",
+    "credit": "+ Credit bonus",
+    "creditTitle": "Credit a bonus · {{name}}",
+    "creditReasonHint": "Shown in their ledger, for example “Mustang group bonus”.",
+    "credited": "Bonus credited to {{name}}",
+    "balance": "Balance",
+    "held": "Held by requests",
+    "available": "Available",
+    "noEntries": "No bonus entries yet.",
+    "reversed": "reversed",
+    "reverse": "Reverse",
+    "reverseNamed": "Reverse the entry: {{reason}}",
+    "reverseTitle": "Reverse {{amount}}",
+    "reverseNote": "An entry the other way is added with your reason; the original stays in the ledger, marked reversed.",
+    "reversedToast": "Entry reversed",
+    "withdrawalNumber": "Withdrawal #{{id}}",
+    "withdrawalLine": "Withdrawal asked {{date}}"
+  },
+  "myCommission": {
+    "title": "My commission",
+    "subtitle": "Your sales, your bonus account and your withdrawals",
+    "available": "Available to withdraw",
+    "availableNote": "Balance {{balance}} · held by requests {{held}}",
+    "salesThisMonth": "Your sales this month",
+    "salesLastMonth": "Last month",
+    "salesCount_one": "{{n}} confirmed booking",
+    "salesCount_other": "{{n}} confirmed bookings",
+    "commissionThisMonth": "Commission this month",
+    "commissionTotal": "Credited to your account · {{amount}} in all",
+    "noWithdrawals": "No withdrawal requests yet.",
+    "paidOn": "✓ Paid {{date}}",
+    "cancel": "Cancel request",
+    "cancelConfirm": "Cancel your request for {{amount}}?",
+    "cancelled": "Request cancelled",
+    "formNote": "At least {{min}}, up to {{available}}. An admin approves it, then pays it.",
+    "notEnough": "You can ask once at least {{min}} is available.",
+    "belowMin": "At least {{min}}",
+    "overAvailable": "Up to {{available}}",
+    "note": "Note (optional)",
+    "send": "Send request",
+    "requested": "Withdrawal requested"
   }
 }

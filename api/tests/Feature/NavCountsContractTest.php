@@ -15,6 +15,7 @@ use App\Models\SupportTicket;
 use App\Models\TravellerDocument;
 use App\Services\Admin\Ownership;
 use App\Services\Attendance\LeaveDesk;
+use App\Services\Bonus\BonusDesk;
 use App\Support\Admin\NavBadges;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -93,9 +94,18 @@ class NavCountsContractTest extends TestCase
         $pendingLeave = app(LeaveDesk::class)->file($this->staff['agent_a'], '2026-12-01', '2026-12-02', 'Family visit', $this->staff['agent_a']);
         app(LeaveDesk::class)->approve(app(LeaveDesk::class)->file($this->staff['agent_b'], '2026-12-07', '2026-12-07', 'Doctor', $this->staff['agent_b']), true, null, $this->staff['admin']);
 
+        // Bonus withdrawals: A's pending and B's approved are waiting; B's cancelled one isn't.
+        $bonus = app(BonusDesk::class);
+        foreach (['agent_a', 'agent_b'] as $agent) {
+            $bonus->credit($this->staff[$agent], 5000, 'Commission', $this->staff['super_admin']);
+        }
+        $pendingBonus = $bonus->request($this->staff['agent_a'], 1000, null);
+        $approvedBonus = $bonus->approve($bonus->request($this->staff['agent_b'], 1500, null), null, $this->staff['admin']);
+        $bonus->cancel($bonus->request($this->staff['agent_b'], 600, null), $this->staff['agent_b']);
+
         $this->assertContract([
-            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'staff_documents' => 2],
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'staff_documents' => 2],
+            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
             'accountant' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'support' => 1],
             'tour_operator' => ['bookings' => 4, 'documents' => 2, 'support' => 1],
             'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
@@ -107,7 +117,7 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/bookings/{$pool1->id}/claim")->assertOk();
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/air-inquiries/{$stalePool->id}/claim")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
             'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
             'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'support' => 1],
         ]);
@@ -121,8 +131,11 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['accountant'])->postJson("/api/v1/admin/support-tickets/{$overdueTicket->id}/replies", ['body' => 'The invoice now carries your company name.'])->assertOk();
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/staff-documents/{$expiredOfA->id}/archive", ['reason' => 'Renewed; the new passport is on file'])->assertOk();
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/leave-requests/{$pendingLeave->id}/approve", ['paid' => true])->assertOk();
+        // A's request is rejected; B's approved one stays waiting until it is paid.
+        $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bonus-withdrawals/{$pendingBonus->id}/reject", ['note' => 'Next month'])->assertOk();
+        $this->assertSame('approved', $approvedBonus->fresh()->status);
         $this->assertContract([
-            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'staff_documents' => 1],
+            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'staff_documents' => 1],
             'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'support' => 0],
             'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'support' => 0],
             'tour_operator' => ['bookings' => 3, 'documents' => 2, 'support' => 0],

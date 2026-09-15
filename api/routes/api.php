@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\AttendanceController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
 use App\Http\Controllers\Api\V1\Admin\BlogCategoryController;
 use App\Http\Controllers\Api\V1\Admin\BlogPostController;
+use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\BookingTicketController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\MyAttendanceController;
+use App\Http\Controllers\Api\V1\Admin\MyCommissionController;
 use App\Http\Controllers\Api\V1\Admin\MyRecordController;
 use App\Http\Controllers\Api\V1\Admin\NavCountController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
@@ -347,6 +349,24 @@ Route::prefix('v1')->group(function () {
         Route::controller(PayrollController::class)->group(function () {
             Route::get('profile/payslips', 'myPayslips');
             Route::get('profile/payslips/{id}', 'myPayslip')->whereNumber('id');
+        });
+
+        // Bonus accounts and withdrawals (docs/phase-7-hr-attendance-bonus-wallet.md §7). Changes also need bonus.manage
+        // (checked in the controller).
+        Route::middleware('permission:bonus.manage|commission.view_all,staff')->controller(BonusController::class)->group(function () {
+            Route::get('staff/{id}/bonus', 'ledger')->whereNumber('id');
+            Route::post('staff/{id}/bonus/credits', 'credit')->whereNumber('id');
+            Route::post('bonus-entries/{id}/reverse', 'reverse')->whereNumber('id');
+            Route::get('bonus-withdrawals', 'withdrawals');
+            Route::post('bonus-withdrawals/{id}/approve', 'approve')->whereNumber('id');
+            Route::post('bonus-withdrawals/{id}/reject', 'reject')->whereNumber('id');
+            Route::post('bonus-withdrawals/{id}/pay', 'pay')->whereNumber('id')->middleware('throttle:media-upload');
+        });
+        // My commission: the signed-in person's own figures and requests; no staff id to point elsewhere (Phase 5 §4.8).
+        Route::middleware('permission:commission.view_own|commission.view_all,staff')->controller(MyCommissionController::class)->group(function () {
+            Route::get('profile/commission', 'show');
+            Route::post('profile/commission/withdrawals', 'requestWithdrawal');
+            Route::post('profile/commission/withdrawals/{id}/cancel', 'cancelWithdrawal')->whereNumber('id');
         });
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).

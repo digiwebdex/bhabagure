@@ -1,6 +1,7 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): steps 1–3 built (§12); step 4 (bonus accounts) next.**
+**Status (2026-09-15): steps 1–3 built and live; step 4 built except commission auto-credit and the My commission layout
+check, both waiting for the re-synced design (§12). Step 5 (wallet) waits for its questions.**
 
 ## 0. Decisions (2026-09-15)
 
@@ -708,3 +709,61 @@ without `TEMP`, Chrome can't stream the PDF. `InvoicePdf` now passes both on Win
   - `cms.spec.ts` waits longer for the photo upload, which makes the WebP sizes, and for the first answer after the saved
     package's screen loads.
   - `new-booking.spec.ts` waits for the new booking's heading instead of reading the outgoing one.
+
+### Step 4 — bonus accounts and My commission (2026-09-15)
+
+**Waiting for the re-synced design, which still can't be read here:**
+- **Commission auto-credit** on booking confirmation, with its reversal on cancellation or reassignment. The rules are
+  only in that design. `bonus_transactions` already has the booking, the rule snapshot and the `commission` kind for it,
+  and My commission counts commission entries once they exist.
+- **My commission's layout.** The screen is built from Phase 5 §4.8 and this section in the admin's existing style, to be
+  checked against the design. So is "commission pending", which needs the rules.
+
+**The API** (`BonusDesk`, `BonusController`, `MyCommissionController`):
+- **Accounts:** `bonus_accounts`, one per staff member, opened the first time money moves. The balance is the sum of
+  `bonus_transactions` (append-only). An account row is locked while a credit, a reversal or a withdrawal is decided.
+- **Manual credit** by `bonus.manage`, with a reason. **Reversal** of a manual or commission entry adds an entry the other
+  way; each entry can be reversed once. A credit can't be reversed below what is still available, meaning money already
+  withdrawn or asked for.
+- **Withdrawals** (`bonus_withdrawals`, steps in `bonus_withdrawal_events`, append-only):
+  1. The staff member asks under My commission: at least ৳ 500, at most the available balance (balance less open
+     requests). They can cancel while it's pending.
+  2. `bonus.manage` approves it, or rejects it with a reason the owner sees. An approved request can still be rejected
+     until paid.
+  3. Mark paid, with method, date, reference and receipt. This writes the debit and records a cash-out under a new expense
+     account, **5240 Staff bonuses and commission** (cash category `staff_bonuses`).
+- **Reversing that cash-out** in the cash book puts the money back (a reversal credit) and returns the request to
+  approved, in the same transaction (`CashEntryReversed`, as for salaries).
+- **Nobody credits, reverses or decides their own bonus**, except the super admin (403 `own_bonus`).
+- **Permissions:**
+  - reading a person's ledger and the queue: `bonus.manage` or `commission.view_all`;
+  - every change: `bonus.manage`;
+  - My commission: `commission.view_own` or `commission.view_all`. Its routes take no staff id.
+- **Badge:** `bonus_withdrawals`, the open ones (pending or approved, not yet paid), on HR → Staff. It opens
+  `/staff?withdrawals=open`; the filter is named `withdrawals` because the Staff list already uses `status`.
+
+**The admin:**
+- **Staff & bonus:** a Bonus column in the list, and the design's Bonus withdrawals card below it: filters, Approve,
+  Reject with a reason, Mark paid with the receipt.
+- **A staff record:** the bonus account card, with balance, held and available, the ledger, credit and reverse.
+- **My commission** (`/my-commission`):
+  - available to withdraw, with balance and held;
+  - own confirmed sales this month and last month;
+  - commission this month and in all;
+  - the withdrawal form and their requests, with cancel;
+  - the ledger.
+
+**Tests:**
+- **API, `BonusAccountsTest`:**
+  - credit, reversal as an entry the other way, reversed once only, append-only enforced;
+  - the own-bonus rule, and the accountant reading without changing;
+  - request limits, approve, pay as a Staff bonuses cash-out with its receipt, events, and a reversed payout putting the
+    money back and paying again;
+  - cancel by the owner only while pending, rejection needing a reason, and no reversal of money already asked for;
+  - My commission shows only the signed-in person's sales and balance, while the company balance, cash book, payments,
+    payroll, another person's ledger and the queue answer 403 to a sales agent (Phase 5 §4.8).
+- **`NavCountsContractTest`** covers the new badge.
+- **Admin e2e, `bonus.spec.ts`:**
+  - a credit on the staff record, then a withdrawal asked for under My commission, with its limits;
+  - the badge opening the queue; approve, then pay with a receipt; the badge clearing; the cash book row; the staff
+    member seeing it paid.

@@ -34,6 +34,8 @@ final class LedgerTables
         'leave_request_events',
         // Base salaries by effective month (§6): a raise or a correction is a new row.
         'staff_salaries',
+        // The steps of each bonus withdrawal (§7); bonus_transactions is listed above.
+        'bonus_withdrawal_events',
     ];
 
     public static function contains(string $table): bool

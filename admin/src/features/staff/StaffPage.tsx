@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router'
 
+import { useAuth } from '../../app/auth'
 import { contactActions } from '../../components/table/contactActions'
 import { DataTable, type Column, type RowAction } from '../../components/table/DataTable'
 import { buttonClass } from '../../components/ui/button'
@@ -11,20 +12,26 @@ import { Pair, SelectInput, TextInput } from '../../components/ui/fields'
 import { Badge, Card, Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
+import { WITHDRAWAL_FILTERS } from '../bonus/api'
+import { WithdrawalsCard } from '../bonus/WithdrawalsCard'
 import { roleLabel, useCreateStaff, useStaffList, useStaffOptions, type Invitation, type NewStaff, type StaffDetail, type StaffFilters, type StaffListStatus, type StaffRow } from './api'
 import { InvitationDialog } from './InvitationDialog'
 
 const STATUSES: StaffListStatus[] = ['current', 'active', 'invited', 'suspended', 'all']
 
 /**
- * HR → Staff (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): everyone with an admin account, their role, sales closed
- * this month and documents needing attention. Adding someone invites them to set their own password.
+ * HR → Staff & bonus (docs/phase-7-hr-attendance-bonus-wallet.md §4.1, §7): everyone with an admin account, their role,
+ * sales closed this month, bonus balance and documents needing attention, and the bonus withdrawals queue. Adding someone
+ * invites them to set their own password.
  */
 export function StaffPage() {
   const { t } = useTranslation()
-  const { locale, dateTime, number } = useFormat()
+  const { locale, dateTime, number, bdt } = useFormat()
+  const { can } = useAuth()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
+  // The Staff badge opens ?withdrawals=open: the queue below starts on that filter.
+  const withdrawals = WITHDRAWAL_FILTERS.find((value) => value === params.get('withdrawals'))
   const filters: StaffFilters = {
     status: STATUSES.includes(params.get('status') as StaffListStatus) ? (params.get('status') as StaffListStatus) : 'current',
     search: params.get('search') ?? '',
@@ -87,6 +94,9 @@ export function StaffPage() {
     },
     { key: 'status', header: t('common.status'), cell: statusBadge },
     { key: 'sales', header: t('staff.columns.sales'), align: 'right', cell: (row) => <span className="font-display">{number(row.closed_sales_month)}</span> },
+    ...(list.data?.data.some((row) => row.bonus !== null)
+      ? [{ key: 'bonus', header: t('staff.columns.bonus'), align: 'right' as const, cell: (row: StaffRow) => <span className="font-display font-semibold">{row.bonus === null ? '—' : bdt(row.bonus)}</span> }]
+      : []),
     ...(list.data?.data.some((row) => row.documents_attention !== null)
       ? [
           {
@@ -147,6 +157,7 @@ export function StaffPage() {
           </div>
         ) : null}
       </Card>
+      {can('bonus.manage') || can('commission.view_all') ? <WithdrawalsCard key={withdrawals ?? 'open'} initial={withdrawals ?? 'open'} /> : null}
       {adding ? <AddStaffDialog onClose={() => setAdding(false)} onCreated={(staff, invitation) => { setAdding(false); setInvited({ staff, invitation }) }} /> : null}
       {invited ? <InvitationDialog name={invited.staff.name} email={invited.staff.email} phone={invited.staff.phone} invitation={invited.invitation} onClose={() => { setInvited(null); navigate(`/staff/${invited.staff.id}`) }} /> : null}
     </>

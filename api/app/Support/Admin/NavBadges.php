@@ -3,6 +3,7 @@
 namespace App\Support\Admin;
 
 use App\Enums\BookingStatus;
+use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
@@ -73,6 +74,13 @@ final class NavBadges
                 'path' => '/api/v1/admin/leave-requests',
                 'filter' => ['status' => LeaveRequest::PENDING],
                 'query' => fn (Staff $staff) => LeaveRequestController::filtered(['status' => LeaveRequest::PENDING]),
+            ],
+            // Bonus withdrawals waiting for someone: pending, or approved and not yet paid (Phase 7 §7). On the Staff item.
+            'bonus_withdrawals' => [
+                'permission' => ['bonus.manage'],
+                'path' => '/api/v1/admin/bonus-withdrawals',
+                'filter' => ['withdrawals' => 'open'],
+                'query' => fn (Staff $staff) => BonusController::filtered('open'),
             ],
             // Staff documents expired or expiring within 30 days, for staff who aren't suspended (Phase 7 §4.2).
             'staff_documents' => [

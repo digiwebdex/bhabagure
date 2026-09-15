@@ -36,6 +36,7 @@ use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\Transaction;
 use App\Models\TravellerDocument;
+use App\Services\Bonus\BonusDesk;
 use App\Services\Notifications\Sms\BulkSmsBdGateway;
 use App\Services\Notifications\Sms\DisabledSmsGateway;
 use App\Services\Notifications\Sms\FakeSmsGateway;
@@ -194,8 +195,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Bookings, payments and website forms → WhatsApp and email notifications (docs/phase-4-whatsapp.md).
         Event::subscribe(PlanNotifications::class);
-        // A reversed salary cash-out leaves that month's pay unpaid again, in the same transaction (docs/phase-7 §6).
+        // A reversed salary or bonus cash-out leaves that month's pay unpaid, or puts the bonus back, in the same
+        // transaction (docs/phase-7-hr-attendance-bonus-wallet.md §6, §7).
         Event::listen(CashEntryReversed::class, [PayrollDesk::class, 'onCashEntryReversed']);
+        Event::listen(CashEntryReversed::class, [BonusDesk::class, 'onCashEntryReversed']);
 
         // Super admin passes every check, independent of the permission matrix (docs/phase-1-schema.md §5).
         Gate::before(fn ($user) => $user instanceof Staff && $user->isSuperAdmin() ? true : null);

@@ -9,6 +9,7 @@ import { Pair, SelectInput, TextArea, TextInput } from '../../components/ui/fiel
 import { Badge, Card, CardTitle, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
+import { BonusLedgerCard } from '../bonus/BonusLedgerCard'
 import { SalaryHistory } from '../payroll/PayrollDialogs'
 import {
   documentName,
@@ -57,6 +58,7 @@ export function StaffProfilePage() {
               <SalaryHistory staffId={staff.id} />
             </Card>
           ) : null}
+          {can('bonus.manage') || can('commission.view_all') ? <BonusLedgerCard staffId={staff.id} name={staff.name} /> : null}
           {staff.documents !== null ? <DocumentsCard staff={staff} documents={staff.documents} /> : null}
         </div>
       </div>

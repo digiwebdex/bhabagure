@@ -51,6 +51,9 @@ class Account extends Model
 
     public const MARKETING = '5230';
 
+    /** Bonus withdrawals paid out to staff (docs/phase-7-hr-attendance-bonus-wallet.md §7). */
+    public const STAFF_BONUSES = '5240';
+
     public const OTHER_EXPENSES = '5290';
 
     /**
