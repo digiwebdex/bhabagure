@@ -219,7 +219,7 @@ All hosts are behind Cloudflare (**SSL mode Full (strict)**); every block sets t
 **Why our own PHP-FPM master.** The shared `php8.3-fpm` serves another site (travelagencyweb) from its single
 five-worker pool. A reload of that master cuts off that site's requests in flight, and sharing the pool lets either
 site starve the other. `bhabaghure-php.service` runs `php-fpm8.3` with `deploy/php-fpm/bhabaghure.conf`: six workers,
-75 s request limit, `MemoryMax=600M`, `CPUQuota=100%`, OPcache not watching files (new code lands at the deploy's
+75 s request limit, `MemoryMax=800M` and `TasksMax=256` (in-request PDF renders with Chrome; 64 tasks killed every render until 2026-09-15), `CPUQuota=100%`, OPcache not watching files (new code lands at the deploy's
 reload, not file by file during `git pull`). Deploys reload that master only; the shared one is never touched.
 
 **Why two website slots.** `next build` rewrites its output directory, and Next bakes the directory name into the
@@ -340,7 +340,9 @@ order, each run by a person on the server:
 3. **Basic auth.** Run it yourself, so the password never passes through anyone else's terminal:
    `printf 'owner:%s\n' "$(openssl passwd -apr1)" > /etc/nginx/bhabaghure-wallet/htpasswd`, then
    `chown root:www-data /etc/nginx/bhabaghure-wallet/htpasswd && chmod 0640 /etc/nginx/bhabaghure-wallet/htpasswd`.
-4. **nginx:** `deploy.sh --install-nginx` (`nginx -t` first; the previous file is restored if it fails).
+4. **nginx:** `deploy.sh --install-nginx`. It runs `nginx -t` with the new files, then reloads nginx (never restarts it);
+   the nginx file itself is already installed, so the reload is what makes the allow-list and basic auth take effect.
+   Before 2026-09-15 this mode skipped the reload when the file was unchanged.
 
 At the first wallet sign-in the page shows a QR code for an authenticator app; the first accepted code enrolls it. For a
 lost phone: `cd /var/www/Bhabagure/api && sudo -u www-data php artisan wallet:reset-authenticator <email>`, then sign in

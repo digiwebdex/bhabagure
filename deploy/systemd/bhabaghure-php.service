@@ -32,11 +32,14 @@ RestartSec=10
 TimeoutStopSec=40
 
 # Six workers at up to 256 MB each would be 1.5 GB; the cgroup cap stops that long before it reaches the other sites.
-MemoryHigh=450M
-MemoryMax=600M
+# Invoice, quotation, payslip and deal PDFs render in the request with headless Chrome (InvoicePdf): one render peaks at
+# 64 tasks (PHP, Node and Chrome's processes and threads, measured on this server) and about 200 MB. TasksMax=64 killed
+# every render with "Target crashed" (2026-09-15); 256 leaves room for three at once beside the workers.
+MemoryHigh=600M
+MemoryMax=800M
 MemorySwapMax=0
 CPUQuota=100%
-TasksMax=64
+TasksMax=256
 Nice=5
 OOMScoreAdjust=300
 

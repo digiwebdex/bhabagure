@@ -4,7 +4,8 @@
 #   /var/www/Bhabagure/deploy/deploy.sh                  ship origin/main: pull, install, build, migrate, reload
 #   /var/www/Bhabagure/deploy/deploy.sh --force          same, even when the server is already on origin/main
 #   /var/www/Bhabagure/deploy/deploy.sh --check          report pending commits and config drift; change nothing
-#   /var/www/Bhabagure/deploy/deploy.sh --install-nginx  install deploy/nginx/bhabaghure.conf (nginx -t; restored on failure)
+#   /var/www/Bhabagure/deploy/deploy.sh --install-nginx  install deploy/nginx/bhabaghure.conf (nginx -t; restored on failure),
+#                                                        or reload it after changing a file it includes (the wallet allow-list)
 #   /var/www/Bhabagure/deploy/deploy.sh --install-units  install changed bhabaghure-* systemd units
 #   /var/www/Bhabagure/deploy/deploy.sh --reload-config  after editing api/.env: re-cache config, reload our PHP-FPM,
 #                                                        restart our queue worker (no pull, no build)
@@ -77,7 +78,13 @@ install_nginx() {
   need_root
   say "Install $NGINX_DST"
   nginx -t -q 2>/dev/null || die "nginx -t fails BEFORE any change (another site's config?). Not touching nginx."
-  [[ -f $NGINX_DST ]] && cmp -s "$NGINX_SRC" "$NGINX_DST" && [[ -L $NGINX_LINK ]] && { note "already installed and identical."; return 0; }
+  if [[ -f $NGINX_DST ]] && cmp -s "$NGINX_SRC" "$NGINX_DST" && [[ -L $NGINX_LINK ]]; then
+    # Still reload: the files it includes may have changed (the wallet's allow-list and basic auth, docs/deployment.md §7.6).
+    # nginx -t passed just above, with those files.
+    systemctl reload nginx
+    note "already installed and identical; nginx -t passed and nginx was reloaded (not restarted) for the files it includes."
+    return 0
+  fi
 
   local backup="" had_link=0
   if [[ -f $NGINX_DST ]]; then
@@ -391,7 +398,7 @@ for arg in "$@"; do
     --install-nginx) ACTION=install-nginx ;;
     --install-units) ACTION=install-units ;;
     --reload-config) ACTION=reload-config ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
     *) die "unknown option $arg (see --help)" ;;
   esac
 done
