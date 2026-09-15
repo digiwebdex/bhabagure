@@ -1,8 +1,12 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): steps 1–4 built and live, except commission auto-credit and the My commission layout check, both
-waiting for the re-synced design. Step 5 (wallet) built; it opens once its database, allow-list and basic auth are in
-place on the server (§12, docs/deployment.md §7.6).**
+**Status (2026-09-15): steps 1–5 built and live. Waiting:
+- commission auto-credit and the My commission layout check, both needing the re-synced design's commission rules,
+  which still couldn't be read here;
+- the wallet, which opens once its allow-list and basic auth are in place on the server (§12, docs/deployment.md
+  §7.6). Its database exists.
+
+Operations: docs/handover.md.**
 
 ## 0. Decisions (2026-09-15)
 

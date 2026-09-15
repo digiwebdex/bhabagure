@@ -25,9 +25,8 @@ systemd units named `bhabaghure-*`.
 | MySQL | database `bhabaghure` (utf8mb4_unicode_ci), user `bhabaghure_user@127.0.0.1` with privileges on `bhabaghure.*` only; the password was generated on the server and exists only in `api/.env` | **created** 2026-09-14 |
 | Redis | the box's shared Redis 7.0 (localhost, 16 databases): **database 12 = queue, 13 = cache**, prefix `bhabaghure_`, client Predis | **reserved** — 0 and 3 hold other sites' keys; the worker refuses anything else |
 
-What the scheduler runs (`api/routes/console.php`): `payments:reconcile` (10 min), `bookings:complete-travelled`
-(02:30), `passport-scans:prune` (hourly), `notifications:dispatch` (every minute — scheduled trip messages, paced and
-retried sends) and `notifications:check-whatsapp` (5 min).
+What the scheduler runs is listed in `docs/handover.md` §4, with the rest of day-to-day operation: every setting,
+unit, rollback, backup and restore.
 
 ## 2. `api/.env` on the server
 
@@ -104,13 +103,15 @@ templates in the admin, or the log.
 
 **If the number is banned — runbook:**
 
-1. Set `WASENDER_MODE=off` and run `php artisan config:cache`. WhatsApp messages are recorded as "not sent"; emails
+1. Set `WASENDER_MODE=off` and run `deploy/deploy.sh --reload-config`. WhatsApp messages are recorded as "not sent"; emails
    carry on. (Left on, messages retry for about an hour and then show as failed.)
 2. Clear the notifications number in Site settings so the website and invoices stop publishing a dead number.
 3. Decide: a new warmed number on WaSender (steps 1–6 above, same day) or the Meta Cloud API (days to weeks for
    verification and template approval).
 4. Publish the new number in Site settings — the website, invoice footer, booking page and confirmation emails pick it
    up without a deploy.
+
+The full runbook, including how to tell a dropped session from a ban, is `docs/handover.md` §9.
 
 ## 4. Email (SendGrid)
 
