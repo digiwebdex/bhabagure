@@ -33,6 +33,7 @@ const CustomerProfilePage = page(() => import('../features/customers/CustomerPro
 const CustomersPage = page(() => import('../features/customers/CustomersPage'), 'CustomersPage')
 const DashboardPage = page(() => import('../features/dashboard/DashboardPage'), 'DashboardPage')
 const DocumentsPage = page(() => import('../features/documents/DocumentsPage'), 'DocumentsPage')
+const DownloadsPage = page(() => import('../features/downloads/DownloadsPage'), 'DownloadsPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
 const VisaServicesPage = page(() => import('../features/cms/visas/VisaServicesPage'), 'VisaServicesPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
       { path: 'quotations/:id', element: <Require permissions={quotations}><QuotationDetailPage /></Require> },
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
+      { path: 'downloads', element: <Require permissions={['downloads.view']}><DownloadsPage /></Require> },
       { path: 'air-ticketing', element: <Require permissions={['air_inquiries.view']}><AirTicketingPage /></Require> },
       { path: 'hotel-requests', element: <Require permissions={['hotel_inquiries.view']}><HotelRequestsPage /></Require> },
       { path: 'documents', element: <Require permissions={bookings}><DocumentsPage /></Require> },

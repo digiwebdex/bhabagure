@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { artisan } from '../../scripts/e2e-api.mjs'
 import { API_URL, FIRST_LOAD, password, PHOTO, signIn } from './helpers'
 
 test.describe('access', () => {
@@ -104,13 +105,18 @@ test.describe('packages', () => {
     await page.goto('/packages')
     await page.getByRole('link', { name: /NEPAL MUSTANG/ }).click()
 
-    await page.getByRole('button', { name: 'Unpublish' }).click()
-    await expect(page.getByText('Unpublished — hidden from the website.')).toBeVisible()
-    expect((await request.get(`${API_URL}/api/v1/public/packages/${slug}`)).status()).toBe(404)
+    try {
+      await page.getByRole('button', { name: 'Unpublish' }).click()
+      await expect(page.getByText('Unpublished — hidden from the website.')).toBeVisible()
+      expect((await request.get(`${API_URL}/api/v1/public/packages/${slug}`)).status()).toBe(404)
 
-    await page.getByRole('button', { name: 'Publish' }).click()
-    await expect(page.getByText('Published — live on the website.')).toBeVisible()
-    expect((await request.get(`${API_URL}/api/v1/public/packages/${slug}`)).status()).toBe(200)
+      await page.getByRole('button', { name: 'Publish' }).click()
+      await expect(page.getByText('Published — live on the website.')).toBeVisible()
+      expect((await request.get(`${API_URL}/api/v1/public/packages/${slug}`)).status()).toBe(200)
+    } finally {
+      // Every later spec books this package: a failure part-way must not leave it off the website.
+      artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${slug}')->update(['status' => 'published', 'published_at' => DB::raw('COALESCE(published_at, NOW())')]); echo 'ok';`)
+    }
   })
 
   test('leaving with unsaved changes asks first', async ({ page }) => {

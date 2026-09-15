@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DealController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
+use App\Http\Controllers\Api\V1\Admin\DownloadLogController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
@@ -48,6 +49,7 @@ use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffInvitationController;
 use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
 use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
+use App\Http\Controllers\Api\V1\Portal\DownloadController;
 use App\Http\Controllers\Api\V1\Portal\PortalDocumentController;
 use App\Http\Controllers\Api\V1\Portal\PortalPaymentController;
 use App\Http\Controllers\Api\V1\Portal\PortalProfileController;
@@ -101,6 +103,11 @@ Route::prefix('v1')->group(function () {
         Route::get('trips/{reference}', [PortalTripController::class, 'show']);
         Route::get('tickets/{ticketId}/file', [PortalTripController::class, 'ticketFile'])->whereNumber('ticketId');
         Route::get('payments', [PortalPaymentController::class, 'index']);
+        // Brochure and visa-requirements PDFs from the website, logged (Phase 8 §4.E).
+        Route::controller(DownloadController::class)->middleware('throttle:downloads')->group(function () {
+            Route::get('downloads/packages/{slug}', 'package');
+            Route::get('downloads/visas/{slug}', 'visa');
+        });
         Route::get('quotations', [PortalQuotationController::class, 'index']);
         Route::get('quotations/{number}', [PortalQuotationController::class, 'show']);
         Route::post('quotations/{number}/accept', [PortalQuotationController::class, 'accept']);
@@ -382,6 +389,9 @@ Route::prefix('v1')->group(function () {
         Route::get('search', SearchController::class)->middleware('throttle:public-read');
 
         // Customers & leads (§4.4). Per-action permissions and ownership are checked in the controller.
+        // Brochure and visa PDFs customers downloaded (Phase 8 §4.E).
+        Route::get('downloads', [DownloadLogController::class, 'index'])->middleware('permission:downloads.view,staff');
+
         Route::middleware('permission:customers.view,staff')->controller(CustomerController::class)->group(function () {
             Route::get('customers', 'index');
             Route::get('customers/board', 'board');

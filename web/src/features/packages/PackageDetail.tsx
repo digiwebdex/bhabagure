@@ -1,12 +1,13 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { defaultHotelCategory, packagePerPerson } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Stepper } from '@/components/ui/Stepper';
+import { DownloadButton } from '@/features/downloads/DownloadButton';
 import type { PackageView } from '@/lib/content/views';
 import { whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
@@ -226,15 +227,26 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
 export function PackageDetailActions({ pkg, onBeforeBook }: { pkg: PackageView; onBeforeBook?: () => void }) {
   const t = useTranslations('detail');
   const tp = useTranslations('packages');
+  const td = useTranslations('download');
+  const locale = useLocale();
   const { settings, pricing } = useSiteContent();
   const pax = useSiteUi((state) => state.detailPax);
   const detailCategory = useSiteUi((state) => state.detailCategory);
   const startBooking = useBooking((state) => state.start);
+  // The brochure highlights what is chosen here; the API picks basic/3-star when no category was picked.
+  const query = new URLSearchParams({ pax: String(pax), locale, ...(pkg.priceGrid && detailCategory ? { hotel_category: detailCategory } : {}) });
 
   return (
     <>
       <span className="text-13 text-muted">{t('foot')}</span>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap items-start gap-2.5">
+        <DownloadButton
+          path={`portal/downloads/packages/${pkg.slug}?${query}`}
+          filename={`bhabaghure-${pkg.slug}.pdf`}
+          label={td('brochure')}
+          className={buttonClass('outlineInk', 'lg', 'px-5')}
+          testId="download-brochure"
+        />
         <a
           href={whatsappUrl(settings.contact.whatsapp, t('whatsappMessage', { title: pkg.title }))}
           target="_blank"

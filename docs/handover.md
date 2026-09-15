@@ -20,6 +20,11 @@ Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pri
 - price by hotel category: a package's editor has a *Price by hotel category* table (basic/3-star, 4-star, 5-star × 1,
   2, 4, 6, 10 travellers). Filled in, customers pick the category then the group size; without it a package keeps its
   one price and the group discounts.
+- downloads: package brochures and visa requirements as PDFs, for customers signed in by phone code (so real sign-ins
+  need SMS or WhatsApp working). Every download is logged on Sales → Downloads, the Super Admin's screen unless the
+  Roles screen grants `downloads.view`: who, what, the category and travellers chosen, when, and whether a booking or
+  quotation is in progress. Made PDFs are kept in `api/storage/app/private/brochures`; each is made again the next day
+  or after the package or visa changes, and older copies are removed then.
 
 ---
 

@@ -1,11 +1,12 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { controlClass, Field } from '@/components/ui/Field';
+import { DownloadButton } from '@/features/downloads/DownloadButton';
 import { Link } from '@/i18n/navigation';
 import { visaPath, whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
@@ -15,6 +16,8 @@ import { searchCardClass } from './styles';
 /** The search panel's Visa tab: pick a country, see its visa types with price and processing time (Phase 8 §4.C). */
 export function VisaFinder() {
   const t = useTranslations('visa');
+  const td = useTranslations('download');
+  const locale = useLocale();
   const { visaCountries, settings } = useSiteContent();
   const f = useFormatters();
   const [key, setKey] = useState(visaCountries[0]?.key ?? '');
@@ -51,9 +54,17 @@ export function VisaFinder() {
               {visa.price === null ? null : <span className="ml-1 font-sans text-12 font-normal text-muted">{t('perPerson')}</span>}
             </span>
             {visa.processing ? <span className="text-13 text-muted">{t('processingIn', { time: visa.processing })}</span> : null}
-            <Link href={visaPath(visa.slug)} className="mt-1 self-start text-13 font-semibold">
-              {t('details')}
-            </Link>
+            <span className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <Link href={visaPath(visa.slug)} className="text-13 font-semibold">
+                {t('details')}
+              </Link>
+              <DownloadButton
+                path={`portal/downloads/visas/${visa.slug}?locale=${locale}`}
+                filename={`bhabaghure-visa-${visa.slug}.pdf`}
+                label={td('pdf')}
+                className="inline-flex cursor-pointer items-center gap-1 text-13 font-semibold text-blue hover:text-orange disabled:opacity-50"
+              />
+            </span>
           </li>
         ))}
       </ul>

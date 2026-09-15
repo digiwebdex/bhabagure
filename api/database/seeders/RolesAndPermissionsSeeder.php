@@ -58,6 +58,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'payroll.manage' => ['staff', 'বেতন নির্ধারণ, চূড়ান্ত ও পরিশোধ', 'Set salaries, finalise and pay payroll'],
         'cms.manage' => ['website', 'ওয়েবসাইট কনটেন্ট ব্যবস্থাপনা', 'Manage website content'],
         'reports.view' => ['reports', 'রিপোর্ট দেখা', 'View reports'],
+        // No role has it by default: the Super Admin sees downloads; grant it on the Roles screen (Phase 8 §4.E).
+        'downloads.view' => ['reports', 'ওয়েবসাইট থেকে ডাউনলোডের তালিকা দেখা', 'View website downloads'],
         'reports.export' => ['reports', 'রিপোর্ট এক্সপোর্ট', 'Export reports'],
         'reports.profit_loss' => ['reports', 'লাভ-ক্ষতি দেখা', 'View profit and loss'],
         'notifications.send' => ['communication', 'গ্রাহককে WhatsApp বার্তা পাঠানো', 'Send WhatsApp messages to customers'],

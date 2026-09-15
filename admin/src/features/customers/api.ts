@@ -68,6 +68,8 @@ export type CustomerDetail = CustomerRow & {
   nps: { booking_reference: string; booking_id: number; score: number; comment: string | null; created_at: string }[]
   /** What the website's contact and air-ticket forms sent, newest first. */
   enquiries: CustomerEnquiry[]
+  /** Brochures and visa requirements they downloaded from the website, newest first (Phase 8 §4.E). */
+  downloads: { id: number; kind: 'package' | 'visa'; title: string; hotel_category: '3' | '4' | '5' | null; pax: number | null; created_at: string }[]
 }
 
 export type CustomerEnquiry = {

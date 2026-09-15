@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\CustomerContact;
+use App\Models\Download;
 use App\Models\Inquiry;
 use App\Models\NpsResponse;
 use App\Models\Quotation;
@@ -116,6 +117,9 @@ final class AdminCustomer
             ],
             // What the website's forms sent (docs/phase-2-cms-api.md §9 item 1): the contact form's message, package and group
             // size, and air-ticket enquiries, which are worked on the Air ticketing screen.
+            // Brochures and visa requirements downloaded from the website (Phase 8 §4.E), newest first.
+            'downloads' => Download::query()->where('customer_id', $customer->id)->latest('created_at')->latest('id')->limit(20)->get()
+                ->map(fn (Download $download) => $download->only(['id', 'kind', 'title', 'hotel_category', 'pax']) + ['created_at' => $download->created_at->toIso8601String()])->values(),
             'enquiries' => Inquiry::query()->where('customer_id', $customer->id)->with('package:id,slug,title_en,title_bn')->latest('id')->limit(20)->get()
                 ->map(fn (Inquiry $inquiry) => [
                     'id' => $inquiry->id,

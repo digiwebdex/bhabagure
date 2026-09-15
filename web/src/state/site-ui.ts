@@ -4,6 +4,9 @@ import { create } from 'zustand';
 
 import { clampTravellers, type HotelCategory } from '@bhabaghure/pricing';
 
+/** A gated download: the portal API path (with its query) and the file name it is saved as. */
+export type PendingDownload = { path: string; filename: string };
+
 /**
  * Open panels and the package detail modal. The modal keeps its own traveller count, seeded from
  * the search bar when it opens, so exploring slabs in the modal doesn't change the grid.
@@ -18,6 +21,8 @@ export interface SiteUiState {
   photoIndex: number;
   menuOpen: boolean;
   authOpen: boolean;
+  /** A brochure or visa PDF waiting for the visitor to sign in; the sign-in modal starts it once they have. */
+  pendingDownload: PendingDownload | null;
   chatOpen: boolean;
 
   openPackage: (slug: string, pax: number, openedBy?: 'click' | 'history') => void;
@@ -29,7 +34,7 @@ export interface SiteUiState {
   setPhotoIndex: (index: number) => void;
   toggleMenu: () => void;
   closeMenu: () => void;
-  openAuth: () => void;
+  openAuth: (pendingDownload?: PendingDownload) => void;
   closeAuth: () => void;
   toggleChat: () => void;
   closeChat: () => void;
@@ -43,6 +48,7 @@ export const useSiteUi = create<SiteUiState>()((set) => ({
   photoIndex: 0,
   menuOpen: false,
   authOpen: false,
+  pendingDownload: null,
   chatOpen: false,
 
   openPackage: (slug, pax, openedBy = 'click') =>
@@ -55,8 +61,8 @@ export const useSiteUi = create<SiteUiState>()((set) => ({
   setPhotoIndex: (photoIndex) => set({ photoIndex }),
   toggleMenu: () => set((state) => ({ menuOpen: !state.menuOpen })),
   closeMenu: () => set({ menuOpen: false }),
-  openAuth: () => set({ authOpen: true, menuOpen: false }),
-  closeAuth: () => set({ authOpen: false }),
+  openAuth: (pendingDownload) => set({ authOpen: true, menuOpen: false, pendingDownload: pendingDownload ?? null }),
+  closeAuth: () => set({ authOpen: false, pendingDownload: null }),
   toggleChat: () => set((state) => ({ chatOpen: !state.chatOpen })),
   closeChat: () => set({ chatOpen: false }),
 }));

@@ -185,6 +185,45 @@ test.describe('website sign-in', () => {
     await dialog.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('link', { name: 'EC My account' })).toHaveAttribute('href', PORTAL_URL);
   });
+
+  test('a brochure download asks a visitor to sign in, then downloads what they chose, and every download is logged', async ({ page, request }) => {
+    const slug = 'nepal-mustang-adventure-tour-8-days-7-nights';
+    const phone = uniquePhone();
+    await page.goto(`/en/packages/${slug}`);
+    await page.getByRole('button', { name: 'Travellers +' }).click();
+
+    await page.getByTestId('download-brochure').click();
+    const dialog = page.getByRole('dialog', { name: 'Sign in to download' });
+    await expect(dialog).toContainText('Brochures and visa requirements are for signed-in customers.');
+    await dialog.getByLabel('Mobile number').fill(phone);
+    await dialog.getByRole('button', { name: 'Send code' }).click();
+    await expect(dialog.getByText(/We sent a 6-digit code/)).toBeVisible();
+    await dialog.getByLabel('Code', { exact: true }).fill(lastCode(phone));
+    await dialog.getByRole('button', { name: 'Sign in' }).click();
+    await dialog.getByLabel('Full name as on passport').fill('Brochure Reader');
+
+    // Signed in, the download starts by itself: the PDF, named for the package.
+    const first = page.waitForEvent('download', { timeout: 60_000 });
+    await dialog.getByRole('button', { name: 'Finish' }).click();
+    const file = await first;
+    expect(file.suggestedFilename()).toBe(`bhabaghure-${slug}.pdf`);
+    expect(readFileSync((await file.path())!).subarray(0, 5).toString()).toBe('%PDF-');
+    await expect(dialog.getByRole('status')).toContainText('You’re signed in — your download has started.');
+    await dialog.getByRole('button', { name: 'Close' }).click();
+
+    // Now signed in, the button downloads straight away.
+    const second = page.waitForEvent('download', { timeout: 60_000 });
+    await page.getByTestId('download-brochure').click();
+    await second;
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // Both are on the Downloads screen, with the traveller count chosen on the page.
+    const headers = await staffHeaders(request);
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->where('email', 'web.portal@e2e.test')->sole()->givePermissionTo('downloads.view'); echo 'ok';`);
+    const log = await (await request.get(`${E2E_API_URL}/api/v1/admin/downloads?search=${phone}`, { headers })).json();
+    expect(log.meta.total).toBe(2);
+    expect(log.data[0]).toMatchObject({ kind: 'package', slug, pax: 3, customer: { name: 'Brochure Reader' }, in_progress: { booking: false, quotation: false } });
+  });
 });
 
 /** A valid 1×1 PNG. */

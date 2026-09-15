@@ -928,5 +928,17 @@
     "people": "{count, plural, one {Person on the team} other {People on the team}}",
     "empty": "Our team will be introduced here soon.",
     "metaDescription": "Meet the Bhabaghure Holidays team in Agargaon, Dhaka: the tour operators and travel advisers behind our Nepal, Thailand and domestic tours."
+  },
+  "download": {
+    "brochure": "Download brochure (PDF)",
+    "requirements": "Download requirements (PDF)",
+    "pdf": "Download PDF",
+    "working": "Preparing…",
+    "signInTitle": "Sign in to download",
+    "signInSubtitle": "Brochures and visa requirements are for signed-in customers. We send a one-time code to your mobile — no password needed.",
+    "started": "You’re signed in — your download has started.",
+    "again": "Download again",
+    "tooMany": "That’s a lot of downloads for today — please try again later, or message us on WhatsApp.",
+    "failed": "The download didn’t work — please try again."
   }
 }

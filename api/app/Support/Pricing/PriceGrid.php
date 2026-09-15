@@ -62,6 +62,22 @@ final class PriceGrid
         return $category !== null && isset($grid[$category]) ? [$category => $grid[$category]] : null;
     }
 
+    /**
+     * The category a request means: the one asked for when the grid sells it, otherwise 3★ (or the first one sold) — as
+     * the website's defaultHotelCategory. Null without a grid.
+     *
+     * @param  array<string, array<string, int|float>>|null  $grid
+     */
+    public static function chosenCategory(?array $grid, ?string $asked): ?string
+    {
+        $categories = PricingService::gridCategories($grid);
+        if ($categories === []) {
+            return null;
+        }
+
+        return in_array($asked, $categories, true) ? $asked : (in_array('3', $categories, true) ? '3' : $categories[0]);
+    }
+
     /** "NEPAL MUSTANG … · 4-star hotel" — how a booking or quotation line names the category. */
     public static function lineTitle(string $title, ?string $category, string $locale): string
     {

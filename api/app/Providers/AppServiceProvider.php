@@ -254,6 +254,11 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(40)->by('codes-day|'.$request->ip()),
         ]);
         RateLimiter::for('customer-verify', fn (Request $request) => Limit::perMinute(20)->by('verify|'.$request->ip()));
+        // Brochure downloads render a PDF each time the content changes: a few a minute is plenty for a person.
+        RateLimiter::for('downloads', fn (Request $request) => [
+            Limit::perMinute(10)->by('downloads-minute|'.($request->user('customer')?->getAuthIdentifier() ?? $request->ip())),
+            Limit::perDay(100)->by('downloads-day|'.($request->user('customer')?->getAuthIdentifier() ?? $request->ip())),
+        ]);
         RateLimiter::for('portal', fn (Request $request) => Limit::perMinute(120)->by('portal|'.($request->user('customer')?->getAuthIdentifier() ?? $request->ip())));
         RateLimiter::for('portal-support', fn (Request $request) => [
             Limit::perMinute(6)->by('portal-support-minute|'.$request->user('customer')?->getAuthIdentifier()),

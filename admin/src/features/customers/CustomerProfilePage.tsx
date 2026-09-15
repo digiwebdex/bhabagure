@@ -94,6 +94,7 @@ function Profile({ customer }: { customer: CustomerDetail }) {
         </div>
         <div className="flex flex-col gap-admin-gap">
           {customer.enquiries.length > 0 ? <EnquiriesCard customer={customer} /> : null}
+          {customer.downloads.length > 0 ? <DownloadsCard customer={customer} /> : null}
           <PortalCard customer={customer} />
           <ContactLogCard customer={customer} />
         </div>
@@ -310,6 +311,46 @@ function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
                 {t('customers.openHotelRequests')}
               </Link>
             ) : null}
+          </li>
+        ))}
+      </ol>
+    </Card>
+  )
+}
+
+/** What they downloaded from the website (Phase 8 §4.E): the package and the choice in it, or the visa. */
+function DownloadsCard({ customer }: { customer: CustomerDetail }) {
+  const { t } = useTranslation()
+  const { can } = useAuth()
+  const { dateTime, number } = useFormat()
+
+  return (
+    <Card>
+      <CardTitle
+        bn="ওয়েবসাইট থেকে ডাউনলোড"
+        en="Downloads from the website"
+        aside={
+          can('downloads.view') ? (
+            <Link to={`/downloads?search=${encodeURIComponent(customer.phone)}`} className="text-12">
+              {t('downloads.openList')}
+            </Link>
+          ) : undefined
+        }
+      />
+      <ol className="m-0 flex list-none flex-col gap-2 p-0" data-testid="customer-downloads">
+        {customer.downloads.map((download) => (
+          <li key={download.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-app-line pb-2 text-13 last:border-b-0">
+            <span className="flex min-w-0 flex-col">
+              <span className="font-semibold">
+                {t(`downloads.kinds.${download.kind}`)} · {download.title}
+              </span>
+              {download.kind === 'package' ? (
+                <span className="text-12 text-app-muted">
+                  {[download.hotel_category ? t(`grid.categories.${download.hotel_category}`) : null, download.pax ? t('grid.tier', { count: download.pax, n: number(download.pax) }) : null].filter(Boolean).join(' · ')}
+                </span>
+              ) : null}
+            </span>
+            <span className="text-12 text-app-muted">{dateTime(download.created_at)}</span>
           </li>
         ))}
       </ol>

@@ -40,6 +40,8 @@ const TABLES = [
   { name: 'Leave requests', url: '/attendance?status=all', testId: 'leave-requests-table', width: 700, icons: 4 },
   // Days, Base salary, Adjust pay (§6).
   { name: 'Salary', url: `/payroll?month=${THIS_MONTH}`, testId: 'payroll-table', width: 700, icons: 3 },
+  // Open customer, WhatsApp, email (docs/phase-8-visa-quotes-pricing-downloads.md §4.E).
+  { name: 'Downloads', url: '/downloads', testId: 'downloads-table', width: 700, icons: 3 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -83,6 +85,11 @@ test.beforeAll(async ({ browser }) => {
   artisan(
     'tinker',
     `--execute=foreach (['Sticky Hotel One', 'Sticky Hotel Two With A Much Longer Guest Name', 'Sticky Hotel Three'] as $i => $n) { App\\Models\\Inquiry::query()->create(['type' => 'hotel_quote', 'name' => $n, 'phone' => '88018110006'.$i.'0', 'email' => 'hotel'.$i.'@example.test', 'pax' => 3, 'locale' => 'en', 'details' => ['location' => $i === 1 ? 'Inani Beach, Cox\\'s Bazar, near the Marine Drive' : 'Sylhet', 'checkIn' => '2026-12-10', 'checkOut' => '2026-12-13', 'hotelCategory' => '4', 'note' => null]]); } echo 'ok';`,
+  )
+  // Website downloads, one customer with a long name; the e2e admin is granted the screen, as the Roles screen would.
+  artisan(
+    'tinker',
+    `--execute=$p = App\\Models\\TourPackage::query()->where('slug', 'nepal-mustang-adventure-tour-8-days-7-nights')->sole(); foreach (['Sticky Download One', 'Sticky Download Two With A Much Longer Customer Name', 'Sticky Download Three'] as $i => $n) { $c = App\\Models\\Customer::query()->forceCreate(['name' => $n, 'phone' => '88019110006'.$i.'0', 'email' => 'download'.$i.'@example.test', 'stage' => 'lead', 'source' => 'website_form']); App\\Models\\Download::query()->forceCreate(['customer_id' => $c->id, 'kind' => 'package', 'tour_package_id' => $p->id, 'title' => $p->title_en, 'hotel_category' => '4', 'pax' => 2, 'locale' => 'en']); } App\\Models\\Staff::query()->where('email', 'admin@e2e.test')->sole()->givePermissionTo('downloads.view'); echo 'ok';`,
   )
   await page.close()
 })

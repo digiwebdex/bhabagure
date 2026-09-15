@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { buttonClass } from '@/components/ui/button';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { DownloadButton } from '@/features/downloads/DownloadButton';
 import { Link } from '@/i18n/navigation';
 import type { AppLocale } from '@/i18n/routing';
 import type { SiteViews } from '@/lib/content/views';
@@ -41,9 +42,17 @@ export async function VisaSection({ locale, views }: { locale: AppLocale; views:
                       </span>
                     </span>
                     {visa.processing ? <span className="text-13 text-muted">{t('visa.processingIn', { time: visa.processing })}</span> : null}
-                    <Link href={visaPath(visa.slug)} className="self-start text-13 font-semibold">
-                      {t('visa.details')}
-                    </Link>
+                    <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <Link href={visaPath(visa.slug)} className="text-13 font-semibold">
+                        {t('visa.details')}
+                      </Link>
+                      <DownloadButton
+                        path={`portal/downloads/visas/${visa.slug}?locale=${locale}`}
+                        filename={`bhabaghure-visa-${visa.slug}.pdf`}
+                        label={t('download.pdf')}
+                        className="inline-flex cursor-pointer items-center gap-1 text-13 font-semibold text-blue hover:text-orange disabled:opacity-50"
+                      />
+                    </span>
                   </li>
                 ))}
               </ul>

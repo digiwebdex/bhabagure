@@ -1,6 +1,6 @@
 # Phase 8 — Visa, hotel quotes, hotel-category pricing, gated downloads
 
-**Status (2026-09-16): steps A–D built and deployed (§4.A–§4.D); step E planned.**
+**Status (2026-09-16): steps A–E built (§4.A–§4.E); A–D deployed.**
 
 ## 0. The client's requests (2026-09-15, summarised from Bangla)
 
@@ -280,3 +280,81 @@ loaded the same way.
   (৳ 55,080), then 4-star (৳ 76,500) with the category kept.
 - Web e2e: the card caption and price, the modal's category chips and tier prices, and a booking from the modal whose
   total reaches the SSLCommerz stand-in exactly (৳ 1,34,640).
+
+### 4.E Brochure and visa PDFs; sign-in-gated downloads; the Downloads screen (2026-09-16)
+
+**The PDFs.** `BrochurePdf` builds both on the invoices' letterhead and headless-Chrome renderer (one render at a time,
+the invoice lock). Each is A4, in the language the visitor is reading.
+- **Package brochure** (`brochures/package.blade.php`):
+  - title, destination and length, summary, air-ticket status and package code;
+  - a *Your choice* box: the hotel category and travellers picked on the website, the per-person price and the total;
+  - the price table:
+    - a grid package gets one row per sold category across 1, 2, 4, 6 and 10+ travellers;
+    - any other package gets one row across 1, 2, 3, 4, 6 and 10+ with the site-wide group discounts;
+    - the chosen cell is highlighted;
+  - the single-room and service-charge notes, and the date the prices are from;
+  - the itinerary, included and not included, and the office's contact line.
+- **Visa requirements** (`brochures/visa.blade.php`): price, processing time and stay; the numbered requirements
+  (Bengali numerals in Bangla); notes; an "as of" line; contact.
+- **Storage.** A made PDF is kept on the private disk. Its key covers everything that changes the page: the template
+  version, the package or visa and its last update, the category, travellers, language, the pricing settings and the
+  day. Downloading the same thing again doesn't start Chrome. Bump `BrochurePdf::TEMPLATE_VERSION` when a template
+  changes.
+- The chosen category is worked out once (`PriceGrid::chosenCategory`): the one asked for when the grid sells it,
+  otherwise basic/3-star, otherwise the first sold. The brochure and the log always agree.
+
+**API.**
+- **Downloads.** `GET /portal/downloads/packages/{slug}?hotel_category=&pax=&locale=` and
+  `GET /portal/downloads/visas/{slug}?locale=`.
+  - They are behind customer sign-in (`auth:customer`, a portal turned off answers 401), for published items only.
+  - They answer `application/pdf` as an attachment (`bhabaghure-<slug>.pdf`, `bhabaghure-visa-<slug>.pdf`),
+    `private, no-store`.
+  - Limited to 10 a minute and 100 a day per customer (`throttle:downloads`).
+- **Log.** Every download is a `downloads` row: customer, kind, package or visa, the title as it was, category,
+  travellers, language, IP address, time.
+- **Downloads screen.** `GET /admin/downloads` needs `downloads.view`.
+  - The permission is in the Reports group of the Roles screen, on no role, so it is the Super Admin's until granted.
+  - Filters: kind, search (name, mobile digits or title), from/to (Dhaka dates), `follow_up`.
+  - `follow_up` keeps customers with no inquiry or confirmed booking and no open or draft quotation.
+  - Totals for the filter: downloads, distinct customers, package brochures, visa requirements.
+  - Each row: the customer (name, mobile, email, lead or customer, owner, how many downloads), the item and its
+    website slug, the choice, the time, and whether a booking or quotation is in progress.
+- **Profile.** The customer's profile (`GET /admin/customers/{id}`) lists their last 20 downloads, for anyone who can
+  see the customer.
+
+**Website.**
+- **Buttons.**
+  - The package modal and the package page: *Download brochure (PDF)*, with the category and travellers chosen there.
+  - The visa page: *Download requirements (PDF)*.
+  - Each visa type in the Visa section and the Visa tab: *Download PDF*.
+- **Signed in:** the file downloads straight away (`downloadPortalFile`: fetched with the session token, saved under its
+  name).
+- **Not signed in:** the sign-in dialog opens as *Sign in to download*. After the code (and a name, for a new number) it
+  starts the download itself, says so, and offers *Download again*.
+- **Too many for today:** the button says to try later or message on WhatsApp.
+
+**Admin.**
+- **Sales → Downloads** (`downloads.view`):
+  - totals;
+  - What (all, package, visa) and Follow-up (everyone, nothing in progress) chips;
+  - from/to dates and search;
+  - the table, with *Open customer*, WhatsApp (a follow-up message naming the download) and email.
+- The customer's profile has a *Downloads from the website* card, linking to the list filtered by their number.
+
+**Tests.**
+- API `DownloadsTest`:
+  - sign-in required and a turned-off portal refused;
+  - the log row, the attachment, and the brochure's price table and itinerary;
+  - a stored PDF reused, and logged again;
+  - a grid brochure's chosen cell, and a grid without 3-star;
+  - the visa PDF, with drafts not offered;
+  - the Downloads screen's totals, follow-up, kind, search (including a name alone) and date filters;
+  - the permission, and the profile's list.
+- Web e2e:
+  - a visitor on a package page picks 3 travellers and clicks the brochure button;
+  - they sign in with a code and a name, and the PDF downloads by itself;
+  - a second click downloads without the dialog, and both downloads are on the Downloads screen with 3 travellers;
+  - the visa page asks a visitor to sign in.
+- Admin e2e: a sales agent has no Downloads screen; the Super Admin sees the rows, the choice, the follow-up and kind
+  filters, and the profile card and its link back. `row-actions.spec` covers the new table.
+- Smoke: both download routes refuse anonymous calls.

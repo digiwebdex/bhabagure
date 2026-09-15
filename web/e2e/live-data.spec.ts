@@ -233,6 +233,9 @@ test.describe('CMS to website', () => {
       await page.goto('/visa/thailand-tourist-visa');
       await expect(page.getByTestId('visa-requirements').locator('li')).toHaveText(['ছয় মাস মেয়াদি পাসপোর্ট', 'দুই কপি ছবি']);
       await expect(page.locator('main')).toContainText('৳ ৫,৫০০ জনপ্রতি');
+      // The requirements PDF is for signed-in customers: a visitor is asked to sign in first (Phase 8 §4.E).
+      await page.getByTestId('download-visa').click();
+      await expect(page.getByRole('dialog', { name: 'ডাউনলোড করতে সাইন ইন করুন' })).toBeVisible();
       expect((await request.get('/sitemap.xml')).status()).toBe(200);
     } finally {
       await request.delete(`${E2E_API_URL}/api/v1/admin/visas/${id}`, { headers });

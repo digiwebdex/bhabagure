@@ -299,7 +299,8 @@
       "attendance": "Attendance",
       "my_attendance": "My attendance",
       "payroll": "Salary",
-      "my_commission": "My commission"
+      "my_commission": "My commission",
+      "downloads": "Downloads"
     }
   },
   "status": {
@@ -2447,5 +2448,47 @@
     "volumeReached": "Reached: {{rate}} of {{base}} ≈ {{amount}}, credited at month end",
     "rules": "You earn {{tour}} of tour sales before VAT ({{air}} air, {{hotel}} hotel) on bookings you own, credited when a booking is confirmed and taken back if it’s cancelled. {{threshold}} confirmed bookings in a month add {{volume}} on that whole month.",
     "noCommission": "Your role doesn’t earn commission on bookings. Bonuses are credited by an admin."
+  },
+  "downloads": {
+    "title": "Downloads",
+    "subtitle": "Brochures and visa requirements signed-in customers downloaded from the website — follow up the ones with nothing in progress",
+    "totals": {
+      "downloads": "Downloads",
+      "customers": "Customers",
+      "packages": "Package brochures",
+      "visas": "Visa requirements"
+    },
+    "kind": "What",
+    "kinds": {
+      "all": "All",
+      "package": "Package",
+      "visa": "Visa"
+    },
+    "followUp": "Follow-up",
+    "everyone": "Everyone",
+    "needsFollowUp": "Nothing in progress",
+    "hasBooking": "Booking",
+    "hasQuotation": "Quotation",
+    "from": "From",
+    "to": "To",
+    "note": "Newest first",
+    "search": "Search by name, mobile or package",
+    "empty": "No downloads yet",
+    "emptyNote": "When a signed-in customer downloads a brochure or visa requirements from the website, it shows here.",
+    "columns": {
+      "customer": "Customer",
+      "what": "Downloaded",
+      "when": "When",
+      "progress": "In progress"
+    },
+    "stage": {
+      "lead": "Lead",
+      "customer": "Customer"
+    },
+    "times_one": "{{n}} download",
+    "times_other": "{{n}} downloads",
+    "openCustomer": "Open customer",
+    "followUpMessage": "Hello {{name}}, thank you for downloading “{{title}}” from Bhabaghure Holidays. Can I help you plan the trip?",
+    "openList": "All downloads"
   }
 }

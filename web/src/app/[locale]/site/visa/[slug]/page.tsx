@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { buttonClass } from '@/components/ui/button';
+import { DownloadButton } from '@/features/downloads/DownloadButton';
 import { SiteChrome } from '@/features/SiteChrome';
 import { CountryCode } from '@/features/visa/CountryCode';
 import { Link } from '@/i18n/navigation';
@@ -97,14 +98,23 @@ export default async function VisaPage({ params }: PageProps<'/[locale]/site/vis
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-16 border border-hairline bg-paper-soft px-fluid-18-28 py-4">
           <span className="text-14 text-muted">{t('visa.askNote')}</span>
-          <a
-            href={whatsappUrl(views.settings.contact.whatsapp, t('visa.askMessage', { visa: visa.visaType, country: visa.country }))}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonClass('success', 'md')}
-          >
-            {t('visa.ask')}
-          </a>
+          <div className="flex flex-wrap items-start gap-2.5">
+            <DownloadButton
+              path={`portal/downloads/visas/${visa.slug}?locale=${locale}`}
+              filename={`bhabaghure-visa-${visa.slug}.pdf`}
+              label={t('download.requirements')}
+              className={buttonClass('outlineInk', 'md')}
+              testId="download-visa"
+            />
+            <a
+              href={whatsappUrl(views.settings.contact.whatsapp, t('visa.askMessage', { visa: visa.visaType, country: visa.country }))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClass('success', 'md')}
+            >
+              {t('visa.ask')}
+            </a>
+          </div>
         </div>
 
         {others.length > 0 ? (

@@ -177,6 +177,40 @@ export async function openPortalFile(path: string, locale: string): Promise<bool
   }
 }
 
+export type DownloadResult = 'ok' | 'signed_out' | 'rate_limited' | 'not_found' | 'failed';
+
+/**
+ * Saves a file only a signed-in customer may have — a package brochure or visa requirements
+ * (docs/phase-8-visa-quotes-pricing-downloads.md §4.E). Fetched with the session's token and handed to the browser as a
+ * download; the API logs it. 'signed_out' means the caller should ask the visitor to sign in first.
+ */
+export async function downloadPortalFile(path: string, filename: string, locale: string): Promise<DownloadResult> {
+  if (!base()) return 'failed';
+  const fetchWith = (token: string | null) =>
+    fetch(`${base()}/api/v1/${path}`, { headers: { 'X-Locale': locale, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+  try {
+    const token = useCustomerSession.getState().accessToken;
+    let res = token ? await fetchWith(token) : null;
+    if (!res || res.status === 401) {
+      if (!(await restoreSession(locale, { onlyIfHinted: !token }))) return 'signed_out';
+      res = await fetchWith(useCustomerSession.getState().accessToken);
+    }
+    if (res.status === 401) return 'signed_out';
+    if (res.status === 429) return 'rate_limited';
+    if (res.status === 404) return 'not_found';
+    if (!res.ok) return 'failed';
+    const url = URL.createObjectURL(await res.blob());
+    const link = Object.assign(document.createElement('a'), { href: url, download: filename, rel: 'noopener' });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return 'ok';
+  } catch {
+    return 'failed';
+  }
+}
+
 function establish(body: TokenBody) {
   writeHint(true);
   useCustomerSession.getState().establish(body.access_token, body.customer);
