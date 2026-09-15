@@ -35,7 +35,9 @@ password=$(env_value WALLET_DB_PASSWORD)
 key=$(env_value WALLET_KEY)
 user_exists=$(mysql -N -e "SELECT COUNT(*) FROM mysql.user WHERE user = '$WALLET_USER' AND host = '$DB_HOST'")
 if [[ -z $password ]]; then
-  password=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)
+  # 28 random letters and digits, then one of each class the server's validate_password policy asks for. The symbols
+  # are safe inside the SQL quotes below and unquoted in api/.env.
+  password="$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 28)Kq7-_"
   new_password=1
 else
   new_password=0
