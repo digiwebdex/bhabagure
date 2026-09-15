@@ -21,6 +21,9 @@ test('a website enquiry reaches the board as a new lead; the agent claims it, lo
   await card.click()
 
   await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
+  // What they wrote on the website is on the profile.
+  await expect(page.getByTestId('customer-enquiries')).toContainText('Contact form')
+  await expect(page.getByTestId('customer-enquiries')).toContainText('Kashmir for 12 people?')
   await expect(page.getByText('Not assigned — any sales agent can claim it')).toBeVisible()
   await page.getByRole('button', { name: 'Claim', exact: true }).click()
   await expect(page.getByText('It’s yours now')).toBeVisible()

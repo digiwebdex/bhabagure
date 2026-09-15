@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 
 import { Badge } from '../../components/ui/layout'
 import { useFormat } from '../../lib/useFormat'
-import { CHANNELS, type NotificationChannel, type NotificationGroup, type NotificationMessage } from './api'
+import { CHANNELS, UNDELIVERED_MAILERS, type NotificationChannel, type NotificationGroup, type NotificationMessage } from './api'
 
 const CHIP: Record<NotificationChannel, { className: string; label: string }> = {
   whatsapp: { className: 'bg-whatsapp', label: '✆ WhatsApp' },
@@ -15,13 +15,17 @@ export function ChannelChip({ channel }: { channel: NotificationChannel }) {
   return <span className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-10 font-bold whitespace-nowrap text-white ${CHIP[channel].className}`}>{CHIP[channel].label}</span>
 }
 
+const notDelivered = (message: NotificationMessage) => message.channel === 'email' && message.status === 'sent' && UNDELIVERED_MAILERS.includes(message.provider ?? '')
+
 /**
  * WhatsApp-style ticks: ✓ sent, ✓✓ delivered, blue ✓✓ read. An SMS only ever reaches "submitted": bulksmsbd.net reports
- * acceptance, not delivery, and operators drop some messages silently. Waiting, skipped and failed rows say why.
+ * acceptance, not delivery, and operators drop some messages silently. An email the log mailer took says it wasn't
+ * delivered. Waiting, skipped and failed rows say why.
  */
 export function DeliveryStatus({ message }: { message: NotificationMessage }) {
   const { t } = useTranslation()
   const { dateTime } = useFormat()
+  if (notDelivered(message)) return <Badge tone="slate">{t('notifications.status.notDelivered')}</Badge>
   switch (message.status) {
     case 'read':
       return <span className="font-display text-12 font-semibold whitespace-nowrap text-blue">✓✓ {t('notifications.status.read')}</span>
@@ -49,6 +53,7 @@ export function DeliveryStatus({ message }: { message: NotificationMessage }) {
 
 /** Why a message is waiting, was skipped or failed — in words, not codes. */
 function statusNote(message: NotificationMessage, t: (key: string, options?: Record<string, unknown>) => string): string | null {
+  if (notDelivered(message)) return t('notifications.reasons.mail_not_set_up')
   if (message.status === 'skipped' || message.status === 'cancelled') {
     return message.skipped_reason ? t(`notifications.reasons.${message.skipped_reason}`, { defaultValue: message.skipped_reason }) : null
   }

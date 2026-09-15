@@ -12,8 +12,11 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 import { createCanvas } from '@napi-rs/canvas';
-import { BarcodeFormat, BinaryBitmap, DecodeHintType, HybridBinarizer, MultiFormatReader, RGBLuminanceSource } from '@zxing/library';
+// @zxing/library is CommonJS: Node 24 detects its named exports, Node 22 (the server's) doesn't, so take the default export.
+import zxing from '@zxing/library';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+const { BarcodeFormat, BinaryBitmap, DecodeHintType, HybridBinarizer, MultiFormatReader, RGBLuminanceSource } = zxing;
 
 const PT_TO_MM = 25.4 / 72;
 

@@ -66,6 +66,19 @@ export type CustomerDetail = CustomerRow & {
   quotations: QuotationRow[]
   portal: PortalStatus
   nps: { booking_reference: string; booking_id: number; score: number; comment: string | null; created_at: string }[]
+  /** What the website's contact and air-ticket forms sent, newest first. */
+  enquiries: CustomerEnquiry[]
+}
+
+export type CustomerEnquiry = {
+  id: number
+  type: 'contact' | 'air_quote'
+  message: string | null
+  package: { slug: string; title_bn: string; title_en: string } | null
+  pax: number | null
+  /** Air-ticket enquiries: from and to. */
+  route: string[] | null
+  created_at: string | null
 }
 
 export type BoardColumn = { count: number; cards: CustomerRow[] }

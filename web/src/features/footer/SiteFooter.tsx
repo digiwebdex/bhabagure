@@ -18,7 +18,7 @@ const LINKS = [
 ] as const;
 
 /** Logo, section links, contact and licence (README §16) on the prototype's dark footer. */
-export async function SiteFooter({ locale, settings }: { locale: AppLocale; settings: SiteViews['settings'] }) {
+export async function SiteFooter({ locale, settings, emptySections = [] }: { locale: AppLocale; settings: SiteViews['settings']; emptySections?: string[] }) {
   const t = await getTranslations({ locale });
   const f = formattersFor(locale);
   // A year is an identifier: localized digits, never thousands grouping.
@@ -28,7 +28,7 @@ export async function SiteFooter({ locale, settings }: { locale: AppLocale; sett
     <footer className="bg-navy-abyss px-5 py-6 text-center text-13 text-white opacity-85">
       <Image src="/brand/logo-wordmark-light.png" alt={settings.brand} width={852} height={378} className="mx-auto mb-2.5 block h-logo-footer w-auto" />
       <nav aria-label={t('footer.explore')} className="mb-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
-        {LINKS.map(([href, key]) => (
+        {LINKS.filter(([href]) => !emptySections.some((id) => href === `/#${id}`)).map(([href, key]) => (
           <Link key={href} href={href} className="text-white hover:text-orange-light">
             {t(`nav.${key}`)}
           </Link>

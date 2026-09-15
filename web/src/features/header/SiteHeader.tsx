@@ -10,7 +10,7 @@ import { Link } from '@/i18n/navigation';
 import { restoreSession } from '@/lib/customer-api';
 import { useBooking } from '@/state/booking';
 import { initialsOf } from '@/lib/initials';
-import { teamPath } from '@/lib/links';
+import { emptySections, teamPath } from '@/lib/links';
 import { useCustomerSession } from '@/state/customer-session';
 import { useSiteUi } from '@/state/site-ui';
 import { useTripSearch } from '@/state/trip-search';
@@ -57,7 +57,9 @@ const SHEET_NAV: NavItem[] = [
 export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
   const t = useTranslations('nav');
   const common = useTranslations('common');
-  const { packages, pricing } = useSiteContent();
+  const { packages, pricing, departures, gallery } = useSiteContent();
+  // Sections that render nothing without CMS content get no link, so the menu never points at a missing anchor.
+  const shown = (item: NavItem) => item.kind !== 'section' || !emptySections({ departures, gallery }).includes(item.id);
   const menuOpen = useSiteUi((state) => state.menuOpen);
   const toggleMenu = useSiteUi((state) => state.toggleMenu);
   const closeMenu = useSiteUi((state) => state.closeMenu);
@@ -107,17 +109,19 @@ export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
 
         <nav aria-label={t('menu')} className="flex min-w-0 items-center gap-fluid-10-26 text-fluid-13.5-15 font-medium">
           <span className="hidden items-center gap-fluid-10-26 md:flex">
-            {DESKTOP_NAV.map((item) =>
+            {DESKTOP_NAV.filter(shown).map((item) =>
               item.kind === 'book' ? (
                 <button key="book" type="button" onClick={openBooking} className="cursor-pointer whitespace-nowrap text-ink-deep hover:text-orange">
                   {t(item.key)}
                 </button>
               ) : item.kind === 'page' ? (
+                // From 1024px: at 900px the row is full in Bangla, and a few pixels over on some platforms' font metrics.
+                // Below that the page is still linked from About, the footer and the ☰ sheet.
                 <Link
                   key={item.href}
                   href={item.href}
                   aria-current={pathname === item.href ? 'page' : undefined}
-                  className="whitespace-nowrap text-ink-deep hover:text-orange aria-[current=page]:text-orange-deep"
+                  className="hidden whitespace-nowrap text-ink-deep hover:text-orange aria-[current=page]:text-orange-deep lg:block"
                 >
                   {t(item.key)}
                 </Link>
@@ -175,7 +179,7 @@ export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
 
       {menuOpen ? (
         <div id="site-menu" className="flex flex-col gap-0.5 border-t border-hairline-soft bg-white px-fluid-14-20 pt-2.5 pb-4 md:hidden">
-          {SHEET_NAV.map((item) => {
+          {SHEET_NAV.filter(shown).map((item) => {
             const row = 'flex items-center justify-between gap-3 border-b border-hairline-faint px-1 py-3.25 text-16 no-underline hover:text-orange';
             if (item.kind === 'book') {
               return (

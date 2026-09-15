@@ -110,7 +110,14 @@
       "quote_requested": "কোটেশন চেয়েছেন",
       "nps_detractor": "যাত্রাকে ০–৬ রেটিং"
     },
-    "deleteHasQuotations": "কোটেশন আছে — রেকর্ড থাকবে"
+    "deleteHasQuotations": "কোটেশন আছে — রেকর্ড থাকবে",
+    "enquiryTypes": {
+      "contact": "যোগাযোগ ফর্ম",
+      "air_quote": "এয়ার টিকেট জিজ্ঞাসা"
+    },
+    "enquiryPax_one": "{{n}} জন যাত্রী",
+    "enquiryPax_other": "{{n}} জন যাত্রী",
+    "openAirTicketing": "এয়ার টিকেটিং খুলুন →"
   },
   "search": {
     "placeholder": "বুকিং, কোটেশন, গ্রাহক, ফোন খুঁজুন…",
@@ -1027,7 +1034,8 @@
       "failed": "ব্যর্থ",
       "skipped": "পাঠানো হয়নি",
       "cancelled": "বাতিল",
-      "submitted": "জমা হয়েছে"
+      "submitted": "জমা হয়েছে",
+      "notDelivered": "পৌঁছায়নি"
     },
     "reasons": {
       "booking_cancelled": "বুকিংটি বাতিল হয়েছে।",
@@ -1070,7 +1078,8 @@
       "sms_too_long": "SMS-এ পাঠানোর জন্য বেশি লম্বা।",
       "sms_provider_error": "SMS প্রোভাইডারে সমস্যা — আবার চেষ্টা হবে।",
       "sms_provider_code": "SMS প্রোভাইডার বার্তাটি নেয়নি।",
-      "sms_provider_unreachable": "SMS প্রোভাইডারে পৌঁছানো যায়নি — আবার চেষ্টা হবে।"
+      "sms_provider_unreachable": "SMS প্রোভাইডারে পৌঁছানো যায়নি — আবার চেষ্টা হবে।",
+      "mail_not_set_up": "সার্ভারে ইমেইল (SendGrid) এখনো চালু হয়নি, তাই এই ইমেইল পাঠানো হয়নি।"
     },
     "onHold": "সাইট সেটিংসে নোটিফিকেশন নম্বর প্রকাশ না করা পর্যন্ত গ্রাহকের WhatsApp বার্তা আটকে আছে। ইমেইল যাচ্ছে।",
     "customerOptedOut": "এই গ্রাহক স্বয়ংক্রিয় WhatsApp বার্তা বন্ধ করেছেন। ইমেইল যাচ্ছে।",
@@ -1130,7 +1139,8 @@
     "thisMonth": "এই মাস",
     "lastMonth": "গত মাস",
     "subscription": "মাসিক সাবস্ক্রিপশন",
-    "costNote": "SMS-এর খরচ সেট করা প্রতি-অংশের হার থেকে আনুমানিক। WhatsApp মাসিক সাবস্ক্রিপশন; ইমেইলে প্রতি বার্তায় খরচ নেই।"
+    "costNote": "SMS-এর খরচ সেট করা প্রতি-অংশের হার থেকে আনুমানিক। WhatsApp মাসিক সাবস্ক্রিপশন; ইমেইলে প্রতি বার্তায় খরচ নেই।",
+    "emailNotSetUp": "চালু হয়নি — ইমেইল পৌঁছায় না"
   },
   "quotations": {
     "title": "কোটেশন",

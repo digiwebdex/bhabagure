@@ -96,7 +96,24 @@ check "sitemap.xml" 200 "$(get sitemap "$APEX/sitemap.xml")"
 check "sitemap lists the package" yes "$(body_has sitemap "$slug")"
 check "robots.txt" 200 "$(get robots "$APEX/robots.txt")"
 check "unknown page" 404 "$(get w_404 "$APEX/no-such-page-$RANDOM")"
+check "unknown page is the site's own 404" yes "$(body_has w_404 'পাতাটি পাওয়া যায়নি')"
 check "portal is noindex or private" yes "$( (grep -qi 'noindex' "$DIR/portal.body" || grep -qi 'x-robots-tag: noindex' "$DIR/portal.head") && echo yes || echo no)"
+icon=$(grep -o '<link rel="icon" href="[^"]*"' "$DIR/home.body" | head -1 | sed 's/.*href="//; s/"$//')
+check "site icon linked" yes "$([[ -n $icon ]] && echo yes || echo no)"
+[[ -n $icon ]] && check "site icon loads" 200 "$(get icon "$APEX${icon%%\?*}")"
+# Sections the CMS left empty render nothing; no menu link may point at them.
+for section in departures gallery; do
+  if ! grep -q "id=\"$section\"" "$DIR/home.body"; then
+    check "no link to the empty #$section section" 0 "$(grep -c "href=\"[^\"]*#$section\"" "$DIR/home.body")"
+  fi
+done
+
+echo "── Security headers"
+for key in home portal p_settings; do
+  check "$key: X-Frame-Options" DENY "$(header "$key" x-frame-options)"
+  check "$key: X-Content-Type-Options" nosniff "$(header "$key" x-content-type-options)"
+  check "$key: Referrer-Policy" 'strict-origin-when-cross-origin|no-referrer' "$(header "$key" referrer-policy)"
+done
 
 echo "── Headers worth knowing"
 hsts=$(header home strict-transport-security)

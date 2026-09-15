@@ -34,3 +34,8 @@ export function displayPhone(phone: string): string {
   const match = /^880(\d{4})(\d{6})$/.exec(digits);
   return match ? `+880 ${match[1]} ${match[2]}` : phone;
 }
+
+/** Home sections that render nothing until the CMS has content for them, so nothing may link to their anchors. */
+export function emptySections(content: { departures: readonly unknown[]; gallery: readonly unknown[] }): string[] {
+  return [...(content.departures.length === 0 ? ['departures'] : []), ...(content.gallery.length === 0 ? ['gallery'] : [])];
+}

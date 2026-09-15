@@ -2,11 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\InquiryType;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\CustomerContact;
+use App\Models\Inquiry;
 use App\Models\NpsResponse;
 use App\Models\Quotation;
 use App\Models\Staff;
@@ -112,6 +114,18 @@ final class AdminCustomer
                 'invite_text' => __('portal.invite', ['url' => (string) config('bhabaghure.portal_url')], $customer->locale ?? 'bn'),
                 'actions' => ['block' => (Customer::seesAll($viewer) || $customer->assigned_staff_id === $viewer->id) && $viewer->can('customers.manage')],
             ],
+            // What the website's forms sent (docs/phase-2-cms-api.md §9 item 1): the contact form's message, package and group
+            // size, and air-ticket enquiries, which are worked on the Air ticketing screen.
+            'enquiries' => Inquiry::query()->where('customer_id', $customer->id)->with('package:id,slug,title_en,title_bn')->latest('id')->limit(20)->get()
+                ->map(fn (Inquiry $inquiry) => [
+                    'id' => $inquiry->id,
+                    'type' => $inquiry->type->value,
+                    'message' => $inquiry->details['message'] ?? null,
+                    'package' => $inquiry->package ? ['slug' => $inquiry->package->slug, 'title_bn' => $inquiry->package->title_bn ?: $inquiry->package->title_en, 'title_en' => $inquiry->package->title_en] : null,
+                    'pax' => $inquiry->pax,
+                    'route' => $inquiry->type === InquiryType::AirQuote ? array_filter([$inquiry->details['from'] ?? null, $inquiry->details['to'] ?? null]) : null,
+                    'created_at' => $inquiry->created_at?->toIso8601String(),
+                ])->values(),
             'nps' => NpsResponse::query()->where('customer_id', $customer->id)->with('booking')->latest('id')->limit(20)->get()
                 ->map(fn (NpsResponse $r) => ['booking_reference' => $r->booking->reference, 'booking_id' => $r->booking_id, 'score' => $r->score, 'comment' => $r->comment, 'created_at' => $r->created_at->toIso8601String()])->values(),
             'quotations' => Quotation::seesAll($viewer) || Quotation::seesOwn($viewer)

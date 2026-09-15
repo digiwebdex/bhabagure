@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { API_DIR, E2E_API_URL } from '../../scripts/e2e-api.mjs'
+import { API_DIR, E2E_API_URL, E2E_CHANNEL } from '../../scripts/e2e-api.mjs'
 
 export { E2E_API_URL as API_URL } from '../../scripts/e2e-api.mjs'
 export const PHOTO = resolve(import.meta.dirname, '.state/photo.jpg')
@@ -18,6 +18,10 @@ export const FIRST_LOAD = { timeout: 15_000 }
 
 /** Signs in through the real login form, in English so assertions read naturally. */
 export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_operator' | 'sales_agent' | 'new.hire') {
+  // Start signed out. A refresh cookie left by an earlier sign-in on this page, or by staffApi (it shares the browser's
+  // cookies), restores that session, and the admin rightly sends a signed-in visitor from /login to the dashboard.
+  // Whether the form shows first was a race that slower machines lost.
+  await page.context().clearCookies()
   await page.goto('/login')
   await page.evaluate(() => localStorage.setItem('bh-lang', 'en'))
   await page.reload()
@@ -26,6 +30,22 @@ export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_o
   await page.getByRole('button', { name: 'Sign in' }).click()
   // Login, refresh and "me" queue on the e2e API's single-threaded PHP server; under a full run that can pass 5 s.
   await expect(page).not.toHaveURL(/\/login$/, { timeout: 15_000 })
+}
+
+/**
+ * Clicks something that opens a PDF in a new tab: the API answers with the PDF, and with Chrome (which has a PDF viewer)
+ * the tab shows it as a blob. Playwright's bundled headless shell (E2E_BROWSER=bundled, the server's test run) has no PDF
+ * viewer, so there the tab stays blank and only the response is checked.
+ */
+export async function expectPdfTab(page: Page, path: RegExp, open: () => Promise<void>) {
+  const response = page.waitForResponse((r) => path.test(new URL(r.url()).pathname), { timeout: 30_000 })
+  const popup = page.waitForEvent('popup', { timeout: 30_000 })
+  await open()
+  const pdf = await response
+  expect(pdf.status()).toBe(200)
+  expect(pdf.headers()['content-type']).toContain('application/pdf')
+  if (E2E_CHANNEL) await expect.poll(async () => (await popup).url(), { timeout: 30_000 }).toMatch(/^blob:/)
+  await (await popup).close()
 }
 
 /** The staff API as one role, for arranging data a test isn't about (signs in through the API, not the form). */

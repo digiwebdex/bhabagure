@@ -29,6 +29,12 @@ class CustomersAndLeadsTest extends TestCase
 
         $state = fn () => $this->actingAsApi($agent)->getJson("/api/v1/admin/customers/{$lead->id}")->assertOk()->json('data.lead_state');
         $this->assertSame('new', $state());
+        // What they wrote is on the lead's profile, not only in a notification.
+        $this->postJson('/api/v1/public/inquiries', ['name' => 'Rumana Islam', 'phone' => '01711000901', 'travellers' => 4, 'message' => 'And Thailand for four?', 'locale' => 'en'])->assertAccepted();
+        $this->actingAsApi($agent)->getJson("/api/v1/admin/customers/{$lead->id}")->assertOk()
+            ->assertJsonCount(2, 'data.enquiries')
+            ->assertJsonPath('data.enquiries.0.type', 'contact')->assertJsonPath('data.enquiries.0.message', 'And Thailand for four?')->assertJsonPath('data.enquiries.0.pax', 4)
+            ->assertJsonPath('data.enquiries.1.message', 'Maldives in December?');
 
         // A pool lead is claimed before it is worked.
         $this->actingAsApi($agent)->postJson("/api/v1/admin/customers/{$lead->id}/contacts", ['channel' => 'call', 'outcome' => 'reached'])->assertStatus(409)->assertJsonPath('code', 'claim_first');

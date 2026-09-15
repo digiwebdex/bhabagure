@@ -7,6 +7,9 @@ import type { Data, Paginated } from '../../lib/api/types'
 
 export type NotificationChannel = 'whatsapp' | 'email' | 'sms'
 export const CHANNELS: NotificationChannel[] = ['whatsapp', 'email', 'sms']
+
+/** Mailers that accept an email without delivering it: production uses "log" until SendGrid is set up. */
+export const UNDELIVERED_MAILERS = ['log', 'array']
 export type NotificationStatus = 'pending' | 'sending' | 'sent' | 'delivered' | 'read' | 'failed' | 'skipped' | 'cancelled'
 export type AlertEvent =
   | 'new_booking_alert'
@@ -33,6 +36,8 @@ export type NotificationMessage = {
   event: string
   channel: NotificationChannel
   status: NotificationStatus
+  /** wasender, bulksmsbd, or the mailer; an email "sent" by the log or array mailer was not delivered. */
+  provider: string | null
   /** Masked for WhatsApp (01711•••344); the full number never reaches the admin. */
   to: string
   recipient_type: string | null

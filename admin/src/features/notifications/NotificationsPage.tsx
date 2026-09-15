@@ -13,6 +13,7 @@ import { useFormat } from '../../lib/useFormat'
 import {
   ALERT_EVENTS,
   CHANNELS,
+  UNDELIVERED_MAILERS,
   useAlertSettings,
   useCheckConnection,
   useNotificationLog,
@@ -86,7 +87,16 @@ function ConnectionCard({ overview }: { overview: NotificationOverview }) {
         <dl className="m-0 flex flex-col gap-1.5 rounded-12 bg-app-surface-2 px-3.5 py-3 text-13">
           <Fact label={t('notifications.mainNumber')} value={numbers.main ? digits(numbers.main) : '—'} />
           <Fact label={t('notifications.notificationsNumber')} value={numbers.notifications ? digits(numbers.notifications) : t('notifications.notSet')} />
-          <Fact label={t('notifications.email')} value={email.enabled ? `${email.mailer}${email.from ? ` · ${email.from}` : ''}` : t('notifications.emailOff')} />
+          <Fact
+            label={t('notifications.email')}
+            value={
+              !email.enabled
+                ? t('notifications.emailOff')
+                : UNDELIVERED_MAILERS.includes(email.mailer)
+                  ? t('notifications.emailNotSetUp')
+                  : `${email.mailer}${email.from ? ` · ${email.from}` : ''}`
+            }
+          />
           <Fact label={t('notifications.counts')} value={t('notifications.countsValue', { pending: number(counts.pending), sent: number(counts.sent_today), failed: number(counts.failed_24h) })} />
         </dl>
         <dl className="m-0 flex flex-col gap-1.5 rounded-12 bg-app-surface-2 px-3.5 py-3 text-13" data-testid="sms-connection">

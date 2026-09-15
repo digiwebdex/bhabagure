@@ -110,7 +110,14 @@
       "quote_requested": "Wants a quote",
       "nps_detractor": "Rated the trip 0–6"
     },
-    "deleteHasQuotations": "Has quotations — the record stays"
+    "deleteHasQuotations": "Has quotations — the record stays",
+    "enquiryTypes": {
+      "contact": "Contact form",
+      "air_quote": "Air-ticket enquiry"
+    },
+    "enquiryPax_one": "{{n}} traveller",
+    "enquiryPax_other": "{{n}} travellers",
+    "openAirTicketing": "Open Air ticketing →"
   },
   "search": {
     "placeholder": "Search bookings, quotations, customers, phone…",
@@ -1027,7 +1034,8 @@
       "failed": "Failed",
       "skipped": "Not sent",
       "cancelled": "Cancelled",
-      "submitted": "Submitted"
+      "submitted": "Submitted",
+      "notDelivered": "Not delivered"
     },
     "reasons": {
       "booking_cancelled": "The booking was cancelled.",
@@ -1070,7 +1078,8 @@
       "sms_too_long": "Too long to send by SMS.",
       "sms_provider_error": "The SMS provider had an error — will retry.",
       "sms_provider_code": "The SMS provider refused it.",
-      "sms_provider_unreachable": "The SMS provider couldn’t be reached — will retry."
+      "sms_provider_unreachable": "The SMS provider couldn’t be reached — will retry.",
+      "mail_not_set_up": "Email isn’t set up on the server yet (SendGrid), so this email was not delivered."
     },
     "onHold": "Customer WhatsApp messages are on hold until the notifications number is published in Site settings. Emails still go.",
     "customerOptedOut": "This customer turned automated WhatsApp messages off. Emails still go.",
@@ -1130,7 +1139,8 @@
     "thisMonth": "This month",
     "lastMonth": "Last month",
     "subscription": "flat subscription",
-    "costNote": "SMS costs are estimates from the configured rate per part. WhatsApp is a flat monthly subscription; email costs nothing per message."
+    "costNote": "SMS costs are estimates from the configured rate per part. WhatsApp is a flat monthly subscription; email costs nothing per message.",
+    "emailNotSetUp": "Not set up — emails are not delivered"
   },
   "quotations": {
     "title": "Quotations",

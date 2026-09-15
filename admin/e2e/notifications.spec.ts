@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { lastFakeWhatsApp, signIn, websiteBooking } from './helpers'
+import { FIRST_LOAD, lastFakeWhatsApp, signIn, websiteBooking } from './helpers'
 
 /**
  * docs/phase-4-whatsapp.md: the published notifications number, a staff member verifying their own WhatsApp number,
@@ -97,7 +97,9 @@ test('a booking shows its messages; staff send a WhatsApp to the number on recor
   const rows = messages.getByTestId('notification-group')
   const received = rows.filter({ hasText: 'Booking received' })
   await expect(received.getByTestId('channel-whatsapp')).toContainText('Sent')
-  await expect(received.getByTestId('channel-email')).toContainText('Sent')
+  // The e2e API uses the log mailer, like production before SendGrid: the email is written, not delivered, and says so.
+  await expect(received.getByTestId('channel-email')).toContainText('Not delivered')
+  await expect(received.getByTestId('channel-email')).toContainText('Email isn’t set up on the server yet')
   await expect(received.getByTestId('channel-sms')).toContainText('Not used')
 
   await messages.getByRole('button', { name: 'Send WhatsApp' }).click()
@@ -126,7 +128,8 @@ test('a booking shows its messages; staff send a WhatsApp to the number on recor
 test('the SMS template shows its part count and estimated cost, and warns above three parts', async ({ page }) => {
   await signIn(page, 'admin')
   await page.goto('/notifications')
-  await expect(page.getByTestId('sms-connection')).toContainText('Test gateway')
+  // First load after a full navigation: the single-threaded e2e API still finishes the dashboard the sign-in opened.
+  await expect(page.getByTestId('sms-connection')).toContainText('Test gateway', FIRST_LOAD)
 
   await page.getByRole('button', { name: /^Payment received/ }).click()
   const editor = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Payment received', level: 2 }) })

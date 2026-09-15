@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateAttendanceAgent;
 use App\Http\Middleware\EnsurePortalAccess;
 use App\Http\Middleware\EnsureStaffCanWork;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetRequestLocale;
 use App\Wallet\Console\ResetWalletAuthenticator;
 use App\Wallet\Http\Middleware\OnlyOnWalletHost;
@@ -31,6 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([ResetWalletAuthenticator::class])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [SetRequestLocale::class]);
+        // Every response, API or not (share pages, short links, /up).
+        $middleware->append(SecurityHeaders::class);
         $middleware->alias([
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,

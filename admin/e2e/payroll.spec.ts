@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { artisan } from '../../scripts/e2e-api.mjs'
-import { FIRST_LOAD, PHOTO, signIn } from './helpers'
+import { expectPdfTab, FIRST_LOAD, PHOTO, signIn } from './helpers'
 
 /**
  * docs/phase-7-hr-attendance-bonus-wallet.md §6: last month's pay from attendance. A base salary is set, an allowance
@@ -93,10 +93,7 @@ test('an admin sets a base salary, adds an allowance, finalises last month and p
   await expect(row).toContainText('bKash')
   await expect(row.getByRole('button', { name: `Mark paid — ${PERSON} (Already paid)` })).toBeDisabled()
 
-  const popup = page.waitForEvent('popup')
-  await row.getByRole('button', { name: `Payslip — ${PERSON}` }).click()
-  await expect.poll(async () => (await popup).url(), { timeout: 30_000 }).toMatch(/^blob:/)
-  await (await popup).close()
+  await expectPdfTab(page, /\/payroll-items\/\d+\/payslip$/, () => row.getByRole('button', { name: `Payslip — ${PERSON}` }).click())
 })
 
 test('the staff member finds the paid month under My payslips, and has no Salary screen', async ({ page }) => {
@@ -107,10 +104,7 @@ test('the staff member finds the paid month under My payslips, and has no Salary
   await expect(payslips).toContainText('৳ 30,346')
   await expect(payslips).toContainText('Paid')
 
-  const popup = page.waitForEvent('popup')
-  await payslips.getByRole('button', { name: `Open the payslip for ${month.label}` }).click()
-  await expect.poll(async () => (await popup).url(), { timeout: 30_000 }).toMatch(/^blob:/)
-  await (await popup).close()
+  await expectPdfTab(page, /\/profile\/payslips\/\d+$/, () => payslips.getByRole('button', { name: `Open the payslip for ${month.label}` }).click())
 
   await expect(page.getByRole('navigation').getByRole('link', { name: /Salary/ })).toHaveCount(0)
   await page.goto('/payroll')

@@ -17,6 +17,22 @@ const nextConfig: NextConfig = {
   // Workspace packages that ship TypeScript source.
   transpilePackages: ['@bhabaghure/format', '@bhabaghure/pricing'],
   poweredByHeader: false,
+  // Every page of the website and portal: never framed (no clickjacking of booking, payment or sign-in), no MIME
+  // sniffing, and only the origin in the Referer sent to other sites (booking links carry a private token in the hash;
+  // share links in the path). HSTS is Cloudflare's setting (docs/handover.md §6.1).
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       // CMS uploads, served from the API host (e.g. https://api.bhabaghure.com.bd/storage/…).

@@ -62,6 +62,8 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
   await dialog.getByRole('button', { name: 'Create booking' }).click()
 
   await expect(page).toHaveURL(/\/bookings\/\d+$/)
+  // The URL changes before the new booking's page has loaded: wait for its heading, then read the reference.
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/BH-\d{4}-\d{3,}/, FIRST_LOAD)
   const reference = (await page.getByRole('heading', { level: 1 }).textContent())!.match(/BH-\d{4}-\d{3,}/)?.[0]
   expect(reference).toBeTruthy()
   await expect(page.getByText('৳ 1,53,000').first()).toBeVisible()

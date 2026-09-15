@@ -117,6 +117,42 @@ test.describe('language', () => {
   });
 });
 
+test.describe('site basics', () => {
+  test('an unknown address answers 404 with the site’s own page, in the visitor’s language', async ({ page }) => {
+    const response = await page.goto('/en/no-such-page');
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Bhabaghure Holidays' })).toBeVisible();
+    await page.getByRole('link', { name: '← Back to the home page' }).click();
+    await expect(page).toHaveURL(/\/en$/);
+
+    expect((await page.goto('/no-such-page'))?.status()).toBe(404);
+    await expect(page.getByRole('heading', { level: 1, name: 'পাতাটি পাওয়া যায়নি' })).toBeVisible();
+  });
+
+  test('pages carry the icon and refuse framing and MIME sniffing', async ({ page }) => {
+    const response = await page.goto('/en');
+    const headers = response!.headers();
+    expect(headers['x-frame-options']).toBe('DENY');
+    expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    const icon = await page.locator('link[rel="icon"]').first().getAttribute('href');
+    expect(icon).toBeTruthy();
+    expect((await page.request.get(icon!)).status()).toBe(200);
+  });
+
+  test('no menu link points at a section the CMS left empty', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/en');
+    for (const id of ['departures', 'gallery']) {
+      const present = await page.locator(`#${id}`).count();
+      await expect(page.locator(`header a[href$="#${id}"]`), `header link to #${id}`).toHaveCount(present ? 1 : 0);
+      await expect(page.locator(`footer a[href$="#${id}"]`), `footer link to #${id}`).toHaveCount(id === 'departures' && present ? 1 : 0);
+    }
+  });
+});
+
 test.describe('team page', () => {
   test('the header link opens /ourteam with every member the About section shows, in both languages', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });

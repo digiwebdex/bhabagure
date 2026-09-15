@@ -1,11 +1,10 @@
 # Deployment notes
 
-**Status (2026-09-14): live.** https://bhabaghure.com.bd serves the website from the live CMS; `admin.`, `customer.`
-and `www.` answer; `wallet.` is 404 until Phase 7. Deployed with `deploy.sh` (§7.2). Third-party keys are blank and
-sending is off (§2). **Not yet working: `api.bhabaghure.com.bd` has no DNS record**, so the admin can't sign in and
-the website's forms, bookings and sign-in can't reach the API (pages render — they read the API over loopback).
-Certificate: an interim Let's Encrypt certificate by HTTP-01 for the five hosts that have DNS records; the DNS-01
-wildcard replaces it once the Cloudflare token exists (§7.5). DNS hosts and the shared-server rules are in
+**Status (2026-09-15): live on every host** — the website, `customer.`, `admin.`, `api.` and `www.`; `wallet.` answers
+403 until its allow-list and basic auth exist (§7.6). Deployed with `deploy.sh` (§7.2). Day-to-day operation (settings,
+units, schedules, rollback, backups, the WhatsApp ban runbook) is `docs/handover.md`. Certificate: Let's Encrypt by
+HTTP-01, re-issued on 2026-09-14 18:09 UTC to cover all six hosts including `api.`; the DNS-01 wildcard replaces it
+once a Cloudflare token exists (§7.5). DNS hosts and the shared-server rules are in
 `_design/DEPLOYMENT.md`; the short version is: nothing outside `/var/www/Bhabagure` without asking first, a new nginx
 file (never an edited one), reload never restart, a dedicated MySQL database and user, a project Redis index and prefix,
 systemd units named `bhabaghure-*`.
@@ -16,7 +15,7 @@ systemd units named `bhabaghure-*`.
 
 | Piece | How | State |
 |---|---|---|
-| API | nginx (`deploy/nginx/bhabaghure.conf`) → **our own PHP-FPM master** `bhabaghure-php.service`, root `api/public` (§7) | **live** 2026-09-14 (reachable from browsers once `api` has a DNS record) |
+| API | nginx (`deploy/nginx/bhabaghure.conf`) → **our own PHP-FPM master** `bhabaghure-php.service`, root `api/public` (§7) | **live** 2026-09-14; `api.` has its DNS record and certificate since 2026-09-14 |
 | Admin | static `admin/dist` | **live** 2026-09-14 |
 | Website + portal | `bhabaghure-web.service`: Next.js on 127.0.0.1:3340, two build slots (§7) | **running** 2026-09-14 (slot `.next-a`) |
 | Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **enabled and running** 2026-09-14 |
@@ -296,8 +295,8 @@ anyone else's terminal or logs.
 `admin.`, `customer.`, `wallet.` — the same HTTP-01 method the other certificates on this box renew with. It works
 because Cloudflare passes plain-http requests through to the server; with no nginx block of ours on :80 certbot adds
 its challenge to the catch-all with a `rewrite … break` ahead of `return 444`, and removes it afterwards (staging
-dry run first). Expires 2026-12-13; renews automatically. It depends on Cloudflare's **Always Use HTTPS staying off**
-and does not cover `api.` (no DNS record yet).
+dry run first). Re-issued on 2026-09-14 18:09 UTC with `api.` added, so it covers all six hosts. Expires 2026-12-13;
+renews automatically. It depends on Cloudflare's **Always Use HTTPS staying off**: plain http must reach the server.
 
 **Planned (as specified): the DNS-01 wildcard.** When `/root/.secrets/certbot/bhabaghure.com.bd.ini` (0600,
 `dns_cloudflare_api_token = …`, token scoped to Zone → DNS → Edit on this zone) exists:
@@ -309,8 +308,7 @@ certbot certonly --dns-cloudflare --dns-cloudflare-credentials /root/.secrets/ce
 ```
 
 Same certificate name, so the nginx file needs no change; renewal then no longer depends on plain http reaching the
-server. Until then, when the `api` record exists: add `-d api.bhabaghure.com.bd` to the HTTP-01 command above
-(with `--expand`).
+server.
 
 **Certificate renewal baseline, before any change (2026-09-14 03:36 UTC):** `certbot renew --dry-run` — 38 of 42 pass.
 The four failures are other sites' and pre-date this deploy: `api.primeskyint.com` (webroot challenge 404; also failed

@@ -4,9 +4,10 @@
 contact. It covers what runs, where its settings live, and what to do when something has to change or goes wrong.
 §10 is for the client too: what v1.0 does not do.
 
-**State on 2026-09-15:** everything below is deployed and live. Third-party accounts are still blank, so nothing is
-sent and no real payment is taken yet (§1). The deeper design notes per phase are in `docs/phase-*.md`, and the
-server's first set-up is in `docs/deployment.md`.
+**State on 2026-09-15:** everything below is deployed and live. SMS, email and online payment accounts are still
+blank, so none of those send or take money yet; they fail gracefully (§1). WhatsApp is configured by the owner (§13).
+The deeper design notes per phase are in `docs/phase-*.md`, and the server's first set-up is in `docs/deployment.md`.
+§11–§13 were added later the same day: commission rules, the wallet database, and WhatsApp configuration.
 
 ---
 
@@ -46,8 +47,8 @@ server's first set-up is in `docs/deployment.md`.
 
 Built and deployed, but switched off until the account or decision exists:
 
-- [x] **First staff account:** the super admin was created on 2026-09-15 with a temporary password, which must be changed
-      at the first sign-in. More super admins, or a reset:
+- [x] **First staff account:** the super admin was created on 2026-09-15; the owner signed in and set their own password
+      the same day. More super admins, or a reset:
       `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan staff:super-admin <email> [--name="…"] [--reset]`
       (`docs/deployment.md` §7.3).
 - [ ] **Customer portal sign-in** needs SMS or WhatsApp to be live: the portal signs in with a one-time code sent to
@@ -55,16 +56,21 @@ Built and deployed, but switched off until the account or decision exists:
       **Once WhatsApp is live** (approved 2026-09-15), send that customer a one-line apology from the notifications
       number with the portal link, so they ask for a fresh code there. Use the admin's one-off WhatsApp message, which
       is logged. Don't send a code: codes last 10 minutes and work once.
-- [ ] **Payments:** SSLCommerz live store ID and password → `SSLCOMMERZ_MODE=live` (§2.1).
+- [ ] **Payments:** SSLCommerz live store ID and password → `SSLCOMMERZ_MODE=live` (§2.1). Until then the website's
+      Pay step says "Online payment is not available right now. Please contact us to pay." and keeps the booking; staff
+      take the money and record it with its receipt on the booking page, then confirm.
 - [ ] **Email:** SendGrid domain authentication, DMARC and an API key → `MAIL_MAILER=smtp` (`docs/deployment.md` §4).
-- [ ] **WhatsApp:** a dedicated, warmed-up number on WaSender, its session key and webhook secret →
-      `WASENDER_MODE=live`. Then publish the number in Site settings (`docs/deployment.md` §3.1).
+      Until then no email is delivered, and the message log marks each one **Not delivered** (not "Sent"). Staff
+      invitations still work: the admin shows the invitation link to copy. Password resets by email don't.
+- [ ] **WhatsApp:** configure and check it as §13 describes.
 - [ ] **SMS:** the operator-approved sender ID and the rotated API key → `BULKSMSBD_MODE=live` (`docs/deployment.md` §4a).
+      Until then SMS is skipped with its reason in the message log; sign-in codes go by WhatsApp once §13 is done.
+- [ ] **Unanswered website booking** from 2026-09-14 19:15 UTC: unpaid, unassigned, and the customer was told nothing
+      (no channel was on). Claim it in Admin → Bookings and call the customer.
 - [ ] **Passport OCR** (optional): an AWS IAM user limited to `textract:DetectDocumentText` →
       `PASSPORT_OCR_PROVIDER=textract`. Without it, customers type passport details by hand.
 - [ ] **Wallet front door:** `/etc/nginx/bhabaghure-wallet/allow.conf` with the office's public address, and the
-      `htpasswd` file; then `nginx -t && systemctl reload nginx` (`docs/deployment.md` §7.6). Until then the wallet
-      answers 403 to everyone.
+      `htpasswd` file; then `deploy/deploy.sh --install-nginx` (§12). Until then the wallet answers 403 to everyone.
 - [ ] **Attendance:** install the agent on the office PC and run `agent.exe test` against the device
       (`agent/README.md`).
 - [x] **Uploaded files in the nightly backup:** added to the backup manifest on 2026-09-15, approved (§8.2).
@@ -167,7 +173,7 @@ applies.
 
 | Variable | Production | What it does |
 |---|---|---|
-| `MAIL_MAILER` | `log` → `smtp` at go-live | `log` writes emails to the log instead of sending them |
+| `MAIL_MAILER` | `log` → `smtp` at go-live | `log` delivers nothing and keeps nothing (it logs at debug level, below `LOG_LEVEL=info`); the message log shows such emails as **Not delivered** |
 | `MAIL_HOST` / `MAIL_PORT` | `smtp.sendgrid.net` / `587` | STARTTLS; leave `MAIL_SCHEME` unset |
 | `MAIL_USERNAME` | `apikey` | Literally that word, for SendGrid |
 | `MAIL_PASSWORD` | blank → secret | A SendGrid key with *Mail Send* permission only |
@@ -277,7 +283,7 @@ Rules on this shared server: our units are all named `bhabaghure-*`. Shared serv
 
 | Unit | What it runs | As | Limits | If it stops |
 |---|---|---|---|---|
-| `bhabaghure-php.service` | PHP-FPM 8.3, its own master with 6 workers, socket `/run/bhabaghure-php/php-fpm.sock`, pool `deploy/php-fpm/bhabaghure.conf` | www-data | 600 MB, 1 CPU, 75 s per request | The API, admin and portal stop; the website shows cached pages. `systemctl reload bhabaghure-php` (tests the pool file first) |
+| `bhabaghure-php.service` | PHP-FPM 8.3, its own master with 6 workers, socket `/run/bhabaghure-php/php-fpm.sock`, pool `deploy/php-fpm/bhabaghure.conf` | www-data | 800 MB, 1 CPU, 256 tasks (PDF renders use Chrome in the request), 75 s per request | The API, admin and portal stop; the website shows cached pages. `systemctl reload bhabaghure-php` (tests the pool file first) |
 | `bhabaghure-web.service` | Next.js on 127.0.0.1:3340: the website and portal, from the slot in `.deploy/web-slot.env` | www-data | 600 MB, 1 CPU | Both hosts give 502. `systemctl restart bhabaghure-web` is ours, so a restart is fine |
 | `bhabaghure-queue.service` | `php artisan queue:work redis --queue=notifications,default`, one worker. Its preflight refuses Redis databases other than 12/13 | www-data | 600 MB, half a CPU, 120 s per job | Messages wait (nothing is lost); after 15 minutes the scheduler emails the notification managers. `systemctl restart bhabaghure-queue` |
 | `bhabaghure-scheduler.service` + `.timer` | `php artisan schedule:run` every minute (§4) | www-data | nice 10 | Reminders, reconciliation and alerts stop. `systemctl start bhabaghure-scheduler.timer` |
@@ -619,3 +625,80 @@ So nobody is surprised. None of these exists in v1.0 unless a line says otherwis
   opens the booking's page.
 - **Built but not switched on** (§1): live payments, email, WhatsApp, SMS, passport OCR, the wallet's front door, and
   the attendance agent at the office.
+
+## 11. Commission rules
+
+Built 2026-09-15 from the client's rules (docs/phase-7-hr-attendance-bonus-wallet.md §12 step 4, "Commission
+auto-credit"). Everything below happens on its own; nobody presses anything.
+
+| Rule | What happens |
+|---|---|
+| **Rate** | 3 % on tour bookings, of the **sale before VAT**: the booking total less its VAT, after any discount, add-ons included. Rounded to the taka. Air 1.5 % and hotel 2 % are configured, but v1.0 records no air or hotel sales. |
+| **Who earns** | The booking's owner, if their role includes *View own commission*: sales agents and tour operators. Admins and the super admin earn nothing on bookings they own. |
+| **When** | The moment a booking is confirmed (by staff, or by an online payment). It goes on the owner's bonus ledger as *Commission · BH-…*, marked *Automatic*, showing the rule it used. |
+| **Cancelled** | The commission is reversed automatically, even if the money was already withdrawn. The balance can go below zero until later credits make it up, and no withdrawal can be asked for meanwhile. |
+| **Reassigned** | Reversed for the old owner and credited to the new one. Back to the pool, or to someone who doesn't earn, only reverses. A booking confirmed by online payment while nobody owned it earns whoever an admin assigns it to. |
+| **Reversed by hand** | An admin with *Manage bonuses* can reverse a commission with a reason. That person is then never credited for that booking again (the dialog warns). |
+| **Volume bonus** | At 00:30 Dhaka on the 1st, anyone with **10 or more** bookings confirmed last month (still confirmed or completed, still earning them commission) gets **0.5 % of all those bookings' sale** as one *Volume bonus* entry. It is posted once per person and month. A later cancellation reverses only that booking's 3 %. |
+| **Staff see** | *My commission*: balance, this month's commission, a *Volume bonus this month* card ("7 of 10"), and the rules in a line. |
+
+Rates live in `api/config/bhabaghure.php` → `commission` (a code change and a deploy to change them; each entry keeps
+the rule it was made with). A month the scheduler missed:
+`cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan commission:volume-bonus 2026-09`.
+
+## 12. The wallet database
+
+The super admin wallet keeps its own books, apart from the company's, and MySQL enforces the separation.
+
+- **Database** `bhabaghure_wallet`, **user** `bhabaghure_wallet@127.0.0.1` with rights on that database only. The company
+  user `bhabaghure_user` has no grant on it, and the wallet user none on `bhabaghure`. `deploy/wallet-database.sh`
+  created both on 2026-09-15 and checks the isolation every time it runs (safe to re-run: it keeps an existing
+  password and key).
+- **Settings** in `api/.env`: `WALLET_DB_*`, `WALLET_KEY`, `WALLET_HOST=wallet.bhabaghure.com.bd`,
+  `WALLET_COOKIE_SECURE=true` (§2.1). No company screen, report or export reads it; a test enforces that.
+- **Migrations** run from `api/database/migrations/wallet` on every deploy (`migrate --database=wallet`).
+- **Encryption:** the authenticator secret and evidence files are encrypted with `WALLET_KEY`, not `APP_KEY`. Keep an
+  offline copy of `WALLET_KEY` with the super admin (§0).
+- **Backups:** the nightly server backup dumps it as `mysql-bhabaghure_wallet` from 2026-09-16 (§8). Evidence files are
+  in `api/storage/app/private/wallet/evidence`, covered by the storage entry. Restoring either needs the same
+  `WALLET_KEY`.
+- **Opening the wallet** (once, as root):
+  1. `mkdir -p /etc/nginx/bhabaghure-wallet` and put one `allow <office public IP>;` line per office address in
+     `/etc/nginx/bhabaghure-wallet/allow.conf`. The addresses stay out of the public repository.
+  2. Basic auth, typed by you so the password passes through nobody else:
+     `printf 'owner:%s\n' "$(openssl passwd -apr1)" > /etc/nginx/bhabaghure-wallet/htpasswd && chown root:www-data /etc/nginx/bhabaghure-wallet/htpasswd && chmod 0640 /etc/nginx/bhabaghure-wallet/htpasswd`
+  3. `/var/www/Bhabagure/deploy/deploy.sh --install-nginx`: it runs `nginx -t` with the new files and reloads nginx (never a restart).
+  4. From the office: https://wallet.bhabaghure.com.bd → basic auth → the super admin's email and password → scan the
+     QR code with an authenticator app → enter the first code. That enrolls it.
+- **Lost phone:** `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan wallet:reset-authenticator <email>`,
+  then sign in again to enroll a new one.
+
+## 13. WhatsApp configuration and checks
+
+**Configure (the owner, on the server):**
+
+1. WaSender dashboard: the session for the dedicated notifications number, connected (QR scanned), *Account Protection*
+   on. Copy the **session API key**, never the account's personal token. A key that was ever pasted into a chat or a
+   document is rotated first.
+2. In `/var/www/Bhabagure/api/.env` (keep a copy first, §2):
+   `WASENDER_MODE=live`, `WASENDER_API_KEY=<session key>`, `WASENDER_WEBHOOK_SECRET=<a long random string>`.
+3. WaSender dashboard → webhook: URL `https://api.bhabaghure.com.bd/api/v1/webhooks/wasender`, the same secret, events
+   `messages.update`, `message.sent`, `session.status`, `messages.received`.
+4. `/var/www/Bhabagure/deploy/deploy.sh --reload-config`. It prints `WhatsApp: live`.
+5. Admin → **Site settings → Contact → Notifications WhatsApp number**: the number, different from the main line. Until
+   it is published, customer WhatsApp messages and sign-in codes are held (a customer must be able to find the number
+   before trusting a message from it).
+
+**Check, in order:**
+
+| Check | Where | Passes when |
+|---|---|---|
+| Config is live | `deploy.sh --reload-config` output | `WhatsApp: live` |
+| Session | Admin → Notifications → *Check connection now* | "Connected" |
+| Webhook reaches us and the signature passes | send any template test, then Admin → Notifications → Message log | the test shows ✓✓ *Delivered*: only the webhook, with the right secret, moves a message past ✓ *Sent*. A wrong secret leaves it at ✓ *Sent*, and `grep webhooks/wasender /var/log/nginx/bhabaghure-api.access.log` shows the webhook's POSTs answered 401 |
+| Sign-in code | https://customer.bhabaghure.com.bd with a staff phone | the code arrives on WhatsApp, first line "ভবঘুরে হলিডেজ · Bhabaghure Holidays" |
+| Booking confirmation + invoice PDF | a test booking to a staff phone, paid by hand and confirmed | the confirmation arrives with the invoice PDF attached (WaSender fetches it from the public invoice link) |
+| Sender line can't be removed | Admin → Notifications → any WhatsApp template → Preview | the preview opens with the sender line whatever the template says; it is added when the message is sent, not stored in the template |
+
+Every WhatsApp from the notifications number, sign-in codes included (fixed 2026-09-15), opens with the sender line.
+What happens when the number is banned: §9.

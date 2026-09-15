@@ -61,7 +61,8 @@ test('draft quote, issue, header on and off, record payment, confirm', async ({ 
   const confirmation = groups.filter({ hasText: 'Booking confirmed + invoice' })
   await expect(confirmation.getByTestId('channel-whatsapp')).toContainText('Not sent')
   await expect(confirmation.getByTestId('channel-whatsapp')).toContainText('the notifications number isn’t published')
-  await expect(confirmation.getByTestId('channel-email')).toContainText('Sent')
+  // The log mailer (as on production before SendGrid) takes the email without delivering it; the card says so.
+  await expect(confirmation.getByTestId('channel-email')).toContainText('Not delivered')
   await expect(confirmation.getByTestId('channel-sms')).toContainText('Submitted')
   await expect(confirmation.getByTestId('channel-sms')).toContainText('Sent because WhatsApp couldn’t deliver')
 })

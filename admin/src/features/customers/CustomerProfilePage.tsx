@@ -93,6 +93,7 @@ function Profile({ customer }: { customer: CustomerDetail }) {
           <BookingsCard customer={customer} />
         </div>
         <div className="flex flex-col gap-admin-gap">
+          {customer.enquiries.length > 0 ? <EnquiriesCard customer={customer} /> : null}
           <PortalCard customer={customer} />
           <ContactLogCard customer={customer} />
         </div>
@@ -275,6 +276,39 @@ function InviteDialog({ customer, onClose }: { customer: CustomerDetail; onClose
         </button>
       </div>
     </Dialog>
+  )
+}
+
+/** What this person sent through the website: the contact form's message, and air-ticket enquiries (worked on Air ticketing). */
+function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
+  const { t, i18n } = useTranslation()
+  const { dateTime, number } = useFormat()
+
+  return (
+    <Card>
+      <CardTitle bn="ওয়েবসাইট থেকে জিজ্ঞাসা" en="Website enquiries" />
+      <ol className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="customer-enquiries">
+        {customer.enquiries.map((enquiry) => (
+          <li key={enquiry.id} className="flex flex-col gap-1 border-b border-app-line pb-2.5 last:border-b-0">
+            <span className="flex flex-wrap items-baseline justify-between gap-2 text-13">
+              <span className="font-semibold">
+                {t(`customers.enquiryTypes.${enquiry.type}`)}
+                {enquiry.package ? ` · ${i18n.language === 'en' ? enquiry.package.title_en : enquiry.package.title_bn}` : ''}
+                {enquiry.route && enquiry.route.length > 0 ? ` · ${enquiry.route.join(' → ')}` : ''}
+                {enquiry.pax ? ` · ${t('customers.enquiryPax', { count: enquiry.pax, n: number(enquiry.pax) })}` : ''}
+              </span>
+              {enquiry.created_at ? <span className="text-12 text-app-muted">{dateTime(enquiry.created_at)}</span> : null}
+            </span>
+            {enquiry.message ? <span className="text-14 whitespace-pre-line">{enquiry.message}</span> : null}
+            {enquiry.type === 'air_quote' ? (
+              <Link to="/air-ticketing" className="self-start text-12">
+                {t('customers.openAirTicketing')}
+              </Link>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </Card>
   )
 }
 

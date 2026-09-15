@@ -6,7 +6,7 @@ import { ScrollProgress } from '@/components/motion/ScrollProgress';
 import { SiteContentProvider } from '@/components/providers/SiteContentProvider';
 import type { AppLocale } from '@/i18n/routing';
 import type { SiteViews } from '@/lib/content/views';
-import { localizedPath } from '@/lib/links';
+import { emptySections, localizedPath } from '@/lib/links';
 
 import { ChatAssistant } from './assistant/ChatAssistant';
 import { FloatingActions } from './assistant/FloatingActions';
@@ -41,7 +41,7 @@ export async function SiteChrome({ locale, views, pathname, pageSections, childr
         <main id="main" className="flex-1">
           {children}
         </main>
-        <SiteFooter locale={locale} settings={views.settings} />
+        <SiteFooter locale={locale} settings={views.settings} emptySections={emptySections(views)} />
         <FloatingActions />
         <ChatAssistant />
         <PackageModalHost homePath={localizedPath(locale, pathname)} />

@@ -20,6 +20,8 @@ final class AdminNotification
             'event' => $row->event->value,
             'channel' => $row->channel->value,
             'status' => $row->status->value,
+            // Who carried it: wasender, bulksmsbd, or the mailer. "log" or "array" means the email went nowhere.
+            'provider' => $row->provider,
             'to' => $row->channel === NotificationChannel::Email ? $row->to_address : self::maskPhone($row->to_address),
             'group_key' => $row->group_key,
             'fallback_of_id' => $row->fallback_of_id,

@@ -84,6 +84,12 @@ class Inquiry extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    /** The package a contact enquiry was sent from, if any. */
+    public function package(): BelongsTo
+    {
+        return $this->belongsTo(TourPackage::class, 'tour_package_id');
+    }
+
     public function quotedBy(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'quoted_by_staff_id');
