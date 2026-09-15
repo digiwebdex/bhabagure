@@ -31,7 +31,7 @@ class AirInquiryQueueTest extends TestCase
         $this->assertSame([30, 3], array_column($rows, 'age_hours'));
         $this->assertSame([true, false], array_column($rows, 'stale'));
         $this->assertSame(['Dhaka', 'Kathmandu', 2, 'business'], [$rows[0]['from'], $rows[0]['to'], $rows[0]['passengers'], $rows[0]['cabin_class']]);
-        $this->assertSame(['claim' => true, 'mark_quoted' => true, 'undo_quoted' => false, 'assign' => false], $rows[0]['actions']);
+        $this->assertSame(['claim' => true, 'mark_quoted' => true, 'undo_quoted' => false, 'assign' => false, 'reply' => true], $rows[0]['actions']);
     }
 
     #[Test]

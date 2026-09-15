@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Admin\DealController;
 use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
+use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\MyAttendanceController;
@@ -145,6 +146,7 @@ Route::prefix('v1')->group(function () {
         Route::controller(PublicFormController::class)->middleware('throttle:public-forms')->group(function () {
             Route::post('inquiries', 'inquiry');
             Route::post('air-quotes', 'airQuote');
+            Route::post('hotel-quotes', 'hotelQuote');
             Route::post('newsletter', 'subscribe');
         });
 
@@ -393,15 +395,19 @@ Route::prefix('v1')->group(function () {
             Route::post('customers/{id}/assign', 'assign')->whereNumber('id');
         });
 
-        // The Air ticketing queue: website air-ticket enquiries (§4.7). Per-action permissions are checked in the controller.
-        Route::middleware('permission:air_inquiries.view,staff')->controller(AirInquiryController::class)->group(function () {
-            Route::get('air-inquiries', 'index');
-            Route::get('air-inquiries/{id}', 'show')->whereNumber('id');
-            Route::post('air-inquiries/{id}/claim', 'claim')->whereNumber('id');
-            Route::post('air-inquiries/{id}/assign', 'assign')->whereNumber('id');
-            Route::post('air-inquiries/{id}/quoted', 'markQuoted')->whereNumber('id');
-            Route::delete('air-inquiries/{id}/quoted', 'undoQuoted')->whereNumber('id');
-        });
+        // Quotation-request queues: Air ticketing (§4.7) and Hotel requests (Phase 8 §4.B). Per-action permissions are
+        // checked in the controller (WorksQuoteRequests).
+        foreach (['air-inquiries' => [AirInquiryController::class, 'air_inquiries'], 'hotel-inquiries' => [HotelInquiryController::class, 'hotel_inquiries']] as $path => [$controller, $permission]) {
+            Route::middleware("permission:{$permission}.view,staff")->controller($controller)->group(function () use ($path) {
+                Route::get($path, 'index');
+                Route::get("{$path}/{id}", 'show')->whereNumber('id');
+                Route::post("{$path}/{id}/claim", 'claim')->whereNumber('id');
+                Route::post("{$path}/{id}/assign", 'assign')->whereNumber('id');
+                Route::post("{$path}/{id}/reply", 'reply')->whereNumber('id');
+                Route::post("{$path}/{id}/quoted", 'markQuoted')->whereNumber('id');
+                Route::delete("{$path}/{id}/quoted", 'undoQuoted')->whereNumber('id');
+            });
+        }
 
         // The Support queue: tickets from the customer portal (docs/phase-6-customer-portal.md §3.5).
         Route::middleware('permission:support.manage,staff')->controller(SupportTicketController::class)->group(function () {

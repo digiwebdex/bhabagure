@@ -113,11 +113,13 @@
     "deleteHasQuotations": "Has quotations — the record stays",
     "enquiryTypes": {
       "contact": "Contact form",
-      "air_quote": "Air-ticket enquiry"
+      "air_quote": "Air-ticket enquiry",
+      "hotel_quote": "Hotel quotation request"
     },
     "enquiryPax_one": "{{n}} traveller",
     "enquiryPax_other": "{{n}} travellers",
-    "openAirTicketing": "Open Air ticketing →"
+    "openAirTicketing": "Open Air ticketing →",
+    "openHotelRequests": "Open Hotel requests →"
   },
   "search": {
     "placeholder": "Search bookings, quotations, customers, phone…",
@@ -231,6 +233,7 @@
       "bookings": "Bookings",
       "quotations": "Quotations",
       "air": "Air ticketing",
+      "hotel": "Hotel requests",
       "customers": "Customers",
       "catalogue": "Catalogue",
       "finance": "Finance",
@@ -286,6 +289,7 @@
       "quotations": "Quotations",
       "payments": "Payments & invoices",
       "air_ticketing": "Air ticketing",
+      "hotel_requests": "Hotel requests",
       "documents": "Documents",
       "support": "Support",
       "staff": "Staff",
@@ -964,7 +968,9 @@
       "support_reply": "Reply to a support ticket",
       "nps_follow_up_alert": "Low rating after a trip",
       "staff_document_expiring_alert": "Staff document expiring",
-      "attendance_device_offline_alert": "Attendance device silent"
+      "attendance_device_offline_alert": "Attendance device silent",
+      "hotel_quote_alert": "Hotel quotation request",
+      "inquiry_reply": "Reply to a quotation request"
     },
     "timing": {
       "booking_created": "Immediately, when a website booking is saved",
@@ -975,7 +981,7 @@
       "departure_today": "The travel day, 06:00 — WhatsApp, and always SMS",
       "trip_completed": "2 days after return, 11:00",
       "new_booking_alert": "Immediately; the booking’s assigned agent always gets it too",
-      "new_lead_alert": "Immediately, from the inquiry and air-ticket forms",
+      "new_lead_alert": "Immediately, from the contact and air-ticket forms",
       "low_seat_alert": "Once, when a departure has 3 or fewer seats left",
       "quote_expiring": "24 hours before a sent quotation expires — on its last day",
       "quote_accepted_alert": "Immediately; the quotation’s owner always gets it too",
@@ -983,7 +989,9 @@
       "support_reply": "When staff reply in Support — WhatsApp and email",
       "nps_follow_up_alert": "When a customer rates a completed trip 0–6; the trip’s owner always gets it too",
       "staff_document_expiring_alert": "30 days before a staff document expires, and on the day; with nobody on this list, everyone who manages staff documents gets it",
-      "attendance_device_offline_alert": "After an hour without a good sync during duty hours on a working day, once per outage; with nobody on this list, everyone who manages attendance gets it"
+      "attendance_device_offline_alert": "After an hour without a good sync during duty hours on a working day, once per outage; with nobody on this list, everyone who manages attendance gets it",
+      "hotel_quote_alert": "Immediately, from the website’s hotel quotation form; with nobody on this list, the super admins and admins get it",
+      "inquiry_reply": "When staff reply from Air ticketing or Hotel requests — WhatsApp and email"
     },
     "enabled": "On",
     "disabled": "Off",
@@ -1502,6 +1510,71 @@
     "language": "Language",
     "enquiryFrom": "Enquiry from {{name}}",
     "quotedBy": "Marked quoted by {{name}}, {{when}}"
+  },
+  "hotel": {
+    "title": "Hotel requests",
+    "subtitle": "Hotel quotation requests from the website — send the quotation, then mark them quoted",
+    "claimFirst": "Claim this request first",
+    "contactSubject": "Your hotel quotation request · {{location}}",
+    "contactMessage": "Hello {{name}}, about your hotel quotation request for {{location}} from {{date}} — Bhabaghure Holidays",
+    "markQuoted": "Mark as quoted",
+    "quoted": "{{name}}’s request marked quoted",
+    "undoQuoted": "Back to open",
+    "reopened": "{{name}}’s request is open again",
+    "noPermission": "You can’t change hotel requests",
+    "undoOnlyBy": "Only whoever marked it, or an admin, can reopen it",
+    "passenger": "Guest",
+    "waiting": "Waiting {{age}}",
+    "route": "Stay",
+    "nights_one": "{{n}} night",
+    "nights_other": "{{n}} nights",
+    "guests_one": "{{n}} guest",
+    "guests_other": "{{n}} guests",
+    "categories": {
+      "3": "Basic / 3-star",
+      "4": "4-star",
+      "5": "5-star"
+    },
+    "status": {
+      "new": "Open",
+      "quoted": "Quoted"
+    },
+    "states": {
+      "open": "Open",
+      "quoted": "Quoted",
+      "all": "All"
+    },
+    "waitingFilter": "Waiting",
+    "anyAge": "Any age",
+    "over24h": "Over 24 hours",
+    "queueNote": "Oldest open first · flagged after 24 hours",
+    "search": "Search by name or phone",
+    "empty": "No hotel requests here",
+    "emptyNote": "Requests from the website’s hotel quotation form appear here.",
+    "location": "Location",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "categoryLabel": "Hotel category",
+    "guestsLabel": "Guests",
+    "note": "Note",
+    "received": "Received",
+    "language": "Language",
+    "enquiryFrom": "Hotel request from {{name}}",
+    "quotedBy": "Marked quoted by {{name}}, {{when}}"
+  },
+  "requests": {
+    "reply": "Reply",
+    "send": "Send reply",
+    "sent": "Reply sent to {{name}}",
+    "messages": "Replies sent",
+    "fromForm": "To the number and email on the request: WhatsApp from the notifications number, and email.",
+    "whatsAppOff": "WhatsApp can’t go out now (the notifications number isn’t published or WhatsApp isn’t connected). The email still goes, and the message log says why.",
+    "optedOut": "This customer has stopped WhatsApp messages; the reply goes by email only.",
+    "noEmailEither": "There is no email on this request either, so nothing will reach the customer: call them.",
+    "markQuotedToo": "Also mark it quoted",
+    "repliesCount_one": "{{n}} reply sent",
+    "repliesCount_other": "{{n}} replies sent",
+    "noReplyPermission": "You can’t message customers"
   },
   "evidence": {
     "attach": "Attach the receipt, bank slip or screenshot",

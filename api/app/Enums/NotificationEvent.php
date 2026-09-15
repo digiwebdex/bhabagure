@@ -35,6 +35,10 @@ enum NotificationEvent: string
     case StaffDocumentExpiringAlert = 'staff_document_expiring_alert';
     /** The attendance device, or the office PC that reads it, has been silent for an hour of duty time (§5.1). */
     case AttendanceDeviceOfflineAlert = 'attendance_device_offline_alert';
+    /** A hotel quotation request from the website (docs/phase-8-visa-quotes-pricing-downloads.md §4.B). */
+    case HotelQuoteAlert = 'hotel_quote_alert';
+    /** A staff reply to an air-ticket or hotel quotation request: WhatsApp and email to the customer. */
+    case InquiryReply = 'inquiry_reply';
 
     /** A message a staff member sends from a booking or customer record. Not templated. */
     case StaffMessage = 'staff_message';
@@ -50,7 +54,7 @@ enum NotificationEvent: string
             self::BookingCreated, self::BookingConfirmed, self::PaymentReceived, self::DocumentsPending, self::PreTripReminder,
             self::DepartureToday, self::TripCompleted, self::QuoteSent, self::QuoteExpiring, self::NewBookingAlert, self::NewLeadAlert,
             self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::SupportReply, self::NpsFollowUpAlert, self::StaffDocumentExpiringAlert,
-            self::AttendanceDeviceOfflineAlert,
+            self::AttendanceDeviceOfflineAlert, self::HotelQuoteAlert, self::InquiryReply,
         ];
     }
 
@@ -58,7 +62,7 @@ enum NotificationEvent: string
     public static function staffAlerts(): array
     {
         return [
-            self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert,
+            self::NewBookingAlert, self::NewLeadAlert, self::HotelQuoteAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert,
             self::StaffDocumentExpiringAlert, self::AttendanceDeviceOfflineAlert,
         ];
     }
@@ -67,7 +71,7 @@ enum NotificationEvent: string
     {
         return match ($this) {
             self::NewBookingAlert, self::NewLeadAlert, self::LowSeatAlert, self::QuoteAcceptedAlert, self::SupportTicketAlert, self::NpsFollowUpAlert,
-            self::StaffDocumentExpiringAlert, self::AttendanceDeviceOfflineAlert, self::WhatsAppVerification => 'staff',
+            self::StaffDocumentExpiringAlert, self::AttendanceDeviceOfflineAlert, self::HotelQuoteAlert, self::WhatsAppVerification => 'staff',
             default => 'customer',
         };
     }
@@ -122,6 +126,8 @@ enum NotificationEvent: string
             self::NpsFollowUpAlert => ['ref', 'package', 'score', 'comment', 'customer', 'phone'],
             self::StaffDocumentExpiringAlert => ['staff', 'document', 'expires', 'days', 'link'],
             self::AttendanceDeviceOfflineAlert => ['device', 'since', 'reason', 'link'],
+            self::HotelQuoteAlert => ['name', 'phone', 'location', 'check_in', 'check_out', 'nights', 'category', 'guests', 'note', 'link'],
+            self::InquiryReply => ['name', 'request', 'reply'],
             default => [],
         };
     }
@@ -143,6 +149,8 @@ enum NotificationEvent: string
             self::NpsFollowUpAlert => 'when a customer rates a completed trip 0–6 in the portal',
             self::StaffDocumentExpiringAlert => '30 days before a staff document expires, and on the day',
             self::AttendanceDeviceOfflineAlert => 'after an hour without a good pull during duty hours on a working day, once per outage',
+            self::HotelQuoteAlert => 'when the website’s hotel quotation form is sent',
+            self::InquiryReply => 'when staff reply to an air-ticket or hotel quotation request',
             default => 'immediately',
         };
     }

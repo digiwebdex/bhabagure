@@ -14,6 +14,7 @@ export type NotificationStatus = 'pending' | 'sending' | 'sent' | 'delivered' | 
 export type AlertEvent =
   | 'new_booking_alert'
   | 'new_lead_alert'
+  | 'hotel_quote_alert'
   | 'low_seat_alert'
   | 'quote_accepted_alert'
   | 'support_ticket_alert'
@@ -23,6 +24,7 @@ export type AlertEvent =
 export const ALERT_EVENTS: AlertEvent[] = [
   'new_booking_alert',
   'new_lead_alert',
+  'hotel_quote_alert',
   'low_seat_alert',
   'quote_accepted_alert',
   'support_ticket_alert',

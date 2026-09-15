@@ -22,6 +22,7 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     key: 'services',
     items: [
       { key: 'air_ticketing', path: '/air-ticketing', icon: 'A', permissions: ['air_inquiries.view'], badge: 'air_inquiries' },
+      { key: 'hotel_requests', path: '/hotel-requests', icon: 'H', permissions: ['hotel_inquiries.view'], badge: 'hotel_inquiries' },
       { key: 'documents', path: '/documents', icon: 'V', permissions: ['bookings.view_all', 'bookings.view_own'], badge: 'documents' },
     ],
   },

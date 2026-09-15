@@ -124,6 +124,12 @@ final class AdminCustomer
                     'package' => $inquiry->package ? ['slug' => $inquiry->package->slug, 'title_bn' => $inquiry->package->title_bn ?: $inquiry->package->title_en, 'title_en' => $inquiry->package->title_en] : null,
                     'pax' => $inquiry->pax,
                     'route' => $inquiry->type === InquiryType::AirQuote ? array_filter([$inquiry->details['from'] ?? null, $inquiry->details['to'] ?? null]) : null,
+                    // Hotel quotation requests, worked on the Hotel requests screen.
+                    'hotel' => $inquiry->type === InquiryType::HotelQuote ? [
+                        'location' => $inquiry->details['location'] ?? null, 'check_in' => $inquiry->details['checkIn'] ?? null,
+                        'check_out' => $inquiry->details['checkOut'] ?? null, 'category' => $inquiry->details['hotelCategory'] ?? null,
+                    ] : null,
+                    'status' => $inquiry->status,
                     'created_at' => $inquiry->created_at?->toIso8601String(),
                 ])->values(),
             'nps' => NpsResponse::query()->where('customer_id', $customer->id)->with('booking')->latest('id')->limit(20)->get()

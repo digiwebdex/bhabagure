@@ -78,6 +78,7 @@ check "admin bookings without a token" 401 "$(get a_bookings "$API/api/v1/admin/
 check "admin payroll without a token" 401 "$(get a_payroll "$API/api/v1/admin/payroll" -H 'Accept: application/json')"
 check "portal trips without a token" 401 "$(get c_trips "$API/api/v1/portal/trips" -H 'Accept: application/json')"
 check "my commission without a token" 401 "$(get a_comm "$API/api/v1/admin/profile/commission" -H 'Accept: application/json')"
+check "hotel requests without a token" 401 "$(get a_hotel "$API/api/v1/admin/hotel-inquiries" -H 'Accept: application/json')"
 
 echo "── CORS"
 cors() { curl -s -o /dev/null -D - -X OPTIONS --max-time 20 -H "Origin: $1" -H 'Access-Control-Request-Method: POST' "$API/api/v1/public/inquiries" | grep -i '^access-control-allow-origin:' | cut -d' ' -f2- | tr -d '\r'; }

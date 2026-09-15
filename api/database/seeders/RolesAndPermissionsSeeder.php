@@ -34,6 +34,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'quotations.convert' => ['quotations', 'কোটেশন থেকে বুকিং', 'Convert quotations to bookings'],
         'air_inquiries.view' => ['air', 'টিকেট ইনকোয়্যারি দেখা', 'View air-ticket enquiries'],
         'air_inquiries.manage' => ['air', 'টিকেট ইনকোয়্যারিতে কাজ করা', 'Work air-ticket enquiries'],
+        'hotel_inquiries.view' => ['hotel', 'হোটেল কোটেশন অনুরোধ দেখা', 'View hotel quotation requests'],
+        'hotel_inquiries.manage' => ['hotel', 'হোটেল কোটেশন অনুরোধে কাজ করা ও উত্তর দেওয়া', 'Work and answer hotel quotation requests'],
         'customers.view' => ['customers', 'গ্রাহক দেখা', 'View customers'],
         'customers.manage' => ['customers', 'গ্রাহক ব্যবস্থাপনা', 'Manage customers'],
         'clients.manage' => ['customers', 'কর্পোরেট ও এজেন্ট ব্যবস্থাপনা', 'Manage corporate and agent accounts'],
@@ -70,7 +72,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'super_admin' => ['সুপার অ্যাডমিন', 'Super admin', []],
         'admin' => ['অ্যাডমিন', 'Admin', [
             'bookings.view_all', 'bookings.create', 'bookings.update', 'bookings.delete', 'records.assign',
-            'quotations.view_all', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage',
+            'quotations.view_all', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage', 'hotel_inquiries.view', 'hotel_inquiries.manage',
             'customers.view', 'customers.manage',
             'clients.manage', 'b2b_rates.manage', 'packages.manage', 'pricing.manage', 'payments.view', 'invoices.manage',
             'transactions.create_manual', 'ledger.view_company_balance', 'staff.manage', 'bonus.manage', 'commission.view_all',
@@ -80,7 +82,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
-            'quotations.view_own', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage',
+            'quotations.view_own', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage', 'hotel_inquiries.view', 'hotel_inquiries.manage',
             'commission.view_own', 'reports.view', 'reports.export', 'notifications.send', 'support.manage',
         ]],
         'accountant' => ['হিসাবরক্ষক', 'Accountant', [

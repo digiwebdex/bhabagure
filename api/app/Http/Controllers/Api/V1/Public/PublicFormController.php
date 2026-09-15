@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1\Public;
 
+use App\Enums\HotelCategory;
 use App\Enums\InquiryType;
-use App\Enums\LeadSource;
 use App\Events\InquiryReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
@@ -104,6 +104,49 @@ class PublicFormController extends Controller
         return $this->accepted();
     }
 
+    /** The home page's hotel quotation request (docs/phase-8-visa-quotes-pricing-downloads.md §4.B). */
+    public function hotelQuote(Request $request): JsonResponse
+    {
+        if ($this->isBot($request)) {
+            return $this->accepted();
+        }
+
+        $this->normalizePhone($request);
+        $data = $request->validate([
+            'location' => ['required', 'string', 'max:120'],
+            'check_in' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
+            'check_out' => ['required', 'date_format:Y-m-d', 'after:check_in'],
+            'hotel_category' => ['required', Rule::enum(HotelCategory::class)],
+            'guests' => ['required', 'integer', 'min:1', 'max:99'],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'name' => ['required', 'string', 'max:160'],
+            'phone' => ['required', 'regex:/^8801[3-9]\d{8}$/'],
+            'email' => ['nullable', 'email', 'max:190'],
+            'locale' => ['nullable', Rule::in(['bn', 'en'])],
+        ], ['check_out.after' => __('forms.check_out_after_check_in')]);
+
+        $inquiry = Inquiry::query()->create([
+            'type' => InquiryType::HotelQuote,
+            'name' => $data['name'],
+            'phone' => $data['phone'],
+            'email' => $data['email'] ?? null,
+            'pax' => $data['guests'],
+            'details' => [
+                'location' => $data['location'],
+                'checkIn' => $data['check_in'],
+                'checkOut' => $data['check_out'],
+                'hotelCategory' => $data['hotel_category'],
+                'note' => filled($data['note'] ?? null) ? trim($data['note']) : null,
+            ],
+            'locale' => $data['locale'] ?? 'bn',
+            'customer_id' => $this->leadFor($data['phone'], $data['name'], $data['email'] ?? null, $data['locale'] ?? 'bn'),
+            'ip' => $request->ip(),
+        ]);
+        InquiryReceived::dispatch($inquiry);
+
+        return $this->accepted();
+    }
+
     public function subscribe(Request $request): JsonResponse
     {
         if ($this->isBot($request)) {
@@ -169,23 +212,10 @@ class PublicFormController extends Controller
         $request->merge(['phone' => Phone::normalizeBdMobile($request->input('phone')) ?? $request->input('phone')]);
     }
 
-    /**
-     * The customer record for the enquiry's phone number — a new lead in the shared pool when the number is unknown
-     * (docs/phase-5-admin-core.md §0), so every website enquiry reaches a salesperson's lead board. The response is the
-     * same either way: the form tells a visitor nothing about whether the number was known.
-     */
+    /** Customer::leadForEnquiry. The response is the same either way: a form tells a visitor nothing about whether the number was known. */
     private function leadFor(string $phone, string $name, ?string $email, string $locale): int
     {
-        $existing = Customer::query()->where('phone', $phone)->value('id');
-        if ($existing !== null) {
-            return $existing;
-        }
-        $emailFree = $email !== null && ! Customer::query()->where('email', $email)->exists();
-
-        return Customer::query()->create([
-            'name' => $name, 'phone' => $phone, 'email' => $emailFree ? $email : null,
-            'stage' => 'lead', 'source' => LeadSource::WebsiteForm->value, 'locale' => $locale,
-        ])->id;
+        return Customer::leadForEnquiry($phone, $name, $email, $locale);
     }
 
     private function accepted(): JsonResponse

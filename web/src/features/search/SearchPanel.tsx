@@ -4,11 +4,12 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { AirQuoteForm } from './AirQuoteForm';
+import { HotelQuoteForm } from './HotelQuoteForm';
 import { TripSearchForm } from './TripSearchForm';
 
-type Tab = 'trip' | 'air';
+type Tab = 'trip' | 'air' | 'hotel';
 
-/** Sits directly under the hero: package search, with the air-ticket quote as a second tab. */
+/** Sits directly under the hero: package search, with the air-ticket and hotel quotation requests as further tabs. */
 export function SearchPanel() {
   const t = useTranslations('search');
   const [tab, setTab] = useState<Tab>('trip');
@@ -38,9 +39,10 @@ export function SearchPanel() {
         <div role="tablist" className="flex flex-wrap gap-1.75">
           {tabButton('trip', t('tabTrip'))}
           {tabButton('air', t('tabAir'))}
+          {tabButton('hotel', t('tabHotel'))}
         </div>
         <div role="tabpanel" id={`search-panel-${tab}`} aria-labelledby={`search-tab-${tab}`}>
-          {tab === 'trip' ? <TripSearchForm /> : <AirQuoteForm />}
+          {tab === 'trip' ? <TripSearchForm /> : tab === 'air' ? <AirQuoteForm /> : <HotelQuoteForm />}
         </div>
       </div>
     </section>

@@ -67,6 +67,11 @@ class NavCountsContractTest extends TestCase
         $quoted = $this->airInquiry(40);
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/air-inquiries/{$quoted->id}/quoted")->assertOk();
 
+        // Hotel quotation requests: stale and fresh in the pool, a stale one of A's.
+        $staleHotelPool = $this->hotelInquiry(30);
+        $this->hotelInquiry(1);
+        $ownership->claim($this->hotelInquiry(27), $this->staff['agent_a']);
+
         // Quotations: one expiring for A; for B one expiring, one with days left, one expired and a draft.
         $this->quotation($this->staff['agent_a'], 1);
         $expiringOfB = $this->quotation($this->staff['agent_b'], 0);
@@ -104,12 +109,12 @@ class NavCountsContractTest extends TestCase
         $bonus->cancel($bonus->request($this->staff['agent_b'], 600, null), $this->staff['agent_b']);
 
         $this->assertContract([
-            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
+            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
             'accountant' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'support' => 1],
             'tour_operator' => ['bookings' => 4, 'documents' => 2, 'support' => 1],
-            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
-            'agent_b' => ['bookings' => 3, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'support' => 1],
+            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1],
+            'agent_b' => ['bookings' => 3, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 1],
             'cms_only' => [],
         ]);
 
@@ -117,14 +122,15 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/bookings/{$pool1->id}/claim")->assertOk();
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/air-inquiries/{$stalePool->id}/claim")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
-            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 1],
-            'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'support' => 1],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
+            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1],
+            'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'hotel_inquiries' => 1, 'support' => 1],
         ]);
 
         // B quotes their stale enquiry and withdraws their expiring quotation; a pool booking is cancelled; an admin
         // hands A's booking to B.
         $this->actingAsApi($this->staff['agent_b'])->postJson("/api/v1/admin/air-inquiries/{$staleOfB->id}/quoted")->assertOk();
+        $this->actingAsApi($this->staff['agent_b'])->postJson("/api/v1/admin/hotel-inquiries/{$staleHotelPool->id}/reply", ['text' => 'Sea-view rooms at ৳ 9,500 a night.'])->assertOk();
         $this->actingAsApi($this->staff['agent_b'])->postJson("/api/v1/admin/quotations/{$expiringOfB->id}/withdraw")->assertOk();
         DB::table('bookings')->where('id', $pool2->id)->update(['status' => 'cancelled']);
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bookings/{$ofA->id}/assign", ['staff_id' => $this->staff['agent_b']->id, 'reason' => 'Rebalance'])->assertOk();
@@ -135,9 +141,9 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bonus-withdrawals/{$pendingBonus->id}/reject", ['note' => 'Next month'])->assertOk();
         $this->assertSame('approved', $approvedBonus->fresh()->status);
         $this->assertContract([
-            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'staff_documents' => 1],
-            'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'support' => 0],
-            'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'support' => 0],
+            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'staff_documents' => 1],
+            'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 0],
+            'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'hotel_inquiries' => 1, 'support' => 0],
             'tour_operator' => ['bookings' => 3, 'documents' => 2, 'support' => 0],
         ]);
     }
@@ -221,6 +227,20 @@ class NavCountsContractTest extends TestCase
         $inquiry = Inquiry::query()->create([
             'type' => InquiryType::AirQuote, 'name' => "Passenger {$phone}", 'phone' => '8801711000'.$phone, 'pax' => 1, 'locale' => 'en',
             'details' => ['from' => 'Dhaka', 'to' => 'Bangkok', 'departOn' => '2026-11-10', 'returnOn' => null, 'cabinClass' => 'economy'],
+        ]);
+        DB::table('inquiries')->where('id', $inquiry->id)->update(['created_at' => now()->subHours($hoursOld)]);
+
+        return $inquiry->fresh();
+    }
+
+    private function hotelInquiry(int $hoursOld): Inquiry
+    {
+        static $phone = 500;
+        $phone++;
+        $customer = Customer::query()->create(['name' => "Guest {$phone}", 'phone' => '8801811000'.$phone, 'stage' => 'lead', 'source' => 'website_form']);
+        $inquiry = Inquiry::query()->create([
+            'type' => InquiryType::HotelQuote, 'name' => "Guest {$phone}", 'phone' => '8801811000'.$phone, 'pax' => 2, 'locale' => 'en', 'customer_id' => $customer->id,
+            'details' => ['location' => "Cox's Bazar", 'checkIn' => '2026-12-10', 'checkOut' => '2026-12-12', 'hotelCategory' => '4', 'note' => null],
         ]);
         DB::table('inquiries')->where('id', $inquiry->id)->update(['created_at' => now()->subHours($hoursOld)]);
 

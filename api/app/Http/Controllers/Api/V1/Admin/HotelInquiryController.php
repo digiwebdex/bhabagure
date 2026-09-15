@@ -5,27 +5,26 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Enums\InquiryType;
 use App\Http\Controllers\Api\V1\Admin\Concerns\WorksQuoteRequests;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\AdminAirInquiry;
+use App\Http\Resources\AdminHotelInquiry;
 use App\Models\Inquiry;
 use App\Models\Staff;
 use Illuminate\Support\Carbon;
 
 /**
- * The Air ticketing queue (docs/phase-5-admin-core.md §4.7): the website's air-ticket enquiries. Staff reply from the
- * queue (WhatsApp and email) or their own WhatsApp, and mark the enquiry quoted. Air quotes themselves (fares, PNRs) are
- * a later module.
+ * Hotel requests (docs/phase-8-visa-quotes-pricing-downloads.md §4.B): the website's hotel quotation requests. Staff send
+ * the quotation as a reply (WhatsApp and email, logged) and mark the request quoted.
  */
-class AirInquiryController extends Controller
+class HotelInquiryController extends Controller
 {
     use WorksQuoteRequests;
 
     protected function type(): InquiryType
     {
-        return InquiryType::AirQuote;
+        return InquiryType::HotelQuote;
     }
 
     protected function present(Inquiry $inquiry, Staff $viewer, ?Carbon $now = null): array
     {
-        return AdminAirInquiry::row($inquiry, $viewer, $now);
+        return AdminHotelInquiry::row($inquiry, $viewer, $now);
     }
 }

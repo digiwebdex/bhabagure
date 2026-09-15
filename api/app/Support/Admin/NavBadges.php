@@ -3,6 +3,7 @@
 namespace App\Support\Admin;
 
 use App\Enums\BookingStatus;
+use App\Enums\InquiryType;
 use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
@@ -60,6 +61,13 @@ final class NavBadges
                 'path' => '/api/v1/admin/air-inquiries',
                 'filter' => ['state' => 'open', 'stale' => '1'],
                 'query' => fn (Staff $staff) => Inquiry::query()->airQuotes()->visibleTo($staff)->filtered(['state' => 'open', 'stale' => '1'], $staff),
+            ],
+            // Open hotel quotation requests waiting more than 24 hours, the same rule (Phase 8 §4.B).
+            'hotel_inquiries' => [
+                'permission' => ['hotel_inquiries.view'],
+                'path' => '/api/v1/admin/hotel-inquiries',
+                'filter' => ['state' => 'open', 'stale' => '1'],
+                'query' => fn (Staff $staff) => Inquiry::query()->ofType(InquiryType::HotelQuote)->visibleTo($staff)->filtered(['state' => 'open', 'stale' => '1'], $staff),
             ],
             // Portal support tickets waiting for staff longer than the 24 hours the portal promises. One shared queue.
             'support' => [

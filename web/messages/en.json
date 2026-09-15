@@ -50,6 +50,7 @@
   "search": {
     "tabTrip": "Find a tour package",
     "tabAir": "Air ticket quote",
+    "tabHotel": "Hotel quotation",
     "destination": "Destination",
     "allDestinations": "All destinations",
     "date": "Travel date",
@@ -88,6 +89,32 @@
     "sentTitle": "Quote request sent",
     "sentNote": "Your request has reached our ticketing team. During office hours ({open} AM – {close} PM) we usually reply with a fare within 30 minutes.",
     "returnBeforeDepart": "The return date must be after the departure date."
+  },
+  "hotel": {
+    "formLabel": "Hotel quotation request",
+    "location": "Location",
+    "locationPh": "Cox's Bazar, Bangkok…",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "checkOutNights": "Check-out · {nights, plural, one {{nightsText} night} other {{nightsText} nights}}",
+    "category": "Hotel category",
+    "categories": {
+      "3": "Basic / 3-star",
+      "4": "4-star",
+      "5": "5-star"
+    },
+    "guests": "Guests",
+    "guestOption": "{count, plural, one {{countText} person} other {{countText} people}}",
+    "note": "Note (optional)",
+    "notePh": "Sea view, near the beach, a family room…",
+    "name": "Your name",
+    "phone": "WhatsApp number",
+    "email": "Email (optional)",
+    "explain": "Tell us where and when; we will compare hotels in your category and send the quotation on WhatsApp and email.",
+    "submit": "Request quotation",
+    "sentTitle": "Quotation request sent",
+    "sentNote": "Your request has reached our hotel team. During office hours ({open} AM – {close} PM) we usually send the quotation within an hour.",
+    "checkOutBeforeCheckIn": "The check-out date must be after the check-in date."
   },
   "marquee": [
     "NEPAL · কাঠমান্ডু",

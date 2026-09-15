@@ -72,12 +72,15 @@ export type CustomerDetail = CustomerRow & {
 
 export type CustomerEnquiry = {
   id: number
-  type: 'contact' | 'air_quote'
+  type: 'contact' | 'air_quote' | 'hotel_quote'
   message: string | null
   package: { slug: string; title_bn: string; title_en: string } | null
   pax: number | null
   /** Air-ticket enquiries: from and to. */
   route: string[] | null
+  /** Hotel quotation requests. */
+  hotel: { location: string | null; check_in: string | null; check_out: string | null; category: '3' | '4' | '5' | null } | null
+  status: 'new' | 'quoted'
   created_at: string | null
 }
 

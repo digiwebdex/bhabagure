@@ -9,8 +9,12 @@ blank, so none of those send or take money yet; they fail gracefully (§1). What
 The deeper design notes per phase are in `docs/phase-*.md`, and the server's first set-up is in `docs/deployment.md`.
 §11–§13 were added later the same day: commission rules, the wallet database, and WhatsApp configuration.
 Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pricing, gated downloads) is under way in
-`docs/phase-8-visa-quotes-pricing-downloads.md`; step A is live: the Facebook reels on the home page, and website
-bookings that need only the lead traveller's name and WhatsApp number, with staff completing the rest on the booking.
+`docs/phase-8-visa-quotes-pricing-downloads.md`. Live so far:
+- the Facebook reels on the home page;
+- website bookings that need only the lead traveller's name and WhatsApp number, with staff completing the rest;
+- the website's hotel quotation form, the Hotel requests queue, and a Reply box there and on Air ticketing (WhatsApp and
+  email to the customer). Put people on the new *Hotel quotation request* alert under Admin → Notifications → Alerts;
+  until someone is on it, the super admins and admins get it.
 
 ---
 
@@ -586,9 +590,10 @@ So nobody is surprised. None of these exists in v1.0 unless a line says otherwis
 **Named by the client:**
 - **Custom-trip quotations.** Quotations are for tour packages only. A custom trip is quoted outside the system, or
   built as a draft package first.
-- **Air-ticket quotations.** The website's air-ticket enquiries arrive in *Air ticketing* as a queue: claim, assign,
-  WhatsApp or email the customer, *Mark as quoted*. The quote itself is prepared and sent outside the system. There is
-  no PNR, fare, airline-commission or BSP management. (E-tickets *can* be recorded per traveller on a package booking,
+- **Air-ticket and hotel quotations.** The website's air-ticket enquiries and hotel quotation requests arrive in *Air
+  ticketing* and *Hotel requests* as queues. Staff claim, assign and *Reply*: the reply goes to the customer by WhatsApp
+  from the notifications number and by email, and is logged. Then *Mark as quoted*. The fare or hotel price is typed into
+  the reply; there are no hotel contracts or allotments, and no PNR, fare, airline-commission or BSP management. (E-tickets *can* be recorded per traveller on a package booking,
   and the customer sees them in the portal.)
 - **Loyalty.** No points, tiers or rewards. (The portal's post-trip NPS question is built.)
 - **Referrals.** No referral codes or rewards.

@@ -282,7 +282,7 @@ function InviteDialog({ customer, onClose }: { customer: CustomerDetail; onClose
 /** What this person sent through the website: the contact form's message, and air-ticket enquiries (worked on Air ticketing). */
 function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
   const { t, i18n } = useTranslation()
-  const { dateTime, number } = useFormat()
+  const { date, dateTime, number } = useFormat()
 
   return (
     <Card>
@@ -295,6 +295,7 @@ function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
                 {t(`customers.enquiryTypes.${enquiry.type}`)}
                 {enquiry.package ? ` · ${i18n.language === 'en' ? enquiry.package.title_en : enquiry.package.title_bn}` : ''}
                 {enquiry.route && enquiry.route.length > 0 ? ` · ${enquiry.route.join(' → ')}` : ''}
+                {enquiry.hotel ? ` · ${enquiry.hotel.location ?? ''}${enquiry.hotel.check_in ? `, ${date(enquiry.hotel.check_in)}` : ''}${enquiry.hotel.category ? ` · ${t(`hotel.categories.${enquiry.hotel.category}`)}` : ''}` : ''}
                 {enquiry.pax ? ` · ${t('customers.enquiryPax', { count: enquiry.pax, n: number(enquiry.pax) })}` : ''}
               </span>
               {enquiry.created_at ? <span className="text-12 text-app-muted">{dateTime(enquiry.created_at)}</span> : null}
@@ -303,6 +304,10 @@ function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
             {enquiry.type === 'air_quote' ? (
               <Link to="/air-ticketing" className="self-start text-12">
                 {t('customers.openAirTicketing')}
+              </Link>
+            ) : enquiry.type === 'hotel_quote' ? (
+              <Link to={`/hotel-requests?state=${enquiry.status === 'quoted' ? 'quoted' : 'open'}`} className="self-start text-12">
+                {t('customers.openHotelRequests')}
               </Link>
             ) : null}
           </li>

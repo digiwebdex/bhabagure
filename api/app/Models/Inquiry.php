@@ -3,14 +3,21 @@
 namespace App\Models;
 
 use App\Enums\InquiryType;
+use App\Enums\NotificationChannel;
+use App\Enums\NotificationEvent;
 use App\Models\Concerns\OwnedByStaff;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
- * Website enquiries. Air-ticket enquiries are worked from the Air ticketing queue (docs/phase-5-admin-core.md §4.7):
- * open until someone marks them quoted; flagged when open for more than 24 hours.
+ * Website enquiries. Air-ticket enquiries are worked from the Air ticketing queue (docs/phase-5-admin-core.md §4.7), hotel
+ * quotation requests from Hotel requests (docs/phase-8-visa-quotes-pricing-downloads.md §4.B): open until someone marks
+ * them quoted; flagged when open for more than 24 hours.
+ *
+ * Visibility is per queue: the routes of each queue require its own `.view` permission and always filter by kind
+ * (`ofType`), so seesAll/seesOwn only have to say whether this staff member works any queue.
  */
 class Inquiry extends Model
 {
@@ -32,12 +39,12 @@ class Inquiry extends Model
 
     public static function seesAll(Staff $staff): bool
     {
-        return $staff->can('air_inquiries.view') && $staff->can('bookings.view_all');
+        return self::seesOwn($staff) && $staff->can('bookings.view_all');
     }
 
     public static function seesOwn(Staff $staff): bool
     {
-        return $staff->can('air_inquiries.view');
+        return collect(InquiryType::queued())->contains(fn (InquiryType $type) => $staff->can("{$type->queuePermission()}.view"));
     }
 
     /** The pool: unowned enquiries nobody has quoted yet. */
@@ -65,7 +72,12 @@ class Inquiry extends Model
 
     public function scopeAirQuotes(Builder $query): void
     {
-        $query->where($this->qualifyColumn('type'), InquiryType::AirQuote);
+        $query->ofType(InquiryType::AirQuote);
+    }
+
+    public function scopeOfType(Builder $query, InquiryType $type): void
+    {
+        $query->where($this->qualifyColumn('type'), $type);
     }
 
     public function scopeOpen(Builder $query): void
@@ -93,5 +105,18 @@ class Inquiry extends Model
     public function quotedBy(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'quoted_by_staff_id');
+    }
+
+    /** Staff replies to the customer: one WhatsApp row per reply (its email twin shares the group). */
+    public function replies(): MorphMany
+    {
+        return $this->morphMany(NotificationMessage::class, 'related')
+            ->where('event', NotificationEvent::InquiryReply->value)->where('channel', NotificationChannel::WhatsApp->value);
+    }
+
+    /** Every message about this request: the staff alerts and the replies. */
+    public function notifications(): MorphMany
+    {
+        return $this->morphMany(NotificationMessage::class, 'related');
     }
 }

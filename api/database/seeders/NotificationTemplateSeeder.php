@@ -212,6 +212,24 @@ class NotificationTemplateSeeder extends Seeder
                 "হাজিরা ডিভাইস {{device}} থেকে এক ঘণ্টার বেশি পাঞ্চ আসছে না।\n\nকারণ: {{reason}}\nসর্বশেষ সফল সিঙ্ক: {{since}}\n\nপাঞ্চ ডিভাইসেই জমা থাকে, সংযোগ ফিরলে চলে আসবে। অবস্থা দেখুন: {{link}}",
                 "No punches have come from the attendance device {{device}} for over an hour.\n\nWhy: {{reason}}\nLast good sync: {{since}}\n\nPunches wait on the device and arrive once the link is back. See its status: {{link}}",
                 'হাজিরা ডিভাইস সংযোগহীন · {{device}}', 'Attendance device offline · {{device}}'],
+
+            [NotificationEvent::HotelQuoteAlert, $wa,
+                "নতুন হোটেল কোটেশন অনুরোধ: {{name}} {{phone}}\n{{location}} · {{check_in}} – {{check_out}} ({{nights}})\n{{category}} · {{guests}}\nনোট: {{note}}",
+                "New hotel quotation request: {{name}} {{phone}}\n{{location}} · {{check_in}} – {{check_out}} ({{nights}})\n{{category}} · {{guests}}\nNote: {{note}}",
+                null, null],
+            [NotificationEvent::HotelQuoteAlert, $mail,
+                "নতুন হোটেল কোটেশন অনুরোধ\n\nগ্রাহক: {{name}} {{phone}}\nলোকেশন: {{location}}\nচেক-ইন: {{check_in}}\nচেক-আউট: {{check_out}} ({{nights}})\nহোটেল: {{category}}\nঅতিথি: {{guests}}\nনোট: {{note}}\n\nঅ্যাডমিনের হোটেল অনুরোধ থেকে উত্তর দিন: {{link}}",
+                "New hotel quotation request\n\nCustomer: {{name}} {{phone}}\nLocation: {{location}}\nCheck-in: {{check_in}}\nCheck-out: {{check_out}} ({{nights}})\nHotel: {{category}}\nGuests: {{guests}}\nNote: {{note}}\n\nReply from Hotel requests in the admin: {{link}}",
+                'হোটেল কোটেশন অনুরোধ · {{location}}', 'Hotel quotation request · {{location}}'],
+
+            [NotificationEvent::InquiryReply, $wa,
+                "প্রিয় {{name}},\nআপনার {{request}} অনুরোধের উত্তর:\n{{reply}}",
+                "Dear {{name}},\na reply to your {{request}} request:\n{{reply}}",
+                null, null],
+            [NotificationEvent::InquiryReply, $mail,
+                "প্রিয় {{name}},\n\nআপনার {{request}} অনুরোধের উত্তর:\n\n{{reply}}\n\nকোনো প্রশ্ন থাকলে এই ইমেইলের উত্তর দিন অথবা WhatsApp-এ লিখুন।",
+                "Dear {{name}},\n\na reply to your {{request}} request:\n\n{{reply}}\n\nIf you have any questions, reply to this email or write to us on WhatsApp.",
+                'আপনার অনুরোধের উত্তর · {{request}}', 'Reply to your request · {{request}}'],
         ];
     }
 }

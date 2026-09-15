@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LeadSource;
 use App\Models\Concerns\OwnedByStaff;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -90,6 +91,25 @@ class Customer extends Authenticatable implements JWTSubject
     public function contacts(): HasMany
     {
         return $this->hasMany(CustomerContact::class)->orderByDesc('occurred_at')->orderByDesc('id');
+    }
+
+    /**
+     * The customer record for a website enquiry's phone number — a new lead in the shared pool when the number is unknown
+     * (docs/phase-5-admin-core.md §0), so every website enquiry reaches a salesperson's lead board. An email already on
+     * another customer is left off the new lead.
+     */
+    public static function leadForEnquiry(string $phone, string $name, ?string $email, string $locale): int
+    {
+        $existing = self::query()->where('phone', $phone)->value('id');
+        if ($existing !== null) {
+            return $existing;
+        }
+        $emailFree = $email !== null && ! self::query()->where('email', $email)->exists();
+
+        return self::query()->create([
+            'name' => $name, 'phone' => $phone, 'email' => $emailFree ? $email : null,
+            'stage' => 'lead', 'source' => LeadSource::WebsiteForm->value, 'locale' => $locale,
+        ])->id;
     }
 
     /** Staff who see every booking see every customer; the matrix gives sales agents "own customers" (phase-1-schema §5). */

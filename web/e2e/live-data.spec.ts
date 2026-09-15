@@ -18,6 +18,37 @@ test.describe('forms on the live API', () => {
     await expect(form.getByRole('button', { name: '✓ Sent — we will call you shortly' })).toBeVisible();
   });
 
+  test('the hotel tab sends a quotation request that lands in the Hotel requests queue', async ({ page }) => {
+    const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+    const phone = uniquePhone();
+    await page.goto('/en');
+    const tabs = page.locator('#search').getByRole('tab');
+    await expect(tabs).toHaveText(['Find a tour package', 'Air ticket quote', 'Hotel quotation']);
+    await tabs.filter({ hasText: 'Hotel quotation' }).click();
+
+    const form = page.getByRole('form', { name: 'Hotel quotation request' });
+    await form.getByLabel('Location').fill("Cox's Bazar");
+    await form.getByLabel('Check-in').fill(inDays(30));
+    await form.getByLabel('Check-out').fill(inDays(29));
+    await form.getByLabel('Hotel category').selectOption('4');
+    await form.getByLabel('Guests').selectOption('3');
+    await form.getByLabel('Note (optional)').fill('Sea view, near Kolatoli');
+    await form.getByPlaceholder('Your name').fill('E2E Hotel Guest');
+    await form.getByPlaceholder('WhatsApp number').fill(phone);
+    await form.getByRole('button', { name: 'Request quotation' }).click();
+    await expect(form.getByText('The check-out date must be after the check-in date.')).toBeVisible();
+
+    await form.getByLabel('Check-out').fill(inDays(33));
+    await expect(form.getByText('Check-out · 3 nights')).toBeVisible();
+    await form.getByRole('button', { name: 'Request quotation' }).click();
+    await expect(form.getByRole('status')).toContainText('Quotation request sent');
+
+    // Stored as a hotel request, the customer a lead.
+    const stored = artisan('tinker', `--execute=echo json_encode(App\\Models\\Inquiry::query()->where('phone', '88${phone}')->first(['type', 'pax', 'details']));`).trim().split(/\r?\n/).pop()!;
+    const inquiry = JSON.parse(stored) as { type: string; pax: number; details: Record<string, string | null> };
+    expect([inquiry.type, inquiry.pax, inquiry.details.location, inquiry.details.hotelCategory, inquiry.details.checkOut]).toEqual(['hotel_quote', 3, "Cox's Bazar", '4', inDays(33)]);
+  });
+
   test('newsletter sign-up, then the signed unsubscribe link works without signing in', async ({ page }) => {
     const email = `reader-${Date.now()}@e2e.test`;
     await page.goto('/en');

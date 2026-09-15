@@ -22,8 +22,10 @@ const TABLES = [
   { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700, icons: 7 },
   { name: 'Quotations', url: '/quotations', testId: 'quotations-table', width: 1024, icons: 8 },
   { name: 'Cash book', url: '/payments', testId: 'cash-book-table', width: 1024, icons: 7 },
-  // WhatsApp and email only, and Mark as quoted (§4.7).
-  { name: 'Air ticketing', url: '/air-ticketing?state=all', testId: 'air-inquiries-table', width: 700, icons: 4 },
+  // View, Reply, WhatsApp and email only, and Mark as quoted (§4.7; the Reply box, Phase 8 §4.B).
+  { name: 'Air ticketing', url: '/air-ticketing?state=all', testId: 'air-inquiries-table', width: 700, icons: 5 },
+  // The same actions on hotel quotation requests (Phase 8 §4.B).
+  { name: 'Hotel requests', url: '/hotel-requests?state=all', testId: 'hotel-inquiries-table', width: 700, icons: 5 },
   // Open file, Verify, Reject, Open booking (docs/phase-6-customer-portal.md §3.3).
   { name: 'Documents', url: '/documents?status=uploaded', testId: 'document-reviews-table', width: 700, icons: 4 },
   // Open ticket, WhatsApp, Open customer (§3.5).
@@ -76,6 +78,11 @@ test.beforeAll(async ({ browser }) => {
   artisan(
     'tinker',
     `--execute=foreach (['Sticky Air One', 'Sticky Air Two With A Much Longer Passenger Name', 'Sticky Air Three'] as $i => $n) { App\\Models\\Inquiry::query()->create(['type' => 'air_quote', 'name' => $n, 'phone' => '88017110006'.$i.'0', 'email' => 'air'.$i.'@example.test', 'pax' => 2, 'locale' => 'en', 'details' => ['from' => 'Dhaka', 'to' => 'Kuala Lumpur', 'departOn' => '2026-12-10', 'returnOn' => '2026-12-20', 'cabinClass' => 'business']]); } echo 'ok';`,
+  )
+  // Hotel requests the same way, one with a long location.
+  artisan(
+    'tinker',
+    `--execute=foreach (['Sticky Hotel One', 'Sticky Hotel Two With A Much Longer Guest Name', 'Sticky Hotel Three'] as $i => $n) { App\\Models\\Inquiry::query()->create(['type' => 'hotel_quote', 'name' => $n, 'phone' => '88018110006'.$i.'0', 'email' => 'hotel'.$i.'@example.test', 'pax' => 3, 'locale' => 'en', 'details' => ['location' => $i === 1 ? 'Inani Beach, Cox\\'s Bazar, near the Marine Drive' : 'Sylhet', 'checkIn' => '2026-12-10', 'checkOut' => '2026-12-13', 'hotelCategory' => '4', 'note' => null]]); } echo 'ok';`,
   )
   await page.close()
 })

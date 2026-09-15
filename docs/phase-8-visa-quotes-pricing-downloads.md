@@ -1,6 +1,6 @@
 # Phase 8 — Visa, hotel quotes, hotel-category pricing, gated downloads
 
-**Status (2026-09-15): step A built and deployed (§4.A); steps B–E planned.**
+**Status (2026-09-15): steps A and B built and deployed (§4.A, §4.B); steps C–E planned.**
 
 ## 0. The client's requests (2026-09-15, summarised from Bangla)
 
@@ -65,8 +65,8 @@
 | Step | What | Depends on |
 |---|---|---|
 | A | Reels back; minimal booking | — |
-| B | Hotel quotation requests, Hotel and Visa tabs, reply box for hotel and air | — |
-| C | Visa services: CMS screen, home section, country details | — |
+| B | Hotel quotation requests, Hotel tab, reply box for hotel and air | — |
+| C | Visa services: CMS screen, home section, country details, Visa tab (it lists the CMS's countries) | — |
 | D | Hotel-category × traveller price grid: package editor, website customiser, bookings, quotations, invoices | — |
 | E | Package and visa PDFs, sign-in-gated downloads, downloads log | C, D; live WhatsApp for real sign-ins |
 
@@ -120,3 +120,55 @@ Each step ships on its own with API tests, e2e tests and a deploy.
 - Smoke: the home page has one player per published reel.
 - **E2E setup fix.** The e2e run now clears the website build's cached API responses (`web/.next/cache/fetch-cache`)
   after rebuilding its database. Before, a build reused the previous run's copies for up to an hour.
+
+### 4.B Hotel quotation requests; a reply box for hotel and air (2026-09-15)
+
+**Website.** The search panel under the hero has a third tab, *Hotel quotation*. The form asks for:
+- location, check-in and check-out (the label counts the nights);
+- hotel category: Basic / 3-star, 4-star or 5-star;
+- guests, and an optional note;
+- name, WhatsApp number and optional email.
+
+It posts to `POST /public/hotel-quotes`, which is rate-limited and has the honeypot, like the air form.
+- The request is stored as an `inquiries` row of type `hotel_quote`.
+- The number becomes a lead on the Customers board, as every website enquiry does.
+- The Visa tab moved to step C: it lists the countries from the visa CMS.
+
+**Alert.** A new *Hotel quotation request* alert (`hotel_quote_alert`) goes by WhatsApp and email.
+- Recipients are whoever is on its list (Admin → Notifications → Alerts).
+- With nobody on the list, it goes to every active super admin and admin, so a request is never announced to no one.
+- The general new-lead alert is not sent for hotel requests.
+- Both the alert and the reply have editable templates on the Notifications screen.
+
+**Admin → Hotel requests.**
+- Permissions: `hotel_inquiries.view` and `hotel_inquiries.manage`. Admins and sales agents get them, and deploy's
+  `permissions:sync` grants them on the live database.
+- The screen works like Air ticketing: oldest open first, flagged after 24 hours, a sidebar badge of the flagged ones,
+  the pool, claim, assign, *Mark as quoted* and *Back to open*.
+- The two screens share one API trait (`WorksQuoteRequests`) and one admin page (`features/requests`).
+
+**Reply (Hotel requests and Air ticketing).**
+- `POST /admin/{hotel|air}-inquiries/{id}/reply` sends the customer the reply (event `inquiry_reply`).
+  - It goes by WhatsApp from the notifications number to the number on the request, and by email to its address.
+  - The template opens with "Dear {name}, a reply to your {request} request:" and then the text staff typed.
+  - The typed text never enters the audit log: `inquiry.replied` records only the message ids.
+- Replying to an unowned request claims it. *Also mark it quoted* marks it in the same step.
+- Needs `<queue>.manage` and `notifications.send`, and uses the same per-staff send limits as a WhatsApp from a booking.
+- **Preview.** The dialog previews the WhatsApp exactly: the sender line, then the template filled for this request
+  around the typed text.
+- **When WhatsApp can't send** (no notifications number published, WhatsApp not connected, or the customer opted out):
+  - the dialog says so, and the email still goes;
+  - the reply's message log shows each channel's status.
+- The row counts the replies sent. The customer's profile lists hotel requests with a link to the queue.
+
+**Tests.**
+- API:
+  - `HotelQuoteRequestTest`: form, lead, alert and its fallback, validation, honeypot, queue, badge, permissions;
+    reply by WhatsApp and email with claim, mark quoted and audit; a reply when WhatsApp can't send; an air reply;
+    no reply without `notifications.send`.
+  - `NavCountsContractTest` covers the new badge for every role, including a reply claiming a pool request.
+  - `AirInquiryQueueTest` updated for the reply action.
+- Web e2e: the Hotel tab's validation and nights label, and the stored request.
+- Admin e2e: a flagged hotel request answered with a reply that marks it quoted. It checks the preview, the held
+  WhatsApp and the email status, the badge, and the reply count in Quoted.
+- Smoke: the hotel queue refuses anonymous calls.

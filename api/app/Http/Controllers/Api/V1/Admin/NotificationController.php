@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Enums\InquiryType;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationEvent;
 use App\Enums\NotificationStatus;
@@ -353,13 +354,19 @@ class NotificationController extends Controller
     {
         $sample = match ($event) {
             NotificationEvent::NewLeadAlert => Inquiry::query()->latest('id')->first(),
+            NotificationEvent::HotelQuoteAlert => Inquiry::query()->ofType(InquiryType::HotelQuote)->latest('id')->first(),
+            NotificationEvent::InquiryReply => Inquiry::query()->whereIn('type', InquiryType::queued())->latest('id')->first(),
             NotificationEvent::LowSeatAlert => PackageDeparture::query()->latest('id')->first(),
             default => Booking::query()->latest('id')->first(),
         };
-        $extra = $sample instanceof Booking ? [
-            'amount' => $sample->paid_amount,
-            'link' => rtrim((string) config('bhabaghure.web_url'), '/')."/booking/{$sample->reference}#t=sample",
-        ] : [];
+        $extra = match (true) {
+            $sample instanceof Booking => [
+                'amount' => $sample->paid_amount,
+                'link' => rtrim((string) config('bhabaghure.web_url'), '/')."/booking/{$sample->reference}#t=sample",
+            ],
+            $event === NotificationEvent::InquiryReply => ['reply' => $locale === 'en' ? '(the reply staff type)' : '(স্টাফের লেখা উত্তর)'],
+            default => [],
+        };
 
         return [$sample, $extra];
     }

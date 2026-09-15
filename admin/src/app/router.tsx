@@ -19,6 +19,7 @@ const page = (load: () => Promise<Record<string, unknown>>, name: string) => {
 }
 
 const AirTicketingPage = page(() => import('../features/air/AirTicketingPage'), 'AirTicketingPage')
+const HotelRequestsPage = page(() => import('../features/hotel/HotelRequestsPage'), 'HotelRequestsPage')
 const AttendancePage = page(() => import('../features/attendance/AttendancePage'), 'AttendancePage')
 const AttendanceStaffPage = page(() => import('../features/attendance/AttendanceStaffPage'), 'AttendanceStaffPage')
 const MyAttendancePage = page(() => import('../features/attendance/MyAttendancePage'), 'MyAttendancePage')
@@ -90,6 +91,7 @@ export const router = createBrowserRouter([
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'air-ticketing', element: <Require permissions={['air_inquiries.view']}><AirTicketingPage /></Require> },
+      { path: 'hotel-requests', element: <Require permissions={['hotel_inquiries.view']}><HotelRequestsPage /></Require> },
       { path: 'documents', element: <Require permissions={bookings}><DocumentsPage /></Require> },
       { path: 'support', element: <Require permissions={['support.manage']}><SupportPage /></Require> },
       { path: 'support/:id', element: <Require permissions={['support.manage']}><SupportTicketPage /></Require> },

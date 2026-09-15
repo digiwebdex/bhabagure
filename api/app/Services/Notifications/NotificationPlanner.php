@@ -2,9 +2,11 @@
 
 namespace App\Services\Notifications;
 
+use App\Enums\InquiryType;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationEvent;
 use App\Enums\NotificationStatus;
+use App\Enums\StaffRole;
 use App\Jobs\DeliverNotification;
 use App\Models\AttendanceDevice;
 use App\Models\Booking;
@@ -28,6 +30,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Decides who gets which message, on which channel, and when (docs/phase-4-whatsapp.md §2–§3). Each message is one
@@ -137,7 +140,43 @@ final class NotificationPlanner
 
     public function leadReceived(Inquiry $inquiry): void
     {
+        if ($inquiry->type === InquiryType::HotelQuote) {
+            // Its own alert list; with nobody on it, the super admins and admins, so a request is never announced to no one.
+            $this->toStaff(NotificationEvent::HotelQuoteAlert, $inquiry,
+                fallback: fn () => Staff::query()->where('status', 'active')
+                    ->whereHas('roles', fn ($roles) => $roles->whereIn('name', [StaffRole::SuperAdmin->value, StaffRole::Admin->value]))->get());
+
+            return;
+        }
         $this->toStaff(NotificationEvent::NewLeadAlert, $inquiry);
+    }
+
+    /**
+     * A staff reply to an air-ticket or hotel quotation request, by WhatsApp and email to the number and address the
+     * customer gave on the form.
+     *
+     * @return list<NotificationMessage>
+     */
+    public function inquiryReplied(Inquiry $inquiry, string $reply, Staff $staff): array
+    {
+        $inquiry->loadMissing('customer');
+        $event = NotificationEvent::InquiryReply;
+        $base = "{$event->value}:inquiry:{$inquiry->id}:".now()->format('YmdHisv').':'.bin2hex(random_bytes(3));
+        $addresses = [
+            NotificationChannel::WhatsApp->value => $inquiry->phone,
+            NotificationChannel::Email->value => $inquiry->email ?? $inquiry->customer?->email,
+        ];
+        $recipient = $inquiry->customer ?? throw new LogicException('A quotation request always has a customer record.');
+
+        $rows = [];
+        foreach ($event->channels() as $channel) {
+            $row = $this->plan($event, $channel, $inquiry, $recipient, $addresses[$channel->value] ?? null, $inquiry->locale ?? 'bn',
+                ['reply' => $reply], null, "{$base}:{$channel->value}", null, $base);
+            $row->forceFill(['triggered_by_staff_id' => $staff->id])->save();
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 
     /**

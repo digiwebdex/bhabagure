@@ -2,6 +2,7 @@
 
 namespace App\Services\Notifications;
 
+use App\Enums\HotelCategory;
 use App\Enums\InquiryType;
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationEvent;
@@ -198,18 +199,47 @@ final class NotificationVariables
     private function inquiry(Inquiry $inquiry, string $locale): array
     {
         $details = $inquiry->details ?? [];
-        $summary = $inquiry->type === InquiryType::AirQuote
-            ? sprintf('%s → %s, %s%s, %s × %s', $details['from'] ?? '?', $details['to'] ?? '?', $details['departOn'] ?? '?',
-                empty($details['returnOn']) ? '' : ' – '.$details['returnOn'], $inquiry->pax ?? 1, $details['cabinClass'] ?? 'economy')
-            : Str::limit((string) ($details['message'] ?? ''), 300);
-
-        return [
+        $en = $locale === 'en';
+        $summary = match ($inquiry->type) {
+            InquiryType::AirQuote => sprintf('%s → %s, %s%s, %s × %s', $details['from'] ?? '?', $details['to'] ?? '?', $details['departOn'] ?? '?',
+                empty($details['returnOn']) ? '' : ' – '.$details['returnOn'], $inquiry->pax ?? 1, $details['cabinClass'] ?? 'economy'),
+            InquiryType::HotelQuote => sprintf('%s, %s – %s', $details['location'] ?? '?', $details['checkIn'] ?? '?', $details['checkOut'] ?? '?'),
+            InquiryType::Contact => Str::limit((string) ($details['message'] ?? ''), 300),
+        };
+        $values = [
             'name' => $inquiry->name,
             'phone' => self::displayPhone($inquiry->phone),
-            'kind' => $inquiry->type === InquiryType::AirQuote
-                ? ($locale === 'en' ? 'Air ticket quote' : 'এয়ার টিকেট কোটেশন')
-                : ($locale === 'en' ? 'Contact form' : 'যোগাযোগ ফর্ম'),
+            'kind' => match ($inquiry->type) {
+                InquiryType::AirQuote => $en ? 'Air ticket quote' : 'এয়ার টিকেট কোটেশন',
+                InquiryType::HotelQuote => $en ? 'Hotel quotation' : 'হোটেল কোটেশন',
+                InquiryType::Contact => $en ? 'Contact form' : 'যোগাযোগ ফর্ম',
+            },
             'details' => $summary !== '' ? $summary : '—',
+            // What the customer asked for, as a reply names it: "your Dhaka → Bangkok air ticket request".
+            'request' => match ($inquiry->type) {
+                InquiryType::AirQuote => trim(sprintf('%s → %s %s', $details['from'] ?? '', $details['to'] ?? '', $en ? 'air ticket' : 'এয়ার টিকেট')),
+                InquiryType::HotelQuote => trim(sprintf('%s %s', $details['location'] ?? '', $en ? 'hotel' : 'হোটেল')),
+                InquiryType::Contact => $en ? 'enquiry' : 'জিজ্ঞাসা',
+            },
+        ];
+        if ($inquiry->type !== InquiryType::HotelQuote) {
+            return $values;
+        }
+
+        $checkIn = $details['checkIn'] ?? null;
+        $checkOut = $details['checkOut'] ?? null;
+        $nights = $checkIn && $checkOut ? (int) CarbonImmutable::parse($checkIn)->diffInDays(CarbonImmutable::parse($checkOut)) : null;
+        $guests = (int) ($inquiry->pax ?? 1);
+
+        return $values + [
+            'location' => (string) ($details['location'] ?? '—'),
+            'check_in' => $checkIn ? Numerals::date($checkIn, $locale) : '—',
+            'check_out' => $checkOut ? Numerals::date($checkOut, $locale) : '—',
+            'nights' => $nights === null ? '—' : ($en ? Numerals::number($nights, $locale).' '.($nights === 1 ? 'night' : 'nights') : Numerals::number($nights, $locale).' রাত'),
+            'category' => HotelCategory::tryFrom((string) ($details['hotelCategory'] ?? ''))?->label($locale) ?? '—',
+            'guests' => $en ? Numerals::number($guests, $locale).' '.($guests === 1 ? 'guest' : 'guests') : Numerals::number($guests, $locale).' জন',
+            'note' => filled($details['note'] ?? null) ? Str::limit((string) $details['note'], 500) : '—',
+            'link' => rtrim((string) config('bhabaghure.admin_url'), '/').'/hotel-requests',
         ];
     }
 
