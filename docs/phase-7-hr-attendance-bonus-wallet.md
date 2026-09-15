@@ -1,7 +1,8 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): steps 1–3 built and live; step 4 built except commission auto-credit and the My commission layout
-check, both waiting for the re-synced design (§12). Step 5 (wallet) waits for its questions.**
+**Status (2026-09-15): steps 1–4 built and live, except commission auto-credit and the My commission layout check, both
+waiting for the re-synced design. Step 5 (wallet) built; it opens once its database, allow-list and basic auth are in
+place on the server (§12, docs/deployment.md §7.6).**
 
 ## 0. Decisions (2026-09-15)
 
@@ -767,3 +768,70 @@ without `TEMP`, Chrome can't stream the PDF. `InvoicePdf` now passes both on Win
   - a credit on the staff record, then a withdrawal asked for under My commission, with its limits;
   - the badge opening the queue; approve, then pay with a receipt; the badge clearing; the cash book row; the staff
     member seeing it paid.
+
+### Step 5 — the super admin wallet (2026-09-15)
+
+**Answers (2026-09-15):**
+- the database and its own user are created by script, on the VPS and locally, with the password written into
+  `api/.env` unprinted;
+- sign-in is the super admin's staff login plus an authenticator app code;
+- the front door is an office IP allow-list plus basic auth.
+
+**Isolation:**
+- **MySQL:** `bhabaghure_wallet` and `bhabaghure_wallet@127.0.0.1` have rights on each other only. The company user has
+  no grant on it, and the wallet user none on the company's. `deploy/wallet-database.sh` checks both; locally,
+  `scripts/wallet-db-local.mjs` does the same for `bhabaghure_wallet`, `_testing` and `_e2e`.
+- **No foreign key either way.** A staff id in the wallet is a plain number.
+- **Code:** `App\Wallet` has its own connection (`wallet`), models, migrations (`database/migrations/wallet`, run with
+  `--database=wallet`), routes (`routes/wallet.php`), service provider, audit log (`wallet_audit_logs`) and command. It
+  imports only the staff account from company code, to check the password. Company code never names it.
+  `WalletIsolationTest` enforces the grants and both import rules, and sweeps every company GET endpoint asserting that
+  no query reaches the wallet connection.
+- **Keys:** the authenticator secret and evidence files are encrypted with `WALLET_KEY` (AES-256-GCM), refused if it
+  equals `APP_KEY`. Evidence lives in `storage/app/private/wallet/evidence`.
+- **Host:** the API answers `/api/v1/wallet` only on `WALLET_HOST`, and fails closed in production when it is unset.
+  nginx returns 404 for that path on the API host. Every request needs `X-Wallet-Request`, which CORS never allows another
+  origin to send, and a request carrying another `Origin` is refused. The reason is that the admin shares the site
+  (`bhabaghure.com.bd`), so SameSite alone wouldn't keep a script there out.
+- **Session:** the password step gives a 5-minute challenge (5 wrong codes spend it). The code step sets `bh_wallet`
+  (HttpOnly, Secure, SameSite=Strict, path `/api/v1/wallet`), a hashed opaque token: 30 minutes idle, 12 hours in all,
+  ended if the account is suspended. The admin's access token never opens the wallet.
+- **Authenticator:** RFC 6238 (SHA-1, 6 digits, 30 s), checked against the RFC's test vectors. Each code works once, and
+  one step of drift either way is allowed. It is enrolled on the first sign-in with a QR code. Reset:
+  `php artisan wallet:reset-authenticator <email>`.
+
+**The book** (`WalletBook`), as the prototype:
+- balance, total in and out with counts, and cash in this month;
+- cash in or out: amount, source, a required reference with saved references per direction, the date and evidence;
+- deals: total, an advance no more than the total (cash in), and payments no more than what is due, with progress and
+  history;
+- breakdown by source (a deal's money counts under its name), and history filtered by all, in or out, with evidence;
+- **the prototype's ✕ is Reverse with a reason:** an entry the other way, once. A reversed deal payment is due again.
+- `wallet_transactions` and `wallet_audit_logs` are append-only (`LedgerTables`). There is no PUT, PATCH or DELETE
+  anywhere under `/wallet`: a saved reference is removed with a POST.
+- **Sources** are entered in the wallet. Only "Personal" and "Other" are seeded, so no business name is in this public
+  repository.
+
+**The app** (`wallet/`, its own workspace and build): the prototype's dark, purple screen, in Bangla and English. It
+covers sign-in with enrollment, the figures, the cash form, breakdown, deals and history with Reverse, and shows
+loading states rather than empty lists.
+
+**Deploy:** `deploy.sh` builds `wallet/dist` and runs the wallet migrations when its database is configured. The health
+check fails the deploy if the wallet answers 200 from the server itself (outside the allow-list), or if its API answers
+on the API host. The nginx wallet block is: Cloudflare real IP, `include /etc/nginx/bhabaghure-wallet/allow*.conf; deny
+all;`, basic auth, the static app with a strict CSP, and `/api/v1/wallet/` to PHP-FPM. The one-time server steps are in
+docs/deployment.md §7.6.
+
+**Tests:**
+- **API:**
+  - `WalletTotpTest`: the RFC vectors;
+  - `WalletSignInTest`: enrollment, a code used once, wrong codes counted, admins and wrong passwords refused, the
+    admin's token refused, idle expiry and suspension, the host, the header, the origin, and closed in production;
+  - `WalletBookTest`: entries by source, evidence encrypted and not with `APP_KEY`, reversal once, the advance and
+    payment limits, a reversed payment due again, presets, append-only;
+  - `WalletIsolationTest`: grants both ways, the import rules, the sweep of company endpoints, and nothing in the
+    company audit log.
+- **Wallet e2e, `wallet/e2e/wallet.spec.ts`:**
+  - an admin refused; the super admin enrolls with a code computed from the key shown;
+  - a source added; cash in from a saved reference; a deal whose advance is capped, then paid in full; a reversal with
+    its reason; sign-out.

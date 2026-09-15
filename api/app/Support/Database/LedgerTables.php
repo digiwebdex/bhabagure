@@ -36,6 +36,8 @@ final class LedgerTables
         'staff_salaries',
         // The steps of each bonus withdrawal (§7); bonus_transactions is listed above.
         'bonus_withdrawal_events',
+        // The wallet's own audit trail (§8), in its own database; wallet_transactions is listed above.
+        'wallet_audit_logs',
     ];
 
     public static function contains(string $table): bool

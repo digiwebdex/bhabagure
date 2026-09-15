@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "@bhabaghure/tokens/theme.css";
+
+/* The wallet is dark and purple-accented, deliberately unlike the admin (docs/phase-1-schema.md §8 item 14). */
+@layer base {
+  html,
+  body {
+    margin: 0;
+    background: var(--color-wallet-bg);
+    color: var(--color-wallet-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--color-wallet-link);
+    text-decoration: none;
+  }
+
+  input,
+  select,
+  button,
+  textarea {
+    font-family: inherit;
+  }
+}

@@ -33,6 +33,10 @@ export function writeE2eEnv({ origins, webUrl = '', portalUrl = '', adminUrl = '
     APP_ENV: 'e2e',
     APP_URL: E2E_API_URL,
     DB_DATABASE: 'bhabaghure_e2e',
+    // The wallet's own e2e database (docs/phase-7-hr-attendance-bonus-wallet.md §8).
+    WALLET_DB_DATABASE: 'bhabaghure_wallet_e2e',
+    WALLET_HOST: '',
+    WALLET_COOKIE_SECURE: 'false',
     CORS_ALLOWED_ORIGINS: origins.join(','),
     AUTH_REFRESH_COOKIE_SECURE: 'false',
     CACHE_STORE: 'array',
@@ -67,9 +71,12 @@ export function writeE2eEnv({ origins, webUrl = '', portalUrl = '', adminUrl = '
 
 /** Rebuilds bhabaghure_e2e from migrations and seeders. Refuses any other database. */
 export function resetE2eDatabase() {
-  const database = artisan('tinker', '--execute=echo config("database.connections.mysql.database");').trim().split(/\r?\n/).pop()
+  const [database, wallet] = artisan('tinker', '--execute=echo config("database.connections.mysql.database")."|".config("database.connections.wallet.database");').trim().split(/\r?\n/).pop().split('|')
   if (database !== 'bhabaghure_e2e') throw new Error(`E2E must run against bhabaghure_e2e, got "${database}". Check api/.env.e2e.`)
+  if (wallet !== 'bhabaghure_wallet_e2e') throw new Error(`E2E must run against bhabaghure_wallet_e2e, got "${wallet}". Run node scripts/wallet-db-local.mjs.`)
   artisan('migrate:fresh', '--seed', '--force')
+  // The wallet's own database, from its own migrations (docs/phase-7-hr-attendance-bonus-wallet.md §8).
+  artisan('migrate:fresh', '--database=wallet', '--path=database/migrations/wallet', '--force')
 }
 
 export const e2eApiServer = () => ({

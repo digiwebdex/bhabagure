@@ -321,3 +321,31 @@ behind Cloudflare's proxy, which answers the HTTP challenge itself.
 challenge: Let's Encrypt refused the request ("Unable to update challenge :: authorization must be pending", before any
 HTTP check). That site has its own server blocks, so the catch-all never handles it. Re-run on its own at 06:52 it
 passed.
+
+### 7.6 Super admin wallet (Phase 7 step 5)
+
+The wallet (docs/phase-7-hr-attendance-bonus-wallet.md §8) is served on `wallet.bhabaghure.com.bd` behind three doors:
+the office IP allow-list, basic auth, then its own sign-in (the super admin's password and an authenticator code).
+`deploy.sh` builds `wallet/dist` and runs the wallet migrations once the database exists. Four one-time steps, in
+order, each run by a person on the server:
+
+1. **Database and user** (approved 2026-09-15): `/var/www/Bhabagure/deploy/wallet-database.sh`. It creates
+   `bhabaghure_wallet` and `bhabaghure_wallet@127.0.0.1` with rights on that database only, checks that the company user
+   has no grant that reaches it, and writes `WALLET_DB_*`, `WALLET_KEY`, `WALLET_HOST` and `WALLET_COOKIE_SECURE` into
+   `api/.env` without printing the password or key. Then `deploy.sh`.
+2. **The allow-list.** Put one `allow <address>;` line per office public address in
+   `/etc/nginx/bhabaghure-wallet/allow.conf` (0644, root). The addresses stay out of this public repository. Until the
+   file exists every request gets 403.
+3. **Basic auth.** Run it yourself, so the password never passes through anyone else's terminal:
+   `printf 'owner:%s\n' "$(openssl passwd -apr1)" > /etc/nginx/bhabaghure-wallet/htpasswd`, then
+   `chown root:www-data /etc/nginx/bhabaghure-wallet/htpasswd && chmod 0640 /etc/nginx/bhabaghure-wallet/htpasswd`.
+4. **nginx:** `deploy.sh --install-nginx` (`nginx -t` first; the previous file is restored if it fails).
+
+At the first wallet sign-in the page shows a QR code for an authenticator app; the first accepted code enrolls it. For a
+lost phone: `cd /var/www/Bhabagure/api && sudo -u www-data php artisan wallet:reset-authenticator <email>`, then sign in
+again to enroll a new one.
+
+| Change | Why | Undo |
+|---|---|---|
+| MySQL database `bhabaghure_wallet`, user `bhabaghure_wallet@127.0.0.1` (wallet-database.sh) | wallet isolation enforced by MySQL | `DROP DATABASE bhabaghure_wallet; DROP USER 'bhabaghure_wallet'@'127.0.0.1';` and remove the `WALLET_*` lines |
+| `/etc/nginx/bhabaghure-wallet/allow.conf` and `htpasswd` | the front door | remove the directory; the wallet then answers 403 to everyone |

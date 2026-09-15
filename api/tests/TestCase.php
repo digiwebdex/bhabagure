@@ -23,6 +23,11 @@ abstract class TestCase extends BaseTestCase
         if (! str_ends_with($database, '_testing')) {
             throw new RuntimeException("Tests must use a *_testing database; got [{$database}]. Check phpunit.xml.");
         }
+        // The same for the wallet's own database (docs/phase-7-hr-attendance-bonus-wallet.md §8).
+        $wallet = (string) config('database.connections.wallet.database');
+        if (! str_ends_with($wallet, '_testing')) {
+            throw new RuntimeException("Tests must use a *_testing wallet database; got [{$wallet}]. Check phpunit.xml.");
+        }
     }
 
     protected function staff(?string $role = 'admin', array $attributes = []): Staff

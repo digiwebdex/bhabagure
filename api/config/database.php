@@ -64,6 +64,25 @@ return [
             ]) : [],
         ],
 
+        // The super admin wallet (docs/phase-7-hr-attendance-bonus-wallet.md §8): its own database and its own MySQL user,
+        // with no grant on the company database either way. Only App\Wallet uses this connection.
+        'wallet' => [
+            'driver' => 'mysql',
+            'host' => env('WALLET_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('WALLET_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('WALLET_DB_DATABASE', 'bhabaghure_wallet'),
+            'username' => env('WALLET_DB_USERNAME', 'bhabaghure_wallet'),
+            'password' => env('WALLET_DB_PASSWORD', ''),
+            'unix_socket' => '',
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

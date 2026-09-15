@@ -25,6 +25,7 @@ ROOT=/var/www/Bhabagure
 API=$ROOT/api
 WEB=$ROOT/web
 ADMIN=$ROOT/admin
+WALLET=$ROOT/wallet
 STATE=$ROOT/.deploy
 BRANCH=main
 SITE_HOST=bhabaghure.com.bd
@@ -226,6 +227,10 @@ build_and_release() {
   rm -rf "$ADMIN/dist-next"
   (cd "$ADMIN" && capped admin npx tsc -b && capped admin npx vite build --outDir dist-next --emptyOutDir)
 
+  say "Wallet build → wallet/dist-next (wallet/dist keeps serving)"
+  rm -rf "$WALLET/dist-next"
+  (cd "$WALLET" && capped wallet npx tsc -b && capped wallet npx vite build --outDir dist-next --emptyOutDir)
+
   local active="" slot
   [[ -f $STATE/web-slot.env ]] && active=$(sed -n 's/^NEXT_DIST_DIR=//p' "$STATE/web-slot.env")
   slot=.next-a
@@ -253,6 +258,12 @@ build_and_release() {
   artisan db:seed --force --no-interaction
   # New permissions reach existing roles only through this audited, add-only step (never removes one).
   artisan permissions:sync --add-only --no-interaction
+  # The wallet's own database, from its own migrations, once deploy/wallet-database.sh has set it up.
+  if grep -qE '^WALLET_DB_PASSWORD=.+' "$API/.env"; then
+    artisan migrate --database=wallet --path=database/migrations/wallet --force --no-interaction
+  else
+    note "wallet database not set up yet (deploy/wallet-database.sh): wallet migrations skipped."
+  fi
   # api/public belongs to root, so the link is made as root.
   [[ -L $API/public/storage ]] || (cd "$API" && php artisan storage:link --no-interaction)
   artisan optimize
@@ -279,6 +290,12 @@ build_and_release() {
   [[ -d $ADMIN/dist ]] && mv "$ADMIN/dist" "$ADMIN/dist-previous"
   mv "$ADMIN/dist-next" "$ADMIN/dist"
   rm -rf "$ADMIN/dist-previous"
+
+  say "Switch the wallet build"
+  rm -rf "$WALLET/dist-previous"
+  [[ -d $WALLET/dist ]] && mv "$WALLET/dist" "$WALLET/dist-previous"
+  mv "$WALLET/dist-next" "$WALLET/dist"
+  rm -rf "$WALLET/dist-previous"
 
   say "Switch the website to $slot"
   chown -R www-data:www-data "$WEB/$slot"
@@ -340,6 +357,13 @@ health() {
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/up") || true
     note "API through nginx (/up)            HTTP $code"
     [[ $code == 200 ]] || die "the API health check failed: tail $API/storage/logs/laravel-*.log; journalctl -u bhabaghure-php -n 50"
+    # The wallet is closed to everyone outside its allow-list — this server included — and absent from the API host.
+    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "wallet.$SITE_HOST:443:127.0.0.1" "https://wallet.$SITE_HOST/") || true
+    note "wallet from this server               HTTP $code (403 or 401 expected: allow-list, then basic auth)"
+    [[ $code == 200 ]] && die "the wallet answered 200 to a request from outside its allow-list. Check /etc/nginx/bhabaghure-wallet/ now."
+    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/api/v1/wallet/auth/me") || true
+    note "wallet API on the API host            HTTP $code (404 expected)"
+    [[ $code == 404 ]] || die "the wallet API answered on api.$SITE_HOST (HTTP $code)."
     local cert=/etc/letsencrypt/live/$SITE_HOST/fullchain.pem host names
     if [[ -f $cert ]]; then
       names=$(openssl x509 -in "$cert" -noout -ext subjectAltName 2>/dev/null | grep -o 'DNS:[^,]*' | tr -d ' ')
