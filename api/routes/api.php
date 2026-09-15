@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\PackageController;
 use App\Http\Controllers\Api\V1\Admin\PackageImageController;
 use App\Http\Controllers\Api\V1\Admin\PaymentsController;
+use App\Http\Controllers\Api\V1\Admin\PayrollController;
 use App\Http\Controllers\Api\V1\Admin\PricingController;
 use App\Http\Controllers\Api\V1\Admin\ProfileWhatsAppController;
 use App\Http\Controllers\Api\V1\Admin\QuotationController;
@@ -327,6 +328,25 @@ Route::prefix('v1')->group(function () {
             Route::get('profile/leave-requests', 'leave');
             Route::post('profile/leave-requests', 'file');
             Route::post('profile/leave-requests/{id}/cancel', 'cancel')->whereNumber('id');
+        });
+
+        // Salary from attendance (docs/phase-7-hr-attendance-bonus-wallet.md §6). Changes also need payroll.manage, and
+        // reopening a finalised month the super admin (checked in the controller).
+        Route::middleware('permission:payroll.view|payroll.manage,staff')->controller(PayrollController::class)->group(function () {
+            Route::get('payroll', 'sheet');
+            Route::post('payroll/{month}/adjustments', 'addAdjustment')->where('month', '\d{4}-\d{2}');
+            Route::delete('payroll-adjustments/{id}', 'removeAdjustment')->whereNumber('id');
+            Route::post('payroll/{month}/finalise', 'finalise')->where('month', '\d{4}-\d{2}');
+            Route::post('payroll/{month}/reopen', 'reopen')->where('month', '\d{4}-\d{2}');
+            Route::post('payroll-items/{id}/pay', 'pay')->whereNumber('id')->middleware('throttle:media-upload');
+            Route::get('payroll-items/{id}/payslip', 'payslip')->whereNumber('id');
+            Route::get('staff/{id}/salaries', 'salaries')->whereNumber('id');
+            Route::post('staff/{id}/salaries', 'setSalary')->whereNumber('id');
+        });
+        // Each person's own finalised payslips.
+        Route::controller(PayrollController::class)->group(function () {
+            Route::get('profile/payslips', 'myPayslips');
+            Route::get('profile/payslips/{id}', 'myPayslip')->whereNumber('id');
         });
 
         // Sidebar badges, derived from the same scoped queries as their lists (docs/phase-5-admin-core.md §3.1).

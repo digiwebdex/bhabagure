@@ -64,6 +64,12 @@ class InvoicePdf
                     'TMPDIR' => "{$chromeHome}/tmp",
                     'XDG_CONFIG_HOME' => "{$chromeHome}/.config",
                     'XDG_CACHE_HOME' => "{$chromeHome}/.cache",
+                    // Windows only (a developer's machine): under PHP's built-in server (php artisan serve) a child process
+                    // inherits almost none of the environment. Node can't seed its random number generator without
+                    // SystemRoot, and Chrome's profile and PDF stream need TEMP.
+                    'SystemRoot' => PHP_OS_FAMILY === 'Windows' ? getenv('SystemRoot') : null,
+                    'TEMP' => PHP_OS_FAMILY === 'Windows' ? "{$chromeHome}/tmp" : null,
+                    'TMP' => PHP_OS_FAMILY === 'Windows' ? "{$chromeHome}/tmp" : null,
                 ]),
                 timeout: (float) config('bhabaghure.invoices.timeout_seconds'),
             );

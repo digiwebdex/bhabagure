@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { API_URL, password, PHOTO, signIn } from './helpers'
+import { API_URL, FIRST_LOAD, password, PHOTO, signIn } from './helpers'
 
 test.describe('access', () => {
   test('a tour operator sees bookings and the catalogue, not the website screens', async ({ page }) => {
@@ -73,15 +73,17 @@ test.describe('packages', () => {
     await expect(page).toHaveURL(/\/packages\/\d+$/)
     await expect(page.getByText('Draft').first()).toBeVisible()
 
-    // Not publishable without a photo: the API says what's missing.
+    // Not publishable without a photo: the API says what's missing. The saved package's screen is still loading its
+    // departures, tags and media on the one-request-at-a-time e2e API, so this answer queues behind them (FIRST_LOAD).
     await page.getByRole('button', { name: 'Publish' }).click()
-    await expect(page.getByRole('alert').filter({ hasText: 'Add at least one photo.' })).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: 'Add at least one photo.' })).toBeVisible(FIRST_LOAD)
     expect((await request.get(`${API_URL}/api/v1/public/packages/pokhara-lake-escape`)).status()).toBe(404)
 
     await page.getByRole('button', { name: '+ Add photo' }).click()
     const dialog = page.getByRole('dialog', { name: 'Choose an image' })
     await dialog.locator('input[type=file]').setInputFiles(PHOTO)
-    await expect(dialog).toBeHidden()
+    // The upload makes the image's WebP sizes inside the request.
+    await expect(dialog).toBeHidden({ timeout: 30_000 })
     await expect(page.getByText('Cover', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: 'Publish' }).click()

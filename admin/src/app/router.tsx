@@ -22,6 +22,7 @@ const AirTicketingPage = page(() => import('../features/air/AirTicketingPage'), 
 const AttendancePage = page(() => import('../features/attendance/AttendancePage'), 'AttendancePage')
 const AttendanceStaffPage = page(() => import('../features/attendance/AttendanceStaffPage'), 'AttendanceStaffPage')
 const MyAttendancePage = page(() => import('../features/attendance/MyAttendancePage'), 'MyAttendancePage')
+const PayrollPage = page(() => import('../features/payroll/PayrollPage'), 'PayrollPage')
 const BookingDetailPage = page(() => import('../features/bookings/BookingDetailPage'), 'BookingDetailPage')
 const BookingListPage = page(() => import('../features/bookings/BookingListPage'), 'BookingListPage')
 const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'), 'NewBookingPage')
@@ -109,6 +110,7 @@ export const router = createBrowserRouter([
       { path: 'attendance', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendancePage /></Require> },
       { path: 'attendance/staff/:id', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendanceStaffPage /></Require> },
       { path: 'my-attendance', element: <MyAttendancePage /> },
+      { path: 'payroll', element: <Require permissions={['payroll.view', 'payroll.manage']}><PayrollPage /></Require> },
       { path: 'staff', element: <Require permissions={['staff.manage']}><StaffPage /></Require> },
       { path: 'staff/:id', element: <Require permissions={['staff.manage']}><StaffProfilePage /></Require> },
       { path: 'vault', element: <Require permissions={['staff_documents.view']}><VaultPage /></Require> },

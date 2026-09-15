@@ -8,6 +8,7 @@ import { Pair, TextArea, TextInput } from '../../components/ui/fields'
 import { Card, CardTitle, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
+import { MyPayslipsCard } from '../payroll/MyPayslipsCard'
 import { myLeaveActions, useAttendanceChange, useMyLeave, useMyMonth } from './api'
 import { MonthSwitch, TotalsStrip } from './AttendanceStaffPage'
 import { DaysTable } from './DaysTable'
@@ -15,7 +16,7 @@ import { LeaveStatusBadge } from './LeaveCard'
 
 /**
  * My attendance (docs/phase-7-hr-attendance-bonus-wallet.md §5.1), for every staff member: their own days from the
- * device, and their leave requests — filed here, cancelled while nobody has decided them.
+ * device, their leave requests — filed here, cancelled while nobody has decided them — and their payslips (§6).
  */
 export function MyAttendancePage() {
   const { t } = useTranslation()
@@ -49,49 +50,52 @@ export function MyAttendancePage() {
           </div>
           {data.data ? <DaysTable days={data.data.data.days} testId="my-days-table" /> : <Loading />}
         </Card>
-        <Card>
-          <CardTitle
-            bn="আমার ছুটি"
-            en="My leave"
-            aside={
-              <button type="button" className={buttonClass('cta', 'sm')} onClick={() => setFiling(true)}>
-                {t('myAttendance.askLeave')}
-              </button>
-            }
-          />
-          {leave.isPending ? (
-            <Loading />
-          ) : leave.isError ? (
-            <ErrorNotice error={leave.error} />
-          ) : leave.data.data.length === 0 ? (
-            <p className="m-0 text-13 text-app-muted">{t('myAttendance.noLeave')}</p>
-          ) : (
-            <ul className="m-0 flex list-none flex-col gap-2 p-0 text-13" data-testid="my-leave">
-              {leave.data.data.map((request) => (
-                <li key={request.id} className="flex flex-col gap-1 rounded-10 bg-app-surface-2 px-3 py-2">
-                  <span className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-display">{request.starts_on === request.ends_on ? date(request.starts_on) : `${date(request.starts_on)} – ${date(request.ends_on)}`}</span>
-                    <LeaveStatusBadge leave={request} />
-                  </span>
-                  <span className="text-app-muted">{request.reason}</span>
-                  {request.decision_note ? <span className="text-12">{t('myAttendance.note', { name: request.decided_by ?? '—', note: request.decision_note })}</span> : null}
-                  {request.status === 'pending' ? (
-                    <button
-                      type="button"
-                      className="cursor-pointer self-start text-12 font-semibold text-red"
-                      disabled={cancel.isPending}
-                      onClick={async () => {
-                        if (await confirm(t('myAttendance.cancelConfirm'))) cancel.mutate(request.id, { onSuccess: () => toast(t('myAttendance.cancelled')) })
-                      }}
-                    >
-                      {t('myAttendance.cancel')}
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <div className="flex flex-col gap-4.5">
+          <Card>
+            <CardTitle
+              bn="আমার ছুটি"
+              en="My leave"
+              aside={
+                <button type="button" className={buttonClass('cta', 'sm')} onClick={() => setFiling(true)}>
+                  {t('myAttendance.askLeave')}
+                </button>
+              }
+            />
+            {leave.isPending ? (
+              <Loading />
+            ) : leave.isError ? (
+              <ErrorNotice error={leave.error} />
+            ) : leave.data.data.length === 0 ? (
+              <p className="m-0 text-13 text-app-muted">{t('myAttendance.noLeave')}</p>
+            ) : (
+              <ul className="m-0 flex list-none flex-col gap-2 p-0 text-13" data-testid="my-leave">
+                {leave.data.data.map((request) => (
+                  <li key={request.id} className="flex flex-col gap-1 rounded-10 bg-app-surface-2 px-3 py-2">
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-display">{request.starts_on === request.ends_on ? date(request.starts_on) : `${date(request.starts_on)} – ${date(request.ends_on)}`}</span>
+                      <LeaveStatusBadge leave={request} />
+                    </span>
+                    <span className="text-app-muted">{request.reason}</span>
+                    {request.decision_note ? <span className="text-12">{t('myAttendance.note', { name: request.decided_by ?? '—', note: request.decision_note })}</span> : null}
+                    {request.status === 'pending' ? (
+                      <button
+                        type="button"
+                        className="cursor-pointer self-start text-12 font-semibold text-red"
+                        disabled={cancel.isPending}
+                        onClick={async () => {
+                          if (await confirm(t('myAttendance.cancelConfirm'))) cancel.mutate(request.id, { onSuccess: () => toast(t('myAttendance.cancelled')) })
+                        }}
+                      >
+                        {t('myAttendance.cancel')}
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <MyPayslipsCard />
+        </div>
       </div>
       {filing ? <LeaveDialog onClose={() => setFiling(false)} /> : null}
       {element}

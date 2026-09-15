@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 
 import { useAuth } from '../../app/auth'
 import { DataTable, type Column, type RowAction } from '../../components/table/DataTable'
@@ -10,6 +10,7 @@ import { SelectInput, TextArea, TextInput, Pair } from '../../components/ui/fiel
 import { Card, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
+import { usePayrollSheet } from '../payroll/api'
 import { roleLabel } from '../staff/api'
 import { leaveActions, shiftMonth, useAttendanceChange, useAttendanceMonth, type LeaveFilter, type MonthData } from './api'
 import { DayStatusBadge } from './DaysTable'
@@ -21,18 +22,22 @@ type Row = MonthData['rows'][number]
 
 /**
  * HR → Attendance & salary (docs/phase-7-hr-attendance-bonus-wallet.md §5.1): the device card and sync log, the rules and
- * holidays, the month's table from the biometric punches, and leave requests. Salary columns join the table in step 3.
+ * holidays, the month's table from the biometric punches — with base and payable for those who see payroll (§6) — and
+ * leave requests. Adjusting, finalising and paying are on the Salary screen.
  */
 export function AttendancePage() {
   const { t } = useTranslation()
   const { can } = useAuth()
-  const { locale, number } = useFormat()
+  const { locale, number, bdt, month: monthLabel } = useFormat()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const month = /^\d{4}-\d{2}$/.test(params.get('month') ?? '') ? (params.get('month') as string) : todayInDhaka().slice(0, 7)
   const leaveStatus = (['pending', 'approved', 'rejected', 'all'] as const).find((value) => value === params.get('status')) ?? 'pending'
   const data = useAttendanceMonth(month)
   const manage = can('attendance.manage')
+  const seePay = can('payroll.view') || can('payroll.manage')
+  const pay = usePayrollSheet(month, seePay)
+  const payFor = new Map((pay.data?.data.rows ?? []).map((row) => [row.staff.id, row]))
   const [recording, setRecording] = useState(false)
 
   const set = (patch: { month?: string; status?: LeaveFilter }) => {
@@ -63,6 +68,38 @@ export function AttendancePage() {
     { key: 'single', header: t('attendance.columns.single'), align: 'right', cell: (row) => <span className={`font-display ${row.totals.single_punch ? 'text-amber' : 'text-app-muted'}`}>{number(row.totals.single_punch)}</span> },
     { key: 'leave', header: t('attendance.columns.leave'), align: 'right', cell: (row) => <span className="font-display">{number(row.totals.leave_paid + row.totals.leave_unpaid)}</span> },
     { key: 'absent', header: t('attendance.columns.absent'), align: 'right', cell: (row) => <span className={`font-display ${row.totals.absent ? 'text-red' : 'text-app-muted'}`}>{number(row.totals.absent)}</span> },
+    // The design's salary columns, for those who see payroll (§6): the month's sheet, live until it is finalised.
+    ...(seePay
+      ? [
+          {
+            key: 'base',
+            header: t('payroll.columns.base'),
+            align: 'right' as const,
+            cell: (row: Row) => {
+              const base = payFor.get(row.staff.id)?.base
+              if (base === undefined) return null
+              return base === null ? <span className="text-12 text-app-muted">{t('payroll.noSalary')}</span> : <span className="font-display text-app-muted">{bdt(base)}</span>
+            },
+          },
+          {
+            key: 'payable',
+            header: t('payroll.columns.payable'),
+            align: 'right' as const,
+            cell: (row: Row) => {
+              const figures = payFor.get(row.staff.id)?.figures
+              return figures ? (
+                <span className="flex flex-col items-end leading-1.2">
+                  <span className="font-display font-bold">{bdt(figures.payable)}</span>
+                  <span className="flex gap-1.5 text-11 whitespace-nowrap">
+                    {figures.deductions > 0 ? <span className="text-red">{t('payroll.cut', { amount: bdt(figures.deductions) })}</span> : null}
+                    {figures.adjustments !== 0 ? <span className={figures.adjustments < 0 ? 'text-red' : 'text-green'}>{figures.adjustments < 0 ? `− ${bdt(Math.abs(figures.adjustments))}` : `+ ${bdt(figures.adjustments)}`}</span> : null}
+                  </span>
+                </span>
+              ) : null
+            },
+          },
+        ]
+      : []),
     ...(month === todayInDhaka().slice(0, 7)
       ? [{ key: 'today', header: t('attendance.columns.today'), cell: (row: Row) => (row.today ? <DayStatusBadge day={row.today} /> : null) }]
       : []),
@@ -78,8 +115,8 @@ export function AttendancePage() {
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => set({ month: shiftMonth(month, -1) })} aria-label={t('attendance.previousMonth')}>
               ←
             </button>
-            <span className="min-w-28 text-center font-display text-14 font-semibold" data-testid="attendance-month">
-              {month}
+            <span className="min-w-36 text-center font-display text-14 font-semibold" data-testid="attendance-month">
+              {monthLabel(month)}
             </span>
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => set({ month: shiftMonth(month, 1) })} aria-label={t('attendance.nextMonth')}>
               →
@@ -115,13 +152,20 @@ export function AttendancePage() {
           </div>
           <Card padded={false} className="overflow-hidden">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-app-line p-3.5">
-              <h2 className="m-0 text-15 font-semibold">{t('attendance.monthTitle', { month })}</h2>
-              <span className="text-12 text-app-muted">{t('attendance.rules.note', { start: data.data.data.rules.duty_start, end: data.data.data.rules.duty_end, grace: number(data.data.data.rules.grace_minutes), percent: number(data.data.data.rules.late_early_pay_percent) })}</span>
+              <h2 className="m-0 text-15 font-semibold">{t('attendance.monthTitle', { month: monthLabel(month) })}</h2>
+              <span className="flex flex-wrap items-center gap-3">
+                <span className="text-12 text-app-muted">{t('attendance.rules.note', { start: data.data.data.rules.duty_start, end: data.data.data.rules.duty_end, grace: number(data.data.data.rules.grace_minutes), percent: number(data.data.data.rules.late_early_pay_percent) })}</span>
+                {seePay ? (
+                  <Link to={`/payroll?month=${month}`} className={buttonClass('outline', 'sm')}>
+                    {t('payroll.openSheet')}
+                  </Link>
+                ) : null}
+              </span>
             </div>
             {data.data.data.rows.length === 0 ? (
               <EmptyState title={t('attendance.noStaff')} />
             ) : (
-              <DataTable label={t('attendance.monthTitle', { month })} testId="attendance-month-table" columns={columns} rows={data.data.data.rows} rowKey={(row) => row.staff.id} rowLabel={(row) => row.staff.name} actions={actionsFor} onRowClick={(row) => navigate(`/attendance/staff/${row.staff.id}?month=${month}`)} />
+              <DataTable label={t('attendance.monthTitle', { month: monthLabel(month) })} testId="attendance-month-table" columns={columns} rows={data.data.data.rows} rowKey={(row) => row.staff.id} rowLabel={(row) => row.staff.name} actions={actionsFor} onRowClick={(row) => navigate(`/attendance/staff/${row.staff.id}?month=${month}`)} />
             )}
           </Card>
         </>

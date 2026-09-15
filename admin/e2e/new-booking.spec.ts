@@ -27,7 +27,10 @@ test('a sales agent books a walk-in customer at the website price; the booking i
   await page.getByRole('button', { name: 'Create booking · ৳ 1,53,000' }).click()
 
   await expect(page).toHaveURL(/\/bookings\/\d+$/)
-  const reference = (await page.getByRole('heading', { level: 1 }).textContent())!.match(/BH-\d{4}-\d{3,}/)?.[0]
+  // The URL changes before the booking loads; until then the heading is still "New booking".
+  const heading = page.getByRole('heading', { level: 1 })
+  await expect(heading).toContainText(/BH-\d{4}-\d{3,}/, FIRST_LOAD)
+  const reference = (await heading.textContent())!.match(/BH-\d{4}-\d{3,}/)?.[0]
   expect(reference).toBeTruthy()
 
   await page.goto('/bookings?owner=mine')

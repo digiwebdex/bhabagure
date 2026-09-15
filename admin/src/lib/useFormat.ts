@@ -34,6 +34,8 @@ export function useFormat() {
       percent: (value: number) => formatPercent(value, locale),
       /** 'YYYY-MM-DD' (or an ISO timestamp, taken on its Dhaka date) → '24 Sep 2026' / '২৪ সেপ্টেম্বর ২০২৬'. */
       date: (iso: string) => formatDate(iso.length > 10 ? dhaka(iso).date : iso, locale),
+      /** 'YYYY-MM' → 'September 2026' / 'সেপ্টেম্বর ২০২৬' (the date's day dropped). */
+      month: (yearMonth: string) => formatDate(`${yearMonth}-01`, locale).replace(/^\S+\s/u, ''),
       /** An ISO timestamp in Dhaka time → '24 Oct 2026, 10:00' / '২৪ অক্টোবর ২০২৬, ১০:০০'. */
       dateTime: (iso: string) => {
         const { date, time } = dhaka(iso)

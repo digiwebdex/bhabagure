@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
-import { useStaff } from '../../app/auth'
+import { useAuth, useStaff } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
 import { Dialog, ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
 import { Pair, SelectInput, TextArea, TextInput } from '../../components/ui/fields'
 import { Badge, Card, CardTitle, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
+import { SalaryHistory } from '../payroll/PayrollDialogs'
 import {
   documentName,
   roleLabel,
@@ -27,9 +28,10 @@ import { DocumentStatusBadge, ExpiryNote } from './documentBits'
 import { InvitationDialog } from './InvitationDialog'
 import { useOpenStaffDocument } from './useOpenStaffDocument'
 
-/** One staff member's record (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): account, HR record, role and access, documents. */
+/** One staff member's record (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): account, HR record, role and access, base salary (§6), documents. */
 export function StaffProfilePage() {
   const { t } = useTranslation()
+  const { can } = useAuth()
   const { locale } = useFormat()
   const id = Number(useParams().id)
   const member = useStaffMember(id)
@@ -49,6 +51,12 @@ export function StaffProfilePage() {
         <RecordForm key={JSON.stringify([staff.name, staff.email, staff.phone, staff.locale, staff.profile])} staff={staff} />
         <div className="flex flex-col gap-4.5">
           <AccessCard staff={staff} />
+          {can('payroll.view') || can('payroll.manage') ? (
+            <Card>
+              <CardTitle bn="মূল বেতন" en="Base salary" />
+              <SalaryHistory staffId={staff.id} />
+            </Card>
+          ) : null}
           {staff.documents !== null ? <DocumentsCard staff={staff} documents={staff.documents} /> : null}
         </div>
       </div>

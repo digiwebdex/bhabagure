@@ -13,6 +13,9 @@ test.describe.configure({ mode: 'serial' })
 
 type Theme = 'light' | 'dark'
 
+/** This month in Dhaka: never finalised, so its salary sheet always has everyone employed, each with the draft's actions. */
+const THIS_MONTH = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date()).slice(0, 7)
+
 /** Every admin table with row actions, at a width where its columns overflow the card. Quotations add → Convert (§2 #10). */
 const TABLES = [
   { name: 'Bookings', url: '/bookings', testId: 'bookings-table', width: 1024, icons: 7 },
@@ -33,6 +36,8 @@ const TABLES = [
   { name: 'Attendance', url: '/attendance', testId: 'attendance-month-table', width: 700, icons: 1 },
   // Approve, Reject, Revoke, Open their days (§5.1).
   { name: 'Leave requests', url: '/attendance?status=all', testId: 'leave-requests-table', width: 700, icons: 4 },
+  // Days, Base salary, Adjust pay (§6).
+  { name: 'Salary', url: `/payroll?month=${THIS_MONTH}`, testId: 'payroll-table', width: 700, icons: 3 },
 ] as const
 
 /** The table the helpers below measure. */
@@ -83,6 +88,10 @@ async function openBookings(page: Page, width: number, theme: Theme) {
   // The e2e API is PHP's built-in server, one request at a time (no workers on Windows): a screen that loads several
   // lists at once, like Payments, can take over 5 s to show its table here. Production serves them in parallel.
   await expect(page.getByTestId(current.testId).getByRole('row').nth(1)).toBeVisible({ timeout: 15_000 })
+  // Measurements are pixel positions: wait for every section of the screen, not just this table. On Attendance the
+  // leave table arrives before the month table and salary figures above it, which then push it down mid-measurement.
+  await expect(page.getByRole('main').getByText('Loading…', { exact: true })).toHaveCount(0, { timeout: 15_000 })
+  await page.waitForLoadState('networkidle', { timeout: 15_000 })
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 }
 

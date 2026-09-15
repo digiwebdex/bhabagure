@@ -57,6 +57,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     key: 'hr',
     items: [
       { key: 'attendance', path: '/attendance', icon: '◷', permissions: ['attendance.view_all', 'attendance.manage'], badge: 'leave_requests' },
+      // Salary from attendance (§6).
+      { key: 'payroll', path: '/payroll', icon: '৳', permissions: ['payroll.view', 'payroll.manage'] },
       { key: 'staff', path: '/staff', icon: 'S', permissions: ['staff.manage'] },
       // Everyone's own days and leave (§5.1).
       { key: 'my_attendance', path: '/my-attendance', icon: '◴', permissions: [] },

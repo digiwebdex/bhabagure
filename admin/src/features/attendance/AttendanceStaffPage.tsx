@@ -95,12 +95,13 @@ export function AttendanceStaffPage() {
 
 export function MonthSwitch({ month, onChange }: { month: string; onChange: (month: string) => void }) {
   const { t } = useTranslation()
+  const { month: monthLabel } = useFormat()
   return (
     <div className="flex items-center gap-2">
       <button type="button" className={buttonClass('outline', 'sm')} onClick={() => onChange(shiftMonth(month, -1))} aria-label={t('attendance.previousMonth')}>
         ←
       </button>
-      <span className="min-w-28 text-center font-display text-14 font-semibold">{month}</span>
+      <span className="min-w-36 text-center font-display text-14 font-semibold">{monthLabel(month)}</span>
       <button type="button" className={buttonClass('outline', 'sm')} onClick={() => onChange(shiftMonth(month, 1))} aria-label={t('attendance.nextMonth')}>
         →
       </button>

@@ -3,6 +3,7 @@
 namespace App\Services\Ledger;
 
 use App\Enums\TransactionDirection;
+use App\Events\CashEntryReversed;
 use App\Models\Account;
 use App\Models\Booking;
 use App\Models\Invoice;
@@ -314,6 +315,7 @@ final class LedgerService
         } elseif ($invoice) {
             $this->syncInvoicePaid($invoice);
         }
+        CashEntryReversed::dispatch($payment, $reversal, $staff, $reason);
 
         return $reversal;
     }

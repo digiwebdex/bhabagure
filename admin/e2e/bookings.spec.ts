@@ -49,7 +49,8 @@ test('draft quote, issue, header on and off, record payment, confirm', async ({ 
   await expect(preview.locator('main')).toContainText('PARTIAL')
 
   await page.getByRole('button', { name: 'Confirm booking' }).click()
-  await expect(page.getByText('Booking confirmed', { exact: true })).toBeVisible()
+  // The e2e queue is synchronous: the confirmation email's invoice PDF is rendered inside this request.
+  await expect(page.getByText('Booking confirmed', { exact: true })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('main').getByText('Confirmed', { exact: true }).first()).toBeVisible()
 
   // The half advance sent "payment received"; confirming sends the confirmation. Each channel reports on its own. No

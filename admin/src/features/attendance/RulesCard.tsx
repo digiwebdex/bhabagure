@@ -21,7 +21,7 @@ export function RulesCard({ month, rules, manage }: { month: string; rules: Rule
 
 function RulesForm({ month, rules, manage }: { month: string; rules: Rules; manage: boolean }) {
   const { t } = useTranslation()
-  const { number } = useFormat()
+  const { number, month: monthLabel } = useFormat()
   const toast = useToast()
   const [form, setForm] = useState({ ...rules })
   const save = useAttendanceChange(attendanceActions.saveRules)
@@ -30,7 +30,16 @@ function RulesForm({ month, rules, manage }: { month: string; rules: Rules; mana
 
   return (
     <Card>
-      <CardTitle bn="নিয়ম" en="Rules" aside={<span className="text-12 text-app-muted">{t('attendance.rulesFrom', { month: rules.effective_month })}</span>} />
+      <CardTitle
+        bn="নিয়ম"
+        en="Rules"
+        aside={
+          <span className="text-12 text-app-muted">
+            {/* The migration's starting rules carry January 2000: in force from the beginning, not from a real month. */}
+            {rules.effective_month === '2000-01' ? t('attendance.rulesFromStart') : t('attendance.rulesFrom', { month: monthLabel(rules.effective_month) })}
+          </span>
+        }
+      />
       <fieldset disabled={!manage} className="m-0 flex flex-col gap-3 border-0 p-0" data-testid="attendance-rules">
         <Pair>
           <TextInput label={t('attendance.rules.dutyStart')} type="time" value={form.duty_start} onChange={(duty_start) => setForm({ ...form, duty_start })} error={fieldError('duty_start')} />
@@ -97,11 +106,11 @@ function RulesForm({ month, rules, manage }: { month: string; rules: Rules; mana
                 weekly_off_days: form.weekly_off_days,
                 single_punch_counts_as: form.single_punch_counts_as,
               },
-              { onSuccess: () => toast(t('attendance.rules.saved', { month })) },
+              { onSuccess: () => toast(t('attendance.rules.saved', { month: monthLabel(month) })) },
             )
           }
         >
-          {t('attendance.rules.saveFrom', { month })}
+          {t('attendance.rules.saveFrom', { month: monthLabel(month) })}
         </button>
       ) : null}
       <HolidaysList year={Number(month.slice(0, 4))} manage={manage} />

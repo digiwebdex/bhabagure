@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Events\CashEntryReversed;
 use App\Listeners\PlanNotifications;
 use App\Models\Account;
 use App\Models\Addon;
+use App\Models\AttendanceDevice;
 use App\Models\AuditLog;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
@@ -27,7 +29,6 @@ use App\Models\Quotation;
 use App\Models\ReferencePreset;
 use App\Models\Review;
 use App\Models\SiteSetting;
-use App\Models\AttendanceDevice;
 use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\SupportTicket;
@@ -50,6 +51,7 @@ use App\Services\Payments\PaymentsNotConfigured;
 use App\Services\Payments\SslCommerz\FakeSslCommerzGateway;
 use App\Services\Payments\SslCommerz\HttpSslCommerzGateway;
 use App\Services\Payments\SslCommerz\SslCommerzGateway;
+use App\Services\Payroll\PayrollDesk;
 use App\Support\Database\LedgerQueryGuard;
 use Aws\Textract\TextractClient;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -192,6 +194,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Bookings, payments and website forms → WhatsApp and email notifications (docs/phase-4-whatsapp.md).
         Event::subscribe(PlanNotifications::class);
+        // A reversed salary cash-out leaves that month's pay unpaid again, in the same transaction (docs/phase-7 §6).
+        Event::listen(CashEntryReversed::class, [PayrollDesk::class, 'onCashEntryReversed']);
 
         // Super admin passes every check, independent of the permission matrix (docs/phase-1-schema.md §5).
         Gate::before(fn ($user) => $user instanceof Staff && $user->isSuperAdmin() ? true : null);

@@ -1,6 +1,6 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): steps 1 and 2 built (§12); step 3 (salary) next.**
+**Status (2026-09-15): steps 1–3 built (§12); step 4 (bonus accounts) next.**
 
 ## 0. Decisions (2026-09-15)
 
@@ -560,7 +560,7 @@ through the API (`role_name_en` / `role_name_bn`).
 - **Install and build:** `install.ps1` installs, updates and uninstalls. `build.ps1` runs the tests and makes the zip;
   the build is never committed.
 - **Commands:** `run`, `test`, `status`, `pull --full`, `set-token`, `configure`.
-- **Tests:** 15 unit tests with a fake device and a fake API.
+- **Tests:** 16 unit tests with a fake device and a fake API.
 
 **The API:**
 - **Agent endpoints** (`/api/v1/attendance-agent/check-in | device | punches`):
@@ -609,7 +609,7 @@ through the API (`role_name_en` / `role_name_bn`).
   time is kept on the device instead.
 - Punches aren't linked to their sync-log row. The log row is append-only and written after the insert, which is when
   its counts are known.
-- Salary columns (base, payable, cut) join the monthly table in step 3.
+- Salary columns (base, payable, cut) join the monthly table in step 3 (done).
 
 **Tests:**
 - **API:**
@@ -631,3 +631,80 @@ through the API (`role_name_en` / `role_name_bn`).
     mark.
   - A request with the agent's User-Agent reaches the production API through Cloudflare without a challenge.
   - Still to do at the office: `agent.exe test` against the real K40.
+
+### Step 3 — salary from attendance (2026-09-15)
+
+**The API** (`PayrollDesk`, `PayrollController`):
+- **Base salaries** (`staff_salaries`, append-only in `LedgerTables`): a row per change, from a month onward, with its
+  reason and who set it. A change can't reach back into a finalised month.
+- **The sheet** for a month (default: last month) is figured live from `DailyAttendance` and the month's rules, as §6:
+  - day rate = base ÷ working days a month;
+  - deductions = day rate × (absent days + working days not employed + (100 % − late-or-early pay) × reduced days);
+  - payable = base − deductions + adjustments, never below 0, rounded to the taka.
+- **Adjustments:** an allowance or a recovery with a reason, only while the month is a draft and only for someone
+  employed in it.
+- **Finalising** needs the month to be over. Each person with a base salary gets a `payroll_items` row with the base,
+  day rate, totals, the days' statuses, deductions, adjustments and payable; the rules used are frozen on the run.
+  Payslips are emailed by a queued job (`SendPayslips`), one PDF at a time; a failure is logged per person.
+- **Reopening:** the super admin only, with a reason, and only while nobody is paid. The items are discarded and the
+  month is a draft again.
+- **Paying** one person records a cash-out under Salaries (business line: office) through `LedgerService`, with the
+  method's money account, the reference, the receipt and the date (a past date is noon in Dhaka).
+- **Payslips** (`PayslipPdf`, `payroll/payslip.blade.php`): the invoices' letterhead and renderer, in the person's
+  language, rendered on demand and never cached. `payroll.view` and `payroll.manage` open anyone's; everyone opens their
+  own finalised months (`/profile/payslips`).
+- **Permissions:** `payroll.view` (Accountant) and `payroll.manage` (Admin), as §9.
+
+**Decisions made while building, open to veto:**
+- **No base salary, not on the payroll.** Someone employed in a month without a base salary (the proprietor, say) isn't
+  in it. The draft lists them, the finalise dialog names them, and a month where nobody has a salary can't be finalised.
+- **Nobody handles their own pay.** Setting your own salary, adjusting your own pay or marking it paid is refused (403
+  `own_pay`) except for the super admin. This is the same rule as leave and attendance corrections.
+- **A reversed cash-out unpays the month.** Reversing a salary cash-out in the cash book (the only way to undo a payment)
+  sets that person's month back to unpaid in the same transaction (`CashEntryReversed`), so it can be paid again. The
+  audit log keeps `payroll.payment_reversed`.
+
+**The admin:**
+- **HR → Salary** (`/payroll`):
+  - the month's status, with Finalise and Reopen;
+  - the people without a base salary;
+  - KPIs: payable, base, cuts, and adjustments or paid;
+  - the design's table: full, late, early, leave, absent, base, and payable with its cut and adjustment underneath,
+    plus paid status once finalised;
+  - row actions: Days, Base salary (history, and set), Adjust pay, Mark paid, Payslip;
+  - the month's adjustments, removable while a draft.
+- **Attendance:** the monthly table gains Base and Payable for payroll viewers, and a Salary sheet link.
+- **A staff record:** a Base salary card (history, and set).
+- **My attendance:** My payslips, with paid status and the PDF.
+- **Month labels** on these screens read "August 2026" / "আগস্ট ২০২৬", not 2026-08. The starting attendance rules say so
+  instead of "since 2000-01".
+
+**Fixed along the way:** PDF rendering failed on a Windows `php artisan serve`, for invoices as well as payslips. PHP's
+built-in server gives child processes almost none of its environment; without `SystemRoot`, Node aborts at start-up, and
+without `TEMP`, Chrome can't stream the PDF. `InvoicePdf` now passes both on Windows only. The VPS was never affected.
+
+**Tests:**
+- **API, `PayrollTest`:**
+  - the design's sample (৳ 30,154) and the second sample (৳ 27,115);
+  - a full month is the base whatever its length, and one absence costs one day's rate;
+  - live figures, an adjustment, finalising, payslip email, frozen figures after attendance changes, and no salary change
+    or adjustment reaching back;
+  - payment as a bKash Salaries cash-out with its receipt, paid once;
+  - the reopen rules, own payslips only, and permissions;
+  - no base salary: not on the payroll, with `no_salaries` refused; a leaver isn't adjustable; a joiner on the 16th is
+    paid 13 of 26 days;
+  - `own_pay` refusals; a reversed cash-out leaves the month unpaid, then paid afresh.
+- **Admin e2e, `payroll.spec.ts`:**
+  - base salary, allowance, the figures on the Salary and Attendance screens, finalise, pay with a receipt, and open the
+    payslip;
+  - the staff member opens it under My payslips, and has no Salary screen;
+  - reversing the cash-out in the cash book shows the month unpaid.
+- **Row-actions matrix:** Salary is added. The matrix now waits for every section of a screen to finish loading before
+  measuring. On Attendance, the month table and salary figures arrived after the leave table and pushed it down
+  mid-measurement.
+- **Other specs, timing only:**
+  - Now that PDFs render locally, confirming a booking renders the confirmation's invoice inside the request (the e2e
+    queue is synchronous), and `bookings.spec.ts` waits for that.
+  - `cms.spec.ts` waits longer for the photo upload, which makes the WebP sizes, and for the first answer after the saved
+    package's screen loads.
+  - `new-booking.spec.ts` waits for the new booking's heading instead of reading the outgoing one.
