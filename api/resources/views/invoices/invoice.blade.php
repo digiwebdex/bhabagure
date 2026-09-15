@@ -76,6 +76,8 @@
   .totals .paid { background: #E6F7EC; border-radius: 2mm; padding: 2mm 2.6mm; margin-top: 1mm; }
   .totals .paid span { color: #12A150 !important; font-weight: 700; }
   .totals .due { padding: 0 2.6mm; } .totals .due .num { font-weight: 700; color: {{ $hasDue ? '#C2410C' : 'var(--ink)' }}; }
+  .how-to-pay { display: flex; flex-direction: column; gap: 0.6mm; border: 0.25mm solid var(--line, #E1E7F2); border-radius: 2mm; padding: 2mm 3mm; break-inside: avoid; }
+  .how-to-pay span.t { font-size: 8.8pt; line-height: 1.45; overflow-wrap: anywhere; }
   footer { margin-top: auto; display: grid; grid-template-columns: 1.3fr 1fr; gap: 5mm; align-items: end; border-top: 0.7mm solid var(--blue); padding-top: 2.4mm; }
   footer .terms { display: flex; flex-direction: column; gap: 0.8mm; }
   footer .terms span.t { font-size: 9pt; color: var(--muted); line-height: 1.5; }
@@ -181,6 +183,17 @@
       @endif
     </div>
   </section>
+
+  @if (! empty($howToPay))
+    {{-- Phase 8 §4.F: bank transfer, the payment link while the built-in checkout is off, bKash with its charge. --}}
+    <section class="how-to-pay" data-region="how-to-pay">
+      <span class="label">How to pay · পেমেন্টের উপায়</span>
+      @foreach ($howToPay as $line)
+        <span class="t">· {{ $line }}</span>
+      @endforeach
+      <span class="t">{{ $locale === 'bn' ? 'রেফারেন্সে বুকিং বা কোটেশন নম্বর লিখুন।' : 'Write the booking or quotation number as the reference.' }}</span>
+    </section>
+  @endif
 
   <footer>
     <div class="terms">

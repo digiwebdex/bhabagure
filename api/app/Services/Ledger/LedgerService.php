@@ -142,7 +142,8 @@ final class LedgerService
         if ($chargePaisa > 0) {
             Transaction::query()->create($common + [
                 'direction' => TransactionDirection::In, 'amount' => self::amount($chargePaisa), 'category' => self::CATEGORY_ONLINE_CHARGE,
-                'external_ref' => $externalRef === null ? null : "{$externalRef}:charge", 'description' => "Online payment charge · {$description}",
+                'external_ref' => $externalRef === null ? null : "{$externalRef}:charge",
+                'description' => ($method === 'bkash' ? 'bKash charge' : 'Online payment charge')." · {$description}",
             ]);
         }
         if ($gatewayFeePaisa > 0) {
@@ -307,6 +308,20 @@ final class LedgerService
             'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $payment->id,
             'description' => "Reversal of #{$payment->id}: {$reason}",
         ]);
+
+        // A bKash charge recorded with the payment (Phase 8 §4.F) is in the same journal entry; its cash-book row goes too.
+        if ($payment->external_ref !== null && $payment->category === self::CATEGORY_PAYMENT) {
+            Transaction::query()->where('booking_id', $payment->booking_id)->where('method', $payment->method)
+                ->where('category', self::CATEGORY_ONLINE_CHARGE)->where('external_ref', "{$payment->external_ref}:charge")
+                ->whereNull('reverses_transaction_id')->whereDoesntHave('reversal')->get()
+                ->each(fn (Transaction $charge) => Transaction::query()->create([
+                    'direction' => $charge->direction->opposite(), 'amount' => $charge->amount, 'category' => $charge->category,
+                    'business_line' => $charge->business_line, 'method' => $charge->method, 'booking_id' => $charge->booking_id,
+                    'invoice_id' => $charge->invoice_id, 'customer_id' => $charge->customer_id, 'client_id' => $charge->client_id,
+                    'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $charge->id,
+                    'description' => "Reversal of #{$charge->id}: {$reason}",
+                ]));
+        }
 
         $entry = JournalEntry::query()->where('source_type', $payment->getMorphClass())->where('source_id', $payment->id)->firstOrFail();
         $this->reverse($entry, "Reversal of #{$payment->id}: {$reason}", $staff, $reversal);

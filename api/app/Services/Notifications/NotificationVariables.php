@@ -19,6 +19,7 @@ use App\Models\SupportTicket;
 use App\Services\Booking\DepartureSeats;
 use App\Services\Invoices\InvoiceShortLink;
 use App\Support\Numerals;
+use App\Support\Payments\PaymentOptions;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
@@ -53,7 +54,7 @@ final class NotificationVariables
         }
 
         $values = match (true) {
-            $related instanceof Booking => $this->booking($related, $locale, $money),
+            $related instanceof Booking => $this->booking($related, $locale, $money) + ['how_to_pay' => self::howToPay($related, $locale, $channel)],
             $related instanceof Inquiry => $this->inquiry($related, $locale),
             $related instanceof PackageDeparture => $this->departure($related, $locale),
             $related instanceof Quotation => $this->quotation($related, $locale, $money),
@@ -64,6 +65,24 @@ final class NotificationVariables
         };
 
         return array_intersect_key($extra + $values + $this->company($locale), array_flip($event->variables()));
+    }
+
+    /**
+     * {{how_to_pay}} (Phase 8 §4.F): the balance by bank transfer, payment link and bKash, one line each, or nothing when
+     * nothing is due or set. The WhatsApp leaves the link out: the first WhatsApp to a customer carries no link
+     * (WaSenderAPI's anti-ban guidance); the email has it.
+     */
+    private static function howToPay(Booking $booking, string $locale, NotificationChannel $channel): string
+    {
+        $due = (float) $booking->due_amount;
+        $checkout = $channel === NotificationChannel::WhatsApp ? true : null;
+        $lines = PaymentOptions::lines($due, $locale, $checkout);
+        if ($lines === []) {
+            return '';
+        }
+        $heading = $locale === 'en' ? "How to pay (write {$booking->reference} as the reference):" : "পেমেন্টের উপায় (রেফারেন্সে {$booking->reference} লিখুন):";
+
+        return $heading."\n".implode("\n", array_map(fn (string $line) => "• {$line}", $lines));
     }
 
     /**

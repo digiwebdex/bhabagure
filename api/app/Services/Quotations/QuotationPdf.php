@@ -5,6 +5,7 @@ namespace App\Services\Quotations;
 use App\Models\Quotation;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Invoices\InvoiceView;
+use App\Support\Payments\PaymentOptions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -26,7 +27,7 @@ class QuotationPdf
     {
         $key = sha1(implode('|', [
             InvoiceView::TEMPLATE_VERSION, QuotationView::TEMPLATE_VERSION, $quotation->id, $quotation->number, $quotation->displayStatus(),
-            $quotation->valid_until->toDateString(), $quotation->updated_at?->getTimestamp(), (int) $header, $locale,
+            $quotation->valid_until->toDateString(), $quotation->updated_at?->getTimestamp(), (int) $header, $locale, PaymentOptions::fingerprint(),
         ]));
         $path = "quotations/{$quotation->id}/{$key}.pdf";
         $disk = Storage::disk('local');

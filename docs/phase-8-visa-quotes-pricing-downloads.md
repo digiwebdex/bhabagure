@@ -1,6 +1,6 @@
 # Phase 8 — Visa, hotel quotes, hotel-category pricing, gated downloads
 
-**Status (2026-09-16): steps A–E built (§4.A–§4.E); A–D deployed.**
+**Status (2026-09-16): steps A–F built (§4.A–§4.F); A–E deployed.**
 
 ## 0. The client's requests (2026-09-15, summarised from Bangla)
 
@@ -69,6 +69,7 @@
 | C | Visa services: CMS screen, home section, country details, Visa tab (it lists the CMS's countries) | — |
 | D | Hotel-category × traveller price grid: package editor, website customiser, bookings, quotations, invoices | — |
 | E | Package and visa PDFs, sign-in-gated downloads, downloads log | C, D; live WhatsApp for real sign-ins |
+| F | Payment methods: NPSB bank transfer, the SSLCommerz payment link, bKash with its charge (asked for 2026-09-16) | — |
 
 Each step ships on its own with API tests, e2e tests and a deploy.
 
@@ -358,3 +359,61 @@ the invoice lock). Each is A4, in the language the visitor is reading.
 - Admin e2e: a sales agent has no Downloads screen; the Super Admin sees the rows, the choice, the follow-up and kind
   filters, and the profile card and its link back. `row-actions.spec` covers the new table.
 - Smoke: both download routes refuse anonymous calls.
+
+### 4.F Payment methods: NPSB bank transfer, the payment link, bKash (2026-09-16)
+
+**Decided before building (2026-09-16, all the recommended options):**
+1. The methods are shown on the booking page and in the portal, on invoices and quotations, in the "booking received"
+   WhatsApp and email, and in the FAQ, About and legal wording.
+2. The hosted SSLCommerz payment form stands in for the built-in checkout until that checkout can take payments; then
+   the link goes and bank transfer and bKash stay.
+3. bKash shows the exact amount to send, with its charge already added, and staff record that charge separately.
+4. The details live in Admin → Site settings → Payment, not in the code.
+
+**The details (site setting `payment`).** Bank (`bankName`, `accountName`, `accountNumber`, `branch`, `routingNumber`,
+`transferType`), the payment `link`, and bKash (`number`, `chargePercent`). Each method is optional; a method filled in
+needs all its fields (account number 6–20 digits, routing 9 digits, an https link, a Bangladeshi mobile number, a charge
+of 0–10%). The key is staff-only: it is never part of `GET /public/settings`. Instead the API puts the details where a
+customer needs them, with that booking's amounts.
+
+**`PaymentOptions` (api/app/Support/Payments).**
+- `settings()` — the saved details, each method null until filled in.
+- `checkoutAvailable()` — whether the built-in SSLCommerz checkout takes real payments here: live mode with the store's
+  credentials in production; outside production the fake gateway, or the sandbox with credentials. Anything else is off.
+- `forAmount($amount, $checkout)` — each method with the exact amount: bank and bKash always, the link only while the
+  checkout is off; bKash adds its charge (the same rounding as the online payment charge).
+- `lines($amount, $locale, $checkout)` — the same as one text line per method, for messages and PDFs.
+- `fingerprint()` — part of a stored invoice or quotation PDF's key, so changed details make a new PDF.
+
+**Website.**
+- The booking page and the portal show a *How to pay* box: bank details with copy buttons, the payment link (with the
+  amount and reference to enter), and bKash with balance, charge and the amount to send. It comes from the booking's own
+  API record, so the amounts always match what is still due.
+- With the checkout on, the box sits under the checkout as *Or pay by hand* and the link is left out.
+- The booking form's last step follows `pricing.onlineCheckout`: off, the button reads *Confirm booking · ৳ …*, the
+  booking is saved and its page opens with the instructions; the online payment charge line is not added.
+- The FAQ, About, "Why us", contact note, Terms §3 and Refund §4 name the methods (no account numbers in the text).
+
+**Invoices and quotations.** An issued invoice with a balance, and every quotation, print a *How to pay · পেমেন্টের উপায়*
+box above the terms, in the document's language, and say to write the booking or quotation number as the reference.
+`InvoiceView::TEMPLATE_VERSION` is 2.
+
+**Messages.** `{{how_to_pay}}` is a new variable of *Booking received*: a heading with the reference and one line per
+method. The WhatsApp leaves the link out — the first WhatsApp to a customer carries no link (WaSenderAPI's anti-ban
+guidance) — and the email keeps it. The migration adds the variable to both templates only where staff have not edited
+them. An empty variable no longer leaves a gap: `MessageRenderer::fill` collapses runs of blank lines.
+
+**Staff.** On a bKash payment where the customer also sent the charge, Record payment shows *Customer also paid the ৳ X
+bKash charge*. It needs the bKash transaction ID, records the tour payment and the charge as two cash-book rows (the
+charge as income, not as payment for the tour), and a reversal now reverses both. The invoice lists the charge beside
+its payment as "bKash charge".
+
+**Deploy.** `deploy.sh --reload-config` prints whether the online checkout is on and refreshes the website's cached
+settings, so switching SSLCommerz live reaches the booking form at once.
+
+**Tests.**
+- API `PaymentOptionsTest`: the settings and their rules, that the details stay out of the public settings, the
+  checkout-available matrix, the booking payload's methods and amounts (link only while the checkout is off), the
+  WhatsApp without the link and the email with it, the invoice box appearing and going once paid, and the staff bKash
+  payment with its charge, its rules and its reversal.
+- `PublicContentContractTest` covers the new `onlineCheckout` flag.

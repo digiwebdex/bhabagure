@@ -147,7 +147,9 @@ reload_config() {
   systemctl restart bhabaghure-queue.service
   systemctl is-active --quiet bhabaghure-queue.service || die "bhabaghure-queue did not start: journalctl -u bhabaghure-queue -n 50"
   note "bhabaghure-queue restarted (its preflight re-checked the Redis settings)."
-  artisan tinker --execute='$c = config("bhabaghure.notifications"); echo "   WhatsApp: ".($c["whatsapp"]["mode"] ?? "?")."   SMS: ".($c["sms"]["mode"] ?? "?")."   mail: ".config("mail.default")."   SSLCommerz: ".config("bhabaghure.sslcommerz.mode").PHP_EOL;' 2>/dev/null || true
+  artisan tinker --execute='$c = config("bhabaghure.notifications"); echo "   WhatsApp: ".($c["whatsapp"]["mode"] ?? "?")."   SMS: ".($c["sms"]["mode"] ?? "?")."   mail: ".config("mail.default")."   SSLCommerz: ".config("bhabaghure.sslcommerz.mode")."   online checkout: ".(App\Support\Payments\PaymentOptions::checkoutAvailable() ? "on" : "off (payment link shown)").PHP_EOL;' 2>/dev/null || true
+  # The website's booking form reads whether the SSLCommerz checkout is on (Phase 8 §4.F): refresh its cached settings.
+  revalidate_all
 }
 
 # ── Deploy, stage 1: fetch and fast-forward, then continue with the script that was just pulled ─────────────────

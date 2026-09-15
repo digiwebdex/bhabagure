@@ -763,7 +763,20 @@
     "reelViewsHint": "e.g. 104 for 104K.",
     "banglaSupport": "Bangla support %",
     "notificationsWhatsapp": "Notifications WhatsApp number",
-    "notificationsWhatsappHint": "The dedicated number automated WhatsApp messages come from. The website, invoices and booking page show it as “Notifications” beside the main number. Customer WhatsApp messages are held until it is set."
+    "notificationsWhatsappHint": "The dedicated number automated WhatsApp messages come from. The website, invoices and booking page show it as “Notifications” beside the main number. Customer WhatsApp messages are held until it is set.",
+    "bankName": "Bank",
+    "bankHint": "Shown to customers with the exact amount. Leave every bank field blank to not offer bank transfer.",
+    "accountName": "Account name",
+    "accountNumber": "Account number",
+    "branch": "Branch",
+    "routingNumber": "Routing number",
+    "routingHint": "9 digits",
+    "transferType": "Transfer type",
+    "paymentLink": "Card / mobile banking / EMI payment link",
+    "paymentLinkHint": "Your SSLCommerz payment form. Shown until the built-in checkout takes payments (store ID and password on the server).",
+    "bkashNumber": "bKash number",
+    "bkashCharge": "bKash charge (%)",
+    "bkashChargeHint": "Added to the amount the customer sends, and recorded as a charge, not as payment for the tour."
   },
   "bookings": {
     "title": "Bookings",
@@ -909,7 +922,8 @@
     "categories": {
       "customer_payment": "Payment",
       "online_payment_charge": "online payment charge",
-      "gateway_fee": "gateway fee"
+      "gateway_fee": "gateway fee",
+      "bkash_charge": "bKash charge"
     },
     "nps": "Rated {{score}}/10 after the trip",
     "editTraveller": "Edit details",
@@ -928,7 +942,9 @@
     "missing": {
       "passport": "passport",
       "dateOfBirth": "date of birth"
-    }
+    },
+    "bkashCharge": "Customer also paid the {{amount}} bKash charge",
+    "bkashChargeHint": "Recorded as a separate charge; the booking is paid {{amount}}."
   },
   "profile": {
     "title": "My profile",

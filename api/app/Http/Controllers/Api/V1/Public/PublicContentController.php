@@ -17,6 +17,7 @@ use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\VisaService;
 use App\Support\Money;
+use App\Support\Payments\PaymentOptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
@@ -122,6 +123,8 @@ class PublicContentController extends Controller
             'serviceChargePercent' => $settings['serviceChargePercent'] ?? 0,
             'maxTravellers' => $settings['maxTravellers'] ?? 20,
             'onlinePaymentChargePercent' => $settings['onlinePaymentChargePercent'] ?? 0,
+            // Phase 8 §4.F: off, the booking form saves the booking and its page shows how to pay by hand.
+            'onlineCheckout' => PaymentOptions::checkoutAvailable(),
             'addons' => Addon::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()
                 ->map(fn (Addon $addon) => [
                     'code' => $addon->code,

@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\PaymentAttempt;
 use App\Services\Payments\PaymentService;
 use App\Support\Money;
+use App\Support\Payments\PaymentOptions;
 
 /**
  * A booking as its customer sees it on the website: amounts, status and traveller names — never passport data,
@@ -24,6 +25,8 @@ final class PublicBooking
         $invoice = Invoice::query()->where('booking_id', $booking->id)->where('status', Invoice::ISSUED)->latest('id')->first();
         $attempt = PaymentAttempt::query()->where('booking_id', $booking->id)->latest('id')->first();
         $due = (float) $booking->due_amount;
+        $canPay = in_array($booking->status, [BookingStatus::Inquiry, BookingStatus::Confirmed], true) && $due > 0;
+        $checkout = PaymentOptions::checkoutAvailable();
 
         return [
             'reference' => $booking->reference,
@@ -56,7 +59,10 @@ final class PublicBooking
                 'pdfUrl' => url("/api/v1/public/invoices/{$invoice->share_token}/pdf"),
             ] : null,
             'payment' => [
-                'canPay' => in_array($booking->status, [BookingStatus::Inquiry, BookingStatus::Confirmed], true) && $due > 0,
+                'canPay' => $canPay,
+                // Phase 8 §4.F: the built-in SSLCommerz checkout, and paying by hand with each method's exact amount.
+                'checkout' => $checkout,
+                'manual' => $canPay ? PaymentOptions::forAmount(Money::toNumber($booking->due_amount), $checkout) : null,
                 // What paying the balance online costs now: shown line by line before the customer commits.
                 'online' => PaymentService::quote($booking),
                 'lastAttempt' => $attempt ? [

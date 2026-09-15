@@ -93,9 +93,41 @@ export function SettingsPage() {
             )}
           </SettingCard>
         </div>
+
+        {/* How customers pay by hand (Phase 8 §4.F): shown on the booking page, in the portal, on invoices and in the
+            booking message, each with the exact amount. A method left blank is not offered. */}
+        <SettingCard settingKey="payment" bn="পেমেন্ট" en="Payment" initial={data.payment ?? { bank: null, link: null, bkash: null }}>
+          {(value, set, error) => (
+            <>
+              <Pair>
+                <TextInput label={t('settings.bankName')} value={value.bank?.bankName ?? ''} onChange={(bankName) => set({ ...value, bank: bank(value.bank, { bankName }) })} error={error('value.bank.bankName')} hint={t('settings.bankHint')} />
+                <TextInput label={t('settings.accountName')} value={value.bank?.accountName ?? ''} onChange={(accountName) => set({ ...value, bank: bank(value.bank, { accountName }) })} error={error('value.bank.accountName')} />
+              </Pair>
+              <Pair>
+                <TextInput label={t('settings.accountNumber')} value={value.bank?.accountNumber ?? ''} onChange={(accountNumber) => set({ ...value, bank: bank(value.bank, { accountNumber }) })} error={error('value.bank.accountNumber')} />
+                <TextInput label={t('settings.branch')} value={value.bank?.branch ?? ''} onChange={(branch) => set({ ...value, bank: bank(value.bank, { branch }) })} error={error('value.bank.branch')} />
+              </Pair>
+              <Pair>
+                <TextInput label={t('settings.routingNumber')} value={value.bank?.routingNumber ?? ''} onChange={(routingNumber) => set({ ...value, bank: bank(value.bank, { routingNumber }) })} error={error('value.bank.routingNumber')} hint={t('settings.routingHint')} />
+                <TextInput label={t('settings.transferType')} value={value.bank?.transferType ?? ''} onChange={(transferType) => set({ ...value, bank: bank(value.bank, { transferType }) })} error={error('value.bank.transferType')} placeholder="NPSB" />
+              </Pair>
+              <TextInput label={t('settings.paymentLink')} type="url" value={value.link ?? ''} onChange={(link) => set({ ...value, link: link || null })} error={error('value.link')} hint={t('settings.paymentLinkHint')} />
+              <Pair>
+                <TextInput label={t('settings.bkashNumber')} type="tel" value={value.bkash?.number ?? ''} onChange={(number) => set({ ...value, bkash: number ? { number, chargePercent: value.bkash?.chargePercent ?? 0 } : null })} error={error('value.bkash.number')} placeholder="+8801XXXXXXXXX" />
+                <NumberInput label={t('settings.bkashCharge')} value={value.bkash?.chargePercent ?? null} onChange={(chargePercent) => set({ ...value, bkash: value.bkash ? { ...value.bkash, chargePercent: chargePercent ?? 0 } : null })} error={error('value.bkash.chargePercent')} hint={t('settings.bkashChargeHint')} />
+              </Pair>
+            </>
+          )}
+        </SettingCard>
       </div>
     </>
   )
+}
+
+/** A blank field clears the whole bank block: a half-filled account helps nobody. */
+function bank(current: NonNullable<SiteSettings['payment']>['bank'], patch: Partial<NonNullable<NonNullable<SiteSettings['payment']>['bank']>>) {
+  const next = { bankName: '', accountName: '', accountNumber: '', branch: '', routingNumber: '', transferType: 'NPSB', ...current, ...patch }
+  return Object.values(next).every((field) => field.trim() === '') ? null : next
 }
 
 function SettingCard<K extends Key>({ settingKey, bn, en, initial, children }: {

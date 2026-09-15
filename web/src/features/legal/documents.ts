@@ -50,7 +50,7 @@ const en: Record<LegalSlug, LegalDocument> = {
         heading: '3. Prices and payment',
         paragraphs: [
           'Package prices are per person in Bangladeshi taka and depend on the number of travellers. A single room adds a supplement. A service charge and VAT are added on the amount after any discount; the rate is shown on your quote and invoice.',
-          'Online payments are processed by SSLCommerz. SSLCommerz may add a convenience fee on its payment page; that fee is shown there before you pay and is not part of the package price.',
+          'You can pay by NPSB bank transfer to our account, by card, mobile banking or EMI through SSLCommerz, or by bKash. Your booking page, invoice and quotation show the account details and the exact amount. bKash payments add bKash’s charge, shown with the amount, and SSLCommerz may add a convenience fee on its payment page; neither is part of the package price.',
           `Payment schedule for bookings paid in instalments or with an advance at our office: ${CONFIRM}.`,
         ],
       },
@@ -108,7 +108,7 @@ const en: Record<LegalSlug, LegalDocument> = {
       {
         heading: '4. How refunds are paid',
         paragraphs: [
-          'Refunds go back through the method you paid with where possible: card and online payments through SSLCommerz, bKash or Nagad to the same account, cash and bank payments by bank transfer.',
+          'Refunds go back through the method you paid with where possible: card, mobile banking and EMI payments through SSLCommerz, bKash to the same number, cash and bank payments by bank transfer.',
           `Time to process a refund: ${CONFIRM}. The SSLCommerz convenience fee is not refundable ${CONFIRM}.`,
         ],
       },
@@ -191,7 +191,7 @@ const bn: Record<LegalSlug, LegalDocument> = {
         heading: '৩. দাম ও পেমেন্ট',
         paragraphs: [
           'প্যাকেজের দাম জনপ্রতি টাকায় এবং যাত্রীর সংখ্যার ওপর নির্ভর করে। সিঙ্গেল রুমে সাপ্লিমেন্ট যোগ হয়। ডিসকাউন্টের পরের অঙ্কের ওপর সার্ভিস চার্জ ও ভ্যাট যোগ হয়; হার কোটেশন ও ইনভয়েসে দেখানো থাকে।',
-          'অনলাইন পেমেন্ট SSLCommerz-এর মাধ্যমে হয়। SSLCommerz তাদের পেমেন্ট পেজে কনভিনিয়েন্স ফি যোগ করতে পারে; তা পেমেন্টের আগে সেখানে দেখানো হয় এবং প্যাকেজের দামের অংশ নয়।',
+          'NPSB ব্যাংক ট্রান্সফারে আমাদের অ্যাকাউন্টে, SSLCommerz-এ কার্ড, মোবাইল ব্যাংকিং বা EMI-তে, অথবা বিকাশে পেমেন্ট করা যায়। বুকিং পেজ, ইনভয়েস ও কোটেশনে অ্যাকাউন্টের তথ্য ও সঠিক অঙ্ক দেখানো থাকে। বিকাশ পেমেন্টে বিকাশের চার্জ যোগ হয়, যা অঙ্কের সঙ্গে দেখানো হয়, আর SSLCommerz তাদের পেমেন্ট পেজে কনভিনিয়েন্স ফি যোগ করতে পারে; কোনোটিই প্যাকেজের দামের অংশ নয়।',
           `অফিসে কিস্তি বা অগ্রিমে পেমেন্টের সময়সূচি: ${CONFIRM_BN}।`,
         ],
       },
@@ -249,7 +249,7 @@ const bn: Record<LegalSlug, LegalDocument> = {
       {
         heading: '৪. রিফান্ড কীভাবে দেওয়া হয়',
         paragraphs: [
-          'সম্ভব হলে যে পদ্ধতিতে পেমেন্ট করেছেন সেভাবেই ফেরত: কার্ড ও অনলাইন পেমেন্ট SSLCommerz-এর মাধ্যমে, বিকাশ বা নগদ একই অ্যাকাউন্টে, নগদ ও ব্যাংক পেমেন্ট ব্যাংক ট্রান্সফারে।',
+          'সম্ভব হলে যে পদ্ধতিতে পেমেন্ট করেছেন সেভাবেই ফেরত: কার্ড, মোবাইল ব্যাংকিং ও EMI পেমেন্ট SSLCommerz-এর মাধ্যমে, বিকাশ একই নম্বরে, নগদ ও ব্যাংক পেমেন্ট ব্যাংক ট্রান্সফারে।',
           `রিফান্ড প্রক্রিয়ার সময়: ${CONFIRM_BN}। SSLCommerz কনভিনিয়েন্স ফি ফেরতযোগ্য নয় ${CONFIRM_BN}।`,
         ],
       },

@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { buttonClass } from '@/components/ui/button';
+import { PaymentInstructions } from '@/features/booking/PaymentInstructions';
 import { Link } from '@/i18n/navigation';
 import { openPortalFile, portalCall } from '@/lib/customer-api';
 import { useFormatters } from '@/lib/use-formatters';
@@ -115,6 +116,14 @@ export function TripDetailView({ reference }: { reference: string }) {
                 {t('refresh')}
               </button>
             </p>
+          ) : trip.payment.canPay && !trip.payment.checkout ? (
+            trip.payment.manual ? (
+              <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal />
+            ) : (
+              <p role="note" className="m-0 rounded-12 bg-orange-tint px-3.5 py-3 text-13.5 text-amber">
+                {tb('paymentUnavailable')}
+              </p>
+            )
           ) : trip.payment.canPay ? (
             <div className="flex flex-col gap-3 rounded-14 border border-portal-line bg-app-surface-2 p-3.5">
               <strong className="text-15">{t('payBalance')}</strong>
@@ -143,6 +152,9 @@ export function TripDetailView({ reference }: { reference: string }) {
                 {paying ? t('opening') : t('payNow', { amount: f.bdt(trip.payment.online.total) })}
               </button>
             </div>
+          ) : null}
+          {!checking && trip.payment.canPay && trip.payment.checkout && trip.payment.manual && (trip.payment.manual.bank || trip.payment.manual.bkash) ? (
+            <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal alongsideCheckout />
           ) : null}
         </Card>
 

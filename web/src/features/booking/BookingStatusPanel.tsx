@@ -10,6 +10,8 @@ import { displayPhone, whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
 import type { PaymentMethod } from '@/state/booking';
 
+import { PaymentInstructions } from './PaymentInstructions';
+
 type View =
   { state: 'loading' } | { state: 'no-token' } | { state: 'not-found' } | { state: 'unavailable' } | { state: 'ready'; booking: PublicBooking; token: string };
 
@@ -132,7 +134,17 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
         </div>
       ) : null}
 
-      {booking.payment.canPay && outcome !== 'checking' ? (
+      {booking.payment.canPay && outcome !== 'checking' && !booking.payment.checkout ? (
+        booking.payment.manual ? (
+          <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} />
+        ) : (
+          <p role="note" className="rounded-12 bg-orange-tint px-3.5 py-3 text-14 leading-1.6 text-amber">
+            {tb('paymentUnavailable')}
+          </p>
+        )
+      ) : null}
+
+      {booking.payment.canPay && outcome !== 'checking' && booking.payment.checkout ? (
         <div className="flex flex-col gap-2.5 rounded-14 border border-hairline p-4">
           <strong className="text-15">{t('payNow', { amount: f.bdt(booking.payment.online.total) })}</strong>
           {booking.payment.online.charge > 0 ? (
@@ -164,6 +176,9 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
             {retrying ? tb('paying') : t('payButton')}
           </button>
         </div>
+      ) : null}
+      {booking.payment.canPay && outcome !== 'checking' && booking.payment.checkout && booking.payment.manual && (booking.payment.manual.bank || booking.payment.manual.bkash) ? (
+        <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} alongsideCheckout />
       ) : null}
 
       <div className="flex flex-col gap-1.5 rounded-12 bg-row-alt px-3.5 py-3 text-13 leading-1.55 text-muted">

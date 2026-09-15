@@ -407,7 +407,10 @@ function PaymentsCard({ booking }: { booking: BookingDetail }) {
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-13 font-medium">
                   {t(`bookings.methods.${row.method}`, { defaultValue: row.method })}
-                  {row.category !== 'customer_payment' ? ` · ${t(`bookings.categories.${row.category}`, { defaultValue: row.category })}` : ''}
+                  {/* A bKash payment's charge is bKash's, not a gateway's (Phase 8 §4.F). */}
+                  {row.category !== 'customer_payment'
+                    ? ` · ${t(`bookings.categories.${row.category === 'online_payment_charge' && row.method === 'bkash' ? 'bkash_charge' : row.category}`, { defaultValue: row.category })}`
+                    : ''}
                   {row.reverses_transaction_id ? ` · ${t('bookings.reversal')}` : ''}
                 </span>
                 <span className="truncate text-12 text-app-muted">
@@ -470,7 +473,11 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
   const [occurredAt, setOccurredAt] = useState(todayInDhaka)
   const [note, setNote] = useState('')
   const [evidence, setEvidence] = useState<File | null>(null)
+  const [bkashCharge, setBkashCharge] = useState(false)
   const fieldError = pay.error instanceof ApiError ? pay.error : null
+  // Phase 8 §4.F: a bKash customer sends the charge on top; it is booked as a charge, not as payment for the tour.
+  const chargePercent = booking.bkash_charge_percent ?? 0
+  const charge = method === 'bkash' && chargePercent > 0 && amount ? Math.round((amount * chargePercent) / 100) : 0
 
   const presets = [
     { key: 'full', value: booking.due_amount },
@@ -480,7 +487,7 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
   const submit = () => {
     if (!amount || !evidence || !evidenceReady(evidence)) return
     pay.mutate(
-      { amount, method, reference: reference.trim(), occurred_at: occurredAt, note: note.trim(), evidence },
+      { amount, method, reference: reference.trim(), occurred_at: occurredAt, note: note.trim(), evidence, bkash_charge: charge > 0 && bkashCharge ? '1' : '' },
       { onSuccess: () => { toast(t('bookings.done.paid')); onClose() } },
     )
   }
@@ -498,6 +505,19 @@ function RecordPaymentDialog({ booking, open, onClose }: { booking: BookingDetai
       <NumberInput label={t('bookings.amount')} value={amount} onChange={setAmount} error={fieldError?.field('amount') ?? (fieldError?.code === 'exceeds_balance' ? fieldError.message : undefined)} preview={(value) => bdt(value)} />
       <SelectInput label={t('bookings.method')} value={method} onChange={setMethod} options={booking.payment_methods.map((value) => ({ value, label: t(`bookings.methods.${value}`, { defaultValue: value }) }))} />
       <TextInput label={t('bookings.paymentReference')} value={reference} onChange={setReference} hint={t('bookings.paymentReferenceHint')} error={fieldError?.code === 'duplicate_reference' ? fieldError.message : fieldError?.field('reference')} />
+      {charge > 0 ? (
+        <Switch
+          label={t('bookings.bkashCharge', { amount: bdt(charge) })}
+          hint={t('bookings.bkashChargeHint', { amount: bdt(amount ?? 0) })}
+          checked={bkashCharge}
+          onChange={setBkashCharge}
+        />
+      ) : null}
+      {fieldError?.field('bkash_charge') ? (
+        <p role="alert" className="m-0 text-12 font-semibold text-red">
+          {fieldError.field('bkash_charge')}
+        </p>
+      ) : null}
       <TextInput label={t('bookings.paidOn')} type="date" value={occurredAt} onChange={setOccurredAt} max={todayInDhaka()} error={fieldError?.field('occurred_at')} />
       <TextArea label={t('bookings.note')} value={note} onChange={setNote} rows={2} />
       <EvidenceInput file={evidence} onChange={setEvidence} error={fieldError?.field('evidence')} />

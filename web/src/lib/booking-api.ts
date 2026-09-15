@@ -58,7 +58,20 @@ export type PublicBooking = {
     /** Paying the balance online now: the balance, the online payment charge line, and the exact total to charge. */
     online: { amount: number; chargePercent: number; charge: number; total: number };
     lastAttempt: { status: string; amount: number; at: string } | null;
+    /** Whether the built-in SSLCommerz checkout is live; until it is, the payment link stands in for it. */
+    checkout: boolean;
+    /** How to pay the balance by hand, from Admin → Site settings → Payment; null when nothing is set or nothing is due. */
+    manual: ManualPayment | null;
   };
+};
+
+/** api/app/Support/Payments/PaymentOptions.php: each method with the exact amount to send. */
+export type ManualPayment = {
+  amount: number;
+  bank: { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string } | null;
+  /** The SSLCommerz payment form for card, mobile banking and EMI; only while the built-in checkout is off. */
+  link: string | null;
+  bkash: { number: string; chargePercent: number; charge: number; total: number } | null;
 };
 
 export type BookingPayload = {

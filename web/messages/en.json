@@ -324,7 +324,7 @@
       {
         "icon": "⛨",
         "title": "Secure payment",
-        "desc": "bKash, Nagad and SSLCommerz — your invoice arrives by email."
+        "desc": "Bank transfer (NPSB), card, mobile banking or EMI, or bKash — your invoice arrives by email."
       }
     ]
   },
@@ -360,7 +360,7 @@
     },
     {
       "q": "How do I pay?",
-      "a": "bKash, Nagad, SSLCommerz or bank transfer. Your invoice is emailed as soon as the payment clears."
+      "a": "By NPSB bank transfer, by card, mobile banking or EMI through SSLCommerz, or by bKash (bKash adds its charge). Your booking page shows the account details and the exact amount for each. Your invoice is emailed as soon as the payment clears."
     },
     {
       "q": "How large are the groups?",
@@ -386,7 +386,7 @@
     "paras": [
       "Bhabaghure Holidays Aviation is a travel agency and tour operator working out of Agargaon, Dhaka. Group tours to Nepal and Thailand, domestic packages, air tickets, hotel bookings and visa support — all in one place.",
       "Every group travels with our own Bangla-speaking operator, present from departure to return. What is and is not included is written down before you pay — there are no hidden charges.",
-      "Civil Aviation registration no. {licence}. We accept bKash, Nagad and SSLCommerz, and email an invoice for every booking."
+      "Civil Aviation registration no. {licence}. We accept bank transfer, card, mobile banking and bKash, and email an invoice for every booking."
     ],
     "facts": {
       "packages": "Tour packages",
@@ -429,7 +429,7 @@
     "travellers": "Travellers",
     "submit": "Send inquiry",
     "sent": "✓ Sent — we will call you shortly",
-    "paymentNote": "Secure payment via SSLCommerz after confirmation",
+    "paymentNote": "Pay by bank transfer, card, mobile banking or bKash after confirmation",
     "notifications": "Notifications",
     "notificationsNote": "Automated WhatsApp messages about bookings come only from this number."
   },
@@ -441,7 +441,7 @@
   },
   "booking": {
     "title": "Book online",
-    "subtitle": "Passport scan auto-fill · secure SSLCommerz payment",
+    "subtitle": "Passport scan auto-fill · pay by bank transfer, card, mobile banking or bKash",
     "steps": [
       "Package",
       "Travellers",
@@ -532,7 +532,10 @@
       "4": "4-star",
       "5": "5-star"
     },
-    "perPersonShort": "per person"
+    "perPersonShort": "per person",
+    "confirmButton": "Confirm booking · {total}",
+    "confirming": "Saving your booking…",
+    "confirmNote": "Your booking is saved first. The next page shows how to pay — bank transfer, card, mobile banking or EMI, or bKash — with the exact amount for each."
   },
   "auth": {
     "signInTitle": "Sign in to your account",
@@ -940,5 +943,30 @@
     "again": "Download again",
     "tooMany": "That’s a lot of downloads for today — please try again later, or message us on WhatsApp.",
     "failed": "The download didn’t work — please try again."
+  },
+  "payHow": {
+    "heading": "How to pay",
+    "orHeading": "Or pay by hand",
+    "reference": "Write your booking reference {reference} with the payment so we can match it.",
+    "bankTitle": "Bank transfer ({type})",
+    "bankName": "Bank",
+    "accountName": "Account name",
+    "accountNumber": "Account number",
+    "branch": "Branch",
+    "routingNumber": "Routing number",
+    "amount": "Amount",
+    "linkTitle": "Card, mobile banking or EMI (SSLCommerz)",
+    "linkNote": "Open the SSLCommerz payment form, enter {amount} and write {reference} in the reference.",
+    "linkButton": "Open the payment form →",
+    "bkashTitle": "bKash",
+    "bkashNumber": "Send money to",
+    "balance": "Balance",
+    "bkashCharge": "bKash charge ({percent})",
+    "bkashSend": "Send",
+    "bkashNote": "Write {reference} in the reference. The bKash charge covers bKash’s cash-out fee and isn’t part of the tour price.",
+    "afterPaying": "After paying, send the transaction ID or receipt on WhatsApp. We confirm the booking and email your invoice.",
+    "copy": "Copy {what}",
+    "copyShort": "Copy",
+    "copied": "Copied"
   }
 }

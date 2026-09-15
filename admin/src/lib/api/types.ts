@@ -248,4 +248,11 @@ export type SiteSettings = {
   civilAviationNo?: string
   hours?: { opens: number; closes: number }
   stats?: { topReelViewsThousands: number; banglaSupportPercent: number }
+  /** How customers pay by hand (docs/phase-8-visa-quotes-pricing-downloads.md §4.F). Each method is optional. */
+  payment?: {
+    bank: { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string } | null
+    /** A hosted SSLCommerz payment form, shown until the built-in checkout takes payments. */
+    link: string | null
+    bkash: { number: string; chargePercent: number } | null
+  }
 }

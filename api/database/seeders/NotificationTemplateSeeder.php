@@ -36,12 +36,12 @@ class NotificationTemplateSeeder extends Seeder
 
         return [
             [NotificationEvent::BookingCreated, $wa,
-                "প্রিয় {{name}},\nআপনার {{package}} বুকিং আমরা পেয়েছি। রেফারেন্স {{ref}}, যাত্রা {{date}}, মোট {{total}}।\nপেমেন্ট সম্পন্ন হলে বুকিং নিশ্চিত হবে।",
-                "Dear {{name}},\nwe have received your {{package}} booking. Reference {{ref}}, travelling {{date}}, total {{total}}.\nYour booking is confirmed once payment is complete.",
+                "প্রিয় {{name}},\nআপনার {{package}} বুকিং আমরা পেয়েছি। রেফারেন্স {{ref}}, যাত্রা {{date}}, মোট {{total}}।\nপেমেন্ট সম্পন্ন হলে বুকিং নিশ্চিত হবে।\n\n{{how_to_pay}}",
+                "Dear {{name}},\nwe have received your {{package}} booking. Reference {{ref}}, travelling {{date}}, total {{total}}.\nYour booking is confirmed once payment is complete.\n\n{{how_to_pay}}",
                 null, null],
             [NotificationEvent::BookingCreated, $mail,
-                "প্রিয় {{name}},\n\nআপনার {{package}} বুকিং আমরা পেয়েছি।\nরেফারেন্স: {{ref}}\nযাত্রা: {{date}}\nমোট: {{total}}\n\nবুকিং দেখতে ও পেমেন্ট করতে এই ব্যক্তিগত লিংকটি ব্যবহার করুন (কারো সাথে শেয়ার করবেন না):\n{{link}}\n\nপেমেন্ট সম্পন্ন হলে বুকিং নিশ্চিত হবে।",
-                "Dear {{name}},\n\nwe have received your {{package}} booking.\nReference: {{ref}}\nTravelling: {{date}}\nTotal: {{total}}\n\nUse this private link to view your booking and pay (please don't share it):\n{{link}}\n\nYour booking is confirmed once payment is complete.",
+                "প্রিয় {{name}},\n\nআপনার {{package}} বুকিং আমরা পেয়েছি।\nরেফারেন্স: {{ref}}\nযাত্রা: {{date}}\nমোট: {{total}}\n\nবুকিং দেখতে ও পেমেন্ট করতে এই ব্যক্তিগত লিংকটি ব্যবহার করুন (কারো সাথে শেয়ার করবেন না):\n{{link}}\n\n{{how_to_pay}}\n\nপেমেন্ট সম্পন্ন হলে বুকিং নিশ্চিত হবে।",
+                "Dear {{name}},\n\nwe have received your {{package}} booking.\nReference: {{ref}}\nTravelling: {{date}}\nTotal: {{total}}\n\nUse this private link to view your booking and pay (please don't share it):\n{{link}}\n\n{{how_to_pay}}\n\nYour booking is confirmed once payment is complete.",
                 'বুকিং গ্রহণ করা হয়েছে · {{ref}}', 'We received your booking · {{ref}}'],
 
             [NotificationEvent::BookingConfirmed, $wa,

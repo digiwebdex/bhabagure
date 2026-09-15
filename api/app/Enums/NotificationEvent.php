@@ -108,7 +108,7 @@ enum NotificationEvent: string
     public function variables(): array
     {
         return match ($this) {
-            self::BookingCreated => ['name', 'package', 'ref', 'date', 'total', 'link'],
+            self::BookingCreated => ['name', 'package', 'ref', 'date', 'total', 'link', 'how_to_pay'],
             self::BookingConfirmed => ['name', 'package', 'ref', 'date', 'paid', 'due', 'invoice', 'link', 'short_link'],
             self::PaymentReceived => ['name', 'package', 'ref', 'amount', 'paid', 'due', 'link', 'short_link'],
             self::DocumentsPending => ['name', 'package', 'ref', 'date', 'travellers', 'office', 'short_link'],

@@ -24,7 +24,10 @@ final class MessageRenderer
     /** @param array<string, string> $values */
     public function fill(string $template, array $values): string
     {
-        return trim((string) preg_replace_callback(self::VARIABLE, fn (array $m) => $values[$m[1]] ?? '', $template));
+        $filled = (string) preg_replace_callback(self::VARIABLE, fn (array $m) => $values[$m[1]] ?? '', $template);
+
+        // A variable that came out empty on a line of its own leaves no gap wider than one blank line.
+        return trim((string) preg_replace("/\n{3,}/", "\n\n", $filled));
     }
 
     public function whatsApp(string $body): string

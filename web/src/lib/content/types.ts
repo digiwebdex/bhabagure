@@ -121,6 +121,11 @@ export interface VisaService {
 
 export interface PricingSettings extends PricingConfig {
   addons: (Addon & { name: Localized })[];
+  /**
+   * Whether the built-in SSLCommerz checkout is live (Phase 8 §4.F). Off, the booking form saves the booking and its page
+   * shows how to pay by hand. Absent (an API from before §4.F, or the seed): off.
+   */
+  onlineCheckout?: boolean;
 }
 
 export interface SiteSettings {

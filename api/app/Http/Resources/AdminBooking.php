@@ -19,6 +19,7 @@ use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\MessageRenderer;
 use App\Services\Notifications\NotificationSettings;
 use App\Support\Money;
+use App\Support\Payments\PaymentOptions;
 use App\Support\Pricing\PricingConfig;
 
 /** Bookings for the admin (snake_case, like the rest of the staff API). Amounts are JSON numbers. */
@@ -170,6 +171,8 @@ final class AdminBooking
                 ])(PricingConfig::current()),
             ],
             'payment_methods' => LedgerService::STAFF_METHODS,
+            // Phase 8 §4.F: what a bKash payment adds on top, so staff can record the charge with the payment.
+            'bkash_charge_percent' => PaymentOptions::settings()['bkash']['chargePercent'] ?? null,
             'vat_rates' => BookingQuoteEditor::VAT_RATES,
         ]);
     }

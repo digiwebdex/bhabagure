@@ -133,6 +133,8 @@ export type BookingDetail = BookingSummary & {
   /** Phase 8 §4.D: the hotel category a grid package was booked in. */
   hotel_category: HotelCategory | null
   payment_methods: string[]
+  /** What bKash adds on top of a payment (Phase 8 §4.F), from Site settings → Payment; null when none is set. */
+  bkash_charge_percent: number | null
   vat_rates: number[]
 }
 
@@ -195,7 +197,8 @@ export const bookingActions = {
   issue: (id: number) => () => api.post<Data<BookingDetail>>(`admin/bookings/${id}/invoice`),
   void: () => ({ invoiceId, reason }: { invoiceId: number; reason: string }) => api.post<Data<BookingDetail>>(`admin/invoices/${invoiceId}/void`, { reason }),
   /** Multipart: the receipt goes with the payment. */
-  pay: (id: number) => ({ evidence, ...fields }: { amount: number; method: string; reference: string; occurred_at: string; note: string; evidence: File }) => {
+  // bkash_charge travels as '1' or '' (FormData carries strings; '' is left out, as every blank field is).
+  pay: (id: number) => ({ evidence, ...fields }: { amount: number; method: string; reference: string; occurred_at: string; note: string; evidence: File; bkash_charge: '1' | '' }) => {
     const body = new FormData()
     for (const [key, value] of Object.entries(fields)) if (value !== '') body.append(key, String(value))
     body.append('evidence', evidence)

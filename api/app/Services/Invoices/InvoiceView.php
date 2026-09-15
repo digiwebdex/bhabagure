@@ -8,7 +8,9 @@ use App\Models\SiteSetting;
 use App\Models\Transaction;
 use App\Services\Ledger\LedgerService;
 use App\Support\Barcode\Code128;
+use App\Support\Money;
 use App\Support\Numerals;
+use App\Support\Payments\PaymentOptions;
 
 /**
  * Everything the invoice print view shows, taken from the invoice's frozen snapshot columns and lines — never from the
@@ -17,7 +19,7 @@ use App\Support\Numerals;
  */
 final class InvoiceView
 {
-    public const TEMPLATE_VERSION = '1';
+    public const TEMPLATE_VERSION = '2';
 
     /** @return array<string, mixed> */
     public function data(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false): array
@@ -62,7 +64,9 @@ final class InvoiceView
                 // A gateway or wallet reference; a deal payment's reference is only its label.
                 .(($t->external_ref ?? $t->reference_label) ? ' · '.($t->external_ref ?? $t->reference_label) : '').' · '.$date($t->occurred_at)
                 .(isset($charges[(string) $t->external_ref]) && $t->external_ref !== null
-                    ? ' · + '.$bdt($charges[$t->external_ref]->amount).' '.($locale === 'bn' ? 'অনলাইন পেমেন্ট চার্জ' : 'online payment charge')
+                    ? ' · + '.$bdt($charges[$t->external_ref]->amount).' '.($t->method === 'bkash'
+                        ? ($locale === 'bn' ? 'বিকাশ চার্জ' : 'bKash charge')
+                        : ($locale === 'bn' ? 'অনলাইন পেমেন্ট চার্জ' : 'online payment charge'))
                     : ''))
             ->values()->all();
 
@@ -118,6 +122,8 @@ final class InvoiceView
             'due' => $bdt($invoice->balance_due),
             'hasDue' => (float) $invoice->balance_due > 0,
             'payments' => $payments,
+            // Phase 8 §4.F: how to pay what is still due, while the invoice is open.
+            'howToPay' => $invoice->status === Invoice::ISSUED ? PaymentOptions::lines(Money::toNumber($invoice->balance_due) ?? 0, $locale) : [],
             'terms' => $deal ? [
                 'চুক্তি অনুযায়ী বাকি অর্থ পরিশোধযোগ্য। এই ইনভয়েস কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
             ] : [

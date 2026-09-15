@@ -40,22 +40,37 @@ class SiteSettingController extends Controller
             'value.topReelViewsThousands' => ['required', 'integer', 'min:0'],
             'value.banglaSupportPercent' => ['required', 'integer', 'between:0,100'],
         ],
+        // Phase 8 §4.F. Each method is optional; a method that is filled in needs all its details.
+        'payment' => [
+            'value' => ['present', 'array'],
+            'value.bank' => ['nullable', 'array'],
+            'value.bank.bankName' => ['required_with:value.bank', 'string', 'max:120'],
+            'value.bank.accountName' => ['required_with:value.bank', 'string', 'max:160'],
+            'value.bank.accountNumber' => ['required_with:value.bank', 'string', 'regex:/^\d{6,20}$/'],
+            'value.bank.branch' => ['required_with:value.bank', 'string', 'max:120'],
+            'value.bank.routingNumber' => ['required_with:value.bank', 'string', 'regex:/^\d{9}$/'],
+            'value.bank.transferType' => ['required_with:value.bank', 'string', 'max:20'],
+            'value.link' => ['nullable', 'url:https', 'max:500'],
+            'value.bkash' => ['nullable', 'array'],
+            'value.bkash.number' => ['required_with:value.bkash', 'string', 'regex:/^\+8801[3-9]\d{8}$/'],
+            'value.bkash.chargePercent' => ['required_with:value.bkash', 'numeric', 'between:0,10', 'decimal:0,2'],
+        ],
     ];
 
     public function __construct(private readonly AuditLogger $audit) {}
 
     public function index(): JsonResponse
     {
-        return response()->json(['data' => (object) SiteSetting::query()->whereIn('key', SiteSettingKeys::PUBLIC)->pluck('value', 'key')->all()]);
+        return response()->json(['data' => (object) SiteSetting::query()->whereIn('key', SiteSettingKeys::STAFF_EDITABLE)->pluck('value', 'key')->all()]);
     }
 
     public function update(Request $request, string $key): JsonResponse
     {
-        abort_unless(in_array($key, SiteSettingKeys::PUBLIC, true), 404);
+        abort_unless(in_array($key, SiteSettingKeys::STAFF_EDITABLE, true), 404);
 
         $validated = $request->validate(self::RULES[$key]);
         $setting = SiteSetting::query()->updateOrCreate(['key' => $key], [
-            'value' => $validated['value'],
+            'value' => $key === SiteSettingKeys::PAYMENT ? self::paymentValue($validated['value']) : $validated['value'],
             'updated_by_staff_id' => $request->user('staff')->id,
         ]);
 
@@ -64,5 +79,23 @@ class SiteSettingController extends Controller
         RevalidateWebsite::dispatch(['settings']);
 
         return response()->json(['data' => [$key => $setting->value]]);
+    }
+
+    /**
+     * Only the known fields, trimmed; a method left empty is saved as null.
+     *
+     * @param  array<string, mixed>  $value
+     * @return array{bank: array<string, string>|null, link: string|null, bkash: array{number: string, chargePercent: float}|null}
+     */
+    private static function paymentValue(array $value): array
+    {
+        $bank = is_array($value['bank'] ?? null) ? $value['bank'] : null;
+        $bkash = is_array($value['bkash'] ?? null) ? $value['bkash'] : null;
+
+        return [
+            'bank' => $bank ? array_map(fn ($field) => trim((string) $field), array_intersect_key($bank + array_fill_keys(['bankName', 'accountName', 'accountNumber', 'branch', 'routingNumber', 'transferType'], ''), array_flip(['bankName', 'accountName', 'accountNumber', 'branch', 'routingNumber', 'transferType']))) : null,
+            'link' => filled($value['link'] ?? null) ? trim((string) $value['link']) : null,
+            'bkash' => $bkash ? ['number' => (string) $bkash['number'], 'chargePercent' => (float) $bkash['chargePercent']] : null,
+        ];
     }
 }

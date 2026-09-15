@@ -26,7 +26,9 @@ use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
 use App\Services\Ledger\PaymentExceedsBalance;
 use App\Services\Quotations\QuotationService;
+use App\Support\Payments\PaymentOptions;
 use App\Support\Phone;
+use App\Support\Pricing\PricingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -35,6 +37,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 
 /**
@@ -203,9 +206,26 @@ class BookingController extends Controller
             'occurred_at' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'note' => ['nullable', 'string', 'max:300'],
             'evidence' => EvidenceStore::rules(),
+            // Phase 8 §4.F: the customer also sent the bKash charge on top of `amount`. The transaction ID links the two
+            // cash-book rows, so a reversal takes both.
+            'bkash_charge' => ['nullable', 'boolean'],
         ]);
         if ($booking->status->isFinal()) {
             return $this->refused('booking.closed', 'booking_closed');
+        }
+        $charge = 0;
+        if (filter_var($data['bkash_charge'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            $bkash = PaymentOptions::settings()['bkash'];
+            $problem = match (true) {
+                $data['method'] !== 'bkash' => 'bkash_charge_method',
+                $bkash === null || $bkash['chargePercent'] <= 0 => 'bkash_charge_not_set',
+                blank($data['reference'] ?? null) => 'bkash_charge_reference',
+                default => null,
+            };
+            if ($problem !== null) {
+                throw ValidationException::withMessages(['bkash_charge' => __("booking.{$problem}")]);
+            }
+            $charge = PricingService::onlinePayment((float) $data['amount'], $bkash['chargePercent'])['charge'];
         }
 
         try {
@@ -213,7 +233,7 @@ class BookingController extends Controller
                 $booking, $data['amount'], $data['method'], ($data['note'] ?? null) ?: 'Payment recorded by staff',
                 // A wallet or bank reference is unique per method, like a gateway transaction.
                 externalRef: ($data['reference'] ?? null) ?: null, staff: $request->user('staff'), referenceLabel: $data['reference'] ?? null,
-                occurredAt: self::paidOn($data['occurred_at'] ?? null), evidencePath: $path,
+                onlineCharge: $charge, occurredAt: self::paidOn($data['occurred_at'] ?? null), evidencePath: $path,
             )));
         } catch (PaymentExceedsBalance) {
             return $this->refused('booking.payment_exceeds_balance', 'exceeds_balance', 422);

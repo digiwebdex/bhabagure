@@ -25,6 +25,12 @@ Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pri
   Roles screen grants `downloads.view`: who, what, the category and travellers chosen, when, and whether a booking or
   quotation is in progress. Made PDFs are kept in `api/storage/app/private/brochures`; each is made again the next day
   or after the package or visa changes, and older copies are removed then.
+- payment methods: Admin → Site settings → **Payment** holds the bank account (NPSB), the SSLCommerz payment link and
+  the bKash number with its charge %. Customers see them, with the exact amount, on the booking page, in the portal, on
+  invoices and quotations and in the "booking received" message. The payment link stands in for the built-in SSLCommerz
+  checkout until the store ID and password are set on the server (§4a is for SMS; SSLCommerz is `SSLCOMMERZ_*` in
+  `api/.env`, then `deploy.sh --reload-config`, which prints whether the checkout is on). A bKash payment that includes
+  the charge is recorded with *Customer also paid the ৳ X bKash charge* and the bKash transaction ID.
 
 ---
 

@@ -321,3 +321,56 @@ test.describe('CMS to website', () => {
     }
   });
 });
+
+/**
+ * docs/phase-8-visa-quotes-pricing-downloads.md §4.F: the payment details staff enter in Site settings reach the
+ * booking's own page with that booking's amounts. The e2e API's checkout takes payments, so the hosted payment link
+ * stays hidden and the bank and bKash details sit under the checkout.
+ */
+test.describe('how to pay', () => {
+  test('the booking page shows the bank account and the bKash amount with its charge', async ({ page, request }) => {
+    const password = 'e2e-website-payment-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.payment@e2e.test'], ['employee_code' => 'E2E-PAY', 'name' => 'Payment editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'web.payment@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+    const save = (value: unknown) => request.put(`${E2E_API_URL}/api/v1/admin/settings/payment`, { headers, data: { value } });
+
+    try {
+      expect(
+        (
+          await save({
+            bank: { bankName: 'Example Trust Bank', accountName: 'Example Holidays', accountNumber: '1310000000001', branch: 'Mirpur', routingNumber: '145260001', transferType: 'NPSB' },
+            link: 'https://invoice.sslcommerz.com/invoice-form?refer=EXAMPLE',
+            bkash: { number: '+8801613000000', chargePercent: 1.3 },
+          })
+        ).status(),
+      ).toBe(200);
+
+      const phone = uniquePhone();
+      const created = await request.post(`${E2E_API_URL}/api/v1/public/bookings`, {
+        headers: { Accept: 'application/json' },
+        data: {
+          package_slug: 'nepal-mustang-adventure-tour-8-days-7-nights',
+          travel_date: new Date(Date.now() + 50 * 86_400_000).toISOString().slice(0, 10),
+          pax: 1, room: 'twin', addons: [], travellers: [{ name: 'PAYMENT READER', phone }],
+          expected_total: 76500, terms_accepted: true, locale: 'en',
+        },
+      });
+      expect(created.status()).toBe(201);
+      const booking = (await created.json()).data as { reference: string; accessToken: string };
+
+      await page.goto(`/en/booking/${booking.reference}#t=${booking.accessToken}`);
+      const how = page.getByTestId('payment-instructions');
+      await expect(how.getByRole('heading', { name: 'Or pay by hand' })).toBeVisible();
+      await expect(how).toContainText(`Write your booking reference ${booking.reference} with the payment`);
+      await expect(how.getByTestId('pay-bank')).toContainText('1310000000001');
+      await expect(how.getByTestId('pay-bank')).toContainText('145260001');
+      // ৳ 76,500 due; bKash adds 1.3% (৳ 995), so ৳ 77,495 to send. The link is hidden while the checkout works.
+      await expect(how.getByTestId('pay-bkash')).toContainText('01613000000');
+      await expect(how.getByTestId('pay-bkash')).toContainText('৳ 77,495');
+      await expect(how.getByTestId('pay-link')).toHaveCount(0);
+    } finally {
+      await save({ bank: null, link: null, bkash: null });
+    }
+  });
+});

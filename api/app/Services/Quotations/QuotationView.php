@@ -5,7 +5,9 @@ namespace App\Services\Quotations;
 use App\Models\Quotation;
 use App\Models\QuotationLine;
 use App\Services\Invoices\InvoiceView;
+use App\Support\Money;
 use App\Support\Numerals;
+use App\Support\Payments\PaymentOptions;
 
 /**
  * What the quotation print view shows — the invoice page ($kind = 'quotation') with the same letterhead. Everything
@@ -103,6 +105,8 @@ final class QuotationView
             'due' => null,
             'hasDue' => false,
             'payments' => [],
+            // Phase 8 §4.F: how the quoted total can be paid once it is booked.
+            'howToPay' => PaymentOptions::lines(Money::toNumber($quotation->total_amount) ?? 0, $locale),
             'validUntil' => $locale === 'bn'
                 ? "{$validUntil} পর্যন্ত এই মূল্য প্রযোজ্য। এরপর মূল্য পরিবর্তন হতে পারে; সিট প্রাপ্যতা বুকিংয়ের সময় নিশ্চিত করা হবে।"
                 : "This price is honoured until {$validUntil}. After that it may change; seats are confirmed when you book.",
