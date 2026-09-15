@@ -122,9 +122,10 @@ SQL
     ;;
 
   install)
-    say "Dependencies (unit bhabaghure-testrun-install; log .testrun/logs/install.log)"
+    say "Dependencies (unit bhabaghure-testrun-install; logs .testrun/logs/install.log and install-unit.log)"
+    # The unit's own output goes to a file systemd opens as root, so it must not be the step's log (www-data writes that).
     systemd-run --unit=bhabaghure-testrun-install --collect --quiet "${unit_props[@]}" \
-      -p StandardOutput=append:"$RUN/logs/install.log" -p StandardError=append:"$RUN/logs/install.log" \
+      -p StandardOutput=append:"$RUN/logs/install-unit.log" -p StandardError=append:"$RUN/logs/install-unit.log" \
       /bin/bash "$ROOT/deploy/testrun-steps.sh" install
     ;;
 

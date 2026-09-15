@@ -129,7 +129,8 @@ class CustomerSignInTest extends TestCase
         $this->postJson('/api/v1/customer/auth/code', ['phone' => '01711000123'])->assertAccepted();
         $this->assertCount(1, FakeWhatsAppGateway::$sent);
         $this->assertSame('whatsapp', CustomerLoginCode::query()->value('channel'));
-
+        // Like every WhatsApp from the notifications number, it opens with the sender line on its own line.
+        $this->assertStringStartsWith("ভবঘুরে হলিডেজ · Bhabaghure Holidays\nভবঘুরে হলিডেজ লগইন কোড: ", FakeWhatsAppGateway::$sent[0]['text']);
         $this->customer(['phone' => '8801711000789', 'email' => 'optout@example.test'])->forceFill(['whatsapp_opted_out_at' => now()])->save();
         $this->postJson('/api/v1/customer/auth/code', ['phone' => '01711000789'])->assertStatus(503)->assertJsonPath('code', 'code_undeliverable');
         $this->assertCount(1, FakeWhatsAppGateway::$sent, 'no WhatsApp to a customer who turned it off');

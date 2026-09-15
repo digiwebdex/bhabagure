@@ -5,6 +5,7 @@ namespace App\Services\Customers;
 use App\Models\Customer;
 use App\Models\CustomerLoginCode;
 use App\Services\Notifications\AdminAlerts;
+use App\Services\Notifications\MessageRenderer;
 use App\Services\Notifications\NotificationSettings;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
@@ -121,7 +122,9 @@ final class LoginCodes
             return 'none';
         }
         try {
-            return $this->whatsApp->sendText($phone, $text)->isSent() ? 'whatsapp' : 'none';
+            // Every WhatsApp from the notifications number opens with the sender line (MessageRenderer); SMS carries the
+            // operator's sender ID instead.
+            return $this->whatsApp->sendText($phone, MessageRenderer::senderLine()."\n".$text)->isSent() ? 'whatsapp' : 'none';
         } catch (Throwable $e) {
             report($e);
 
