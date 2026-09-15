@@ -46,11 +46,15 @@ server's first set-up is in `docs/deployment.md`.
 
 Built and deployed, but switched off until the account or decision exists:
 
-- [ ] **First staff account.** There is none yet, so nobody can sign in to the admin. Over SSH:
-      `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan staff:super-admin owner@example.com --name="Owner"`.
-      It prints a temporary password once, and it must be changed at first sign-in (`docs/deployment.md` §7.3).
+- [x] **First staff account:** the super admin was created on 2026-09-15 with a temporary password, which must be changed
+      at the first sign-in. More super admins, or a reset:
+      `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan staff:super-admin <email> [--name="…"] [--reset]`
+      (`docs/deployment.md` §7.3).
 - [ ] **Customer portal sign-in** needs SMS or WhatsApp to be live: the portal signs in with a one-time code sent to
-      the customer's phone. A customer already tried on 2026-09-14 and got no code; the API logged it.
+      the customer's phone. A customer already tried on 2026-09-14 at 18:37 UTC and got no code; the API logged it.
+      **Once WhatsApp is live** (approved 2026-09-15), send that customer a one-line apology from the notifications
+      number with the portal link, so they ask for a fresh code there. Use the admin's one-off WhatsApp message, which
+      is logged. Don't send a code: codes last 10 minutes and work once.
 - [ ] **Payments:** SSLCommerz live store ID and password → `SSLCOMMERZ_MODE=live` (§2.1).
 - [ ] **Email:** SendGrid domain authentication, DMARC and an API key → `MAIL_MAILER=smtp` (`docs/deployment.md` §4).
 - [ ] **WhatsApp:** a dedicated, warmed-up number on WaSender, its session key and webhook secret →
@@ -63,11 +67,12 @@ Built and deployed, but switched off until the account or decision exists:
       answers 403 to everyone.
 - [ ] **Attendance:** install the agent on the office PC and run `agent.exe test` against the device
       (`agent/README.md`).
-- [ ] **Uploaded files in the nightly backup** (§8.2). This needs the server admin's approval.
+- [x] **Uploaded files in the nightly backup:** added to the backup manifest on 2026-09-15, approved (§8.2).
 - [ ] **Legal:** a lawyer's review of `/terms`, `/privacy` and `/refund-policy`; then set `BOOKING_TERMS_VERSION`.
 - [ ] **Certificate (optional):** a Cloudflare API token for the DNS-01 wildcard certificate (`docs/deployment.md` §7.5).
       The current HTTP-01 certificate needs Cloudflare's *Always Use HTTPS* to stay off.
-- [ ] **Commission auto-credit:** its rules are still to come from the re-synced design (§10).
+- [ ] **My commission's layout** against the re-synced design: the copy here is still the 2026-09-13 one. Automatic
+      commission itself is built from the client's rules (§4, §10).
 
 ## 2. Settings: every environment variable
 
@@ -310,6 +315,7 @@ these jobs (`api/routes/console.php`; Dhaka is UTC+6). Each runs on one server o
 | `bookings:complete-travelled` | 02:30 Dhaka | Confirmed bookings whose trip has ended become completed |
 | `bookings:check-paid` | 03:15 Dhaka | Compares each booking's paid amount with the cash book; alerts on any difference |
 | `staff-documents:remind-expiring` | 09:00 Dhaka | Alerts 30 days before a staff document expires, and on the day |
+| `commission:volume-bonus` | 00:30 Dhaka on the 1st, no overlap | Posts last month's 0.5 % volume bonus to everyone with 10 or more confirmed bookings, once per person and month. For a missed month: `php artisan commission:volume-bonus 2026-09` |
 
 To see them: `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan schedule:list`.
 
@@ -449,19 +455,16 @@ UTC and finds every database on the server by itself:
 |---|---|---|
 | `bhabaghure`: `mysqldump --single-transaction --routines`, gzip | `/var/backups/auto/daily/<date>/mysql-bhabaghure.sql.gz` (root-only) | 14 daily, 8 weekly (Sundays), 12 monthly (the 1st) |
 | `bhabaghure_wallet`, the same way, from the first run after it was created (2026-09-16) | `…/mysql-bhabaghure_wallet.sql.gz` | same |
-| An encrypted copy of each night's dumps (age) | the server admin's Google Drive | about 90 days; the decryption key is **not** on this server |
+| Uploaded files, `api/storage/app`, from 2026-09-16: a manifest entry, `files \| bhabaghure-storage \| /var/www/Bhabagure/api/storage/app`, added 2026-09-15 (approved; the manifest's previous copy is `manifest.conf.before-bhabaghure-2026-09-15`) | `/var/backups/auto/uploads/<date>/bhabaghure-storage/`, hard-linked between nights | 14 days |
+| An encrypted copy of each night's dumps (age), and of the file snapshots on Sundays | the server admin's Google Drive | about 90 days; the decryption key is **not** on this server |
 
 To check last night's run: `grep bhabaghure /var/log/backup/backup.log | tail -3`, or `/opt/backup/restore.sh list`.
 
 ### 8.2 What is not backed up: act on this
 
-- **Uploaded files, `api/storage/app`.** The backup job only finds directories named `uploads`, and this project's
-  files aren't in one. They include passport scans and photos, e-ticket PDFs, payment receipts, staff documents,
-  wallet evidence and the website's images. Today they exist only on the server's disk.
-  - **The fix:** one line in the job's manifest, `/opt/backup/manifest.conf` (a shared file, so the server admin
-    decides):
-    `files | bhabaghure-storage | /var/www/Bhabagure/api/storage/app`
-  - Afterwards the files are snapshotted nightly with the dumps, and copied off-site encrypted once a week.
+- **The uploaded files, before 2026-09-16.** The backup job only finds directories named `uploads`. Our files (passport
+  scans and photos, e-ticket PDFs, payment receipts, staff documents, wallet evidence, website images) were covered only
+  once the manifest line above was added. Check the first run: `grep bhabaghure-storage /var/log/backup/backup.log`.
   - Passport scans, traveller documents, e-tickets and staff documents are encrypted with `APP_KEY`, and wallet
     evidence with `WALLET_KEY`, so restoring them needs those keys too. Payment receipts and website images aren't
     encrypted.
@@ -586,11 +589,10 @@ So nobody is surprised. None of these exists in v1.0 unless a line says otherwis
   with the deposit slip as the receipt. This touches neither income nor expense.
 
 **Also not in v1.0:**
-- **Commission is credited by hand, not automatically.** Bonus accounts, manual credits, reversals, withdrawals and the
-  *My commission* screen are built. Crediting commission when a booking is confirmed isn't: its rules weren't readable
-  in the design copy available here. It is the next item once the rules are confirmed, and the ledger already has the
-  booking, rule and `commission` kind ready for it. The *My commission* layout is not yet checked against that
-  design either.
+- **Commission on air tickets and hotels.** Commission *is* automatic on tour bookings: 3 % of the sale before VAT when a
+  booking is confirmed, reversed when it's cancelled, and moved when it's reassigned. A 0.5 % volume bonus is added at
+  month end for 10 confirmed bookings. The air (1.5 %) and hotel (2 %) rates are configured, but v1.0 records no air or
+  hotel sales for them to apply to. Admins and the super admin earn no commission on bookings they own.
 - **Sales and services:** hotel reservations; a visa-file service tracker (appointments, visa-only customers); the
   B2B sub-agent portal (net rates, credit); corporate accounts with credit terms and statements.
 - **Pricing:** early-bird, last-minute and seasonal price rules. Group-size discounts are built.

@@ -76,8 +76,17 @@ export function BonusLedgerCard({ staffId, name }: { staffId: number; name: stri
 /** Ledger rows, newest first: what moved the balance, why, and who. */
 export function EntryList({ entries, onReverse }: { entries: BonusEntry[]; onReverse?: (entry: BonusEntry) => void }) {
   const { t } = useTranslation()
-  const { bdt, date } = useFormat()
+  const { bdt, date, month, number, percent } = useFormat()
   if (entries.length === 0) return <p className="m-0 text-13 text-app-muted">{t('bonus.noEntries')}</p>
+
+  // What a system entry was made from: its rule, or why it was reversed. Entries made by hand carry their reason instead.
+  const describe = (entry: BonusEntry): string | null => {
+    const rule = entry.rule
+    if (!rule) return null
+    if ('cause' in rule) return rule.cause === 'reassigned' && rule.to ? t('bonus.rule.reassignedTo', { name: rule.to }) : t(`bonus.rule.${rule.cause}`)
+    if (rule.type === 'volume') return t('bonus.rule.volume', { rate: percent(rule.rate), base: bdt(rule.base), count: rule.bookings, n: number(rule.bookings), month: month(rule.month) })
+    return t('bonus.rule.sale', { rate: percent(rule.rate), base: bdt(rule.base) })
+  }
 
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="bonus-entries">
@@ -90,8 +99,8 @@ export function EntryList({ entries, onReverse }: { entries: BonusEntry[]; onRev
               {entry.reversed ? ` · ${t('bonus.reversed')}` : ''}
             </span>
             <span className="text-12 text-app-muted">
-              {entry.reason ?? (entry.withdrawal_id ? t('bonus.withdrawalNumber', { id: entry.withdrawal_id }) : '—')}
-              {entry.by ? ` · ${entry.by}` : ''}
+              {entry.reason ?? describe(entry) ?? (entry.withdrawal_id ? t('bonus.withdrawalNumber', { id: entry.withdrawal_id }) : '—')}
+              {entry.by ? ` · ${entry.by}` : entry.rule ? ` · ${t('bonus.automatic')}` : ''}
               {entry.created_at ? ` · ${date(entry.created_at)}` : ''}
             </span>
           </span>
@@ -162,6 +171,7 @@ function ReverseDialog({ entry, onClose }: { entry: BonusEntry; onClose: () => v
   return (
     <Dialog open onClose={onClose} title={t('bonus.reverseTitle', { amount: bdt(entry.amount) })}>
       <p className="m-0 text-13 leading-1.55 text-app-muted">{t('bonus.reverseNote')}</p>
+      {entry.kind === 'commission' ? <p className="m-0 text-13 leading-1.55 font-semibold">{t('bonus.reverseCommissionNote')}</p> : null}
       <TextArea label={t('payroll.reason')} value={reason} onChange={setReason} rows={2} maxLength={300} error={reverse.error instanceof ApiError ? reverse.error.field('reason') : undefined} />
       {reverse.error && !(reverse.error instanceof ApiError && reverse.error.status === 422) ? <ErrorNotice error={reverse.error} /> : null}
       <div className="flex justify-end gap-2">

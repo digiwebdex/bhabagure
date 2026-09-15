@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Events\BookingCancelled;
+use App\Events\BookingConfirmed;
+use App\Events\BookingOwnerChanged;
 use App\Events\CashEntryReversed;
 use App\Listeners\PlanNotifications;
 use App\Models\Account;
@@ -37,6 +40,7 @@ use App\Models\TourPackage;
 use App\Models\Transaction;
 use App\Models\TravellerDocument;
 use App\Services\Bonus\BonusDesk;
+use App\Services\Bonus\CommissionDesk;
 use App\Services\Notifications\Sms\BulkSmsBdGateway;
 use App\Services\Notifications\Sms\DisabledSmsGateway;
 use App\Services\Notifications\Sms\FakeSmsGateway;
@@ -199,6 +203,8 @@ class AppServiceProvider extends ServiceProvider
         // transaction (docs/phase-7-hr-attendance-bonus-wallet.md §6, §7).
         Event::listen(CashEntryReversed::class, [PayrollDesk::class, 'onCashEntryReversed']);
         Event::listen(CashEntryReversed::class, [BonusDesk::class, 'onCashEntryReversed']);
+        // Commission follows a booking's status and owner, once the change is committed (§12 step 4).
+        Event::listen([BookingConfirmed::class, BookingCancelled::class, BookingOwnerChanged::class], [CommissionDesk::class, 'onBookingChanged']);
 
         // Super admin passes every check, independent of the permission matrix (docs/phase-1-schema.md §5).
         Gate::before(fn ($user) => $user instanceof Staff && $user->isSuperAdmin() ? true : null);

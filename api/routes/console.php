@@ -14,6 +14,7 @@ use App\Models\PaymentAttempt;
 use App\Models\Quotation;
 use App\Models\StaffDocument;
 use App\Models\Transaction;
+use App\Services\Bonus\CommissionDesk;
 use App\Services\Booking\BookingStateMachine;
 use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\AdminAlerts;
@@ -128,6 +129,24 @@ Artisan::command('staff-documents:remind-expiring', function (NotificationPlanne
 })->purpose('Alert staff 30 days before a staff document expires, and on the day');
 
 Schedule::command('staff-documents:remind-expiring')->dailyAt('09:00')->timezone('Asia/Dhaka')->onOneServer();
+
+// docs/phase-7-hr-attendance-bonus-wallet.md §12 step 4: the month-end volume bonus, once per person and month. Run by
+// hand for a month the scheduler missed: php artisan commission:volume-bonus 2026-09
+Artisan::command('commission:volume-bonus {month? : YYYY-MM, a Dhaka month that is over (default: last month)}', function (CommissionDesk $commission) {
+    $month = (string) ($this->argument('month') ?? now('Asia/Dhaka')->startOfMonth()->subMonth()->format('Y-m'));
+    try {
+        $posted = $commission->postVolumeBonuses($month);
+    } catch (InvalidArgumentException $e) {
+        $this->error($e->getMessage());
+
+        return 1;
+    }
+    $this->info("Volume bonus for {$month}: {$posted} posted.");
+
+    return 0;
+})->purpose('Post the month-end commission volume bonus');
+
+Schedule::command('commission:volume-bonus')->monthlyOn(1, '00:30')->timezone('Asia/Dhaka')->withoutOverlapping()->onOneServer();
 
 // docs/phase-7-hr-attendance-bonus-wallet.md §5.1: an attendance device with no good pull for an hour, during duty hours on
 // a working day, alerts once per outage — saying whether the office PC went quiet or can't reach the device. A good pull

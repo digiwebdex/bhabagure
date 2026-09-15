@@ -9,8 +9,10 @@ export type BonusEntry = {
   id: number
   direction: 'credit' | 'debit'
   amount: number
-  kind: 'commission' | 'manual' | 'withdrawal' | 'reversal'
+  kind: 'commission' | 'volume_bonus' | 'manual' | 'withdrawal' | 'reversal'
   reason: string | null
+  /** Commission and volume bonus: the rule they were made with. A system reversal: why. */
+  rule: EntryRule | null
   booking: { id: number; reference: string } | null
   withdrawal_id: number | null
   reverses_id: number | null
@@ -20,6 +22,11 @@ export type BonusEntry = {
   by: string | null
   created_at: string | null
 }
+
+export type EntryRule =
+  | { type: 'tour' | 'air' | 'hotel'; rate: number; base: number; booking: string }
+  | { type: 'volume'; month: string; rate: number; threshold: number; bookings: number; base: number }
+  | { cause: 'booking_cancelled' | 'returned_to_pool' | 'reassigned'; booking: string; to?: string }
 
 export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'paid'
 export type WithdrawalFilter = 'open' | WithdrawalStatus | 'all'
@@ -66,6 +73,9 @@ export type MyCommission = {
   min_withdrawal: number
   sales: { this_month: { count: number; total: number }; last_month: { count: number; total: number } }
   commission: { this_month: number; total: number }
+  rules: { earns: boolean; rates: { tour: number; air: number; hotel: number }; volume_threshold: number; volume_rate: number }
+  /** Bookings confirmed this Dhaka month that are earning commission now, and their sale before VAT. */
+  volume: { count: number; base: number }
   entries: BonusEntry[]
   withdrawals: Withdrawal[]
 }

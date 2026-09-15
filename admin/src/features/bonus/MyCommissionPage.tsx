@@ -29,10 +29,12 @@ export function MyCommissionPage() {
 
 function Commission({ data }: { data: MyCommission }) {
   const { t } = useTranslation()
-  const { bdt, date, number } = useFormat()
+  const { bdt, date, number, percent } = useFormat()
   const toast = useToast()
   const { confirm, element } = useConfirm()
   const cancel = useBonusChange(bonusActions.cancel)
+  const { rules, volume } = data
+  const left = Math.max(0, rules.volume_threshold - volume.count)
 
   return (
     <>
@@ -42,6 +44,17 @@ function Commission({ data }: { data: MyCommission }) {
           [t('myCommission.salesThisMonth'), bdt(data.sales.this_month.total), t('myCommission.salesCount', { count: data.sales.this_month.count, n: number(data.sales.this_month.count) })],
           [t('myCommission.salesLastMonth'), bdt(data.sales.last_month.total), t('myCommission.salesCount', { count: data.sales.last_month.count, n: number(data.sales.last_month.count) })],
           [t('myCommission.commissionThisMonth'), bdt(data.commission.this_month), t('myCommission.commissionTotal', { amount: bdt(data.commission.total) })],
+          ...(rules.earns
+            ? [
+                [
+                  t('myCommission.volume'),
+                  t('myCommission.volumeValue', { n: number(volume.count), threshold: number(rules.volume_threshold) }),
+                  left > 0
+                    ? t('myCommission.volumeLeft', { count: left, n: number(left), rate: percent(rules.volume_rate) })
+                    : t('myCommission.volumeReached', { rate: percent(rules.volume_rate), base: bdt(volume.base), amount: bdt(Math.round((volume.base * rules.volume_rate) / 100)) }),
+                ],
+              ]
+            : []),
         ].map(([label, value, note]) => (
           <Card key={label}>
             <span className="text-12 text-app-muted">{label}</span>
@@ -50,6 +63,17 @@ function Commission({ data }: { data: MyCommission }) {
           </Card>
         ))}
       </div>
+      <p className="m-0 max-w-[80ch] text-13 text-app-muted" data-testid="commission-rules">
+        {rules.earns
+          ? t('myCommission.rules', {
+              tour: percent(rules.rates.tour),
+              air: percent(rules.rates.air),
+              hotel: percent(rules.rates.hotel),
+              threshold: number(rules.volume_threshold),
+              volume: percent(rules.volume_rate),
+            })
+          : t('myCommission.noCommission')}
+      </p>
 
       <div className="grid items-start gap-4.5 xl:grid-cols-[minmax(280px,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-4.5">

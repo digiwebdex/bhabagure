@@ -10,6 +10,7 @@ use App\Models\BonusWithdrawal;
 use App\Models\Booking;
 use App\Services\Bonus\BonusDesk;
 use App\Services\Bonus\BonusRefused;
+use App\Services\Bonus\CommissionDesk;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,6 +78,14 @@ class MyCommissionController extends Controller
                 'this_month' => self::commission($accountId, $monthStart),
                 'total' => self::commission($accountId, null),
             ],
+            // The rules, and this month's way to the volume bonus (config bhabaghure.commission, CommissionDesk).
+            'rules' => [
+                'earns' => CommissionDesk::earns($me),
+                'rates' => array_map('floatval', (array) config('bhabaghure.commission.rates')),
+                'volume_threshold' => (int) config('bhabaghure.commission.volume.threshold'),
+                'volume_rate' => (float) config('bhabaghure.commission.volume.rate'),
+            ],
+            'volume' => self::volume($accountId, $monthStart, $monthStart->addMonth()),
             'entries' => BonusTransaction::query()->with(['createdBy', 'booking:id,reference', 'reversedBy:id,reverses_id'])->where('bonus_account_id', $accountId)
                 ->latest('id')->limit(50)->get()->map(fn (BonusTransaction $entry) => array_diff_key(BonusController::entryRow($entry), ['reversible' => true]))->all(),
             'withdrawals' => BonusWithdrawal::query()->with(['staff', 'decidedBy', 'paidBy', 'cashTransaction'])->where('staff_id', $me->id)->latest('id')->limit(20)->get()
@@ -96,13 +105,30 @@ class MyCommissionController extends Controller
         return ['count' => (int) $row->count, 'total' => round((float) $row->total, 2)];
     }
 
-    /** Commission credited, less commission reversed, since a Dhaka month's start (or ever). */
+    /**
+     * Bookings confirmed in the Dhaka month that are earning this person commission now, and their sale: what the
+     * month-end volume bonus will count if nothing changes.
+     *
+     * @return array{count: int, base: float}
+     */
+    private static function volume(int $accountId, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $entries = BonusTransaction::query()->where('bonus_account_id', $accountId)->where('kind', BonusTransaction::COMMISSION)->whereDoesntHave('reversedBy')
+            ->whereHas('booking', fn ($booking) => $booking->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Completed->value])
+                ->where('confirmed_at', '>=', $from->utc())->where('confirmed_at', '<', $to->utc()))
+            ->get(['id', 'rule']);
+
+        return ['count' => $entries->count(), 'base' => round($entries->sum(fn (BonusTransaction $entry) => (float) ($entry->rule['base'] ?? 0)), 2)];
+    }
+
+    /** Commission and volume bonus credited, less what was reversed of them, since a Dhaka month's start (or ever). */
     private static function commission(int $accountId, ?CarbonImmutable $since): float
     {
-        $credited = BonusTransaction::query()->where('bonus_account_id', $accountId)->where('kind', BonusTransaction::COMMISSION)
+        $kinds = [BonusTransaction::COMMISSION, BonusTransaction::VOLUME];
+        $credited = BonusTransaction::query()->where('bonus_account_id', $accountId)->whereIn('kind', $kinds)
             ->when($since, fn ($query) => $query->where('created_at', '>=', $since->utc()))->sum('amount');
         $reversed = BonusTransaction::query()->where('bonus_account_id', $accountId)->where('kind', BonusTransaction::REVERSAL)
-            ->whereHas('reverses', fn ($query) => $query->where('kind', BonusTransaction::COMMISSION))
+            ->whereHas('reverses', fn ($query) => $query->whereIn('kind', $kinds))
             ->when($since, fn ($query) => $query->where('created_at', '>=', $since->utc()))->sum('amount');
 
         return round((float) $credited - (float) $reversed, 2);

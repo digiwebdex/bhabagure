@@ -2211,7 +2211,8 @@
       "commission": "Commission",
       "manual": "Bonus",
       "withdrawal": "Withdrawal",
-      "reversal": "Reversal"
+      "reversal": "Reversal",
+      "volume_bonus": "Volume bonus"
     },
     "noneOpen": "No withdrawal is waiting.",
     "none": "Nothing here.",
@@ -2253,7 +2254,18 @@
     "reverseNote": "An entry the other way is added with your reason; the original stays in the ledger, marked reversed.",
     "reversedToast": "Entry reversed",
     "withdrawalNumber": "Withdrawal #{{id}}",
-    "withdrawalLine": "Withdrawal asked {{date}}"
+    "withdrawalLine": "Withdrawal asked {{date}}",
+    "automatic": "Automatic",
+    "rule": {
+      "sale": "{{rate}} of {{base}} sale before VAT",
+      "volume_one": "{{rate}} of {{base}} · {{n}} booking in {{month}}",
+      "volume_other": "{{rate}} of {{base}} · {{n}} bookings in {{month}}",
+      "booking_cancelled": "Booking cancelled",
+      "returned_to_pool": "Booking returned to the pool",
+      "reassigned": "Booking reassigned",
+      "reassignedTo": "Booking reassigned to {{name}}"
+    },
+    "reverseCommissionNote": "Commission reversed by hand is withheld: this person won’t be credited for this booking again, even if it comes back to them."
   },
   "myCommission": {
     "title": "My commission",
@@ -2277,6 +2289,13 @@
     "overAvailable": "Up to {{available}}",
     "note": "Note (optional)",
     "send": "Send request",
-    "requested": "Withdrawal requested"
+    "requested": "Withdrawal requested",
+    "volume": "Volume bonus this month",
+    "volumeValue": "{{n}} of {{threshold}}",
+    "volumeLeft_one": "{{n}} more confirmed booking adds {{rate}} on the whole month",
+    "volumeLeft_other": "{{n}} more confirmed bookings add {{rate}} on the whole month",
+    "volumeReached": "Reached: {{rate}} of {{base}} ≈ {{amount}}, credited at month end",
+    "rules": "You earn {{tour}} of tour sales before VAT ({{air}} air, {{hotel}} hotel) on bookings you own, credited when a booking is confirmed and taken back if it’s cancelled. {{threshold}} confirmed bookings in a month add {{volume}} on that whole month.",
+    "noCommission": "Your role doesn’t earn commission on bookings. Bonuses are credited by an admin."
   }
 }

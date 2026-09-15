@@ -152,11 +152,13 @@ class BonusController extends Controller
             'amount' => (float) $entry->amount,
             'kind' => $entry->kind,
             'reason' => $entry->reason,
+            // Commission and volume entries: the rule they were made with. System reversals: why (cause, and to whom).
+            'rule' => $entry->rule,
             'booking' => $entry->booking ? ['id' => $entry->booking->id, 'reference' => $entry->booking->reference] : null,
             'withdrawal_id' => $entry->bonus_withdrawal_id,
             'reverses_id' => $entry->reverses_id,
             'reversed' => $entry->reversedBy !== null,
-            'reversible' => in_array($entry->kind, [BonusTransaction::MANUAL, BonusTransaction::COMMISSION], true) && $entry->reversedBy === null
+            'reversible' => in_array($entry->kind, BonusDesk::REVERSIBLE, true) && $entry->reversedBy === null
                 && ($entry->direction !== BonusTransaction::CREDIT || (float) $entry->amount <= $available),
             'by' => $entry->createdBy?->name,
             'created_at' => $entry->created_at?->toIso8601String(),

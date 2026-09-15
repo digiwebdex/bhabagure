@@ -21,8 +21,11 @@ class BonusTransaction extends Model
 
     public const DEBIT = 'debit';
 
-    /** From the booking's commission rule (auto-credit waits for the rules in the re-synced design). */
+    /** A booking's commission, credited and reversed by CommissionDesk. */
     public const COMMISSION = 'commission';
+
+    /** The month-end volume bonus, one per person and month (`period`). */
+    public const VOLUME = 'volume_bonus';
 
     public const MANUAL = 'manual';
 
@@ -30,7 +33,7 @@ class BonusTransaction extends Model
 
     public const REVERSAL = 'reversal';
 
-    protected $fillable = ['bonus_account_id', 'direction', 'amount', 'kind', 'booking_id', 'bonus_withdrawal_id', 'rule', 'reverses_id', 'reason', 'created_by_staff_id'];
+    protected $fillable = ['bonus_account_id', 'direction', 'amount', 'kind', 'booking_id', 'bonus_withdrawal_id', 'rule', 'period', 'reverses_id', 'reason', 'created_by_staff_id'];
 
     protected function casts(): array
     {

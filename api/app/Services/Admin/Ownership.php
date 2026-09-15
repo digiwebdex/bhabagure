@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Enums\StaffStatus;
+use App\Events\BookingOwnerChanged;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Inquiry;
@@ -42,6 +43,9 @@ final class Ownership
                 throw new OwnershipRefused('not_claimable');
             }
             $this->audit->record("{$kind}.claimed", $staff, $record, ['to' => $staff->id]);
+            if ($record instanceof Booking) {
+                BookingOwnerChanged::dispatch($record);
+            }
 
             if ($record instanceof Booking && $record->customer_id !== null) {
                 $customer = Customer::query()->whereKey($record->customer_id)->claimable()->update(['assigned_staff_id' => $staff->id]);
@@ -77,6 +81,9 @@ final class Ownership
             }
             $locked->newQuery()->whereKey($locked->getKey())->update(['assigned_staff_id' => $to?->id]);
             $this->audit->record("{$kind}.reassigned", $by, $locked, ['from' => $from, 'to' => $to?->id, 'reason' => $reason]);
+            if ($locked instanceof Booking) {
+                BookingOwnerChanged::dispatch($locked);
+            }
 
             return $locked->fresh();
         });

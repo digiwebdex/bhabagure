@@ -1,8 +1,7 @@
 # Phase 7 — HR: staff, attendance, salary, bonus; the super admin wallet
 
-**Status (2026-09-15): steps 1–5 built and live. Waiting:
-- commission auto-credit and the My commission layout check, both needing the re-synced design's commission rules,
-  which still couldn't be read here;
+**Status (2026-09-15): steps 1–5 built and live, with automatic commission from the client's rules (§12 step 4). Waiting:
+- the My commission layout check, because the design copy here is still the 2026-09-13 one;
 - the wallet, which opens once its allow-list and basic auth are in place on the server (§12, docs/deployment.md
   §7.6). Its database exists.
 
@@ -717,12 +716,7 @@ without `TEMP`, Chrome can't stream the PDF. `InvoicePdf` now passes both on Win
 
 ### Step 4 — bonus accounts and My commission (2026-09-15)
 
-**Waiting for the re-synced design, which still can't be read here:**
-- **Commission auto-credit** on booking confirmation, with its reversal on cancellation or reassignment. The rules are
-  only in that design. `bonus_transactions` already has the booking, the rule snapshot and the `commission` kind for it,
-  and My commission counts commission entries once they exist.
-- **My commission's layout.** The screen is built from Phase 5 §4.8 and this section in the admin's existing style, to be
-  checked against the design. So is "commission pending", which needs the rules.
+Automatic commission was added the same day; see "Commission auto-credit" at the end of this step.
 
 **The API** (`BonusDesk`, `BonusController`, `MyCommissionController`):
 - **Accounts:** `bonus_accounts`, one per staff member, opened the first time money moves. The balance is the sum of
@@ -772,6 +766,75 @@ without `TEMP`, Chrome can't stream the PDF. `InvoicePdf` now passes both on Win
   - a credit on the staff record, then a withdrawal asked for under My commission, with its limits;
   - the badge opening the queue; approve, then pay with a receipt; the badge clearing; the cash book row; the staff
     member seeing it paid.
+
+#### Commission auto-credit (2026-09-15)
+
+**Rules, from the client (2026-09-15):**
+- 3 % on tours, 1.5 % on air and 2 % on hotels;
+- +0.5 % volume bonus at 10 confirmed bookings in a month;
+- credited to the bonus ledger on confirmation and reversed on cancellation;
+- the volume bonus posted as one month-end adjustment.
+
+The design copy on this machine was still the 2026-09-13 one (no commission rules, no My commission screen), so the rules
+come from the client's message, and the layout check against the design is still open.
+
+**Answers (2026-09-15):**
+- the rates apply to the **sale before VAT**: the booking total less VAT, so after discount and with add-ons, fixed at
+  confirmation;
+- the volume bonus covers the **whole month**: 0.5 % of all that month's qualifying bookings, posted at month end, and a
+  later cancellation reverses only that booking's commission.
+
+**Decisions made while building, open to veto:**
+- **Who earns:** the booking's owner, if their role grants `commission.view_own` (sales agents, tour operators). Admins
+  and the super admin earn nothing on bookings they own; their all-access doesn't count.
+- **Rounded to the taka,** like salaries.
+- **Air and hotel rates are configured, but nothing earns them yet.** v1.0 records neither air-ticket nor hotel sales.
+- **Ownership:**
+  - reassigning a confirmed booking reverses the old owner's commission and credits the new owner;
+  - back to the pool, or to someone who doesn't earn, only reverses;
+  - a booking confirmed by an online payment while unowned earns whoever an admin assigns it to (the claim pool holds
+    inquiries only).
+- **A commission reversed by hand is withheld.** `bonus.manage` can still reverse a commission (or a volume bonus) with a
+  reason; that person is then never credited for that booking again. A system reversal doesn't withhold anything.
+- **System reversals go through even when the money was withdrawn or asked for.** The balance, or what's available, can
+  go below zero. Requests and approvals are then refused until later credits make it up.
+- **The volume bonus counts** bookings confirmed in the Dhaka month that are still confirmed or completed, and still
+  earning that person commission, when it's posted (00:30 on the 1st, Dhaka).
+
+**The API:**
+- `CommissionDesk`:
+  - `sync(booking)` works out the commission from the booking's status and owner and puts the ledger right, so it is safe
+    to repeat;
+  - listeners run it on `BookingConfirmed`, `BookingCancelled` and the new `BookingOwnerChanged` (dispatched by
+    `Ownership`), all after commit;
+  - a failure never undoes the booking change: it is reported, alerts `bonus.manage` once, and is caught up at month end.
+- **Entries:**
+  - commission: `kind=commission`, `booking_id`, and the rule `{type, rate, base, booking}`; system entries have no author;
+  - volume bonus: `kind=volume_bonus` with `period` (`YYYY-MM`), unique per account;
+  - system reversals: the cause (`booking_cancelled`, `returned_to_pool`, or `reassigned` with the new owner's name).
+- **`commission:volume-bonus [YYYY-MM]`** is scheduled monthly (docs/handover.md §4). It refuses a month that isn't over, and
+  catches up on every booking of the month first.
+- **Rates:** `config('bhabaghure.commission')`. Every entry keeps the rule it was made with.
+- **My commission's API** adds `rules` (whether you earn, the rates, the threshold) and `volume` (this month's qualifying
+  bookings and their sale). Commission this month and in all now include the volume bonus.
+
+**The admin:**
+- **Ledger entries** describe themselves: "3% of ৳ 1,50,000 sale before VAT · Automatic", "0.5% of … · 10 bookings in
+  August 2026", "Booking cancelled", "Booking reassigned to …". Reversing a commission by hand warns that it will be
+  withheld.
+- **My commission** has a *Volume bonus this month* card ("7 of 10", how many more to go, or the bonus reached) and a
+  line with the rules. Anyone whose role doesn't earn is told so instead.
+
+**Tests:**
+- **API, `CommissionTest`:**
+  - 3 % of the sale before VAT on confirmation, the rule snapshot and audit, and a repeated sync changing nothing;
+  - cancellation reversing it even with a withdrawal open, which then can't be approved;
+  - the claim path; reassignment moving it; to an admin or the pool reversing it; earning again after a system reversal;
+  - a hand reversal withholding it; admins and the super admin earning none;
+  - the volume bonus for 10 August bookings (a cancelled one left out, 9 not enough), posted once, refused before the
+    month is over, and staying when a booking is cancelled later.
+- **Admin e2e, `bonus.spec.ts`:** an agent claims a website booking; its confirmation shows the commission, its rule, the
+  volume card and the rules under My commission; cancelling shows the reversal.
 
 ### Step 5 — the super admin wallet (2026-09-15)
 

@@ -94,6 +94,9 @@ final class BonusDesk
         });
     }
 
+    /** Entries staff may reverse by hand. A commission reversed this way is withheld: CommissionDesk won't credit it again. */
+    public const REVERSIBLE = [BonusTransaction::MANUAL, BonusTransaction::COMMISSION, BonusTransaction::VOLUME];
+
     /**
      * Undoes a credit with an entry the other way. A withdrawal's debit isn't reversed here: its cash-out is, in the cash
      * book. A credit already withdrawn can't be taken back below what is available.
@@ -105,7 +108,7 @@ final class BonusDesk
         return DB::transaction(function () use ($entry, $reason, $by) {
             $account = BonusAccount::query()->whereKey($entry->bonus_account_id)->lockForUpdate()->firstOrFail();
             self::ensureNotOwn($account->staff_id, $by);
-            if (! in_array($entry->kind, [BonusTransaction::MANUAL, BonusTransaction::COMMISSION], true)) {
+            if (! in_array($entry->kind, self::REVERSIBLE, true)) {
                 throw new BonusRefused('not_reversible');
             }
             if (BonusTransaction::query()->where('reverses_id', $entry->id)->exists()) {

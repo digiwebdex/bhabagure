@@ -166,4 +166,19 @@ return [
         'max_pixels' => 60_000_000,
     ],
 
+    /*
+     * Staff commission (docs/phase-7-hr-attendance-bonus-wallet.md §12 step 4), credited to the bonus ledger by
+     * App\Services\Bonus\CommissionDesk. Percentages of the sale before VAT, rounded to the taka. Each entry keeps the
+     * rule it was made with, so a change here applies to bookings confirmed afterwards only.
+     *
+     *  - tour: package bookings, when confirmed; reversed when cancelled, and moved with the booking when reassigned.
+     *  - air, hotel: for when air ticketing and hotel sales are recorded; v1.0 records neither.
+     *  - volume: at the Dhaka month's end, anyone with at least `threshold` bookings confirmed that month (still earning
+     *    commission when it's posted) gets `rate` % of all those bookings' sale, as one entry.
+     */
+    'commission' => [
+        'rates' => ['tour' => 3.0, 'air' => 1.5, 'hotel' => 2.0],
+        'volume' => ['threshold' => 10, 'rate' => 0.5],
+    ],
+
 ];
