@@ -88,5 +88,12 @@ export const e2eApiServer = () => ({
   timeout: 60_000,
 })
 
+/**
+ * The installed Chrome, as on a developer's machine. E2E_BROWSER=bundled uses Playwright's own Chromium instead, for a
+ * machine without Chrome (the server's throwaway test run, docs/handover.md §6): `npx playwright install
+ * chromium-headless-shell` first.
+ */
+export const E2E_CHANNEL = process.env.E2E_BROWSER === 'bundled' ? undefined : 'chrome'
+
 /** Playwright loads the config in every worker too; the database is reset once, in the main process. */
 export const isMainProcess = () => process.env.TEST_WORKER_INDEX === undefined

@@ -2,6 +2,7 @@ export declare const API_DIR: string
 export declare const E2E_API_PORT: number
 export declare const E2E_API_URL: string
 export declare const E2E_REVALIDATE_SECRET: string
+export declare const E2E_CHANNEL: 'chrome' | undefined
 export declare function artisan(...args: string[]): string
 export declare function writeE2eEnv(options: { origins: string[]; webUrl?: string; portalUrl?: string; adminUrl?: string }): void
 export declare function resetE2eDatabase(): void

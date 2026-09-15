@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test'
 
-import { E2E_API_URL, e2eApiServer, isMainProcess, resetE2eDatabase, writeE2eEnv } from '../scripts/e2e-api.mjs'
+import { E2E_API_URL, E2E_CHANNEL, e2eApiServer, isMainProcess, resetE2eDatabase, writeE2eEnv } from '../scripts/e2e-api.mjs'
 
 /**
  * End-to-end checks of the wallet against the real Laravel API, on bhabaghure_e2e and bhabaghure_wallet_e2e
@@ -27,7 +27,7 @@ export default defineConfig({
   timeout: 60_000,
   use: {
     baseURL: `http://localhost:${WALLET_PORT}`,
-    channel: 'chrome',
+    channel: E2E_CHANNEL,
     trace: 'retain-on-failure',
   },
   webServer: [

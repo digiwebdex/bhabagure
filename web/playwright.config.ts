@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-import { E2E_API_URL, E2E_REVALIDATE_SECRET, e2eApiServer, isMainProcess, resetE2eDatabase, writeE2eEnv } from '../scripts/e2e-api.mjs';
+import { E2E_API_URL, E2E_CHANNEL, E2E_REVALIDATE_SECRET, e2eApiServer, isMainProcess, resetE2eDatabase, writeE2eEnv } from '../scripts/e2e-api.mjs';
 
 import { BROWSER_API_URL, PORT, PORTAL_URL, SITE_URL, TEST_DOMAIN } from './e2e/hosts';
 
@@ -33,7 +33,7 @@ export default defineConfig({
   timeout: 60_000,
   use: {
     baseURL: SITE_URL,
-    channel: 'chrome',
+    channel: E2E_CHANNEL,
     trace: 'retain-on-failure',
     launchOptions: {
       args: [`--host-resolver-rules=MAP *.${TEST_DOMAIN} 127.0.0.1`, '--disable-features=HttpsUpgrades,HttpsFirstBalancedModeAutoEnable'],
