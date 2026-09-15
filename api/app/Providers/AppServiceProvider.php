@@ -39,6 +39,7 @@ use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\Transaction;
 use App\Models\TravellerDocument;
+use App\Models\VisaService;
 use App\Services\Bonus\BonusDesk;
 use App\Services\Bonus\CommissionDesk;
 use App\Services\Notifications\Sms\BulkSmsBdGateway;
@@ -162,6 +163,7 @@ class AppServiceProvider extends ServiceProvider
             'team_member' => TeamMember::class,
             'review' => Review::class,
             'gallery_item' => GalleryItem::class,
+            'visa_service' => VisaService::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,

@@ -187,6 +187,42 @@ test.describe('website content', () => {
     expect(pricing.slabs[0]).toEqual({ minPax: 1, discountPercent: 0 })
   })
 
+  test('a visa service is refused until its processing time and requirements are in, then appears publicly (Phase 8 §4.C)', async ({ page, request }) => {
+    await signIn(page, 'admin')
+    await page.goto('/visas')
+    await expect(page.getByText('No visa services yet')).toBeVisible(FIRST_LOAD)
+    await page.getByRole('button', { name: '+ Add visa service' }).first().click()
+    let dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Country (Bangla)').fill('মালয়েশিয়া')
+    await dialog.getByLabel('Country (English)').fill('Malaysia')
+    await dialog.getByLabel('Visa type (Bangla)').fill('ই-ভিসা')
+    await dialog.getByLabel('Visa type (English)').fill('eVisa')
+    await dialog.getByLabel('Country code').fill('my')
+    await expect(dialog.getByLabel('Country code')).toHaveValue('MY')
+    await dialog.getByLabel('Price per person (৳)').fill('4200')
+    await expect(dialog.getByText('৳ 4,200 · Including our service charge.', { exact: false })).toBeVisible()
+    await dialog.getByLabel('Requirements (English)').fill('Passport valid for 6 months\nOne photo, white background')
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    const row = page.getByRole('listitem').filter({ hasText: 'Malaysia · eVisa' })
+    await expect(row).toContainText('৳ 4,200 · no processing time · 2 requirements')
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(page.getByText('Say how long processing takes.')).toBeVisible()
+    await expect(page.getByText('List the requirements in both languages, one per line.')).toBeVisible()
+    expect((await (await request.get(`${API_URL}/api/v1/public/visas`)).json()).data).toHaveLength(0)
+
+    await row.getByText('৳ 4,200 · no processing time').click()
+    dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Processing time (English)').fill('3–5 working days')
+    await dialog.getByLabel('Requirements (Bangla)').fill('৬ মাস মেয়াদি পাসপোর্ট\nসাদা ব্যাকগ্রাউন্ডে একটি ছবি')
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(row.getByText('Published')).toBeVisible()
+
+    const [visa] = (await (await request.get(`${API_URL}/api/v1/public/visas`)).json()).data
+    expect([visa.slug, visa.countryCode, visa.price, visa.processing.bn, visa.requirements.bn]).toEqual(['malaysia-evisa', 'MY', 4200, '3–5 working days', ['৬ মাস মেয়াদি পাসপোর্ট', 'সাদা ব্যাকগ্রাউন্ডে একটি ছবি']])
+  })
+
   test('media library rejects an oversized upload before sending it', async ({ page }) => {
     await signIn(page, 'admin')
     await page.goto('/media')

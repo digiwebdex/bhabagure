@@ -26,7 +26,7 @@ interface SiteHeaderProps {
 
 type NavItem = { kind: 'section'; id: string; key: string } | { kind: 'page'; href: string; key: string } | { kind: 'book'; key: string };
 
-/** README: the section links on desktop, plus the team page; FAQ, gallery and "how booking works" join them in the ☰ sheet. */
+/** README: the section links on desktop, plus the team page; visa, FAQ, gallery and "how booking works" join them in the ☰ sheet. */
 const DESKTOP_NAV: NavItem[] = [
   { kind: 'section', id: 'services', key: 'services' },
   { kind: 'section', id: 'packages', key: 'packages' },
@@ -41,6 +41,7 @@ const SHEET_NAV: NavItem[] = [
   { kind: 'section', id: 'services', key: 'services' },
   { kind: 'section', id: 'packages', key: 'packages' },
   { kind: 'section', id: 'departures', key: 'departures' },
+  { kind: 'section', id: 'visa', key: 'visa' },
   { kind: 'section', id: 'about', key: 'about' },
   { kind: 'page', href: teamPath, key: 'team' },
   { kind: 'section', id: 'blog', key: 'news' },
@@ -57,9 +58,9 @@ const SHEET_NAV: NavItem[] = [
 export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
   const t = useTranslations('nav');
   const common = useTranslations('common');
-  const { packages, pricing, departures, gallery } = useSiteContent();
+  const { packages, pricing, departures, gallery, visas } = useSiteContent();
   // Sections that render nothing without CMS content get no link, so the menu never points at a missing anchor.
-  const shown = (item: NavItem) => item.kind !== 'section' || !emptySections({ departures, gallery }).includes(item.id);
+  const shown = (item: NavItem) => item.kind !== 'section' || !emptySections({ departures, gallery, visas }).includes(item.id);
   const menuOpen = useSiteUi((state) => state.menuOpen);
   const toggleMenu = useSiteUi((state) => state.toggleMenu);
   const closeMenu = useSiteUi((state) => state.closeMenu);

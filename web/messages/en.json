@@ -32,6 +32,7 @@
       "services": "Services",
       "packages": "Packages",
       "departures": "Departures",
+      "visa": "Visa services",
       "about": "About us",
       "news": "News & guides",
       "book": "Book now",
@@ -51,6 +52,7 @@
     "tabTrip": "Find a tour package",
     "tabAir": "Air ticket quote",
     "tabHotel": "Hotel quotation",
+    "tabVisa": "Visa",
     "destination": "Destination",
     "allDestinations": "All destinations",
     "date": "Travel date",
@@ -116,6 +118,26 @@
     "sentNote": "Your request has reached our hotel team. During office hours ({open} AM – {close} PM) we usually send the quotation within an hour.",
     "checkOutBeforeCheckIn": "The check-out date must be after the check-in date."
   },
+  "visa": {
+    "country": "Country",
+    "finderLabel": "Visas we process",
+    "perPerson": "per person",
+    "priceOnRequest": "Price on request",
+    "price": "Price",
+    "processing": "Processing time",
+    "processingIn": "Processing: {time}",
+    "stay": "Stay",
+    "requirements": "Requirements",
+    "notes": "Good to know",
+    "details": "Requirements & details →",
+    "ask": "Ask about this visa",
+    "askNote": "Send us your questions, or the documents you have, on WhatsApp.",
+    "askMessage": "Hello, I would like to know about the {visa} for {country}.",
+    "heading": "{country} {visa}",
+    "otherTypes": "Other visas for {country}",
+    "backToVisas": "← All visa services",
+    "metaDescription": "{country} {visa}: requirements, processing time and price — Bhabaghure Holidays."
+  },
   "marquee": [
     "NEPAL · কাঠমান্ডু",
     "POKHARA · সারাংকোট",
@@ -139,6 +161,10 @@
     "departures": {
       "heading": "Upcoming group departures",
       "lede": ""
+    },
+    "visa": {
+      "heading": "Visa services",
+      "lede": "The countries we process visas for — what each needs, how long it takes and what it costs."
     },
     "whyUs": {
       "heading": "Why Bhabaghure Holidays",

@@ -184,6 +184,61 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('a visa service published in the CMS appears in the Visa section, on its own page and in the Visa tab', async ({ page, request }) => {
+    const password = 'e2e-visa-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'visa.editor@e2e.test'], ['employee_code' => 'E2E-VISA', 'name' => 'Visa editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'visa.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+
+    // Nothing published: no section, no tab, no menu link.
+    await page.goto('/en');
+    await expect(page.locator('#visa')).toHaveCount(0);
+    await expect(page.locator('#search').getByRole('tab', { name: 'Visa', exact: true })).toHaveCount(0);
+
+    const created = await request.post(`${E2E_API_URL}/api/v1/admin/visas`, {
+      headers,
+      data: {
+        country_code: 'TH', country_bn: 'থাইল্যান্ড', country_en: 'Thailand', visa_type_bn: 'টুরিস্ট ভিসা', visa_type_en: 'Tourist visa', price: 5500,
+        processing_bn: '৭–১০ কর্মদিবস', processing_en: '7–10 working days', stay_en: 'Single entry, up to 60 days',
+        requirements_bn: 'ছয় মাস মেয়াদি পাসপোর্ট\nদুই কপি ছবি', requirements_en: 'Passport valid for 6 months\nTwo photos, 35 × 45 mm',
+        notes_en: 'Apply at least 3 weeks before travel.',
+      },
+    });
+    expect(created.status()).toBe(201);
+    const id = (await created.json()).data.id as number;
+    try {
+      expect((await request.post(`${E2E_API_URL}/api/v1/admin/visas/${id}/publish`, { headers })).status()).toBe(200);
+
+      // The publish called /api/revalidate: the next visit shows the section.
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return page.locator('#visa').count();
+      }, { timeout: 20_000 }).toBe(1);
+      const card = page.getByTestId('visa-countries').locator('article').filter({ hasText: 'Thailand' });
+      await expect(card).toContainText('Tourist visa');
+      await expect(card).toContainText('৳ 5,500per person');
+      await expect(card).toContainText('Processing: 7–10 working days');
+
+      // The Visa tab lists the country's visas.
+      await page.locator('#search').getByRole('tab', { name: 'Visa', exact: true }).click();
+      await expect(page.getByTestId('visa-finder-results')).toContainText('Tourist visa');
+
+      // Its page: price, processing, stay, the requirements as a list, the note; Bangla at the unprefixed address.
+      await card.getByRole('link', { name: 'Requirements & details →' }).click();
+      await expect(page).toHaveURL(/\/en\/visa\/thailand-tourist-visa$/);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Thailand Tourist visa');
+      await expect(page.getByTestId('visa-requirements').locator('li')).toHaveText(['Passport valid for 6 months', 'Two photos, 35 × 45 mm']);
+      await expect(page.locator('main')).toContainText('Single entry, up to 60 days');
+      await expect(page.locator('main')).toContainText('Apply at least 3 weeks before travel.');
+      await page.goto('/visa/thailand-tourist-visa');
+      await expect(page.getByTestId('visa-requirements').locator('li')).toHaveText(['ছয় মাস মেয়াদি পাসপোর্ট', 'দুই কপি ছবি']);
+      await expect(page.locator('main')).toContainText('৳ ৫,৫০০ জনপ্রতি');
+      expect((await request.get('/sitemap.xml')).status()).toBe(200);
+    } finally {
+      await request.delete(`${E2E_API_URL}/api/v1/admin/visas/${id}`, { headers });
+    }
+  });
+
   test('saving a package in the CMS refreshes the website', async ({ page, request }) => {
     // Nepal 04: the other website tests use the Mustang package, so this one is renamed and then restored.
     const slug = 'kathmandu-nagarkot-himalayan-tour-3-nights-4-days-without-air-ticket';

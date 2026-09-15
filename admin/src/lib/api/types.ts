@@ -175,6 +175,30 @@ export type Review = {
   status: ContentStatus
 }
 
+/** api/app/Http/Resources/AdminContent.php visaService (docs/phase-8-visa-quotes-pricing-downloads.md §4.C). */
+export type VisaService = {
+  id: number
+  slug: string
+  country_code: string | null
+  country_bn: string
+  country_en: string
+  visa_type_bn: string
+  visa_type_en: string
+  /** Per person, in taka; null: priced on request. */
+  price: number | null
+  processing_bn: string | null
+  processing_en: string | null
+  stay_bn: string | null
+  stay_en: string | null
+  /** One requirement per line. */
+  requirements_bn: string | null
+  requirements_en: string | null
+  notes_bn: string | null
+  notes_en: string | null
+  sort_order: number
+  status: ContentStatus
+}
+
 export type GalleryItem = {
   id: number
   kind: 'reel' | 'photo'

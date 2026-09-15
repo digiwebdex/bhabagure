@@ -15,6 +15,7 @@ use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\VisaService;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -96,6 +97,11 @@ class PublicContentController extends Controller
         $reviews = Review::query()->published()->orderBy('sort_order')->orderBy('id')->get();
 
         return $this->data($reviews->map(PublicContent::review(...)));
+    }
+
+    public function visas(): JsonResponse
+    {
+        return $this->data(VisaService::query()->published()->orderBy('sort_order')->orderBy('id')->get()->map(PublicContent::visaService(...)));
     }
 
     public function gallery(): JsonResponse

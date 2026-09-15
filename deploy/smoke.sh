@@ -58,7 +58,7 @@ check "wallet API from outside the allow-list" '403|401' "$(get wallet_api https
 check "wallet API absent on the API host" 404 "$(get wallet_on_api "$API/api/v1/wallet/auth/me" -H 'X-Wallet-Request: 1')"
 
 echo "── Public API (live CMS data)"
-for path in settings destinations packages departures posts team reviews gallery pricing; do
+for path in settings destinations packages departures posts team reviews gallery visas pricing; do
   check "GET /public/$path" 200 "$(get "p_$path" "$API/api/v1/public/$path" -H 'Accept: application/json')"
 done
 check "destinations listed" '[1-9][0-9]*' "$(json p_destinations "(d.data||d).length")"
@@ -90,6 +90,13 @@ echo "── Website pages"
 check "package page (bn)" 200 "$(get w_pkg "$APEX/packages/$slug")"
 check "package page (en)" 200 "$(get w_pkg_en "$APEX/en/packages/$slug")"
 [[ -n $post ]] && check "blog post page" 200 "$(get w_post "$APEX/blog/$post")"
+visa=$(json p_visas "((d.data||[])[0]||{}).slug||''")
+if [[ -n $visa ]]; then
+  check "visa page /visa/{slug}" 200 "$(get w_visa "$APEX/visa/$visa")"
+  check "home has the Visa section" yes "$(body_has home 'id="visa"')"
+else
+  note "No visa services published in Admin → Visa services; the Visa section and tab are hidden."
+fi
 for page in terms privacy refund-policy; do
   check "/$page (bn)" 200 "$(get "w_$page" "$APEX/$page")"
   check "/en/$page" 200 "$(get "w_${page}_en" "$APEX/en/$page")"

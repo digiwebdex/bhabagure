@@ -152,9 +152,10 @@ test.describe('site basics', () => {
 
     await page.setViewportSize({ width: 390, height: 800 });
     await page.getByRole('button', { name: 'Menu' }).click();
-    for (const id of ['departures', 'gallery']) {
+    for (const id of ['departures', 'visa', 'gallery']) {
       const present = await page.locator(`#${id}`).count();
       await expect(page.locator(`#site-menu a[href$="#${id}"]`), `☰ sheet link to #${id}`).toHaveCount(present ? 1 : 0);
+      if (id !== 'gallery') await expect(page.locator(`footer a[href$="#${id}"]`), `footer link to #${id}`).toHaveCount(present ? 1 : 0);
     }
   });
 });

@@ -109,6 +109,8 @@ class PublicContentContractTest extends TestCase
     {
         $this->getJson('/api/v1/public/reviews')->assertOk()->assertExactJson(['data' => []]);
         $this->getJson('/api/v1/public/departures')->assertOk()->assertExactJson(['data' => []]);
+        // Visa services come only from Admin → Visa services: no country, price or requirement is invented.
+        $this->getJson('/api/v1/public/visas')->assertOk()->assertExactJson(['data' => []]);
         // The four reels from the company's Facebook page (a migration); none of the demo seed's illustrative photos.
         $gallery = collect($this->getJson('/api/v1/public/gallery')->assertOk()->json('data'));
         $this->assertCount(4, $gallery);

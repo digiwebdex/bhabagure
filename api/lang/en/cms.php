@@ -12,6 +12,8 @@ return [
         'images' => 'Add at least one photo.',
         'body' => 'Write the post body in both languages.',
         'excerpt' => 'Write the excerpt in both languages.',
+        'processing' => 'Say how long processing takes.',
+        'requirements' => 'List the requirements in both languages, one per line.',
     ],
     'has_bookings' => 'This has bookings. Archive it instead of deleting.',
     'gallery_url' => 'Use the link of the reel or photo on the Facebook page. A reel needs the video’s own link, e.g. https://www.facebook.com/reel/1097420422945413.',

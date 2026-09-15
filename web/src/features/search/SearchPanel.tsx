@@ -3,16 +3,20 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
+import { useSiteContent } from '@/components/providers/SiteContentProvider';
+
 import { AirQuoteForm } from './AirQuoteForm';
 import { HotelQuoteForm } from './HotelQuoteForm';
 import { TripSearchForm } from './TripSearchForm';
+import { VisaFinder } from './VisaFinder';
 
-type Tab = 'trip' | 'air' | 'hotel';
+type Tab = 'trip' | 'air' | 'hotel' | 'visa';
 
-/** Sits directly under the hero: package search, with the air-ticket and hotel quotation requests as further tabs. */
+/** Sits directly under the hero: package search, the air-ticket and hotel quotation requests, and the visas we process (once the CMS has one). */
 export function SearchPanel() {
   const t = useTranslations('search');
   const [tab, setTab] = useState<Tab>('trip');
+  const { visaCountries } = useSiteContent();
 
   const tabButton = (value: Tab, label: string) => {
     const active = tab === value;
@@ -40,9 +44,10 @@ export function SearchPanel() {
           {tabButton('trip', t('tabTrip'))}
           {tabButton('air', t('tabAir'))}
           {tabButton('hotel', t('tabHotel'))}
+          {visaCountries.length > 0 ? tabButton('visa', t('tabVisa')) : null}
         </div>
         <div role="tabpanel" id={`search-panel-${tab}`} aria-labelledby={`search-tab-${tab}`}>
-          {tab === 'trip' ? <TripSearchForm /> : tab === 'air' ? <AirQuoteForm /> : <HotelQuoteForm />}
+          {tab === 'trip' ? <TripSearchForm /> : tab === 'air' ? <AirQuoteForm /> : tab === 'hotel' ? <HotelQuoteForm /> : <VisaFinder />}
         </div>
       </div>
     </section>

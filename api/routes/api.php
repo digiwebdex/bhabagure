@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
+use App\Http\Controllers\Api\V1\Admin\VisaServiceController;
 use App\Http\Controllers\Api\V1\Agent\AttendanceAgentController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
@@ -139,6 +140,7 @@ Route::prefix('v1')->group(function () {
             Route::get('team', 'team');
             Route::get('reviews', 'reviews');
             Route::get('gallery', 'gallery');
+            Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
         });
@@ -519,7 +521,7 @@ Route::prefix('v1')->group(function () {
                 Route::delete('blog-categories/{id}', 'destroy')->whereNumber('id');
             });
 
-            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class] as $path => $controller) {
+            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class] as $path => $controller) {
                 Route::controller($controller)->group(function () use ($path) {
                     Route::get($path, 'index');
                     Route::post($path, 'store');

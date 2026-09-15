@@ -101,6 +101,22 @@ export interface GalleryItem {
   thumbnail?: ContentImage | null;
 }
 
+/** A visa the agency processes (docs/phase-8-visa-quotes-pricing-downloads.md §4.C), from Admin → Visa services. */
+export interface VisaService {
+  slug: string;
+  /** ISO 3166-1 alpha-2, for the flag. */
+  countryCode: string | null;
+  country: Localized;
+  visaType: Localized;
+  /** Per person in taka; null: priced on request. */
+  price: number | null;
+  processing: Localized | null;
+  stay: Localized | null;
+  requirements: { bn: string[]; en: string[] };
+  notes: Localized | null;
+  updatedAt: string | null;
+}
+
 export interface PricingSettings extends PricingConfig {
   addons: (Addon & { name: Localized })[];
 }
@@ -133,6 +149,7 @@ export interface ContentBundle {
   team: TeamMember[];
   reviews: Review[];
   gallery: GalleryItem[];
+  visas: VisaService[];
   pricing: PricingSettings;
   settings: SiteSettings;
 }

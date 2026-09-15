@@ -348,7 +348,7 @@ revalidate_all() {
   secret=$(sed -n 's/^REVALIDATE_SECRET=//p' "$WEB/.env.production.local" | tr -d '"')
   [[ -n $secret ]] || { note "REVALIDATE_SECRET is blank in web/.env.production.local; skipped content refresh."; return 0; }
   printf 'Authorization: Bearer %s\n' "$secret" | curl -fsS -o /dev/null --max-time 15 -H @- -H 'Content-Type: application/json' \
-    -d '{"tags":["packages","departures","posts","team","reviews","gallery","settings"]}' http://127.0.0.1:3340/api/revalidate \
+    -d '{"tags":["packages","departures","posts","team","reviews","gallery","visas","settings"]}' http://127.0.0.1:3340/api/revalidate \
     && note "website content cache refreshed." || note "content refresh request failed (pages refresh within the hour anyway)."
 }
 

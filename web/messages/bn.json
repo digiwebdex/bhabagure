@@ -32,6 +32,7 @@
       "services": "সেবা",
       "packages": "প্যাকেজ",
       "departures": "যাত্রা",
+      "visa": "ভিসা সেবা",
       "about": "আমাদের সম্পর্কে",
       "news": "খবর ও গাইড",
       "book": "বুকিং করুন",
@@ -51,6 +52,7 @@
     "tabTrip": "ট্যুর প্যাকেজ খুঁজুন",
     "tabAir": "এয়ার টিকেট কোটেশন",
     "tabHotel": "হোটেল কোটেশন",
+    "tabVisa": "ভিসা",
     "destination": "গন্তব্য · Destination",
     "allDestinations": "সব গন্তব্য",
     "date": "কোন তারিখে",
@@ -116,6 +118,26 @@
     "sentNote": "আপনার অনুরোধ আমাদের হোটেল টিমের কাছে পৌঁছেছে। অফিস সময়ে (সকাল {open}টা – সন্ধ্যা {close}টা) সাধারণত এক ঘণ্টার মধ্যে কোটেশন পাঠানো হয়।",
     "checkOutBeforeCheckIn": "চেক-আউটের তারিখ চেক-ইনের পরে হতে হবে।"
   },
+  "visa": {
+    "country": "দেশ",
+    "finderLabel": "যে দেশের ভিসা আমরা করে দিই",
+    "perPerson": "জনপ্রতি",
+    "priceOnRequest": "মূল্য জানতে যোগাযোগ করুন",
+    "price": "মূল্য",
+    "processing": "প্রসেসিং সময়",
+    "processingIn": "প্রসেসিং: {time}",
+    "stay": "থাকার মেয়াদ",
+    "requirements": "প্রয়োজনীয় কাগজপত্র",
+    "notes": "জেনে রাখুন",
+    "details": "কাগজপত্র ও বিস্তারিত →",
+    "ask": "এই ভিসা নিয়ে জানতে চাই",
+    "askNote": "প্রশ্ন বা আপনার কাছে থাকা কাগজপত্র WhatsApp-এ পাঠান।",
+    "askMessage": "আসসালামু আলাইকুম, {country}-এর {visa} সম্পর্কে জানতে চাই।",
+    "heading": "{country} {visa}",
+    "otherTypes": "{country}-এর অন্য ভিসা",
+    "backToVisas": "← সব ভিসা সেবা",
+    "metaDescription": "{country} {visa}: প্রয়োজনীয় কাগজপত্র, প্রসেসিং সময় ও মূল্য — ভবঘুরে হলিডেজ।"
+  },
   "marquee": [
     "NEPAL · কাঠমান্ডু",
     "POKHARA · সারাংকোট",
@@ -139,6 +161,10 @@
     "departures": {
       "heading": "আসন্ন গ্রুপ যাত্রা",
       "lede": "Confirmed group departures · seats fill fast"
+    },
+    "visa": {
+      "heading": "ভিসা সেবা",
+      "lede": "যে দেশগুলোর ভিসা আমরা করে দিই — কী কাগজপত্র লাগে, কত সময় লাগে আর খরচ কত।"
     },
     "whyUs": {
       "heading": "কেন ভবঘুরে হলিডেজ",

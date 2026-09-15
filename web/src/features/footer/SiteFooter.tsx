@@ -10,6 +10,7 @@ import { displayPhone, teamPath, telUrl } from '@/lib/links';
 const LINKS = [
   ['/#packages', 'packages'],
   ['/#departures', 'departures'],
+  ['/#visa', 'sheet.visa'],
   ['/#about', 'about'],
   [teamPath, 'sheet.team'],
   ['/#blog', 'news'],

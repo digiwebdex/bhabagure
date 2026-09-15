@@ -9,6 +9,8 @@ export function localizedPath(locale: AppLocale, path: string): string {
 
 export const packagePath = (slug: string) => `/packages/${slug}`;
 export const postPath = (slug: string) => `/blog/${slug}`;
+/** A visa service's page (bhabaghure.com.bd/visa/thailand-tourist-visa). */
+export const visaPath = (slug: string) => `/visa/${slug}`;
 /** The team page (bhabaghure.com.bd/ourteam, /en/ourteam). */
 export const teamPath = '/ourteam';
 
@@ -43,6 +45,10 @@ export function facebookVideoEmbedUrl(url: string, width: number, height: number
 }
 
 /** Home sections that render nothing until the CMS has content for them, so nothing may link to their anchors. */
-export function emptySections(content: { departures: readonly unknown[]; gallery: readonly unknown[] }): string[] {
-  return [...(content.departures.length === 0 ? ['departures'] : []), ...(content.gallery.length === 0 ? ['gallery'] : [])];
+export function emptySections(content: { departures: readonly unknown[]; gallery: readonly unknown[]; visas: readonly unknown[] }): string[] {
+  return [
+    ...(content.departures.length === 0 ? ['departures'] : []),
+    ...(content.gallery.length === 0 ? ['gallery'] : []),
+    ...(content.visas.length === 0 ? ['visa'] : []),
+  ];
 }

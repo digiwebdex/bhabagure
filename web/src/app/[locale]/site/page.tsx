@@ -15,6 +15,7 @@ import { ReviewsSection } from '@/features/reviews/ReviewsSection';
 import { SearchPanel } from '@/features/search/SearchPanel';
 import { ServicesSection } from '@/features/services/ServicesSection';
 import { SiteChrome } from '@/features/SiteChrome';
+import { VisaSection } from '@/features/visa/VisaSection';
 import { WhyUsSection } from '@/features/why-us/WhyUsSection';
 import type { AppLocale } from '@/i18n/routing';
 import { getSiteViews, siteUrl } from '@/lib/content';
@@ -57,6 +58,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <ServicesSection locale={locale} />
       <PackagesSection locale={locale} />
       <DeparturesSection locale={locale} departures={views.departures} />
+      <VisaSection locale={locale} views={views} />
       <WhyUsSection locale={locale} stats={views.stats} settings={views.settings} />
       <StepsSection locale={locale} />
       <ReviewsSection locale={locale} reviews={views.reviews} />

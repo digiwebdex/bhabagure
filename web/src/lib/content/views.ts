@@ -66,6 +66,27 @@ export interface PostView {
   readingMinutes: number;
 }
 
+export interface VisaView {
+  slug: string;
+  countryCode: string | null;
+  country: string;
+  visaType: string;
+  price: number | null;
+  processing: string | null;
+  stay: string | null;
+  requirements: string[];
+  notes: string | null;
+  updatedAt: string | null;
+}
+
+/** Visa services grouped by country, in the CMS order of each country's first service. */
+export interface VisaCountryView {
+  key: string;
+  country: string;
+  countryCode: string | null;
+  services: VisaView[];
+}
+
 export interface SiteViews {
   locale: AppLocale;
   /** Destinations that have at least one published package (search select, chips). */
@@ -79,6 +100,8 @@ export interface SiteViews {
   team: { employeeCode: string; name: string; role: string; roleEn: string; photo: ImageView | null }[];
   reviews: { quote: string; reviewerName: string; tripLabel: string; rating: number }[];
   gallery: { kind: 'reel' | 'photo'; url: string; viewsThousands: number | null; caption: string | null; thumbnail: ImageView | null }[];
+  visas: VisaView[];
+  visaCountries: VisaCountryView[];
   pricing: ContentBundle['pricing'];
   addons: { code: string; name: string; price: number; unit: 'per_person' | 'per_booking' }[];
   settings: ContentBundle['settings'] & { brand: string; companyName: string };
@@ -86,6 +109,7 @@ export interface SiteViews {
 }
 
 const pick = (value: Localized, locale: AppLocale) => value[locale] || value.en;
+
 
 const image = (img: Partial<ContentImage> & { url: string; alt: Localized; isPlaceholder: boolean }, locale: AppLocale): ImageView => ({
   url: img.url,
@@ -166,6 +190,26 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     .map((d) => ({ slug: d.slug, label: d.name.en, name: pick(d.name, locale), packageCount: packages.filter((p) => p.destinationSlug === d.slug).length }))
     .filter((d) => d.packageCount > 0);
 
+  const visas: VisaView[] = bundle.visas.map((v) => ({
+    slug: v.slug,
+    countryCode: v.countryCode,
+    country: pick(v.country, locale),
+    visaType: pick(v.visaType, locale),
+    price: v.price,
+    processing: v.processing ? pick(v.processing, locale) : null,
+    stay: v.stay ? pick(v.stay, locale) : null,
+    requirements: v.requirements[locale].length > 0 ? v.requirements[locale] : v.requirements.en,
+    notes: v.notes ? pick(v.notes, locale) : null,
+    updatedAt: v.updatedAt,
+  }));
+  const visaCountries: VisaCountryView[] = [];
+  for (const visa of visas) {
+    const key = visa.countryCode ?? visa.country;
+    const group = visaCountries.find((c) => c.key === key);
+    if (group) group.services.push(visa);
+    else visaCountries.push({ key, country: visa.country, countryCode: visa.countryCode, services: [visa] });
+  }
+
   return {
     locale,
     destinations,
@@ -186,6 +230,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       caption: g.caption ? pick(g.caption, locale) : null,
       thumbnail: g.thumbnail ? image(g.thumbnail, locale) : null,
     })),
+    visas,
+    visaCountries,
     pricing: bundle.pricing,
     addons: bundle.pricing.addons.map((a) => ({ code: a.code, name: pick(a.name, locale), price: a.price, unit: a.unit })),
     settings: { ...bundle.settings, brand: pick(bundle.settings.company.brand, locale), companyName: pick(bundle.settings.company.name, locale) },

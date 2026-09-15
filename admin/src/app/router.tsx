@@ -34,6 +34,7 @@ const CustomersPage = page(() => import('../features/customers/CustomersPage'), 
 const DashboardPage = page(() => import('../features/dashboard/DashboardPage'), 'DashboardPage')
 const DocumentsPage = page(() => import('../features/documents/DocumentsPage'), 'DocumentsPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
+const VisaServicesPage = page(() => import('../features/cms/visas/VisaServicesPage'), 'VisaServicesPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
 const PackageEditorPage = page(() => import('../features/cms/packages/PackageEditorPage'), 'PackageEditorPage')
@@ -108,6 +109,7 @@ export const router = createBrowserRouter([
       { path: 'team', element: <Require permissions={cms}><TeamPage /></Require> },
       { path: 'reviews', element: <Require permissions={cms}><ReviewsPage /></Require> },
       { path: 'gallery', element: <Require permissions={cms}><GalleryPage /></Require> },
+      { path: 'visas', element: <Require permissions={cms}><VisaServicesPage /></Require> },
       { path: 'media', element: <Require permissions={['packages.manage', 'cms.manage']}><MediaLibraryPage /></Require> },
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },
       { path: 'attendance', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendancePage /></Require> },

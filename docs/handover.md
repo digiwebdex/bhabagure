@@ -15,6 +15,8 @@ Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pri
 - the website's hotel quotation form, the Hotel requests queue, and a Reply box there and on Air ticketing (WhatsApp and
   email to the customer). Put people on the new *Hotel quotation request* alert under Admin → Notifications → Alerts;
   until someone is on it, the super admins and admins get it.
+- visa services: Admin → Visa services feeds a Visa section on the home page, a page per visa and a Visa tab. Nothing
+  shows until the agency enters and publishes its visas (country, visa type, price, processing time, requirements).
 
 ---
 

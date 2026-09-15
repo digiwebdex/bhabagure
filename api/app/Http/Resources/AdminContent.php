@@ -15,6 +15,7 @@ use App\Models\Review;
 use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\VisaService;
 use App\Support\Money;
 
 /**
@@ -197,6 +198,16 @@ final class AdminContent
             ...$item->only(['id', 'kind', 'url', 'caption_bn', 'caption_en', 'view_count', 'media_id', 'sort_order']),
             'status' => $item->status->value,
             'thumbnail' => $item->relationLoaded('thumbnail') ? self::media($item->thumbnail) : null,
+        ];
+    }
+
+    public static function visaService(VisaService $visa): array
+    {
+        return [
+            ...$visa->only(['id', 'slug', 'country_code', 'country_bn', 'country_en', 'visa_type_bn', 'visa_type_en', 'processing_bn', 'processing_en',
+                'stay_bn', 'stay_en', 'requirements_bn', 'requirements_en', 'notes_bn', 'notes_en', 'sort_order']),
+            'price' => $visa->price === null ? null : Money::toNumber($visa->price),
+            'status' => $visa->status->value,
         ];
     }
 

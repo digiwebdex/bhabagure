@@ -14,6 +14,7 @@ use App\Models\Review;
 use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\VisaService;
 use App\Support\Money;
 
 /**
@@ -152,6 +153,23 @@ final class PublicContent
             'reviewerName' => $review->reviewer_name,
             'tripLabel' => $review->localized('trip_label'),
             'rating' => $review->rating,
+        ];
+    }
+
+    /** A published visa service; requirements as lists, one item per line. web/src/lib/content/types.ts VisaService. */
+    public static function visaService(VisaService $visa): array
+    {
+        return [
+            'slug' => $visa->slug,
+            'countryCode' => $visa->country_code,
+            'country' => $visa->localized('country'),
+            'visaType' => $visa->localized('visa_type'),
+            'price' => $visa->price === null ? null : Money::toNumber($visa->price),
+            'processing' => $visa->localizedOrNull('processing'),
+            'stay' => $visa->localizedOrNull('stay'),
+            'requirements' => $visa->requirementLists(),
+            'notes' => $visa->localizedOrNull('notes'),
+            'updatedAt' => $visa->updated_at?->toIso8601String(),
         ];
     }
 

@@ -1,6 +1,6 @@
 # Phase 8 — Visa, hotel quotes, hotel-category pricing, gated downloads
 
-**Status (2026-09-15): steps A and B built and deployed (§4.A, §4.B); steps C–E planned.**
+**Status (2026-09-15): steps A–C built and deployed (§4.A–§4.C); steps D–E planned.**
 
 ## 0. The client's requests (2026-09-15, summarised from Bangla)
 
@@ -172,3 +172,43 @@ It posts to `POST /public/hotel-quotes`, which is rate-limited and has the honey
 - Admin e2e: a flagged hotel request answered with a reply that marks it quoted. It checks the preview, the held
   WhatsApp and the email status, the badge, and the reply count in Quoted.
 - Smoke: the hotel queue refuses anonymous calls.
+
+### 4.C Visa services (2026-09-15)
+
+**Content.** Admin → Visa services (`cms.manage`) holds one entry per country and visa type. Each entry has:
+- the country and visa type in both languages, and an optional two-letter country code;
+- the price per person including the service charge; left blank, the website shows "Price on request";
+- processing time and stay;
+- requirements, one per line;
+- notes;
+- the page address (`/visa/<slug>`, generated from the country and visa type unless typed).
+
+Entries start as drafts and are ordered like the other CMS lists. Publishing needs a processing time and the
+requirements in both languages. Nothing is seeded: which countries, prices and requirements appear is the agency's
+content, and the section, tab and menu links stay hidden until one is published. Saves refresh the website through the
+new `visas` cache tag.
+
+**API.** Table `visa_services`, model `VisaService`, `Admin/VisaServiceController` (the published-list endpoints under
+`/admin/visas`), and `GET /public/visas`. Public requirements come as lists per language, falling back to the other
+language when one is empty.
+
+**Website.**
+- **Visa section.** On the home page after Departures: one card per country, each visa type with its price and
+  processing time, a link to its page, and *Ask about this visa* on WhatsApp.
+- **`/visa/<slug>` page.** Price, processing time, stay, the requirements as a numbered list (Bengali numerals in
+  Bangla), notes, WhatsApp, and links to the country's other visa types. It is listed in the sitemap.
+- **Visa tab.** In the search panel, shown once a visa is published: pick a country to see its visa types.
+- **Links.** The ☰ sheet and the footer link to the section.
+- Country codes show as a small badge, not a flag emoji, because Windows browsers draw flag emoji as bare letters.
+- The requirements PDF and the sign-in-gated download come in step E, from the same fields.
+
+**Tests.**
+- API:
+  - `VisaServicesTest`: publish rules, slug and code rules, price on request, the public shape and language fallback,
+    the cache tag, the audit trail, and permissions.
+  - `CmsPermissionsTest` covers the new screen.
+  - `PublicContentContractTest`: nothing is published by default.
+- Admin e2e: add, refused with the reasons, completed and published, then seen on the public API.
+- Web e2e: nothing shows before publishing; after publishing, the card, the Visa tab, the English and Bangla pages,
+  the requirements list and the sitemap. The menu-links test covers the visa links.
+- Smoke: `GET /public/visas`; once one is published, its page and the home section.
