@@ -61,8 +61,14 @@ async function loadFromApi(): Promise<ContentBundle> {
   // On the server the API is reached over loopback (API_INTERNAL_URL) rather than out through the CDN and back.
   const base = process.env.API_INTERNAL_URL || process.env.API_URL;
   if (!base) throw new Error('CONTENT_SOURCE=api needs API_URL');
-  const get = async <T,>(path: string, tag: string): Promise<T> => {
+  const get = async <T,>(path: string, tag: string, { empty }: { empty?: T } = {}): Promise<T> => {
     const res = await fetch(`${base}/api/v1/public/${path}`, { next: { tags: [tag], revalidate: 3600 } });
+    // A list newer than the API that answers: deploy.sh builds the website before it migrates and reloads the API, so the
+    // build talks to the previous release. It renders empty, and the refresh at the end of the deploy fills it in.
+    if (res.status === 404 && empty !== undefined) {
+      console.warn(`GET ${path} → 404: rendering it empty until the API serves it`);
+      return empty;
+    }
     if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
     return (await res.json()).data as T;
   };
@@ -74,7 +80,7 @@ async function loadFromApi(): Promise<ContentBundle> {
     get<ContentBundle['team']>('team', 'team'),
     get<ContentBundle['reviews']>('reviews', 'reviews'),
     get<ContentBundle['gallery']>('gallery', 'gallery'),
-    get<ContentBundle['visas']>('visas', 'visas'),
+    get<ContentBundle['visas']>('visas', 'visas', { empty: [] }),
     get<ContentBundle['pricing']>('pricing', 'settings'),
     get<ContentBundle['settings']>('settings', 'settings'),
   ]);

@@ -212,3 +212,9 @@ language when one is empty.
 - Web e2e: nothing shows before publishing; after publishing, the card, the Visa tab, the English and Bangla pages,
   the requirements list and the sitemap. The menu-links test covers the visa links.
 - Smoke: `GET /public/visas`; once one is published, its page and the home section.
+
+**Deploy note (found on the first deploy of step C).** `deploy.sh` builds the website before it migrates and reloads the
+API, so the build reads the previous release's API, which had no `/public/visas` yet. The website's content loader now
+renders a list the API doesn't serve yet (HTTP 404) as empty. Only lists marked this way do; every other failure still
+stops the build. The content refresh at the end of the deploy then fills it in. Any public list added later should be
+loaded the same way.
