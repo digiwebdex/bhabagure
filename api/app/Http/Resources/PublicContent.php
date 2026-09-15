@@ -54,6 +54,8 @@ final class PublicContent
             'durationNights' => $package->duration_nights,
             'regularPrice' => Money::toNumber($package->regular_price),
             'salePrice' => Money::toNumber($package->sale_price),
+            // {"3": {"1": 95000, "2": 75000, …}, …} or null: web/src/lib/content/types.ts TourPackage.priceGrid.
+            'priceGrid' => $package->price_grid,
             'includesAirfare' => $package->includes_airfare,
             'groupMode' => $package->group_mode,
             'minPax' => $package->min_pax,

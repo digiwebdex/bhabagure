@@ -2,7 +2,7 @@
  * Content as the API serves it: every user-facing string in both languages.
  * Pages turn this into single-language views (see views.ts) before it reaches components.
  */
-import type { Addon, PricingConfig } from '@bhabaghure/pricing';
+import type { Addon, PriceGrid, PricingConfig } from '@bhabaghure/pricing';
 
 export type Localized = { bn: string; en: string };
 
@@ -36,6 +36,8 @@ export interface TourPackage {
   durationNights: number | null;
   regularPrice: number;
   salePrice: number | null;
+  /** Hotel-category × traveller prices (Phase 8 §4.D); absent or null: one price and the group discounts. */
+  priceGrid?: PriceGrid | null;
   /** null = not stated; the card says "ask us". */
   includesAirfare: boolean | null;
   groupMode: 'group' | 'any';

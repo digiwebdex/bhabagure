@@ -1,6 +1,6 @@
 # Phase 8 — Visa, hotel quotes, hotel-category pricing, gated downloads
 
-**Status (2026-09-15): steps A–C built and deployed (§4.A–§4.C); steps D–E planned.**
+**Status (2026-09-16): steps A–D built and deployed (§4.A–§4.D); step E planned.**
 
 ## 0. The client's requests (2026-09-15, summarised from Bangla)
 
@@ -218,3 +218,65 @@ API, so the build reads the previous release's API, which had no `/public/visas`
 renders a list the API doesn't serve yet (HTTP 404) as empty. Only lists marked this way do; every other failure still
 stops the build. The content refresh at the end of the deploy then fills it in. Any public list added later should be
 loaded the same way.
+
+### 4.D Hotel-category × traveller price grid (2026-09-16)
+
+**Decided before building (2026-09-16, all the recommended options):**
+1. **Single rooms.** The 1-traveller grid price already includes a single room. For 2 or more travellers the grid is per
+   person sharing, and a single room adds the single-room supplement %, as before.
+2. **Card price.** A grid package's card shows basic/3-star (or the first category it sells) for the traveller count in
+   the search panel, so it follows the stepper like every other card.
+3. **No sale price** on grid packages: staff change the grid for an offer.
+4. **Existing packages** keep today's price and group discounts until staff fill in a grid.
+
+**Pricing (`@bhabaghure/pricing` and `PricingService`).**
+- A grid is `{"3": {"1": …, "2": …, "4": …, "6": …, "10": …}, "4": {…}, "5": {…}}`, holding per-person prices for
+  basic/3-star, 4-star and 5-star.
+- A category is sold once it has the 1-traveller price.
+- A group between two sizes pays the smaller size's price (3 → the 2-traveller price); 10 or more pay the 10-traveller
+  price.
+- With a grid, `quoteBooking` needs one of the sold categories. The slab it reports is the tier, with no discount.
+- The single supplement follows decision 1.
+- Helpers: `gridCategories`, `gridRate`, `defaultHotelCategory` and `packagePerPerson`.
+- `fixtures.json` has `grid`, `gridRate` and `quoteBookingGrid` cases, and both twins pass them.
+
+**API.**
+- `tour_packages.price_grid`.
+- `bookings` and `quotations` keep `hotel_category` and that category's row (`price_grid`) as it was priced, the way
+  `list_price` is kept. A later change of travellers on a draft invoice uses those prices.
+- **Package editor.** It tidies the grid: unknown categories or sizes, and blank cells, are dropped. Each sold row needs
+  the 1-traveller price, and prices run 1 to 9,99,99,999. With a grid, the package's regular price becomes the default
+  category's 2-traveller price, so older screens (the admin list, the assistant, structured data) stay sensible; the
+  sale price is cleared.
+- **Bookings and quotations.** Website bookings, office bookings and quotations take `hotel_category`. A grid package
+  without a sold category is refused as a validation error on `hotel_category`.
+- **Lines.** The package line is titled "… · 4-star hotel" / "… · ৪ তারকা হোটেল", so invoices, quotations, the portal
+  and PDFs name the category. Converting a quotation keeps its category and prices.
+
+**Website.**
+- **Cards.** Priced from the grid, with "per person · Basic / 3-star · N travellers".
+- **Package modal.** Hotel category chips first (only the categories sold), then the group-size chips priced from that
+  category.
+- **Booking.** Starts in the category chosen in the modal. Step 1 has a Hotel category select, the review line names the
+  category, and the payment sends `hotel_category`.
+- The contact form's package list and the budget filter use the same card price.
+
+**Admin.**
+- **Package editor.** A *Price by hotel category* table; while it holds a sold category, the regular and sale price
+  fields are disabled. The summary says which categories are sold and what cards show.
+- **New booking and the quotation editor** have a Hotel category select, priced live.
+- **Booking page.** Shows the category, and the draft invoice re-prices with the booked grid.
+
+**Tests.**
+- Pricing unit tests (14) and `PricingServiceTest` (the shared fixtures).
+- API `PriceGridTest`:
+  - the editor tidying and rules;
+  - the category required and sold;
+  - tier pricing without a slab;
+  - the snapshot surviving a package price change on the draft invoice;
+  - the single-room rule;
+  - quotation to booking.
+- Admin e2e: the grid refused without a 1-traveller price, then saved; a 3-traveller office booking at 3-star
+  (৳ 55,080), then 4-star (৳ 76,500) with the category kept.
+- Web e2e: the card caption and price, the modal's category chips and tier prices, and a booking from the modal whose
+  total reaches the SSLCommerz stand-in exactly (৳ 1,34,640).

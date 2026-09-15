@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import type { MouseEvent } from 'react';
 
+import { defaultHotelCategory } from '@bhabaghure/pricing';
+
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import type { PackageView } from '@/lib/content/views';
 import { localizedPath, packagePath } from '@/lib/links';
@@ -47,8 +49,11 @@ export function PackageCard({ pkg, perPerson, pax }: PackageCardProps) {
     startBooking({ packageSlug: pkg.slug, pax, date: useTripSearch.getState().date, maxPax: pricing.maxTravellers });
   };
 
-  const caption =
-    pax <= 2
+  // A grid package shows basic/3-star (or its first category) for the search bar’s travellers (decided 2026-09-16).
+  const gridCategory = defaultHotelCategory(pkg.priceGrid);
+  const caption = gridCategory
+    ? t('gridCaption', { category: t(`hotelCategories.${gridCategory}`), pax, paxText: f.number(pax) })
+    : pax <= 2
       ? pkg.salePrice != null
         ? tc('wasPrice', { amount: f.bdt(pkg.regularPrice) })
         : ' '

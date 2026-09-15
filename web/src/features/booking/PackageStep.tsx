@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import type { RoomType } from '@bhabaghure/pricing';
+import { defaultHotelCategory, packagePerPerson, type HotelCategory, type RoomType } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { controlClass, Field } from '@/components/ui/Field';
@@ -19,6 +19,7 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
   const { packages, pricing, addons } = useSiteContent();
   const f = useFormatters();
   const booking = useBooking();
+  const pkg = packages.find((p) => p.slug === booking.packageSlug);
 
   return (
     <>
@@ -53,6 +54,21 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
             className={controlClass(false, 'form')}
           />
         </Field>
+        {pkg && pkg.hotelCategories.length > 0 ? (
+          <Field variant="form" label={t('hotelCategory')}>
+            <select
+              value={booking.hotelCategory && pkg.hotelCategories.includes(booking.hotelCategory) ? booking.hotelCategory : (defaultHotelCategory(pkg.priceGrid) ?? '')}
+              onChange={(e) => booking.setHotelCategory(e.target.value as HotelCategory)}
+              className={controlClass(false, 'form')}
+            >
+              {pkg.hotelCategories.map((category) => (
+                <option key={category} value={category}>
+                  {t(`hotelCategories.${category}`)} · {f.bdt(packagePerPerson(pkg, booking.pax, pricing.slabs, category))} {t('perPersonShort')}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
         <Field variant="form" label={t('room')}>
           <select value={booking.room} onChange={(e) => booking.setRoom(e.target.value as RoomType)} className={controlClass(false, 'form')}>
             {ROOMS.map((room) => (

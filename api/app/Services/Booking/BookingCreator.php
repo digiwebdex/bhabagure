@@ -19,11 +19,13 @@ use App\Models\TravellerDocument;
 use App\Services\AuditLogger;
 use App\Services\Documents\DocumentNumbers;
 use App\Support\Money;
+use App\Support\Pricing\PriceGrid;
 use App\Support\Pricing\PricingConfig;
 use App\Support\Pricing\PricingService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Creates a booking as an unpaid inquiry (docs/phase-3-booking.md §2–§3). The price is recomputed here from current
@@ -61,6 +63,9 @@ final class BookingCreator
                 'package_title_bn' => $package->title_bn,
                 'duration_days' => $package->duration_days,
                 'list_price' => $this->listPrice($package),
+                // The chosen hotel category and its grid row as priced, kept like list_price (Phase 8 §4.D).
+                'hotel_category' => $quote['hotelCategory'],
+                'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
                 'unit_price' => $quote['perPerson'],
                 'subtotal_amount' => $quote['subtotal'],
                 'single_supplement_amount' => $quote['singleSupplement'],
@@ -89,8 +94,8 @@ final class BookingCreator
         return array_map(fn (array $line) => [
             'kind' => $line['kind'],
             'code' => $line['code'],
-            'title_en' => ($line['code'] ? $addonsByCode[$line['code']]->name_en : null) ?? ($line['kind'] === 'package' ? $package->title_en : 'Single room supplement'),
-            'title_bn' => ($line['code'] ? $addonsByCode[$line['code']]->name_bn : null) ?? ($line['kind'] === 'package' ? $package->title_bn : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
+            'title_en' => ($line['code'] ? $addonsByCode[$line['code']]->name_en : null) ?? ($line['kind'] === 'package' ? PriceGrid::lineTitle($package->title_en, $quote['hotelCategory'] ?? null, 'en') : 'Single room supplement'),
+            'title_bn' => ($line['code'] ? $addonsByCode[$line['code']]->name_bn : null) ?? ($line['kind'] === 'package' ? ($package->title_bn === null ? null : PriceGrid::lineTitle($package->title_bn, $quote['hotelCategory'] ?? null, 'bn')) : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
             'quantity' => $line['quantity'],
             'unit_price' => $line['unitPrice'],
             'amount' => $line['amount'],
@@ -114,7 +119,7 @@ final class BookingCreator
             $request = new BookingRequest(
                 packageSlug: '', travelDate: $travelDate, pax: $quotation->pax_count, room: $quotation->room_type,
                 addonCodes: [], travellers: $travellers, expectedTotal: (float) $quotation->total_amount, locale: $quotation->locale,
-                source: $quotation->customer->source, termsAccepted: false,
+                source: $quotation->customer->source, termsAccepted: false, hotelCategory: $quotation->hotel_category,
             );
 
             return $this->persist($request, [
@@ -122,7 +127,7 @@ final class BookingCreator
                 'package_title_en' => $quotation->package_title_en,
                 'package_title_bn' => $quotation->package_title_bn,
                 'duration_days' => $quotation->duration_days,
-            ] + $quotation->only(['list_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
+            ] + $quotation->only(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
                 $quotation->lines->map(fn (QuotationLine $line) => $line->only(['kind', 'code', 'title_en', 'title_bn', 'quantity', 'unit_price', 'amount']))->all(),
                 $quotation->customer, $staff, $quotation->id, $quotation->assigned_staff_id ?? $staff->id);
         });
@@ -173,7 +178,7 @@ final class BookingCreator
             'terms_accepted_at' => $request->termsAccepted ? now() : null,
             'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
             'access_token_hash' => Booking::hashAccessToken($accessToken),
-        ] + array_intersect_key($snapshot, array_flip(['list_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
+        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
 
         foreach (array_values($lines) as $index => $line) {
             $booking->lines()->create($line + ['sort_order' => $index]);
@@ -218,13 +223,31 @@ final class BookingCreator
      */
     public function quote(TourPackage $package, BookingRequest $request, array $addons): array
     {
+        self::assertHotelCategory($package, $request->hotelCategory);
+
         return PricingService::quoteBooking(
             $this->listPrice($package),
             $request->pax,
             $request->room,
             array_map(fn (Addon $addon) => ['code' => $addon->code, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit], $addons),
             PricingConfig::current(),
+            grid: $package->price_grid,
+            hotelCategory: $request->hotelCategory,
         );
+    }
+
+    /**
+     * A package with a price grid is booked and quoted in one of the categories it offers; the category is refused as a
+     * validation error on `hotel_category`, never as a server error.
+     *
+     * @throws ValidationException
+     */
+    public static function assertHotelCategory(TourPackage $package, ?string $category): void
+    {
+        $offered = PricingService::gridCategories($package->price_grid);
+        if ($offered !== [] && ! in_array($category, $offered, true)) {
+            throw ValidationException::withMessages(['hotel_category' => [__('cms.hotel_category_required')]]);
+        }
     }
 
     public function listPrice(TourPackage $package): int|float

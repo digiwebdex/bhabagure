@@ -256,7 +256,13 @@
       "note": "Try another destination or budget. Or tell us where and when you want to go and we will build a package around your budget.",
       "reset": "↺ Clear filters",
       "cta": "Request a custom package"
-    }
+    },
+    "hotelCategories": {
+      "3": "Basic / 3-star",
+      "4": "4-star",
+      "5": "5-star"
+    },
+    "gridCaption": "per person · {category} · {pax, plural, one {{paxText} traveller} other {{paxText} travellers}}"
   },
   "detail": {
     "pricing": "Price by group size",
@@ -278,7 +284,15 @@
     "foot": "Pick your group size above — the price updates instantly",
     "photoCounter": "{current} / {total}",
     "viewPhoto": "View photo {n}",
-    "placeholderPhoto": "Sample photo — real photos coming soon"
+    "placeholderPhoto": "Sample photo — real photos coming soon",
+    "hotelCategory": "Hotel",
+    "hotelCategories": {
+      "3": "Basic / 3-star",
+      "4": "4-star",
+      "5": "5-star"
+    },
+    "gridNote": "{category} hotel · a single room adds {percent} for two or more",
+    "gridNoteOne": "{category} hotel · the price for one includes a single room"
   },
   "departures": {
     "seatsLeft": "{leftText} of {totalText} seats left",
@@ -511,7 +525,14 @@
     "updatesNoticeFrom": "We’ll send booking updates to the lead traveller’s WhatsApp and email, and an SMS when WhatsApp can’t reach them. Automated WhatsApp messages come only from our notifications number {number}.",
     "optionalField": "{label} (optional)",
     "whatsapp": "WhatsApp number",
-    "statusLater": "Can be added later"
+    "statusLater": "Can be added later",
+    "hotelCategory": "Hotel category",
+    "hotelCategories": {
+      "3": "Basic / 3-star",
+      "4": "4-star",
+      "5": "5-star"
+    },
+    "perPersonShort": "per person"
   },
   "auth": {
     "signInTitle": "Sign in to your account",

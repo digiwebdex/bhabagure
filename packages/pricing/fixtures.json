@@ -99,6 +99,7 @@
         "addons": []
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 75000,
         "subtotal": 150000,
         "singleSupplement": 0,
@@ -127,6 +128,7 @@
         "addons": []
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 75000,
         "subtotal": 75000,
         "singleSupplement": 0,
@@ -155,6 +157,7 @@
         "addons": []
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 70500,
         "subtotal": 282000,
         "singleSupplement": 33840,
@@ -189,6 +192,7 @@
         "addons": []
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 75000,
         "subtotal": 75000,
         "singleSupplement": 9000,
@@ -234,6 +238,7 @@
         ]
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 25380,
         "subtotal": 101520,
         "singleSupplement": 0,
@@ -290,6 +295,7 @@
         ]
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 13386,
         "subtotal": 40158,
         "singleSupplement": 4818,
@@ -339,6 +345,7 @@
         "chargePercent": 5
       },
       "expected": {
+        "hotelCategory": null,
         "perPerson": 70500,
         "subtotal": 282000,
         "singleSupplement": 0,
@@ -559,6 +566,248 @@
         "chargePercent": 2.5,
         "charge": 0,
         "total": 0
+      }
+    }
+  ],
+  "grid": {
+    "3": {
+      "1": 95000,
+      "2": 75000,
+      "4": 70000,
+      "6": 66000,
+      "10": 62000
+    },
+    "4": {
+      "1": 120000,
+      "2": 90000,
+      "4": 85000,
+      "6": 80000,
+      "10": 76000
+    },
+    "5": {
+      "1": 150000,
+      "4": 130000
+    }
+  },
+  "gridRate": [
+    {
+      "category": "3",
+      "pax": 1,
+      "expected": {
+        "tier": 1,
+        "perPerson": 95000
+      }
+    },
+    {
+      "category": "3",
+      "pax": 2,
+      "expected": {
+        "tier": 2,
+        "perPerson": 75000
+      }
+    },
+    {
+      "category": "3",
+      "pax": 3,
+      "expected": {
+        "tier": 2,
+        "perPerson": 75000
+      }
+    },
+    {
+      "category": "3",
+      "pax": 5,
+      "expected": {
+        "tier": 4,
+        "perPerson": 70000
+      }
+    },
+    {
+      "category": "3",
+      "pax": 9,
+      "expected": {
+        "tier": 6,
+        "perPerson": 66000
+      }
+    },
+    {
+      "category": "3",
+      "pax": 12,
+      "expected": {
+        "tier": 10,
+        "perPerson": 62000
+      }
+    },
+    {
+      "category": "4",
+      "pax": 4,
+      "expected": {
+        "tier": 4,
+        "perPerson": 85000
+      }
+    },
+    {
+      "category": "5",
+      "pax": 2,
+      "expected": {
+        "tier": 1,
+        "perPerson": 150000
+      }
+    },
+    {
+      "category": "5",
+      "pax": 6,
+      "expected": {
+        "tier": 4,
+        "perPerson": 130000
+      }
+    }
+  ],
+  "quoteBookingGrid": [
+    {
+      "$comment": "3 travellers in basic/3-star pay the 2-person price; no group discount; the list price is ignored",
+      "input": {
+        "listPrice": 1,
+        "pax": 3,
+        "room": "twin",
+        "addons": [],
+        "hotelCategory": "3"
+      },
+      "expected": {
+        "hotelCategory": "3",
+        "perPerson": 75000,
+        "subtotal": 225000,
+        "singleSupplement": 0,
+        "addons": [],
+        "discount": 0,
+        "chargePercent": 2,
+        "serviceCharge": 4500,
+        "total": 229500,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 3,
+            "unitPrice": 75000,
+            "amount": 225000
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "one traveller in a single room: the 1-traveller price already includes it",
+      "input": {
+        "listPrice": 1,
+        "pax": 1,
+        "room": "single",
+        "addons": [],
+        "hotelCategory": "4"
+      },
+      "expected": {
+        "hotelCategory": "4",
+        "perPerson": 120000,
+        "subtotal": 120000,
+        "singleSupplement": 0,
+        "addons": [],
+        "discount": 0,
+        "chargePercent": 2,
+        "serviceCharge": 2400,
+        "total": 122400,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 1,
+            "unitPrice": 120000,
+            "amount": 120000
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "two travellers in single rooms pay the supplement on the grid price",
+      "input": {
+        "listPrice": 1,
+        "pax": 2,
+        "room": "single",
+        "addons": [
+          {
+            "code": "airport-pickup",
+            "price": 800,
+            "unit": "per_booking"
+          }
+        ],
+        "hotelCategory": "3",
+        "discount": 1000
+      },
+      "expected": {
+        "hotelCategory": "3",
+        "perPerson": 75000,
+        "subtotal": 150000,
+        "singleSupplement": 18000,
+        "addons": [
+          {
+            "code": "airport-pickup",
+            "amount": 800
+          }
+        ],
+        "discount": 1000,
+        "chargePercent": 2,
+        "serviceCharge": 3356,
+        "total": 171156,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 2,
+            "unitPrice": 75000,
+            "amount": 150000
+          },
+          {
+            "kind": "single_supplement",
+            "code": null,
+            "quantity": 2,
+            "unitPrice": 9000,
+            "amount": 18000
+          },
+          {
+            "kind": "addon",
+            "code": "airport-pickup",
+            "quantity": 1,
+            "unitPrice": 800,
+            "amount": 800
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "5-star with gaps: 6 travellers pay the 4-person price",
+      "input": {
+        "listPrice": 1,
+        "pax": 6,
+        "room": "triple",
+        "addons": [],
+        "hotelCategory": "5"
+      },
+      "expected": {
+        "hotelCategory": "5",
+        "perPerson": 130000,
+        "subtotal": 780000,
+        "singleSupplement": 0,
+        "addons": [],
+        "discount": 0,
+        "chargePercent": 2,
+        "serviceCharge": 15600,
+        "total": 795600,
+        "lines": [
+          {
+            "kind": "package",
+            "code": null,
+            "quantity": 6,
+            "unitPrice": 130000,
+            "amount": 780000
+          }
+        ]
       }
     }
   ]

@@ -1,3 +1,4 @@
+import { gridCategories } from '@bhabaghure/pricing'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '../../../lib/api/client'
@@ -17,6 +18,7 @@ export const emptyPackage = (): PackageForm => ({
   duration_nights: 0,
   regular_price: 0,
   sale_price: null,
+  price_grid: null,
   includes_airfare: null,
   group_mode: 'group',
   min_pax: null,
@@ -96,7 +98,8 @@ export const packageActions = {
 export function publishChecklist(form: PackageForm, imageCount: number) {
   return [
     { key: 'titleBn', done: !!form.title_bn?.trim() },
-    { key: 'price', done: form.regular_price > 0 },
+    // A hotel-category grid prices the package instead of the one price (Phase 8 §4.D).
+    { key: 'price', done: form.regular_price > 0 || gridCategories(form.price_grid).length > 0 },
     { key: 'duration', done: form.duration_days >= 1 },
     { key: 'itinerary', done: form.itinerary.length > 0 },
     { key: 'includes', done: form.includes.length > 0 },

@@ -20,5 +20,7 @@ final class BookingRequest
         public readonly string $locale,
         public readonly string $source,
         public readonly bool $termsAccepted,
+        /** For a package with a hotel-category price grid: '3', '4' or '5' (Phase 8 §4.D). */
+        public readonly ?string $hotelCategory = null,
     ) {}
 }

@@ -488,6 +488,25 @@
     "visaOnArrival": "Visa on arrival",
     "visaOnArrivalHint": "Travellers’ visa and insurance start as “not needed” on this destination’s bookings. Staff can still set either for one traveller."
   },
+  "grid": {
+    "title": "Price by hotel category",
+    "note": "Per-person prices for each hotel category and group size. A group between two sizes pays the smaller size’s price (3 travellers → the 2-traveller price); 10 or more pay the 10-traveller price. A category is sold once it has the 1-traveller price. Filled in, this replaces the price above and the group discounts for this package; a single room still adds the supplement for two or more.",
+    "hotelCategory": "Hotel category",
+    "categories": {
+      "3": "Basic / 3-star",
+      "4": "4-star",
+      "5": "5-star"
+    },
+    "tier_one": "{{n}} traveller",
+    "tier_other": "{{n}} travellers",
+    "tierPlus": "{{n}}+ travellers",
+    "notOffered": "not sold",
+    "cellLabel_one": "{{category}}, {{n}} traveller",
+    "cellLabel_other": "{{category}}, {{n}} travellers",
+    "summary": "Sold in: {{categories}}",
+    "cardPrice": "cards show {{amount}} per person",
+    "pricesFromGrid": "Priced by hotel category below."
+  },
   "departures": {
     "none": "No scheduled departures. The website hides the departures section when there are none.",
     "add": "Add departure",

@@ -1,3 +1,4 @@
+import { gridCategories } from '@bhabaghure/pricing'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router'
@@ -13,6 +14,7 @@ import { emptyPackage, packageActions, publishChecklist, slugify, toForm, useDes
 import { InclusionsEditor, ItineraryEditor, SeoFields, TagInput } from './ContentLists'
 import { DeparturesPanel } from './DeparturesPanel'
 import { PackagePhotos } from './PackagePhotos'
+import { PriceGridField } from './PriceGridField'
 
 const SITE_URL = (import.meta.env.VITE_SITE_URL ?? '').replace(/\/$/, '')
 
@@ -44,6 +46,8 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
   const [form, setForm] = useState<PackageForm>(initial)
   const [slugTouched, setSlugTouched] = useState(!!pkg)
   const dirty = JSON.stringify(form) !== JSON.stringify(initial)
+  // Priced by hotel category: the one price and the sale price come from the grid (Phase 8 §4.D).
+  const hasGrid = gridCategories(form.price_grid).length > 0
 
   const save = usePackageMutation((values: PackageForm) => (pkg ? packageActions.update(pkg.id, values) : packageActions.create(values)))
   const transition = usePackageMutation((action: 'publish' | 'unpublish' | 'archive') => packageActions.transition(pkg!.id, action))
@@ -152,9 +156,10 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
               <NumberInput label={t('packages.nights')} value={form.duration_nights} onChange={(value) => set('duration_nights', value)} error={error('duration_nights')} />
             </Pair>
             <Pair>
-              <NumberInput label={t('packages.regularPrice')} value={form.regular_price} onChange={(value) => set('regular_price', value ?? 0)} error={error('regular_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} />
-              <NumberInput label={t('packages.salePrice')} value={form.sale_price} onChange={(value) => set('sale_price', value)} error={error('sale_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} hint={form.sale_price === null ? t('packages.salePriceHint') : undefined} />
+              <NumberInput disabled={hasGrid} label={t('packages.regularPrice')} value={form.regular_price} onChange={(value) => set('regular_price', value ?? 0)} error={error('regular_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} />
+              <NumberInput disabled={hasGrid} label={t('packages.salePrice')} value={hasGrid ? null : form.sale_price} onChange={(value) => set('sale_price', value)} error={error('sale_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} hint={hasGrid ? t('grid.pricesFromGrid') : form.sale_price === null ? t('packages.salePriceHint') : undefined} />
             </Pair>
+            <PriceGridField value={form.price_grid} onChange={(grid) => set('price_grid', grid)} error={error} />
             <Pair>
               <SelectInput
                 label={t('packages.departureMode')}

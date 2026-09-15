@@ -44,6 +44,7 @@ class PublicBookingController extends Controller
             'travel_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'pax' => ['required', 'integer', 'min:1', "max:{$max}"],
             'room' => ['required', Rule::in(['twin', 'triple', 'single'])],
+            'hotel_category' => ['nullable', Rule::in(['3', '4', '5'])],
             'addons' => ['array', 'max:20'],
             'addons.*' => ['string', 'distinct', Rule::exists(Addon::class, 'code')->where('is_active', true)],
             'travellers' => ['required', 'array', "size:{$pax}"],
@@ -88,6 +89,7 @@ class PublicBookingController extends Controller
                 locale: $data['locale'],
                 source: LeadSource::WebsiteForm->value,
                 termsAccepted: true,
+                hotelCategory: $data['hotel_category'] ?? null,
             ), $request->user('customer'));
         } catch (PriceChanged $e) {
             return response()->json(['message' => __('booking.price_changed'), 'code' => 'price_changed', 'quote' => $e->quote], Response::HTTP_CONFLICT);

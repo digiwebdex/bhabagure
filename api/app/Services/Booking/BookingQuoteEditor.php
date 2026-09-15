@@ -10,6 +10,7 @@ use App\Models\Staff;
 use App\Services\AuditLogger;
 use App\Services\Ledger\LedgerService;
 use App\Support\Money;
+use App\Support\Pricing\PriceGrid;
 use App\Support\Pricing\PricingConfig;
 use App\Support\Pricing\PricingService;
 use Illuminate\Support\Facades\DB;
@@ -58,8 +59,8 @@ final class BookingQuoteEditor
                 $snapshot = $line['code'] ? $addonLines[$line['code']] : null;
                 $booking->lines()->create([
                     'kind' => $line['kind'], 'code' => $line['code'],
-                    'title_en' => $snapshot?->title_en ?? ($line['kind'] === 'package' ? $booking->package_title_en : 'Single room supplement'),
-                    'title_bn' => $snapshot?->title_bn ?? ($line['kind'] === 'package' ? $booking->package_title_bn : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
+                    'title_en' => $snapshot?->title_en ?? ($line['kind'] === 'package' ? PriceGrid::lineTitle($booking->package_title_en, $booking->hotel_category, 'en') : 'Single room supplement'),
+                    'title_bn' => $snapshot?->title_bn ?? ($line['kind'] === 'package' ? ($booking->package_title_bn === null ? null : PriceGrid::lineTitle($booking->package_title_bn, $booking->hotel_category, 'bn')) : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
                     'quantity' => $line['quantity'], 'unit_price' => $line['unitPrice'], 'amount' => $line['amount'], 'sort_order' => $index,
                 ]);
             }
@@ -82,7 +83,9 @@ final class BookingQuoteEditor
     /** @return array<string, mixed> */
     public function quote(Booking $booking, int $pax, string $room, int|float $discount, int|float $vatRate): array
     {
-        return PricingService::quoteBooking((float) $booking->list_price, $pax, $room, $this->addonInputs($booking), PricingConfig::current(), $discount, $vatRate);
+        // A grid booking keeps its category and that category's prices as booked.
+        return PricingService::quoteBooking((float) $booking->list_price, $pax, $room, $this->addonInputs($booking), PricingConfig::current(), $discount, $vatRate,
+            grid: $booking->price_grid, hotelCategory: $booking->hotel_category);
     }
 
     /**

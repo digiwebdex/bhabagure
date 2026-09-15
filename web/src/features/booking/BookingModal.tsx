@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
-import { quoteBooking, type RoomType } from '@bhabaghure/pricing';
+import { defaultHotelCategory, quoteBooking, type RoomType } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
@@ -33,6 +33,8 @@ export function BookingModal() {
 
   const pkg = packages.find((p) => p.slug === booking.packageSlug) ?? packages[0];
   const selectedAddons = addons.filter((a) => booking.addons.includes(a.code));
+  // A grid package is quoted in the chosen hotel category, or its default until one is chosen.
+  const hotelCategory = pkg && pkg.hotelCategories.length > 0 ? (booking.hotelCategory && pkg.hotelCategories.includes(booking.hotelCategory) ? booking.hotelCategory : defaultHotelCategory(pkg.priceGrid)) : null;
   const quote = useMemo(
     () =>
       pkg
@@ -42,9 +44,11 @@ export function BookingModal() {
             room: booking.room,
             addons: selectedAddons,
             config: pricing,
+            grid: pkg.priceGrid,
+            hotelCategory,
           })
         : null,
-    [pkg, booking.pax, booking.room, selectedAddons, pricing],
+    [pkg, booking.pax, booking.room, selectedAddons, pricing, hotelCategory],
   );
 
   if (!pkg || !quote) return null;

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
-import type { RoomType } from '@bhabaghure/pricing'
+import type { HotelCategory, RoomType } from '@bhabaghure/pricing'
 
 import { useToast } from '../../components/ui/feedback'
 import { api, fetchDocument } from '../../lib/api/client'
@@ -49,6 +49,8 @@ export type QuotationInputs = {
   travel_date: string | null
   pax: number
   room: RoomType
+  /** For a package priced by hotel category (Phase 8 §4.D). */
+  hotel_category: HotelCategory | null
   addons: string[]
   discount: number
   vat_rate: number

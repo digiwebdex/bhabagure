@@ -38,7 +38,7 @@ class Quotation extends Model
 
     protected $fillable = [
         'number', 'revision_of_id', 'customer_id', 'tour_package_id', 'departure_id', 'package_title_en', 'package_title_bn', 'package_code',
-        'duration_days', 'duration_nights', 'includes_airfare', 'travel_date', 'pax_count', 'room_type', 'list_price', 'unit_price',
+        'duration_days', 'duration_nights', 'includes_airfare', 'travel_date', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'unit_price',
         'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount',
         'validity_days', 'valid_until', 'status', 'locale', 'notes', 'share_token', 'assigned_staff_id', 'created_by_staff_id',
     ];
@@ -49,7 +49,7 @@ class Quotation extends Model
     {
         return [
             'travel_date' => 'date', 'valid_until' => 'date', 'includes_airfare' => 'boolean',
-            'list_price' => 'decimal:2', 'unit_price' => 'decimal:2', 'subtotal_amount' => 'decimal:2', 'single_supplement_amount' => 'decimal:2',
+            'list_price' => 'decimal:2', 'price_grid' => 'array', 'unit_price' => 'decimal:2', 'subtotal_amount' => 'decimal:2', 'single_supplement_amount' => 'decimal:2',
             'addons_amount' => 'decimal:2', 'discount_amount' => 'decimal:2', 'vat_rate' => 'decimal:2', 'vat_amount' => 'decimal:2', 'total_amount' => 'decimal:2',
             'sent_at' => 'datetime', 'viewed_at' => 'datetime', 'expiry_reminded_at' => 'datetime', 'accepted_at' => 'datetime', 'declined_at' => 'datetime', 'withdrawn_at' => 'datetime', 'converted_at' => 'datetime',
         ];

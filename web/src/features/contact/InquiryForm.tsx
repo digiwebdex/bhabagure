@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useState, type FormEvent } from 'react';
 
-import { clampTravellers, perPersonRate } from '@bhabaghure/pricing';
+import { clampTravellers, packagePerPerson } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { controlClass, Field } from '@/components/ui/Field';
@@ -90,7 +90,7 @@ export function InquiryForm() {
           <option value="">{t('choosePackage')}</option>
           {packages.map((p) => (
             <option key={p.slug} value={p.slug}>
-              {t('packageOption', { title: p.title, price: f.bdt(perPersonRate(p.listPrice, searchPax, pricing.slabs)) })}
+              {t('packageOption', { title: p.title, price: f.bdt(packagePerPerson(p, searchPax, pricing.slabs)) })}
             </option>
           ))}
         </select>

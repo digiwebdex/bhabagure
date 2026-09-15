@@ -5,14 +5,20 @@ import fixtures from '../fixtures.json' with { type: 'json' };
 import {
   clampTravellers,
   DEFAULT_SLABS,
+  defaultHotelCategory,
+  gridCategories,
+  gridRate,
   invoiceTotals,
   listPrice,
   onlinePayment,
+  packagePerPerson,
   paymentStatus,
   perPersonRate,
   quoteBooking,
   savingPercent,
   slabFor,
+  type HotelCategory,
+  type PriceGrid,
   type PricingConfig,
   type QuoteInput,
 } from './index.ts';
@@ -46,6 +52,42 @@ test('quoteBooking matches the shared fixtures', () => {
     const { pax: _pax, slab: _slab, ...amounts } = quote;
     assert.deepEqual(amounts, c.expected, JSON.stringify(c.input));
   }
+});
+
+test('gridRate and grid quotes match the shared fixtures', () => {
+  const grid = fixtures.grid as PriceGrid;
+  assert.deepEqual(gridCategories(grid), ['3', '4', '5']);
+  for (const c of fixtures.gridRate) {
+    assert.deepEqual(gridRate(grid, c.category as HotelCategory, c.pax), c.expected, JSON.stringify(c));
+  }
+  for (const c of fixtures.quoteBookingGrid) {
+    const quote = quoteBooking({ ...(c.input as Omit<QuoteInput, 'config' | 'grid'>), config, grid });
+    const { pax: _pax, slab, ...amounts } = quote;
+    assert.deepEqual(amounts, c.expected, c.$comment);
+    assert.equal(slab.discountPercent, 0, 'a grid never takes the group discount too');
+  }
+});
+
+test('cards show basic/3-star by default, another category on request, and the slab price without a grid', () => {
+  const grid = fixtures.grid as PriceGrid;
+  assert.equal(defaultHotelCategory(grid), '3');
+  assert.equal(defaultHotelCategory({ 5: grid['5'], 4: grid['4'] }), '4');
+  assert.equal(defaultHotelCategory(null), null);
+  assert.equal(packagePerPerson({ listPrice: 1, priceGrid: grid }, 3, config.slabs), 75000);
+  assert.equal(packagePerPerson({ listPrice: 1, priceGrid: grid }, 3, config.slabs, '4'), 90000);
+  assert.equal(packagePerPerson({ listPrice: 1, priceGrid: { 4: grid['4'] } }, 1, config.slabs, '3'), 120000);
+  assert.equal(packagePerPerson({ listPrice: 75000, priceGrid: null }, 3, config.slabs), 72750);
+});
+
+test('a grid package needs one of its offered categories; an empty grid is no grid', () => {
+  const grid = fixtures.grid as PriceGrid;
+  const base = { listPrice: 75000, pax: 2, room: 'twin' as const, addons: [], config };
+  assert.throws(() => quoteBooking({ ...base, grid }), RangeError);
+  assert.throws(() => quoteBooking({ ...base, grid: { 3: grid['3'] }, hotelCategory: '5' }), RangeError);
+  // A row without the 1-traveller price isn't offered.
+  assert.deepEqual(gridCategories({ 4: { 2: 90000 } }), []);
+  assert.equal(quoteBooking({ ...base, grid: {}, hotelCategory: '3' }).total, 153000);
+  assert.equal(quoteBooking({ ...base, grid: {} }).hotelCategory, null);
 });
 
 test('invoiceTotals matches the shared fixtures: discount first, then VAT', () => {

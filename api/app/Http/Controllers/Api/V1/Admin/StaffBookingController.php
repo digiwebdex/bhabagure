@@ -56,6 +56,7 @@ class StaffBookingController extends Controller
             'travel_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'pax' => ['required', 'integer', 'min:1', "max:{$max}"],
             'room' => ['required', Rule::in(['twin', 'triple', 'single'])],
+            'hotel_category' => ['nullable', Rule::in(['3', '4', '5'])],
             'addons' => ['array', 'max:20'],
             'addons.*' => ['string', 'distinct', Rule::exists(Addon::class, 'code')->where('is_active', true)],
             // Passports often arrive after the booking at the office; the documents-pending message asks for them.
@@ -95,6 +96,7 @@ class StaffBookingController extends Controller
                 locale: $data['locale'],
                 source: $customer?->source ?? $data['customer']['source'],
                 termsAccepted: false,
+                hotelCategory: $data['hotel_category'] ?? null,
             ), $staff, $customer, $customer ? null : [
                 'name' => trim($data['customer']['name']), 'phone' => $data['customer']['phone'], 'email' => $data['customer']['email'] ?? null, 'source' => $data['customer']['source'],
             ]);

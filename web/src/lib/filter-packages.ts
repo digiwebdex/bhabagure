@@ -1,4 +1,4 @@
-import { perPersonRate, type Slab } from '@bhabaghure/pricing';
+import { packagePerPerson, type PriceGrid, type Slab } from '@bhabaghure/pricing';
 
 /**
  * The single source for what the package grid shows. The result counter and the cards both read
@@ -16,6 +16,8 @@ export interface PackageLike {
   slug: string;
   destinationSlug: string;
   listPrice: number;
+  /** A grid package's card shows basic/3-star for the search bar's travellers (decided 2026-09-16). */
+  priceGrid?: PriceGrid | null;
 }
 
 export interface PackageFilter {
@@ -49,7 +51,7 @@ export function filterPackages<P extends PackageLike>(
 ): { cards: PackageCard<P>[]; count: number } {
   const cards = packages
     .filter((pkg) => filter.destination === 'any' || pkg.destinationSlug === filter.destination)
-    .map((pkg) => ({ pkg, perPerson: perPersonRate(pkg.listPrice, filter.pax, slabs) }))
+    .map((pkg) => ({ pkg, perPerson: packagePerPerson(pkg, filter.pax, slabs) }))
     .filter((card) => inBudget(card.perPerson, filter.budget));
   return { cards, count: cards.length };
 }

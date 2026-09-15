@@ -18,7 +18,7 @@ class TourPackage extends Model
 
     protected $fillable = [
         'code', 'wp_trip_id', 'slug', 'destination_id', 'title_en', 'title_bn', 'summary_en', 'summary_bn',
-        'duration_days', 'duration_nights', 'regular_price', 'sale_price', 'includes_airfare', 'group_mode',
+        'duration_days', 'duration_nights', 'regular_price', 'sale_price', 'price_grid', 'includes_airfare', 'group_mode',
         'min_pax', 'departure_mode', 'difficulty', 'source_image_url', 'seo_title_bn', 'seo_title_en',
         'seo_description_bn', 'seo_description_en', 'status', 'published_at', 'is_featured', 'sort_order',
     ];
@@ -29,6 +29,7 @@ class TourPackage extends Model
             'status' => PackageStatus::class,
             'regular_price' => 'decimal:2',
             'sale_price' => 'decimal:2',
+            'price_grid' => 'array',
             'includes_airfare' => 'boolean',
             'is_featured' => 'boolean',
             'published_at' => 'datetime',

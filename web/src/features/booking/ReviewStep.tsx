@@ -93,7 +93,7 @@ type Formatters = ReturnType<typeof useFormatters>;
 export function quoteLines(quote: Quote, title: string, addons: { code: string; name: string }[], singlePercent: number, t: Translate, f: Formatters) {
   const paxText = f.number(quote.pax);
   return [
-    { label: t('lineBase', { title, paxText }), amount: quote.subtotal },
+    { label: t('lineBase', { title: quote.hotelCategory ? `${title} · ${t(`hotelCategories.${quote.hotelCategory}`)}` : title, paxText }), amount: quote.subtotal },
     ...(quote.singleSupplement
       ? [
           {

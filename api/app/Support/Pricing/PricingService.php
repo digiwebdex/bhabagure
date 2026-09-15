@@ -39,22 +39,77 @@ final class PricingService
         return self::round($listPrice * (100 - self::slabFor($pax, $slabs)['discountPercent']) / 100);
     }
 
+    /** Group sizes a hotel-category price grid is entered for (docs/phase-8-visa-quotes-pricing-downloads.md §4.D). */
+    public const GRID_TIERS = [1, 2, 4, 6, 10];
+
+    public const HOTEL_CATEGORIES = ['3', '4', '5'];
+
+    /**
+     * The categories a grid offers, in order: those with a 1-traveller price.
+     *
+     * @param  array<string, array<string, int|float>>|null  $grid
+     * @return list<string>
+     */
+    public static function gridCategories(?array $grid): array
+    {
+        return array_values(array_filter(self::HOTEL_CATEGORIES, fn (string $category) => is_numeric($grid[$category]['1'] ?? null)));
+    }
+
+    /**
+     * Per-person price for `pax` in a category: the highest tier at or below it that has a price.
+     *
+     * @param  array<string, array<string, int|float>>  $grid
+     * @return array{tier: int, perPerson: int}
+     */
+    public static function gridRate(array $grid, string $category, int $pax): array
+    {
+        self::assertTravellers($pax);
+        $row = $grid[$category] ?? null;
+        if (! is_array($row) || ! is_numeric($row['1'] ?? null)) {
+            throw new InvalidArgumentException("The grid has no {$category}-star prices");
+        }
+        $match = null;
+        foreach (self::GRID_TIERS as $tier) {
+            $price = $row[(string) $tier] ?? null;
+            if ($tier <= $pax && is_numeric($price)) {
+                self::assertAmount($price + 0);
+                $match = ['tier' => $tier, 'perPerson' => self::round($price + 0)];
+            }
+        }
+
+        return $match;
+    }
+
     /**
      * @param  list<array{code: string, price: int|float, unit: string}>  $addons  only the selected add-ons
-     * @return array{pax: int, slab: array, perPerson: int, subtotal: int, singleSupplement: int, addons: list<array{code: string, amount: int}>, discount: int, chargePercent: int|float, serviceCharge: int, total: int, lines: list<array{kind: string, code: ?string, quantity: int, unitPrice: int, amount: int}>}
+     * @param  array<string, array<string, int|float>>|null  $grid  the package's hotel-category grid; when it offers a category it replaces the list price and the slabs
+     * @return array{pax: int, slab: array, hotelCategory: ?string, perPerson: int, subtotal: int, singleSupplement: int, addons: list<array{code: string, amount: int}>, discount: int, chargePercent: int|float, serviceCharge: int, total: int, lines: list<array{kind: string, code: ?string, quantity: int, unitPrice: int, amount: int}>}
      */
-    public static function quoteBooking(int|float $listPrice, int $pax, string $room, array $addons, PricingConfig $config, int|float $discount = 0, int|float|null $chargePercent = null): array
+    public static function quoteBooking(int|float $listPrice, int $pax, string $room, array $addons, PricingConfig $config, int|float $discount = 0, int|float|null $chargePercent = null, ?array $grid = null, ?string $hotelCategory = null): array
     {
         self::assertTravellers($pax);
         if ($pax > $config->maxTravellers) {
             throw new InvalidArgumentException("At most {$config->maxTravellers} travellers per booking");
         }
 
-        $slab = self::slabFor($pax, $config->slabs);
-        $perPerson = self::perPersonRate($listPrice, $pax, $config->slabs);
+        $offered = self::gridCategories($grid);
+        $category = null;
+        if ($offered !== []) {
+            if ($hotelCategory === null || ! in_array($hotelCategory, $offered, true)) {
+                throw new InvalidArgumentException('Choose one of the hotel categories '.implode(', ', $offered));
+            }
+            $rate = self::gridRate($grid, $hotelCategory, $pax);
+            $slab = ['minPax' => $rate['tier'], 'discountPercent' => 0];
+            $perPerson = $rate['perPerson'];
+            $category = $hotelCategory;
+        } else {
+            $slab = self::slabFor($pax, $config->slabs);
+            $perPerson = self::perPersonRate($listPrice, $pax, $config->slabs);
+        }
         $lines = [['kind' => 'package', 'code' => null, 'quantity' => $pax, 'unitPrice' => $perPerson, 'amount' => $perPerson * $pax]];
 
-        if ($room === 'single') {
+        // A grid's 1-traveller price already includes a single room (decided 2026-09-16); larger groups pay the supplement.
+        if ($room === 'single' && ! ($category !== null && $pax === 1)) {
             $supplement = self::round($perPerson * $config->singleRoomSupplementPercent / 100);
             $lines[] = ['kind' => 'single_supplement', 'code' => null, 'quantity' => $pax, 'unitPrice' => $supplement, 'amount' => $supplement * $pax];
         }
@@ -72,6 +127,7 @@ final class PricingService
         return [
             'pax' => $pax,
             'slab' => $slab,
+            'hotelCategory' => $category,
             'perPerson' => $perPerson,
             'subtotal' => $lines[0]['amount'],
             'singleSupplement' => $supplementLine['amount'] ?? 0,

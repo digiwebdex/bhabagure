@@ -63,6 +63,8 @@ final class AdminContent
             'duration_nights' => $package->duration_nights,
             'regular_price' => Money::toNumber($package->regular_price),
             'sale_price' => Money::toNumber($package->sale_price),
+            // Hotel-category price grid (Phase 8 §4.D); null when the package is priced the old way.
+            'price_grid' => $package->price_grid,
             'status' => $package->status->value,
             'published_at' => $package->published_at?->toIso8601String(),
             'is_featured' => $package->is_featured,

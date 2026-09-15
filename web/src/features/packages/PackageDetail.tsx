@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import { perPersonRate } from '@bhabaghure/pricing';
+import { defaultHotelCategory, packagePerPerson } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
@@ -47,14 +47,23 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
   const increase = useSiteUi((state) => state.increaseDetailPax);
   const decrease = useSiteUi((state) => state.decreaseDetailPax);
   const setPax = useSiteUi((state) => state.setDetailPax);
+  const chosenCategory = useSiteUi((state) => state.detailCategory);
+  const setCategory = useSiteUi((state) => state.setDetailCategory);
   const labels = packageLabels(pkg, tp, f);
 
-  const perPerson = perPersonRate(pkg.listPrice, pax, pricing.slabs);
+  // A grid package: pick the hotel category first, then the group size (Phase 8 §4.D).
+  const grid = pkg.hotelCategories.length > 0 ? pkg.priceGrid : null;
+  const category = grid ? (chosenCategory && pkg.hotelCategories.includes(chosenCategory) ? chosenCategory : defaultHotelCategory(grid)) : null;
+  const rate = (travellers: number) => packagePerPerson(pkg, travellers, pricing.slabs, category);
+  const perPerson = rate(pax);
   const total = perPerson * pax;
   const paxText = f.number(pax);
 
-  const slabNote =
-    pax === 1
+  const slabNote = category
+    ? pax === 1
+      ? t('gridNoteOne', { category: t(`hotelCategories.${category}`) })
+      : t('gridNote', { category: t(`hotelCategories.${category}`), percent: f.percent(pricing.singleRoomSupplementPercent) })
+    : pax === 1
       ? t('slabNoteOne', { percent: f.percent(pricing.singleRoomSupplementPercent) })
       : pax === 2
         ? t('slabNoteTwo')
@@ -89,6 +98,25 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
             {slabNote}
           </span>
         </div>
+        {category ? (
+          <div role="radiogroup" aria-label={t('hotelCategory')} className="flex flex-wrap items-center gap-1.75" data-testid="hotel-categories">
+            <span className="mr-1 text-13 font-semibold text-muted">{t('hotelCategory')}</span>
+            {pkg.hotelCategories.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={option === category}
+                onClick={() => setCategory(option)}
+                className={`cursor-pointer rounded-pill border-chip px-4 py-2 text-14 font-semibold ${
+                  option === category ? 'border-orange-deep bg-orange-tint text-orange-deep' : 'border-hairline bg-white text-ink'
+                }`}
+              >
+                {t(`hotelCategories.${option}`)}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-1.75">
           {SLAB_CHIPS.map((min, i) => {
             const active = activeChip === min;
@@ -104,7 +132,7 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
                 }`}
               >
                 <span className="text-12 opacity-75">{label}</span>
-                <span className="font-display text-15 font-extrabold tracking-heading">{f.bdt(perPersonRate(pkg.listPrice, min, pricing.slabs))}</span>
+                <span className="font-display text-15 font-extrabold tracking-heading">{f.bdt(rate(min))}</span>
               </button>
             );
           })}
@@ -200,6 +228,7 @@ export function PackageDetailActions({ pkg, onBeforeBook }: { pkg: PackageView; 
   const tp = useTranslations('packages');
   const { settings, pricing } = useSiteContent();
   const pax = useSiteUi((state) => state.detailPax);
+  const detailCategory = useSiteUi((state) => state.detailCategory);
   const startBooking = useBooking((state) => state.start);
 
   return (
@@ -218,7 +247,8 @@ export function PackageDetailActions({ pkg, onBeforeBook }: { pkg: PackageView; 
           type="button"
           onClick={() => {
             onBeforeBook?.();
-            startBooking({ packageSlug: pkg.slug, pax, date: useTripSearch.getState().date, maxPax: pricing.maxTravellers });
+            // The booking starts in the hotel category chosen here.
+            startBooking({ packageSlug: pkg.slug, pax, date: useTripSearch.getState().date, maxPax: pricing.maxTravellers, hotelCategory: detailCategory });
           }}
           className={buttonClass('cta', 'lg', 'shadow-cta')}
         >

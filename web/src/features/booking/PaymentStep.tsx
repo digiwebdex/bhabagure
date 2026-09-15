@@ -48,6 +48,7 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         travel_date: booking.date,
         pax: booking.pax,
         room: booking.room,
+        hotel_category: quote.hotelCategory,
         addons: booking.addons,
         travellers: booking.travellers.map((traveller) => ({
           // Blank optional details go as null; the API names an unnamed traveller "Traveller 2" and so on.

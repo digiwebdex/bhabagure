@@ -17,6 +17,9 @@ Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pri
   until someone is on it, the super admins and admins get it.
 - visa services: Admin → Visa services feeds a Visa section on the home page, a page per visa and a Visa tab. Nothing
   shows until the agency enters and publishes its visas (country, visa type, price, processing time, requirements).
+- price by hotel category: a package's editor has a *Price by hotel category* table (basic/3-star, 4-star, 5-star × 1,
+  2, 4, 6, 10 travellers). Filled in, customers pick the category then the group size; without it a package keeps its
+  one price and the group discounts.
 
 ---
 

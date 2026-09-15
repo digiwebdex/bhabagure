@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-import { clampTravellers, type RoomType } from '@bhabaghure/pricing';
+import { clampTravellers, type HotelCategory, type RoomType } from '@bhabaghure/pricing';
 
 /** Fields a passport scan can fill. `confirm`: the MRZ check digit failed, so the traveller must check it. */
 export type ScannableField = 'passport' | 'dob' | 'expiry';
@@ -39,6 +39,8 @@ export interface BookingState {
   date: string;
   pax: number;
   room: RoomType;
+  /** For a package with a price grid: the hotel category, else null. The modal falls back to the package's default. */
+  hotelCategory: HotelCategory | null;
   addons: string[];
   travellers: TravellerDraft[];
   terms: boolean;
@@ -46,7 +48,7 @@ export interface BookingState {
   /** Validation messages show once the traveller tries to move on. */
   attempted: Record<BookingStep, boolean>;
 
-  start: (options: { packageSlug: string; date?: string; pax?: number; maxPax: number }) => void;
+  start: (options: { packageSlug: string; date?: string; pax?: number; maxPax: number; hotelCategory?: HotelCategory | null }) => void;
   close: () => void;
   goBack: () => void;
   goNext: () => void;
@@ -55,6 +57,7 @@ export interface BookingState {
   setDate: (date: string) => void;
   setPax: (pax: number, max: number) => void;
   setRoom: (room: RoomType) => void;
+  setHotelCategory: (category: HotelCategory) => void;
   toggleAddon: (code: string) => void;
   updateTraveller: (index: number, patch: Partial<TravellerDraft>) => void;
   setTerms: (terms: boolean) => void;
@@ -91,19 +94,21 @@ export const useBooking = create<BookingState>()((set) => ({
   date: '',
   pax: 2,
   room: 'twin',
+  hotelCategory: null,
   addons: [],
   travellers: resize([], 2),
   terms: false,
   method: 'bkash',
   attempted: noAttempts(),
 
-  start: ({ packageSlug, date, pax, maxPax }) =>
+  start: ({ packageSlug, date, pax, maxPax, hotelCategory }) =>
     set((state) => {
       const nextPax = clampTravellers(pax ?? state.pax, maxPax);
       return {
         open: true,
         step: 1,
         packageSlug,
+        hotelCategory: hotelCategory ?? null,
         date: date ?? state.date,
         pax: nextPax,
         travellers: resize(state.travellers, nextPax),
@@ -120,7 +125,7 @@ export const useBooking = create<BookingState>()((set) => ({
       step: state.step < 4 ? ((state.step + 1) as BookingStep) : state.step,
     })),
   markAttempted: (step) => set((state) => ({ attempted: { ...state.attempted, [step]: true } })),
-  setPackage: (packageSlug) => set({ packageSlug }),
+  setPackage: (packageSlug) => set({ packageSlug, hotelCategory: null }),
   setDate: (date) => set({ date }),
   setPax: (pax, max) =>
     set((state) => {
@@ -128,6 +133,7 @@ export const useBooking = create<BookingState>()((set) => ({
       return { pax: nextPax, travellers: resize(state.travellers, nextPax) };
     }),
   setRoom: (room) => set({ room }),
+  setHotelCategory: (hotelCategory) => set({ hotelCategory }),
   toggleAddon: (code) =>
     set((state) => ({
       addons: state.addons.includes(code) ? state.addons.filter((c) => c !== code) : [...state.addons, code],

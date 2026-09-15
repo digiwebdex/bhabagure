@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import type { Addon, PricingConfig, RoomType } from '@bhabaghure/pricing'
+import type { Addon, HotelCategory, PriceGrid, PricingConfig, RoomType } from '@bhabaghure/pricing'
 
 import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
@@ -9,7 +9,7 @@ import type { NotificationGroup } from '../notifications/api'
 
 /** api/app/Services/Booking/BookingFormOptions.php — what the staff booking form and the quotation editor price with. */
 export type BookingFormOptions = {
-  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; departures: { date: string; seats_left: number | null }[] }[]
+  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; price_grid: PriceGrid | null; departures: { date: string; seats_left: number | null }[] }[]
   addons: { code: string; name_en: string; name_bn: string | null; price: number; unit: 'per_person' | 'per_booking' }[]
   config: { slabs: { minPax: number; discountPercent: number }[]; singleRoomSupplementPercent: number; serviceChargePercent: number; maxTravellers: number; onlinePaymentChargePercent: number }
   sources: string[]
@@ -129,7 +129,9 @@ export type BookingDetail = BookingSummary & {
     settled_at: string | null
   }[]
   actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets', boolean>
-  quote_inputs: { list_price: number; addons: Addon[]; config: PricingConfig }
+  quote_inputs: { list_price: number; grid: PriceGrid | null; hotel_category: HotelCategory | null; addons: Addon[]; config: PricingConfig }
+  /** Phase 8 §4.D: the hotel category a grid package was booked in. */
+  hotel_category: HotelCategory | null
   payment_methods: string[]
   vat_rates: number[]
 }

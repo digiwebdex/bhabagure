@@ -274,6 +274,7 @@ class QuotationController extends Controller
             'travel_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'pax' => ['required', 'integer', 'min:1', "max:{$max}"],
             'room' => ['required', Rule::in(['twin', 'triple', 'single'])],
+            'hotel_category' => ['nullable', Rule::in(['3', '4', '5'])],
             'addons' => ['array', 'max:20'],
             'addons.*' => ['string', 'distinct', Rule::exists(Addon::class, 'code')->where('is_active', true)],
             'discount' => ['required', 'numeric', 'min:0', 'max:9999999999'],
@@ -300,6 +301,7 @@ class QuotationController extends Controller
             locale: $data['locale'],
             notes: $data['notes'] ?? null,
             expectedTotal: $data['expected_total'],
+            hotelCategory: $data['hotel_category'] ?? null,
         );
     }
 

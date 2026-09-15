@@ -2,7 +2,7 @@
  * Single-language views of the content. Built on the server per request locale, so client
  * components receive plain strings in one language instead of every translation.
  */
-import { listPrice, savingPercent } from '@bhabaghure/pricing';
+import { gridCategories, listPrice, savingPercent, type HotelCategory, type PriceGrid } from '@bhabaghure/pricing';
 
 import type { AppLocale } from '@/i18n/routing';
 
@@ -29,8 +29,12 @@ export interface PackageView {
   durationNights: number | null;
   regularPrice: number;
   salePrice: number | null;
+  /** With a grid, the price for basic/3-star and two travellers (the API keeps regularPrice at it). */
   listPrice: number;
   savingPercent: number;
+  priceGrid: PriceGrid | null;
+  /** The hotel categories the grid offers, in order; empty without a grid. */
+  hotelCategories: HotelCategory[];
   includesAirfare: boolean | null;
   groupMode: 'group' | 'any';
   minPax: number | null;
@@ -139,6 +143,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       salePrice: p.salePrice,
       listPrice: listPrice(p),
       savingPercent: savingPercent(p),
+      priceGrid: p.priceGrid ?? null,
+      hotelCategories: gridCategories(p.priceGrid),
       includesAirfare: p.includesAirfare,
       groupMode: p.groupMode,
       minPax: p.minPax,

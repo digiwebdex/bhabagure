@@ -124,7 +124,7 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
   const inputs = booking.quote_inputs
   const quote = useMemo(() => {
     try {
-      return quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: discount ?? 0, chargePercent: vat })
+      return quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: discount ?? 0, chargePercent: vat, grid: inputs.grid, hotelCategory: inputs.hotel_category })
     } catch {
       return null
     }
@@ -152,6 +152,11 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
   return (
     <Card>
       <CardTitle bn="মূল্য ও হিসাব" en="Quote" aside={editable ? <Badge tone="blue">{t('bookings.draft')}</Badge> : <Badge tone="slate">{t('bookings.frozen')}</Badge>} />
+      {booking.hotel_category ? (
+        <p className="m-0 text-13" data-testid="booking-hotel-category">
+          <span className="text-app-muted">{t('grid.hotelCategory')}:</span> <strong>{t(`grid.categories.${booking.hotel_category}`)}</strong>
+        </p>
+      ) : null}
       {editable ? (
         <div className="grid-auto-fit-140 grid gap-3">
           <div className="flex flex-col gap-1.25">

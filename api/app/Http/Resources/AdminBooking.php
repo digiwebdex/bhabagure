@@ -68,6 +68,8 @@ final class AdminBooking
         // array_replace, not `+`: the detail's fuller `customer` must win over the summary's.
         return array_replace(self::summary($booking), [
             'room_type' => $booking->room_type,
+            // Phase 8 §4.D: '3', '4' or '5' for a package priced by hotel category, else null.
+            'hotel_category' => $booking->hotel_category,
             'travel_end' => $booking->travel_end?->toDateString(),
             'list_price' => Money::toNumber($booking->list_price),
             'unit_price' => Money::toNumber($booking->unit_price),
@@ -159,6 +161,8 @@ final class AdminBooking
             // Inputs for @bhabaghure/pricing on the draft-invoice controls — the same the server recomputes with.
             'quote_inputs' => [
                 'list_price' => Money::toNumber($booking->list_price),
+                'grid' => $booking->price_grid,
+                'hotel_category' => $booking->hotel_category,
                 'addons' => app(BookingQuoteEditor::class)->addonInputs($booking),
                 'config' => (fn (PricingConfig $c) => [
                     'slabs' => $c->slabs, 'singleRoomSupplementPercent' => $c->singleRoomSupplementPercent,

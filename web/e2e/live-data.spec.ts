@@ -239,6 +239,54 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('a package priced by hotel category: the card shows basic/3-star, the modal picks the category, and the booking is charged from its row', async ({ page, request }) => {
+    const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages'] } });
+    const grid = JSON.stringify({ 3: { 1: 35000, 2: 27500, 4: 25000, 6: 24000, 10: 22000 }, 4: { 1: 45000, 2: 36000, 4: 33000 } });
+    artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${thai}')->update(['price_grid' => '${grid}', 'regular_price' => 27500, 'sale_price' => null]); echo 'ok';`);
+    try {
+      expect((await refresh()).status()).toBe(200);
+      const card = page.locator('#packages article').filter({ hasText: 'THAILAND BUDGET ESCAPE' });
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return card.innerText();
+      }, { timeout: 20_000 }).toContain('per person · Basic / 3-star · 2 travellers');
+      await expect(card.locator('.text-price')).toHaveText('৳ 27,500');
+
+      // The modal: the category first, then the group size; 4 travellers in 4-star pay the 4-traveller price.
+      await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
+      const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
+      const categories = detail.getByTestId('hotel-categories');
+      await expect(categories.getByRole('radio', { name: 'Basic / 3-star' })).toHaveAttribute('aria-checked', 'true');
+      await expect(categories.getByRole('radio')).toHaveText(['Basic / 3-star', '4-star']);
+      await categories.getByRole('radio', { name: '4-star' }).click();
+      await detail.getByRole('button', { name: /^4 people/ }).click();
+      await expect(detail.getByText('Group total').locator('..')).toContainText('৳ 1,32,000');
+      await expect(detail.getByRole('button', { name: /^2 people/ })).toContainText('৳ 36,000');
+      await expect(detail).toContainText('4-star hotel · a single room adds 12% for two or more');
+
+      // Booking starts in 4-star: 33,000 × 4 = 1,32,000 + 2% = 1,34,640, and the API charges exactly that.
+      await detail.getByRole('button', { name: 'Book now' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Book online' });
+      await expect(dialog.getByLabel('Hotel category')).toHaveValue('4');
+      await dialog.getByLabel('Departure date').fill(new Date(Date.now() + 62 * 86_400_000).toISOString().slice(0, 10));
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      const lead = dialog.locator('section').nth(0);
+      await lead.getByLabel('Name (as on passport)').fill('KARIM HOSSAIN');
+      await lead.getByLabel('WhatsApp number').fill(uniquePhone());
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      await expect(dialog).toContainText('THAILAND BUDGET ESCAPE — Bangkok · Pattaya · Coral Island with Dinner Cruise · 4-star × 4');
+      await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 1,34,640');
+      await dialog.getByRole('checkbox').check();
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      await dialog.getByRole('button', { name: 'Pay ৳ 1,34,640 with SSLCommerz →' }).click();
+      await expect(page.locator('body')).toContainText('BDT 134,640.00');
+    } finally {
+      artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${thai}')->update(['price_grid' => null, 'regular_price' => 30000, 'sale_price' => 27000]); echo 'ok';`);
+      await refresh();
+    }
+  });
+
   test('saving a package in the CMS refreshes the website', async ({ page, request }) => {
     // Nepal 04: the other website tests use the Mustang package, so this one is renamed and then restored.
     const slug = 'kathmandu-nagarkot-himalayan-tour-3-nights-4-days-without-air-ticket';

@@ -1,3 +1,5 @@
+import type { PriceGrid } from '@bhabaghure/pricing'
+
 /** Shapes returned by the staff API (api/app/Http/Resources/AdminContent.php). Money is a number. */
 
 export type Data<T> = { data: T }
@@ -68,6 +70,8 @@ export type PackageSummary = {
   duration_nights: number | null
   regular_price: number
   sale_price: number | null
+  /** Hotel-category × traveller prices (Phase 8 §4.D); null: one price and the group discounts. */
+  price_grid: PriceGrid | null
   status: PackageStatus
   published_at: string | null
   is_featured: boolean

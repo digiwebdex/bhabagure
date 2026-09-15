@@ -43,6 +43,29 @@ class PricingServiceTest extends TestCase
     }
 
     #[Test]
+    public function hotel_category_grid_rates_and_quotes_match_the_shared_fixtures(): void
+    {
+        $grid = self::$fixtures['grid'];
+        $config = PricingConfig::fromArray(self::$fixtures['config']);
+        $this->assertSame(['3', '4', '5'], PricingService::gridCategories($grid));
+        $this->assertSame([], PricingService::gridCategories(['4' => ['2' => 90000]]));
+
+        foreach (self::$fixtures['gridRate'] as $case) {
+            $this->assertSame($case['expected'], PricingService::gridRate($grid, $case['category'], $case['pax']), json_encode($case));
+        }
+        foreach (self::$fixtures['quoteBookingGrid'] as $case) {
+            $input = $case['input'];
+            $quote = PricingService::quoteBooking($input['listPrice'], $input['pax'], $input['room'], $input['addons'], $config, $input['discount'] ?? 0, null, $grid, $input['hotelCategory']);
+            $this->assertSame(0, $quote['slab']['discountPercent']);
+            unset($quote['pax'], $quote['slab']);
+            $this->assertEquals($case['expected'], $quote, $case['$comment']);
+        }
+
+        $this->expectException(\InvalidArgumentException::class);
+        PricingService::quoteBooking(75000, 2, 'twin', [], $config, grid: $grid);
+    }
+
+    #[Test]
     public function invoice_totals_match_the_shared_fixtures(): void
     {
         foreach (self::$fixtures['invoiceTotals'] as $case) {

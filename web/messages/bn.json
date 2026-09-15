@@ -256,7 +256,13 @@
       "note": "গন্তব্য বা বাজেট বদলে দেখুন। অথবা আমাদের জানান কোথায়, কখন এবং কত বাজেটে যেতে চান — আমরা আপনার জন্য প্যাকেজ সাজিয়ে দেব।",
       "reset": "↺ ফিল্টার মুছুন",
       "cta": "কাস্টম প্যাকেজ চান"
-    }
+    },
+    "hotelCategories": {
+      "3": "বেসিক / ৩ তারকা",
+      "4": "৪ তারকা",
+      "5": "৫ তারকা"
+    },
+    "gridCaption": "জনপ্রতি · {category} · {paxText} জন"
   },
   "detail": {
     "pricing": "যাত্রী সংখ্যা অনুযায়ী মূল্য",
@@ -278,7 +284,15 @@
     "foot": "উপরের স্ল্যাব থেকে যাত্রী সংখ্যা বাছুন — দাম সাথে সাথে হিসাব হবে",
     "photoCounter": "{current} / {total}",
     "viewPhoto": "ছবি {n} দেখুন",
-    "placeholderPhoto": "নমুনা ছবি — আসল ছবি শিগগিরই"
+    "placeholderPhoto": "নমুনা ছবি — আসল ছবি শিগগিরই",
+    "hotelCategory": "হোটেল",
+    "hotelCategories": {
+      "3": "বেসিক / ৩ তারকা",
+      "4": "৪ তারকা",
+      "5": "৫ তারকা"
+    },
+    "gridNote": "{category} হোটেল · দুই বা বেশি জনের সিঙ্গেল রুমে +{percent}",
+    "gridNoteOne": "{category} হোটেল · একজনের মূল্যে সিঙ্গেল রুম ধরা আছে"
   },
   "departures": {
     "seatsLeft": "{totalText}-এর মধ্যে {leftText}টি সিট বাকি",
@@ -511,7 +525,14 @@
     "updatesNoticeFrom": "বুকিংয়ের আপডেট প্রধান যাত্রীর WhatsApp ও ইমেইলে পাঠানো হবে, আর WhatsApp না পৌঁছালে SMS-এ। স্বয়ংক্রিয় WhatsApp বার্তা আসবে শুধু আমাদের নোটিফিকেশন নম্বর {number} থেকে।",
     "optionalField": "{label} (ঐচ্ছিক)",
     "whatsapp": "WhatsApp নম্বর",
-    "statusLater": "পরে দেওয়া যাবে"
+    "statusLater": "পরে দেওয়া যাবে",
+    "hotelCategory": "হোটেলের ধরন",
+    "hotelCategories": {
+      "3": "বেসিক / ৩ তারকা",
+      "4": "৪ তারকা",
+      "5": "৫ তারকা"
+    },
+    "perPersonShort": "জনপ্রতি"
   },
   "auth": {
     "signInTitle": "আপনার অ্যাকাউন্টে ঢুকুন",

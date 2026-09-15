@@ -1,4 +1,4 @@
-import { quoteBooking, type Quote, type RoomType } from '@bhabaghure/pricing'
+import { defaultHotelCategory, gridCategories, quoteBooking, type HotelCategory, type PriceGrid, type Quote, type RoomType } from '@bhabaghure/pricing'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -8,11 +8,18 @@ import type { QuotationBody, QuotationInputs, QuotationOptions } from './api'
 
 export type QuotationForm = Omit<QuotationInputs, 'package_slug' | 'travel_date' | 'notes'> & { package_slug: string; travel_date: string; notes: string }
 
+/** The category a grid package is quoted in: the one picked if the package offers it, else its default; null without a grid. */
+const gridCategory = (grid: PriceGrid | null | undefined, picked: HotelCategory | null): HotelCategory | null => {
+  const offered = gridCategories(grid)
+  return offered.length === 0 ? null : picked && offered.includes(picked) ? picked : defaultHotelCategory(grid)
+}
+
 const blank = (options: QuotationOptions, locale: 'bn' | 'en'): QuotationForm => ({
   package_slug: '',
   travel_date: '',
   pax: 2,
   room: 'twin',
+  hotel_category: null,
   addons: [],
   discount: 0,
   vat_rate: options.config.serviceChargePercent,
@@ -40,7 +47,7 @@ export function useQuotationForm(options: QuotationOptions | undefined, initial:
     if (!options || !current || !pkg) return null
     try {
       const addons = options.addons.filter((addon) => current.addons.includes(addon.code))
-      return quoteBooking({ listPrice: pkg.list_price, pax: current.pax, room: current.room, addons, config: options.config, discount: current.discount, chargePercent: current.vat_rate })
+      return quoteBooking({ listPrice: pkg.list_price, pax: current.pax, room: current.room, addons, config: options.config, discount: current.discount, chargePercent: current.vat_rate, grid: pkg.price_grid, hotelCategory: gridCategory(pkg.price_grid, current.hotel_category) })
     } catch {
       return null
     }
@@ -49,7 +56,7 @@ export function useQuotationForm(options: QuotationOptions | undefined, initial:
   const set = (patch: Partial<QuotationForm>) => current && setForm({ ...current, ...patch })
   const body = (): QuotationBody | null =>
     current && quote
-      ? { ...current, travel_date: current.travel_date || null, notes: current.notes.trim() || null, expected_total: quote.total }
+      ? { ...current, hotel_category: quote.hotelCategory, travel_date: current.travel_date || null, notes: current.notes.trim() || null, expected_total: quote.total }
       : null
 
   return { form: current, set, quote, pkg, body, reset: () => setForm(null) }
@@ -68,7 +75,7 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
       <SelectInput
         label={t('bookings.package')}
         value={form.package_slug}
-        onChange={(package_slug) => set({ package_slug, travel_date: '' })}
+        onChange={(package_slug) => set({ package_slug, travel_date: '', hotel_category: null })}
         options={[{ value: '', label: t('common.choose') }, ...options.packages.map((p) => ({ value: p.slug, label: (locale === 'bn' ? p.title_bn : null) || p.title_en }))]}
         error={fieldError('package_slug')}
       />
@@ -101,6 +108,15 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
           options={options.validity_days.map((days) => ({ value: String(days), label: t('quotations.days', { count: days, n: number(days) }) }))}
           error={fieldError('validity_days')}
         />
+        {pkg && gridCategory(pkg.price_grid, form.hotel_category) ? (
+          <SelectInput
+            label={t('grid.hotelCategory')}
+            value={gridCategory(pkg.price_grid, form.hotel_category) ?? ''}
+            onChange={(value) => set({ hotel_category: value as HotelCategory })}
+            options={gridCategories(pkg.price_grid).map((value) => ({ value, label: t(`grid.categories.${value}`) }))}
+            error={fieldError('hotel_category')}
+          />
+        ) : null}
         <SelectInput label={t('bookings.room')} value={form.room} onChange={(value) => set({ room: value as RoomType })} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
         <SelectInput label={t('quotations.vatRate')} value={String(form.vat_rate)} onChange={(value) => set({ vat_rate: Number(value) })} options={options.vat_rates.map((rate) => ({ value: String(rate), label: `${number(rate)}%` }))} error={fieldError('vat_rate')} />
       </div>

@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\Pricing\PriceGrid;
+use App\Support\Pricing\PricingService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * The whole package, as the editor saves it: fields plus itinerary, inclusions and tags in one request.
@@ -23,6 +26,37 @@ class PackageRequest extends FormRequest
                 $this->merge([$field => null]);
             }
         }
+
+        // A hotel-category price grid replaces the one price and the group discounts (Phase 8 §4.D). The price older
+        // screens show becomes the grid's reference price, and a grid package has no sale price (decided 2026-09-16).
+        if ($this->has('price_grid')) {
+            $grid = PriceGrid::normalize($this->input('price_grid'));
+            $this->merge(['price_grid' => $grid]);
+            if ($grid !== null && PricingService::gridCategories($grid) !== []) {
+                $this->merge(['regular_price' => PriceGrid::referencePrice($grid), 'sale_price' => null]);
+            }
+        }
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $grid = $this->input('price_grid');
+            if ($grid === null) {
+                return;
+            }
+            foreach ($grid as $category => $row) {
+                if (! isset($row['1'])) {
+                    $validator->errors()->add("price_grid.{$category}", __('cms.grid_needs_one_traveller'));
+                }
+                foreach ($row as $price) {
+                    if ($price < 1 || $price > 99999999) {
+                        $validator->errors()->add("price_grid.{$category}", __('cms.grid_price_range'));
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     public function rules(): array
@@ -41,6 +75,7 @@ class PackageRequest extends FormRequest
             'duration_nights' => ['nullable', 'integer', 'between:0,60', 'lte:duration_days'],
             'regular_price' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2', 'lt:regular_price'],
+            'price_grid' => ['nullable', 'array'],
             'includes_airfare' => ['nullable', 'boolean'],
             'group_mode' => ['required', Rule::in(['group', 'any'])],
             'min_pax' => ['nullable', 'integer', 'between:1,99'],

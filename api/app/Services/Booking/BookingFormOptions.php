@@ -31,6 +31,7 @@ final class BookingFormOptions
                     'title_bn' => $package->title_bn,
                     'duration_days' => $package->duration_days,
                     'list_price' => Money::toNumber($package->sale_price ?? $package->regular_price),
+                    'price_grid' => $package->price_grid,
                     'departures' => $package->departures->map(fn (PackageDeparture $departure) => [
                         'date' => $departure->departs_on->toDateString(),
                         'seats_left' => $departure->seats_total === null ? null : DepartureSeats::available($departure),

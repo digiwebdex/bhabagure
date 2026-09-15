@@ -1,6 +1,6 @@
-import { quoteBooking, type RoomType } from '@bhabaghure/pricing'
+import { defaultHotelCategory, gridCategories, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 
@@ -37,6 +37,7 @@ export function NewBookingPage() {
   const [slug, setSlug] = useState('')
   const [travelDate, setTravelDate] = useState('')
   const [room, setRoom] = useState<RoomType>('twin')
+  const [hotelCategory, setHotelCategory] = useState<HotelCategory | null>(null)
   const [addons, setAddons] = useState<string[]>([])
   const [travellers, setTravellers] = useState<Traveller[]>([blankTraveller()])
   const [bookingLocale, setBookingLocale] = useState<'bn' | 'en'>(locale)
@@ -48,16 +49,20 @@ export function NewBookingPage() {
   })
 
   const pkg = options.data?.packages.find((p) => p.slug === slug)
+  // A package priced by hotel category is booked in one of its categories; basic/3-star until another is picked.
+  const categories = gridCategories(pkg?.price_grid)
+  const category = categories.length === 0 ? null : hotelCategory && categories.includes(hotelCategory) ? hotelCategory : defaultHotelCategory(pkg?.price_grid)
   const pax = travellers.length
   const chosenAddons = (options.data?.addons ?? []).filter((addon) => addons.includes(addon.code))
-  const quote = useMemo(() => {
+  // Recomputed each render; the React Compiler memoises it.
+  const quote = (() => {
     if (!pkg || !options.data) return null
     try {
-      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config })
+      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category })
     } catch {
       return null
     }
-  }, [pkg, options.data, pax, room, chosenAddons])
+  })()
 
   const create = useMutation({
     mutationFn: () =>
@@ -67,6 +72,7 @@ export function NewBookingPage() {
         travel_date: travelDate,
         pax,
         room,
+        hotel_category: category,
         addons,
         travellers: travellers.map((traveller) => ({
           name: traveller.name,
@@ -193,6 +199,14 @@ export function NewBookingPage() {
             <TextInput label={t('newBooking.travelDate')} type="date" min={todayInDhaka()} value={travelDate} onChange={setTravelDate} error={fieldError('travel_date')} />
           )}
           <div className="grid-auto-fit-140 grid gap-3">
+            {category ? (
+              <SelectInput
+                label={t('grid.hotelCategory')}
+                value={category}
+                onChange={(value) => setHotelCategory(value as HotelCategory)}
+                options={categories.map((value) => ({ value, label: t(`grid.categories.${value}`) }))}
+              />
+            ) : null}
             <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
             <SelectInput label={t('newBooking.messagesIn')} value={bookingLocale} onChange={(value) => setBookingLocale(value as 'bn' | 'en')} options={[{ value: 'bn', label: 'বাংলা' }, { value: 'en', label: 'English' }]} />
           </div>

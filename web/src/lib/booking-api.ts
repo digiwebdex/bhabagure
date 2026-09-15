@@ -66,6 +66,8 @@ export type BookingPayload = {
   travel_date: string;
   pax: number;
   room: string;
+  /** '3', '4' or '5' for a package priced by hotel category (Phase 8 §4.D). */
+  hotel_category: string | null;
   addons: string[];
   travellers: {
     /** Required for the lead traveller only. */

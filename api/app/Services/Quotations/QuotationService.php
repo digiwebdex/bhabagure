@@ -18,6 +18,7 @@ use App\Services\Booking\SeatsUnavailable;
 use App\Services\Documents\DocumentNumbers;
 use App\Services\Notifications\NotificationPlanner;
 use App\Support\Money;
+use App\Support\Pricing\PriceGrid;
 use App\Support\Pricing\PricingConfig;
 use App\Support\Pricing\PricingService;
 use Closure;
@@ -315,10 +316,12 @@ final class QuotationService
         $package = TourPackage::query()->published()->where('slug', $input->packageSlug)->firstOrFail();
         $addons = Addon::query()->where('is_active', true)->whereIn('code', $input->addonCodes)->orderBy('sort_order')->get();
         $listPrice = $this->bookings->listPrice($package);
+        BookingCreator::assertHotelCategory($package, $input->hotelCategory);
         $quote = PricingService::quoteBooking(
             $listPrice, $input->pax, $input->room,
             $addons->map(fn (Addon $addon) => ['code' => $addon->code, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit])->all(),
             PricingConfig::current(), $input->discount, $input->vatRate,
+            grid: $package->price_grid, hotelCategory: $input->hotelCategory,
         );
         if ((int) round($input->expectedTotal) !== $quote['total']) {
             throw new PriceChanged($quote);
@@ -338,7 +341,9 @@ final class QuotationService
             'travel_date' => $input->travelDate,
             'pax_count' => $input->pax,
             'room_type' => $input->room,
+            'hotel_category' => $quote['hotelCategory'],
             'list_price' => $listPrice,
+            'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
             'unit_price' => $quote['perPerson'],
             'subtotal_amount' => $quote['subtotal'],
             'single_supplement_amount' => $quote['singleSupplement'],

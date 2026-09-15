@@ -38,6 +38,57 @@ export interface Addon {
 
 export type RoomType = 'twin' | 'triple' | 'single';
 
+/**
+ * Hotel-category price grid (docs/phase-8-visa-quotes-pricing-downloads.md §2.1, §4.D): a package can price each hotel
+ * category (basic/3-star, 4-star, 5-star) by group size instead of one price and the site-wide group discounts. Staff
+ * enter a per-person price for 1, 2, 4, 6 and 10 travellers; a group between tiers pays the tier below (3 → the 2-person
+ * price), 10 or more the 10-person price. A category is offered when it has at least the 1-traveller price.
+ */
+export type HotelCategory = '3' | '4' | '5';
+export const HOTEL_CATEGORIES: readonly HotelCategory[] = ['3', '4', '5'];
+export const GRID_TIERS = [1, 2, 4, 6, 10] as const;
+export type GridTier = (typeof GRID_TIERS)[number];
+export type PriceGridRow = Partial<Record<`${GridTier}`, number>>;
+export type PriceGrid = Partial<Record<HotelCategory, PriceGridRow>>;
+
+/** The categories a grid offers, in order: those with a 1-traveller price. Empty for no grid. */
+export function gridCategories(grid: PriceGrid | null | undefined): HotelCategory[] {
+  return HOTEL_CATEGORIES.filter((category) => typeof grid?.[category]?.['1'] === 'number');
+}
+
+/** The category a grid package is shown in until someone picks one: basic/3-star when offered (decided 2026-09-16), else the first. */
+export function defaultHotelCategory(grid: PriceGrid | null | undefined): HotelCategory | null {
+  const offered = gridCategories(grid);
+  return offered.includes('3') ? '3' : (offered[0] ?? null);
+}
+
+/**
+ * The per-person price a package card, chip or list shows: from the grid in `category` (an offered one, else the default)
+ * or, for a package without a grid, the list price after the group slab.
+ */
+export function packagePerPerson(pkg: { listPrice: number; priceGrid?: PriceGrid | null }, pax: number, slabs: readonly Slab[], category?: HotelCategory | null): number {
+  const offered = gridCategories(pkg.priceGrid);
+  if (offered.length === 0) return perPersonRate(pkg.listPrice, pax, slabs);
+  const chosen = category && offered.includes(category) ? category : (defaultHotelCategory(pkg.priceGrid) as HotelCategory);
+  return gridRate(pkg.priceGrid as PriceGrid, chosen, pax).perPerson;
+}
+
+/** Per-person price for `pax` travellers in a category: the highest tier at or below `pax` that has a price. */
+export function gridRate(grid: PriceGrid, category: HotelCategory, pax: number): { tier: GridTier; perPerson: number } {
+  assertTravellers(pax);
+  const row = grid[category];
+  if (!row || typeof row['1'] !== 'number') throw new RangeError(`@bhabaghure/pricing: the grid has no ${category}-star prices`);
+  let match: { tier: GridTier; perPerson: number } | undefined;
+  for (const tier of GRID_TIERS) {
+    const price = row[`${tier}`];
+    if (tier <= pax && typeof price === 'number') {
+      assertAmount(price);
+      match = { tier, perPerson: Math.round(price) };
+    }
+  }
+  return match!;
+}
+
 export const DEFAULT_SLABS: readonly Slab[] = [
   { minPax: 1, discountPercent: 0 },
   { minPax: 3, discountPercent: 3 },
@@ -90,6 +141,10 @@ export interface QuoteInput {
   discount?: number;
   /** VAT / service-charge rate chosen on an invoice; defaults to the configured service charge. */
   chargePercent?: number;
+  /** The package's hotel-category price grid. When it offers any category, it replaces `listPrice` and the group slabs. */
+  grid?: PriceGrid | null;
+  /** Required with a grid: one of the categories it offers. */
+  hotelCategory?: HotelCategory | null;
 }
 
 export type LineKind = 'package' | 'single_supplement' | 'addon';
@@ -116,7 +171,10 @@ export interface Totals {
 
 export interface Quote {
   pax: number;
+  /** With a grid: the tier that priced it, and no discount. */
   slab: Slab;
+  /** The hotel category a grid quote is for; null without a grid. */
+  hotelCategory: HotelCategory | null;
   perPerson: number;
   /** Package line only (per-person rate × travellers). */
   subtotal: number;
@@ -174,15 +232,30 @@ export function paymentStatus(total: number, paid: number): PaymentStatus {
   return paid <= 0 ? 'unpaid' : 'partial';
 }
 
-export function quoteBooking({ listPrice: list, pax, room, addons, config, discount = 0, chargePercent }: QuoteInput): Quote {
+export function quoteBooking({ listPrice: list, pax, room, addons, config, discount = 0, chargePercent, grid, hotelCategory }: QuoteInput): Quote {
   assertTravellers(pax);
   if (pax > config.maxTravellers) {
     throw new RangeError(`@bhabaghure/pricing: at most ${config.maxTravellers} travellers per booking`);
   }
-  const slab = slabFor(pax, config.slabs);
-  const perPerson = perPersonRate(list, pax, config.slabs);
+  const offered = gridCategories(grid);
+  let slab: Slab;
+  let perPerson: number;
+  let category: HotelCategory | null = null;
+  if (offered.length > 0) {
+    if (!hotelCategory || !offered.includes(hotelCategory)) {
+      throw new RangeError(`@bhabaghure/pricing: choose one of the hotel categories ${offered.join(', ')}`);
+    }
+    const rate = gridRate(grid!, hotelCategory, pax);
+    slab = { minPax: rate.tier, discountPercent: 0 };
+    perPerson = rate.perPerson;
+    category = hotelCategory;
+  } else {
+    slab = slabFor(pax, config.slabs);
+    perPerson = perPersonRate(list, pax, config.slabs);
+  }
   const lines: QuoteLine[] = [{ kind: 'package', code: null, quantity: pax, unitPrice: perPerson, amount: perPerson * pax }];
-  if (room === 'single') {
+  // A grid's 1-traveller price already includes a single room (decided 2026-09-16); larger groups pay the supplement.
+  if (room === 'single' && !(category !== null && pax === 1)) {
     const perPersonSupplement = Math.round((perPerson * config.singleRoomSupplementPercent) / 100);
     lines.push({ kind: 'single_supplement', code: null, quantity: pax, unitPrice: perPersonSupplement, amount: perPersonSupplement * pax });
   }
@@ -196,6 +269,7 @@ export function quoteBooking({ listPrice: list, pax, room, addons, config, disco
   return {
     pax,
     slab,
+    hotelCategory: category,
     perPerson,
     subtotal: lines[0].amount,
     singleSupplement: lines.find((line) => line.kind === 'single_supplement')?.amount ?? 0,
