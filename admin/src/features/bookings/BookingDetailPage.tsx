@@ -21,6 +21,7 @@ import { ChannelGroups } from '../notifications/MessageList'
 import { bookingActions, useBooking, useBookingAction, type BookingDetail } from './api'
 import { BookingStatusBadge, PaymentBadge } from './badges'
 import { TicketsCard } from './TicketsCard'
+import { TravellerEditDialog } from './TravellerEditDialog'
 
 export function BookingDetailPage() {
   const id = Number(useParams().id)
@@ -606,6 +607,10 @@ function TravellerDocuments({ booking, traveller }: { booking: BookingDetail; tr
 function TravellersCard({ booking }: { booking: BookingDetail }) {
   const { t } = useTranslation()
   const { date, digits, number } = useFormat()
+  const { can } = useAuth()
+  const [editing, setEditing] = useState<BookingDetail['travellers'][number] | null>(null)
+  const missing = (traveller: BookingDetail['travellers'][number]) =>
+    [!traveller.passport_number && 'passport', !traveller.date_of_birth && 'dateOfBirth'].filter((key): key is string => !!key)
 
   return (
     <Card>
@@ -624,11 +629,28 @@ function TravellersCard({ booking }: { booking: BookingDetail }) {
               {traveller.full_name}
               {traveller.is_lead ? <Badge tone="blue">{t('bookings.lead')}</Badge> : null}
               {traveller.ocr_filled ? <Badge tone="slate">{t('bookings.ocrFilled')}</Badge> : null}
+              {can('bookings.update') ? (
+                <button
+                  type="button"
+                  className="ml-auto cursor-pointer text-12 font-semibold text-blue"
+                  aria-label={t('bookings.editTravellerNamed', { name: traveller.full_name })}
+                  onClick={() => setEditing(traveller)}
+                >
+                  {t('bookings.editTraveller')}
+                </button>
+              ) : null}
             </span>
             <span className="font-display text-12 text-app-muted">
               {traveller.passport_number ?? '—'}
               {traveller.passport_expiry ? ` · ${t('bookings.expires', { date: date(traveller.passport_expiry) })}` : ''}
+              {traveller.date_of_birth ? ` · ${t('bookings.born', { date: date(traveller.date_of_birth) })}` : ''}
+              {traveller.phone ? ` · ${digits(traveller.phone.replace(/^88/, ''))}` : ''}
             </span>
+            {missing(traveller).length > 0 ? (
+              <span className="text-12 text-amber" data-testid={`traveller-missing-${traveller.id}`}>
+                {t('bookings.detailsMissing', { fields: missing(traveller).map((key) => t(`bookings.missing.${key}`)).join(', ') })}
+              </span>
+            ) : null}
             <TravellerDocuments booking={booking} traveller={traveller} />
           </li>
         ))}
@@ -640,6 +662,7 @@ function TravellersCard({ booking }: { booking: BookingDetail }) {
         </p>
       ) : null}
       {booking.terms_accepted_at ? <p className="m-0 text-12 text-app-muted">{t('bookings.termsAccepted', { date: date(booking.terms_accepted_at), version: booking.terms_version })}</p> : null}
+      <TravellerEditDialog booking={booking} traveller={editing} onClose={() => setEditing(null)} />
     </Card>
   )
 }

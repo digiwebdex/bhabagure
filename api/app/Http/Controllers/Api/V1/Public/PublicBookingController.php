@@ -19,6 +19,7 @@ use App\Services\Payments\PaymentService;
 use App\Services\Payments\PaymentsNotConfigured;
 use App\Services\Payments\SslCommerz\GatewayUnavailable;
 use App\Support\Money;
+use App\Support\Numerals;
 use App\Support\Phone;
 use App\Support\Pricing\PricingConfig;
 use Illuminate\Http\JsonResponse;
@@ -46,10 +47,13 @@ class PublicBookingController extends Controller
             'addons' => ['array', 'max:20'],
             'addons.*' => ['string', 'distinct', Rule::exists(Addon::class, 'code')->where('is_active', true)],
             'travellers' => ['required', 'array', "size:{$pax}"],
-            'travellers.*.name' => ['required', 'string', 'max:160'],
-            'travellers.*.passport_number' => ['required', 'regex:/^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/'],
-            'travellers.*.date_of_birth' => ['required', 'date_format:Y-m-d', 'before:today'],
-            'travellers.*.passport_expiry' => ['required', 'date_format:Y-m-d', 'after:travel_date'],
+            // Only the lead traveller's name and WhatsApp number are needed to book (docs/phase-8 §2); staff collect the
+            // rest later. Anything given is still checked.
+            'travellers.*.name' => ['nullable', 'string', 'max:160'],
+            'travellers.0.name' => ['required'],
+            'travellers.*.passport_number' => ['nullable', 'regex:/^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/'],
+            'travellers.*.date_of_birth' => ['nullable', 'date_format:Y-m-d', 'before:today'],
+            'travellers.*.passport_expiry' => ['nullable', 'date_format:Y-m-d', 'after:travel_date'],
             'travellers.*.phone' => ['nullable', 'regex:/^8801[3-9]\d{8}$/'],
             'travellers.0.phone' => ['required'],
             'travellers.*.email' => ['nullable', 'email', 'max:190'],
@@ -69,16 +73,17 @@ class PublicBookingController extends Controller
                 pax: $data['pax'],
                 room: $data['room'],
                 addonCodes: $data['addons'] ?? [],
-                travellers: array_map(fn (array $t) => [
-                    'name' => trim($t['name']),
-                    'passportNumber' => $t['passport_number'],
-                    'dateOfBirth' => $t['date_of_birth'],
-                    'passportExpiry' => $t['passport_expiry'],
+                travellers: array_map(fn (array $t, int $i) => [
+                    // An unnamed traveller is kept as "Traveller 2" and so on, for staff to complete.
+                    'name' => trim((string) ($t['name'] ?? '')) ?: __('booking.unnamed_traveller', ['n' => Numerals::number($i + 1, $data['locale'])], $data['locale']),
+                    'passportNumber' => $t['passport_number'] ?? null,
+                    'dateOfBirth' => $t['date_of_birth'] ?? null,
+                    'passportExpiry' => $t['passport_expiry'] ?? null,
                     'phone' => $t['phone'] ?? null,
                     'email' => $t['email'] ?? null,
                     'passportScanToken' => $t['passport_scan_token'] ?? null,
                     'ocrFilled' => (bool) ($t['ocr_filled'] ?? false),
-                ], array_values($data['travellers'])),
+                ], array_values($data['travellers']), array_keys(array_values($data['travellers']))),
                 expectedTotal: $data['expected_total'],
                 locale: $data['locale'],
                 source: LeadSource::WebsiteForm->value,
@@ -165,7 +170,10 @@ class PublicBookingController extends Controller
                 }
                 $phone = trim((string) ($traveller['phone'] ?? ''));
                 $travellers[$i]['phone'] = $phone === '' ? null : (Phone::normalizeBdMobile($phone) ?? $phone);
-                $travellers[$i]['passport_number'] = strtoupper(preg_replace('/\s+/', '', (string) ($traveller['passport_number'] ?? '')));
+                $travellers[$i]['passport_number'] = strtoupper(preg_replace('/\s+/', '', (string) ($traveller['passport_number'] ?? ''))) ?: null;
+                foreach (['name', 'date_of_birth', 'passport_expiry'] as $optional) {
+                    $travellers[$i][$optional] = trim((string) ($traveller[$optional] ?? '')) ?: null;
+                }
                 $travellers[$i]['email'] = trim((string) ($traveller['email'] ?? '')) ?: null;
             }
             $request->merge(['travellers' => $travellers]);

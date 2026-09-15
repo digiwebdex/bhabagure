@@ -644,12 +644,12 @@
       "photo": "ছবি"
     },
     "url": "Facebook লিংক",
-    "urlHint": "কোম্পানির Facebook পেজের রিল বা ছবির পোস্ট।",
+    "urlHint": "রিলের নিজস্ব লিংক (facebook.com/reel/…) ওয়েবসাইটে Facebook-এর প্লেয়ারে চলে; ছবির পোস্ট Facebook-এ খোলে।",
     "captionBn": "ক্যাপশন (বাংলা)",
     "captionEn": "ক্যাপশন (ইংরেজি)",
     "viewCount": "ভিউ",
     "views": "{{n}} ভিউ",
-    "thumbnail": "থাম্বনেইল (প্রকাশের জন্য দরকার)"
+    "thumbnail": "থাম্বনেইল (ছবি প্রকাশের জন্য দরকার; রিল নিজের ভিডিও দেখায়)"
   },
   "pricing": {
     "title": "মূল্য ও অ্যাড-অন",
@@ -856,7 +856,24 @@
       "online_payment_charge": "অনলাইন পেমেন্ট চার্জ",
       "gateway_fee": "গেটওয়ে ফি"
     },
-    "nps": "যাত্রা শেষে রেটিং {{score}}/১০"
+    "nps": "যাত্রা শেষে রেটিং {{score}}/১০",
+    "editTraveller": "তথ্য সম্পাদনা",
+    "editTravellerNamed": "{{name}}-এর তথ্য সম্পাদনা",
+    "travellerSaved": "যাত্রীর তথ্য সংরক্ষিত হয়েছে",
+    "travellerName": "নাম (পাসপোর্ট অনুযায়ী)",
+    "whatsapp": "WhatsApp নম্বর",
+    "phoneOptional": "মোবাইল (ঐচ্ছিক)",
+    "emailOptional": "ইমেইল (ঐচ্ছিক)",
+    "passportNumber": "পাসপোর্ট নম্বর",
+    "passportExpiry": "পাসপোর্টের মেয়াদ",
+    "dateOfBirth": "জন্ম তারিখ",
+    "born": "জন্ম {{date}}",
+    "travellerEditNote": "ওয়েবসাইটের বুকিংয়ে শুধু প্রধান যাত্রীর নাম ও WhatsApp নম্বর লাগে; গ্রাহক বাকি তথ্য পাঠালে এখানে যোগ করুন। আগে ইস্যু করা ইনভয়েসে আগের তথ্যই থাকবে।",
+    "detailsMissing": "এখনও দরকার: {{fields}}",
+    "missing": {
+      "passport": "পাসপোর্ট",
+      "dateOfBirth": "জন্ম তারিখ"
+    }
   },
   "profile": {
     "title": "আমার প্রোফাইল",

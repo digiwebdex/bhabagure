@@ -35,6 +35,13 @@ export function displayPhone(phone: string): string {
   return match ? `+880 ${match[1]} ${match[2]}` : phone;
 }
 
+/** Facebook's embedded video player for a reel or video link (the same URL Facebook's own "Embed" option gives). */
+export function facebookVideoEmbedUrl(url: string, width: number, height: number): string {
+  const href = url.replace(/^https:\/\/m\.facebook\.com\//, 'https://www.facebook.com/');
+  const query = new URLSearchParams({ href, show_text: 'false', width: String(width), height: String(height), t: '0' });
+  return `https://www.facebook.com/plugins/video.php?${query}`;
+}
+
 /** Home sections that render nothing until the CMS has content for them, so nothing may link to their anchors. */
 export function emptySections(content: { departures: readonly unknown[]; gallery: readonly unknown[] }): string[] {
   return [...(content.departures.length === 0 ? ['departures'] : []), ...(content.gallery.length === 0 ? ['gallery'] : [])];

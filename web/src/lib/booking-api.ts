@@ -68,10 +68,11 @@ export type BookingPayload = {
   room: string;
   addons: string[];
   travellers: {
-    name: string;
-    passport_number: string;
-    date_of_birth: string;
-    passport_expiry: string;
+    /** Required for the lead traveller only. */
+    name: string | null;
+    passport_number: string | null;
+    date_of_birth: string | null;
+    passport_expiry: string | null;
     phone: string | null;
     email: string | null;
     passport_scan_token: string | null;

@@ -61,7 +61,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <StepsSection locale={locale} />
       <ReviewsSection locale={locale} reviews={views.reviews} />
       <FaqSection locale={locale} singleRoomSupplementPercent={views.pricing.singleRoomSupplementPercent} />
-      <GallerySection locale={locale} items={views.gallery} />
+      <GallerySection locale={locale} items={views.gallery} facebook={views.settings.contact.facebook} />
       <AboutSection locale={locale} team={views.team} stats={views.stats} settings={views.settings} />
       <BlogSection locale={locale} posts={views.posts} categories={views.categories} />
       <ContactSection locale={locale} settings={views.settings} />

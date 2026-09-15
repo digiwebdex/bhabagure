@@ -14,6 +14,9 @@ class GalleryItem extends Model
 
     public const KINDS = ['reel', 'photo'];
 
+    /** A Facebook video link the embedded player accepts. */
+    public const REEL_URL = '#^https://(www\.|m\.)?facebook\.com/(reel/\d+|watch/?\?v=\d+|[^/?\#]+/videos/([^/?\#]+/)?\d+)/?([?\#].*)?$#';
+
     protected $fillable = ['kind', 'media_id', 'url', 'caption_bn', 'caption_en', 'view_count', 'status', 'sort_order'];
 
     protected function casts(): array

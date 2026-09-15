@@ -14,5 +14,6 @@ return [
         'excerpt' => 'Write the excerpt in both languages.',
     ],
     'has_bookings' => 'This has bookings. Archive it instead of deleting.',
+    'gallery_url' => 'Use the link of the reel or photo on the Facebook page. A reel needs the video’s own link, e.g. https://www.facebook.com/reel/1097420422945413.',
     'category_in_use' => 'Posts still use this category.',
 ];

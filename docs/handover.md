@@ -8,6 +8,9 @@ contact. It covers what runs, where its settings live, and what to do when somet
 blank, so none of those send or take money yet; they fail gracefully (§1). WhatsApp is configured by the owner (§13).
 The deeper design notes per phase are in `docs/phase-*.md`, and the server's first set-up is in `docs/deployment.md`.
 §11–§13 were added later the same day: commission rules, the wallet database, and WhatsApp configuration.
+Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pricing, gated downloads) is under way in
+`docs/phase-8-visa-quotes-pricing-downloads.md`; step A is live: the Facebook reels on the home page, and website
+bookings that need only the lead traveller's name and WhatsApp number, with staff completing the rest on the booking.
 
 ---
 

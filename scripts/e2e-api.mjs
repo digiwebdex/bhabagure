@@ -1,7 +1,7 @@
 // Shared by admin/playwright.config.ts and web/playwright.config.ts: a second, local-only API instance on its own
 // database (bhabaghure_e2e), so end-to-end tests never touch the dev database. Needs the local MySQL on 3307.
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 // Found from the working directory (admin/ or web/) rather than import.meta: Playwright may load this file as CommonJS.
@@ -77,6 +77,8 @@ export function resetE2eDatabase() {
   artisan('migrate:fresh', '--seed', '--force')
   // The wallet's own database, from its own migrations (docs/phase-7-hr-attendance-bonus-wallet.md §8).
   artisan('migrate:fresh', '--database=wallet', '--path=database/migrations/wallet', '--force')
+  // API responses a previous run's website build cached (for up to an hour) describe the database just replaced.
+  rmSync(resolve(API_DIR, '../web/.next/cache/fetch-cache'), { recursive: true, force: true })
 }
 
 export const e2eApiServer = () => ({

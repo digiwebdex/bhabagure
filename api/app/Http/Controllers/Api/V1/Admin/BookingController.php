@@ -7,6 +7,7 @@ use App\Events\PaymentRecorded;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminBooking;
 use App\Models\Booking;
+use App\Models\BookingTraveller;
 use App\Models\Invoice;
 use App\Models\SeatHold;
 use App\Models\Staff;
@@ -25,6 +26,7 @@ use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
 use App\Services\Ledger\PaymentExceedsBalance;
 use App\Services\Quotations\QuotationService;
+use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -121,6 +123,39 @@ class BookingController extends Controller
             return $this->refused('booking.quote_locked', 'quote_locked');
         } catch (LogicException $e) {
             return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
+        }
+
+        return $this->detail($request, $booking->fresh());
+    }
+
+    /**
+     * A traveller's details, completed by staff: a website booking needs only the lead's name and WhatsApp number, so the
+     * others arrive as "Traveller 2" and so on (docs/phase-8-visa-quotes-pricing-downloads.md §2). The audit log names the
+     * fields changed, never their values. An issued invoice keeps the details it was issued with.
+     */
+    public function updateTraveller(Request $request, int $travellerId, AuditLogger $audit): JsonResponse
+    {
+        $traveller = BookingTraveller::query()->findOrFail($travellerId);
+        $booking = $this->find($request, $traveller->booking_id, 'bookings.update');
+        foreach (['phone', 'passport_number'] as $field) {
+            $value = trim((string) $request->input($field));
+            $request->merge([$field => $value === '' ? null : ($field === 'phone' ? (Phone::normalizeBdMobile($value) ?? $value) : strtoupper((string) preg_replace('/\s+/', '', $value)))]);
+        }
+        $data = $request->validate([
+            'full_name' => ['required', 'string', 'max:160'],
+            'date_of_birth' => ['nullable', 'date_format:Y-m-d', 'before:today'],
+            'passport_number' => ['nullable', 'regex:/^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/'],
+            'passport_expiry' => ['nullable', 'date_format:Y-m-d', 'after:'.($booking->travel_end ?? $booking->travel_start ?? now('Asia/Dhaka'))->toDateString()],
+            'phone' => [Rule::requiredIf($traveller->is_lead), 'nullable', 'regex:/^8801[3-9]\d{8}$/'],
+            'email' => ['nullable', 'email', 'max:190'],
+        ], ['passport_expiry.after' => __('booking.passport_expiry_after_travel')]);
+
+        $traveller->fill(['full_name' => trim($data['full_name'])] + $data);
+        $changed = array_keys($traveller->getDirty());
+        $changed = array_values(array_diff($changed, ['passport_number_hash']));
+        if ($changed !== []) {
+            $traveller->save();
+            $audit->record('traveller.updated', $request->user('staff'), $booking, ['traveller_id' => $traveller->id, 'fields' => $changed]);
         }
 
         return $this->detail($request, $booking->fresh());

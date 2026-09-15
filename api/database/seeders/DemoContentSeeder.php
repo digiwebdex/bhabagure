@@ -58,11 +58,11 @@ class DemoContentSeeder extends Seeder
             }
         }
 
-        if (! GalleryItem::query()->exists()) {
+        // The real reels are already published by a migration; this adds the demo's photo tiles beside them.
+        if (! GalleryItem::query()->where('kind', 'photo')->exists()) {
             foreach ($read('gallery.json') as $index => $row) {
-                GalleryItem::query()->create([
+                GalleryItem::query()->firstOrCreate(['url' => $row['url']], [
                     'kind' => $row['kind'],
-                    'url' => $row['url'],
                     'caption_bn' => $row['caption']['bn'] ?? null,
                     'caption_en' => $row['caption']['en'] ?? null,
                     'view_count' => $row['viewsThousands'] === null ? null : $row['viewsThousands'] * 1000,

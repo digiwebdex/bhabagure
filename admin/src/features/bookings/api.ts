@@ -202,4 +202,15 @@ export const bookingActions = {
   reverse: () => ({ transactionId, reason }: { transactionId: number; reason: string }) => api.post<Data<BookingDetail>>(`admin/transactions/${transactionId}/reverse`, { reason }),
   transition: (id: number) => ({ action, reason }: { action: 'confirm' | 'complete' | 'cancel'; reason?: string }) =>
     api.post<Data<BookingDetail>>(`admin/bookings/${id}/${action}`, reason ? { reason } : undefined),
+  traveller: () => ({ travellerId, ...body }: TravellerDetails & { travellerId: number }) => api.put<Data<BookingDetail>>(`admin/booking-travellers/${travellerId}`, body),
+}
+
+/** What staff can complete on a traveller; blank optional fields go as null. */
+export type TravellerDetails = {
+  full_name: string
+  phone: string | null
+  email: string | null
+  passport_number: string | null
+  date_of_birth: string | null
+  passport_expiry: string | null
 }

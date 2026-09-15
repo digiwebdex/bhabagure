@@ -105,11 +105,14 @@ class PublicContentContractTest extends TestCase
     }
 
     #[Test]
-    public function reviews_and_gallery_are_empty_until_real_items_are_published(): void
+    public function reviews_and_departures_are_empty_until_real_items_are_published_and_the_gallery_holds_only_the_pages_reels(): void
     {
         $this->getJson('/api/v1/public/reviews')->assertOk()->assertExactJson(['data' => []]);
-        $this->getJson('/api/v1/public/gallery')->assertOk()->assertExactJson(['data' => []]);
         $this->getJson('/api/v1/public/departures')->assertOk()->assertExactJson(['data' => []]);
+        // The four reels from the company's Facebook page (a migration); none of the demo seed's illustrative photos.
+        $gallery = collect($this->getJson('/api/v1/public/gallery')->assertOk()->json('data'));
+        $this->assertCount(4, $gallery);
+        $this->assertSame(['reel'], $gallery->pluck('kind')->unique()->values()->all());
     }
 
     #[Test]

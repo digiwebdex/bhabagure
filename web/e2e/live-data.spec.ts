@@ -73,7 +73,7 @@ test.describe('CMS to website', () => {
         await card.getByLabel('Passport number').fill(i === 0 ? 'BW0712345' : 'BX0712345');
         await card.getByLabel('Date of birth').fill('14/03/1991');
         await card.getByLabel('Passport expiry').fill('12/03/2031');
-        if (i === 0) await card.getByLabel('Mobile · WhatsApp').fill('01911223344');
+        if (i === 0) await card.getByLabel('WhatsApp number').fill('01911223344');
       }
       await dialog.getByRole('button', { name: 'Next step →' }).click();
 

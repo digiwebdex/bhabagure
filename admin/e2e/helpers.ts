@@ -95,8 +95,11 @@ export async function quotationFor(page: Page, name: string, { send = true, role
   return { id: created.data.id, number: created.data.number, customerId: customer.data.id }
 }
 
-/** A booking made the way the website makes one (public API), 70 days out, two travellers. */
-export async function websiteBooking(page: Page, name: string, email?: string): Promise<{ reference: string; phone: string }> {
+/**
+ * A booking made the way the website makes one (public API), 70 days out, two travellers. `minimal`: only the lead's name
+ * and WhatsApp number, the least the website asks for.
+ */
+export async function websiteBooking(page: Page, name: string, email?: string, { minimal = false } = {}): Promise<{ reference: string; phone: string }> {
   const travelDate = new Date(Date.now() + 70 * 86_400_000).toISOString().slice(0, 10)
   const phone = `0171${String(Date.now()).slice(-7)}`
   const response = await page.request.post(`${E2E_API_URL}/api/v1/public/bookings`, {
@@ -107,10 +110,12 @@ export async function websiteBooking(page: Page, name: string, email?: string): 
       pax: 2,
       room: 'twin',
       addons: [],
-      travellers: [
-        { name, passport_number: 'BW0912345', date_of_birth: '1990-04-12', passport_expiry: '2031-03-12', phone, ...(email ? { email } : {}) },
-        { name: 'Nusrat Jahan', passport_number: 'BX4471228', date_of_birth: '1994-11-02', passport_expiry: '2029-07-11' },
-      ],
+      travellers: minimal
+        ? [{ name, phone }, {}]
+        : [
+            { name, passport_number: 'BW0912345', date_of_birth: '1990-04-12', passport_expiry: '2031-03-12', phone, ...(email ? { email } : {}) },
+            { name: 'Nusrat Jahan', passport_number: 'BX4471228', date_of_birth: '1994-11-02', passport_expiry: '2029-07-11' },
+          ],
       expected_total: 153000,
       terms_accepted: true,
       locale: 'en',

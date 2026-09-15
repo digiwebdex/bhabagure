@@ -473,6 +473,7 @@ Route::prefix('v1')->group(function () {
             Route::get('traveller-documents/{id}/file', [DocumentReviewController::class, 'file'])->whereNumber('id');
             Route::post('traveller-documents/{id}/review', [DocumentReviewController::class, 'review'])->whereNumber('id');
             Route::put('booking-travellers/{travellerId}/documents/{kind}', [DocumentReviewController::class, 'setStatus'])->whereNumber('travellerId')->whereIn('kind', TravellerDocument::ISSUED);
+            Route::put('booking-travellers/{travellerId}', 'updateTraveller')->whereNumber('travellerId');
             Route::delete('bookings/{id}', 'destroy')->whereNumber('id');
             Route::put('bookings/{id}/quote', 'updateQuote')->whereNumber('id');
             Route::post('bookings/{id}/invoice', 'issueInvoice')->whereNumber('id');

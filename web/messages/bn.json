@@ -311,7 +311,9 @@
   "gallery": {
     "views": "▶ {viewsText}K ভিউ",
     "photo": "ছবি",
-    "openOnFacebook": "ফেসবুকে দেখুন"
+    "openOnFacebook": "ফেসবুকে দেখুন",
+    "reelTitle": "ফেসবুক রিল {n}",
+    "morePage": "আরও রিল ও ছবি আমাদের ফেসবুক পেজে"
   },
   "about": {
     "paras": [
@@ -390,7 +392,7 @@
     "addonPerPerson": "{price} / জন",
     "addonPerBooking": "{price} / বুকিং",
     "travellersHeading": "যাত্রীদের তথ্য",
-    "travellersNote": "{paxText} জন · পাসপোর্ট স্ক্যান দিলে তথ্য স্বয়ংক্রিয়ভাবে পূরণ হবে",
+    "travellersNote": "{paxText} জন · শুধু প্রধান যাত্রীর নাম ও WhatsApp নম্বর দিলেই হবে — বাকি তথ্য আমরা পরে সংগ্রহ করব। পাসপোর্ট স্ক্যান দিলে তথ্য স্বয়ংক্রিয়ভাবে পূরণ হবে।",
     "traveller": "যাত্রী {n}",
     "statusMissing": "তথ্য বাকি",
     "statusFilled": "হাতে পূরণ",
@@ -453,7 +455,10 @@
     "createdButNotPaid": "আপনার বুকিং {reference} সংরক্ষিত হয়েছে, কোনো টাকা কাটা হয়নি। পরে আবার পেমেন্ট করতে <link>বুকিংটি খুলুন</link>।",
     "lineOnlineCharge": "অনলাইন পেমেন্ট চার্জ ({percent})",
     "updatesNotice": "বুকিংয়ের আপডেট প্রধান যাত্রীর WhatsApp ও ইমেইলে পাঠানো হবে, আর WhatsApp না পৌঁছালে SMS-এ।",
-    "updatesNoticeFrom": "বুকিংয়ের আপডেট প্রধান যাত্রীর WhatsApp ও ইমেইলে পাঠানো হবে, আর WhatsApp না পৌঁছালে SMS-এ। স্বয়ংক্রিয় WhatsApp বার্তা আসবে শুধু আমাদের নোটিফিকেশন নম্বর {number} থেকে।"
+    "updatesNoticeFrom": "বুকিংয়ের আপডেট প্রধান যাত্রীর WhatsApp ও ইমেইলে পাঠানো হবে, আর WhatsApp না পৌঁছালে SMS-এ। স্বয়ংক্রিয় WhatsApp বার্তা আসবে শুধু আমাদের নোটিফিকেশন নম্বর {number} থেকে।",
+    "optionalField": "{label} (ঐচ্ছিক)",
+    "whatsapp": "WhatsApp নম্বর",
+    "statusLater": "পরে দেওয়া যাবে"
   },
   "auth": {
     "signInTitle": "আপনার অ্যাকাউন্টে ঢুকুন",

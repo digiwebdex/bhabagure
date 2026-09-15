@@ -644,12 +644,12 @@
       "photo": "Photo"
     },
     "url": "Facebook link",
-    "urlHint": "The reel or photo post on the company's Facebook page.",
+    "urlHint": "A reel's own link (facebook.com/reel/…) plays in Facebook's player on the website; a photo post links out.",
     "captionBn": "Caption (Bangla)",
     "captionEn": "Caption (English)",
     "viewCount": "Views",
     "views": "{{n}} views",
-    "thumbnail": "Thumbnail (needed to publish)"
+    "thumbnail": "Thumbnail (needed to publish a photo; a reel shows its own video)"
   },
   "pricing": {
     "title": "Pricing & add-ons",
@@ -856,7 +856,24 @@
       "online_payment_charge": "online payment charge",
       "gateway_fee": "gateway fee"
     },
-    "nps": "Rated {{score}}/10 after the trip"
+    "nps": "Rated {{score}}/10 after the trip",
+    "editTraveller": "Edit details",
+    "editTravellerNamed": "Edit details of {{name}}",
+    "travellerSaved": "Traveller details saved",
+    "travellerName": "Name (as on passport)",
+    "whatsapp": "WhatsApp number",
+    "phoneOptional": "Mobile (optional)",
+    "emailOptional": "Email (optional)",
+    "passportNumber": "Passport number",
+    "passportExpiry": "Passport expiry",
+    "dateOfBirth": "Date of birth",
+    "born": "born {{date}}",
+    "travellerEditNote": "Website bookings need only the lead traveller’s name and WhatsApp number; add the rest here as the customer sends it. An invoice already issued keeps the details it was issued with.",
+    "detailsMissing": "Still needed: {{fields}}",
+    "missing": {
+      "passport": "passport",
+      "dateOfBirth": "date of birth"
+    }
   },
   "profile": {
     "title": "My profile",

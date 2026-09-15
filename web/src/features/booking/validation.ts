@@ -13,29 +13,30 @@ export function validatePackageStep(booking: Pick<BookingState, 'date'>, tv: Tra
   return { errors, invalid: Object.keys(errors).length > 0 };
 }
 
+/**
+ * Only the lead traveller's name and WhatsApp number are required (docs/phase-8-visa-quotes-pricing-downloads.md §2);
+ * staff collect the rest later. Whatever is filled in is still checked.
+ */
 export function validateTravellers(booking: Pick<BookingState, 'travellers'>, tv: Translate) {
   const errors: TravellerErrors[] = booking.travellers.map((traveller, index) => {
     const e: TravellerErrors = {};
-    if (!traveller.name.trim()) e.name = tv('required');
-    if (!traveller.passport.trim()) e.passport = tv('required');
-    else if (!isPassportNumber(traveller.passport)) e.passport = tv('passport');
+    if (index === 0 && !traveller.name.trim()) e.name = tv('required');
+    if (traveller.passport.trim() && !isPassportNumber(traveller.passport)) e.passport = tv('passport');
 
     const dob = parseDayMonthYear(traveller.dob);
-    if (!traveller.dob.trim()) e.dob = tv('required');
-    else if (!dob) e.dob = tv('date');
-    else if (dob >= todayIso()) e.dob = tv('datePast');
+    if (traveller.dob.trim() && !dob) e.dob = tv('date');
+    else if (dob && dob >= todayIso()) e.dob = tv('datePast');
 
     const expiry = parseDayMonthYear(traveller.expiry);
-    if (!traveller.expiry.trim()) e.expiry = tv('required');
-    else if (!expiry) e.expiry = tv('date');
-    else if (expiry <= todayIso()) e.expiry = tv('dateFuture');
+    if (traveller.expiry.trim() && !expiry) e.expiry = tv('date');
+    else if (expiry && expiry <= todayIso()) e.expiry = tv('dateFuture');
 
     // A scanned value whose check digit failed must be checked by the traveller, never accepted silently.
     for (const field of ['passport', 'dob', 'expiry'] as const) {
       if (traveller.confirm[field] && !e[field]) e[field] = tv('confirmScan');
     }
 
-    // The lead traveller needs a mobile number; the others may leave it blank.
+    // The lead traveller needs a WhatsApp number; the others may leave it blank.
     if (index === 0 && !traveller.phone.trim()) e.phone = tv('required');
     else if (traveller.phone.trim() && !normalizeBdMobile(traveller.phone)) e.phone = tv('phone');
     if (traveller.email.trim() && !isEmail(traveller.email)) e.email = tv('email');

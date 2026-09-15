@@ -62,6 +62,7 @@ for path in settings destinations packages departures posts team reviews gallery
   check "GET /public/$path" 200 "$(get "p_$path" "$API/api/v1/public/$path" -H 'Accept: application/json')"
 done
 check "destinations listed" '[1-9][0-9]*' "$(json p_destinations "(d.data||d).length")"
+reels=$(json p_gallery "(d.data||[]).filter(i=>i.kind==='reel').length")
 packages=$(json p_packages "(d.data||d).length")
 check "published packages listed" '[1-9][0-9]*' "$packages"
 slug=$(json p_packages "(d.data||d)[0].slug")
@@ -101,6 +102,11 @@ check "portal is noindex or private" yes "$( (grep -qi 'noindex' "$DIR/portal.bo
 icon=$(grep -o '<link rel="icon" href="[^"]*"' "$DIR/home.body" | head -1 | sed 's/.*href="//; s/"$//')
 check "site icon linked" yes "$([[ -n $icon ]] && echo yes || echo no)"
 [[ -n $icon ]] && check "site icon loads" 200 "$(get icon "$APEX${icon%%\?*}")"
+if [[ $reels -gt 0 ]]; then
+  check "home plays the $reels published reels in Facebook's player" "$reels" "$(grep -o '<iframe[^>]*facebook.com/plugins/video.php' "$DIR/home.body" | wc -l | tr -d ' ')"
+else
+  note "No reels published in Admin → Gallery; the home page has no reel players."
+fi
 # Sections the CMS left empty render nothing; no menu link may point at them.
 for section in departures gallery; do
   if ! grep -q "id=\"$section\"" "$DIR/home.body"; then

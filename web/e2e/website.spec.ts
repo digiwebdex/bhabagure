@@ -145,11 +145,43 @@ test.describe('site basics', () => {
   test('no menu link points at a section the CMS left empty', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/en');
+    // The desktop row and the footer link to departures; the gallery is linked from the ☰ sheet only.
+    const departures = await page.locator('#departures').count();
+    await expect(page.locator('header a[href$="#departures"]'), 'header link to #departures').toHaveCount(departures);
+    await expect(page.locator('footer a[href$="#departures"]'), 'footer link to #departures').toHaveCount(departures);
+
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.getByRole('button', { name: 'Menu' }).click();
     for (const id of ['departures', 'gallery']) {
       const present = await page.locator(`#${id}`).count();
-      await expect(page.locator(`header a[href$="#${id}"]`), `header link to #${id}`).toHaveCount(present ? 1 : 0);
-      await expect(page.locator(`footer a[href$="#${id}"]`), `footer link to #${id}`).toHaveCount(id === 'departures' && present ? 1 : 0);
+      await expect(page.locator(`#site-menu a[href$="#${id}"]`), `☰ sheet link to #${id}`).toHaveCount(present ? 1 : 0);
     }
+  });
+});
+
+test.describe('gallery', () => {
+  test('the Facebook page reels play in lazily loaded embedded players near the bottom of the home page', async ({ page }) => {
+    await page.goto('/en');
+    const reels = page.getByTestId('gallery-reels').locator('iframe');
+    await expect(reels).toHaveCount(4);
+    const first = reels.first();
+    await expect(first).toHaveAttribute('loading', 'lazy');
+    await expect(first).toHaveAttribute('title', 'Facebook reel 1');
+    const src = new URL((await first.getAttribute('src'))!);
+    expect(src.origin + src.pathname).toBe('https://www.facebook.com/plugins/video.php');
+    expect(src.searchParams.get('href')).toBe('https://www.facebook.com/reel/1097420422945413');
+    await expect(page.locator('#gallery')).toContainText('▶ 104K views');
+    await expect(page.locator('#gallery').getByRole('link', { name: /More reels and photos on our Facebook page/ })).toHaveAttribute('href', 'https://www.facebook.com/bhabaghureholidays');
+    // Below the reviews and FAQ, above About and the contact block.
+    const order = await page.evaluate(() => ['faq', 'gallery', 'about'].map((id) => document.getElementById(id)!.getBoundingClientRect().top));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+
+    // On a phone the players stay full size in a row that scrolls sideways; the page itself never does.
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect(first).toHaveJSProperty('offsetWidth', 260);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await expect(page.locator('#site-menu a[href$="#gallery"]')).toHaveCount(1);
   });
 });
 
@@ -219,7 +251,7 @@ test.describe('booking', () => {
       await card.getByLabel('Passport number').fill(passport);
       await card.getByLabel('Date of birth').fill(dob);
       await card.getByLabel('Passport expiry').fill(expiry);
-      if (phone) await card.getByLabel('Mobile · WhatsApp').fill(phone);
+      if (phone) await card.getByLabel('WhatsApp number').fill(phone);
     }
     await dialog.getByRole('button', { name: 'Next step →' }).click();
 
@@ -264,14 +296,15 @@ test.describe('booking', () => {
     const dialog = page.getByRole('dialog', { name: 'Book online' });
     await dialog.getByLabel('Departure date').fill(inTwoMonths);
     await dialog.getByRole('button', { name: 'Next step →' }).click();
-    for (const [i, name] of ['RAFIQ ISLAM', 'SHIRIN AKTER'].entries()) {
-      const card = dialog.locator('section').nth(i);
-      await card.getByLabel('Name (as on passport)').fill(name);
-      await card.getByLabel('Passport number').fill(`BW09${i}2345`.padEnd(9, '0'));
-      await card.getByLabel('Date of birth').fill('14/03/1991');
-      await card.getByLabel('Passport expiry').fill('12/03/2031');
-      if (i === 0) await card.getByLabel('Mobile · WhatsApp').fill('01811223344');
-    }
+    // The least a customer has to give: the lead traveller's name and WhatsApp number. Everything else waits for staff.
+    const lead = dialog.locator('section').nth(0);
+    await dialog.getByRole('button', { name: 'Next step →' }).click();
+    await expect(lead.getByText('Please fill in this field.')).toHaveCount(2);
+    await expect(dialog.locator('section').nth(1).getByText('Please fill in this field.')).toHaveCount(0);
+    await lead.getByLabel('Name (as on passport)').fill('RAFIQ ISLAM');
+    await lead.getByLabel('WhatsApp number').fill('01811223344');
+    await expect(dialog.locator('section').nth(1)).toContainText('Can be added later');
+    await expect(dialog.locator('section').nth(1).getByLabel('Passport number (optional)')).toBeVisible();
     await dialog.getByRole('button', { name: 'Next step →' }).click();
     await dialog.getByRole('checkbox').check();
     await dialog.getByRole('button', { name: 'Next step →' }).click();

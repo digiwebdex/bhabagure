@@ -45,7 +45,10 @@ function TravellerCard({ index, traveller, errors, travelDate }: { index: number
   const locale = useLocale();
   const f = useFormatters();
   const update = useBooking((state) => state.updateTraveller);
-  const filled = traveller.name.trim() && traveller.passport.trim();
+  const lead = index === 0;
+  // The lead needs a name and WhatsApp number; everything else can follow later.
+  const status = lead ? (traveller.name.trim() && traveller.phone.trim() ? 'filled' : 'missing') : traveller.name.trim() ? 'filled' : 'later';
+  const optional = (label: string) => t('optionalField', { label });
   const id = `traveller-${index}`;
 
   const set = (key: keyof TravellerDraft) => (value: string) => {
@@ -132,9 +135,11 @@ function TravellerCard({ index, traveller, errors, travelDate }: { index: number
           {t('traveller', { n: f.number(index + 1) })}
         </span>
         <span
-          className={`rounded-pill px-2.5 py-0.75 text-12 font-semibold whitespace-nowrap ${filled ? 'bg-green-tint text-green' : 'bg-orange-tint text-amber'}`}
+          className={`rounded-pill px-2.5 py-0.75 text-12 font-semibold whitespace-nowrap ${
+            status === 'filled' ? 'bg-green-tint text-green' : status === 'missing' ? 'bg-orange-tint text-amber' : 'bg-row-alt text-muted'
+          }`}
         >
-          {filled ? t('statusFilled') : t('statusMissing')}
+          {status === 'filled' ? t('statusFilled') : status === 'missing' ? t('statusMissing') : t('statusLater')}
         </span>
       </div>
 
@@ -161,25 +166,25 @@ function TravellerCard({ index, traveller, errors, travelDate }: { index: number
       ) : null}
 
       <div className="grid-auto-fit-200 grid gap-3">
-        {text('name', t('name'), { autoComplete: 'name' })}
-        {text('passport', t('passport'), {
-          autoComplete: 'off',
-          autoCapitalize: 'characters',
-        })}
-        {text('dob', t('dob'), {
-          placeholder: t('datePh'),
-          inputMode: 'numeric',
-        })}
-        {text('expiry', t('expiry'), {
-          placeholder: t('datePh'),
-          inputMode: 'numeric',
-        })}
-        {text('phone', t('phone'), {
+        {text('name', lead ? t('name') : optional(t('name')), { autoComplete: 'name' })}
+        {text('phone', lead ? t('whatsapp') : optional(t('phone')), {
           placeholder: '01XXXXXXXXX',
           inputMode: 'tel',
           autoComplete: 'tel',
         })}
-        {text('email', t('email'), {
+        {text('passport', optional(t('passport')), {
+          autoComplete: 'off',
+          autoCapitalize: 'characters',
+        })}
+        {text('dob', optional(t('dob')), {
+          placeholder: t('datePh'),
+          inputMode: 'numeric',
+        })}
+        {text('expiry', optional(t('expiry')), {
+          placeholder: t('datePh'),
+          inputMode: 'numeric',
+        })}
+        {text('email', optional(t('email')), {
           placeholder: 'name@email.com',
           type: 'email',
           autoComplete: 'email',

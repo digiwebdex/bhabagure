@@ -80,16 +80,43 @@ class CmsContentTest extends TestCase
     }
 
     #[Test]
-    public function gallery_items_link_only_to_facebook_and_need_a_thumbnail_to_publish(): void
+    public function gallery_items_link_only_to_facebook_reels_play_without_a_thumbnail_and_photos_need_one(): void
     {
         $admin = $this->staff('admin');
 
         $this->actingAsApi($admin)->postJson('/api/v1/admin/gallery', ['kind' => 'reel', 'url' => 'https://evil.example/reel'])
             ->assertUnprocessable()->assertJsonValidationErrors('url');
+        // The embedded player needs the video's own link, not the page or a photo post.
+        foreach (['https://www.facebook.com/bhabaghureholidays', 'https://www.facebook.com/photo/?fbid=122176401224613610'] as $url) {
+            $this->actingAsApi($admin)->postJson('/api/v1/admin/gallery', ['kind' => 'reel', 'url' => $url])
+                ->assertUnprocessable()->assertJsonValidationErrors(['url' => 'reel']);
+        }
 
-        $id = $this->actingAsApi($admin)->postJson('/api/v1/admin/gallery', ['kind' => 'reel', 'url' => 'https://www.facebook.com/reel/1097420422945413', 'view_count' => 104000])
+        $reel = $this->actingAsApi($admin)->postJson('/api/v1/admin/gallery', ['kind' => 'reel', 'url' => 'https://www.facebook.com/bhabaghureholidays/videos/1576018203982273/', 'view_count' => 58000])
             ->assertCreated()->json('data.id');
-        $this->actingAsApi($admin)->postJson("/api/v1/admin/gallery/{$id}/publish")->assertUnprocessable();
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/gallery/{$reel}/publish")->assertOk()->assertJsonPath('data.status', 'published');
+
+        $photo = $this->actingAsApi($admin)->postJson('/api/v1/admin/gallery', ['kind' => 'photo', 'url' => 'https://www.facebook.com/photo/?fbid=122176401224613610'])
+            ->assertCreated()->json('data.id');
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/gallery/{$photo}/publish")->assertUnprocessable();
+    }
+
+    #[Test]
+    public function the_facebook_pages_four_reels_are_published_once_and_a_deleted_one_stays_deleted(): void
+    {
+        $reels = collect($this->getJson('/api/v1/public/gallery')->assertOk()->json('data'));
+        $this->assertSame(['https://www.facebook.com/reel/1097420422945413', 'https://www.facebook.com/reel/1576018203982273', 'https://www.facebook.com/reel/1249439448252776', 'https://www.facebook.com/reel/1070950702232596'], $reels->pluck('url')->all());
+        $this->assertSame([104, 58, 17, 11], $reels->pluck('viewsThousands')->all());
+        $this->assertSame(['reel'], $reels->pluck('kind')->unique()->values()->all());
+
+        $admin = $this->staff('admin');
+        $first = $this->actingAsApi($admin)->getJson('/api/v1/admin/gallery')->json('data.0.id');
+        $this->actingAsApi($admin)->deleteJson("/api/v1/admin/gallery/{$first}")->assertOk();
+
+        // Deploys re-run the seeders; the reels came from a migration, so nothing puts the deleted one back.
+        $this->seed(ContentSeeder::class);
+        (require database_path('migrations/2026_09_15_170000_publish_facebook_reels.php'))->up();
+        $this->assertCount(3, $this->getJson('/api/v1/public/gallery')->json('data'));
     }
 
     #[Test]

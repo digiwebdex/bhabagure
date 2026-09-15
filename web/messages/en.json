@@ -311,7 +311,9 @@
   "gallery": {
     "views": "▶ {viewsText}K views",
     "photo": "Photo",
-    "openOnFacebook": "Open on Facebook"
+    "openOnFacebook": "Open on Facebook",
+    "reelTitle": "Facebook reel {n}",
+    "morePage": "More reels and photos on our Facebook page"
   },
   "about": {
     "paras": [
@@ -390,7 +392,7 @@
     "addonPerPerson": "{price} / person",
     "addonPerBooking": "{price} / booking",
     "travellersHeading": "Traveller details",
-    "travellersNote": "{pax, plural, one {{paxText} traveller} other {{paxText} travellers}} · upload a passport scan to fill these in",
+    "travellersNote": "{pax, plural, one {{paxText} traveller} other {{paxText} travellers}} · only the lead traveller’s name and WhatsApp number are required — we’ll collect the rest later. A passport scan fills the details in.",
     "traveller": "Traveller {n}",
     "statusMissing": "Details needed",
     "statusFilled": "Filled in",
@@ -453,7 +455,10 @@
     "createdButNotPaid": "Your booking {reference} is saved and nothing has been charged. <link>Open your booking</link> to try the payment again later.",
     "lineOnlineCharge": "Online payment charge ({percent})",
     "updatesNotice": "We’ll send booking updates to the lead traveller’s WhatsApp and email, and an SMS when WhatsApp can’t reach them.",
-    "updatesNoticeFrom": "We’ll send booking updates to the lead traveller’s WhatsApp and email, and an SMS when WhatsApp can’t reach them. Automated WhatsApp messages come only from our notifications number {number}."
+    "updatesNoticeFrom": "We’ll send booking updates to the lead traveller’s WhatsApp and email, and an SMS when WhatsApp can’t reach them. Automated WhatsApp messages come only from our notifications number {number}.",
+    "optionalField": "{label} (optional)",
+    "whatsapp": "WhatsApp number",
+    "statusLater": "Can be added later"
   },
   "auth": {
     "signInTitle": "Sign in to your account",

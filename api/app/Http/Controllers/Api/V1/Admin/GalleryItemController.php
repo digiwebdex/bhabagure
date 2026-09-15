@@ -78,20 +78,25 @@ class GalleryItemController extends Controller
         return $this->saved($request, $item, 'deleted');
     }
 
+    /** A reel plays in Facebook's embedded player on the website; a photo tile shows the uploaded thumbnail. */
     protected function publishProblems(Model $model): array
     {
-        return $model->media_id === null ? [__('cms.publish_requirements.images')] : [];
+        return $model->kind === 'photo' && $model->media_id === null ? [__('cms.publish_requirements.images')] : [];
     }
 
     private function validated(Request $request): array
     {
         return $request->validate([
             'kind' => ['required', Rule::in(GalleryItem::KINDS)],
-            'url' => ['required', 'url:https', 'max:500', 'regex:#^https://(www\.|m\.)?facebook\.com/#'],
+            'url' => [
+                'required', 'url:https', 'max:500', 'regex:#^https://(www\.|m\.)?facebook\.com/#',
+                // The embedded player needs the video's own link: /reel/<id>, /watch?v=<id> or /<page>/videos/<id>.
+                Rule::when($request->input('kind') === 'reel', ['regex:'.GalleryItem::REEL_URL]),
+            ],
             'media_id' => ['nullable', 'integer', 'exists:media,id'],
             'caption_bn' => ['nullable', 'string', 'max:255'],
             'caption_en' => ['nullable', 'string', 'max:255'],
             'view_count' => ['nullable', 'integer', 'min:0'],
-        ]);
+        ], ['url.regex' => __('cms.gallery_url')]);
     }
 }

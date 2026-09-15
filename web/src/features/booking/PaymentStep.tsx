@@ -50,10 +50,11 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         room: booking.room,
         addons: booking.addons,
         travellers: booking.travellers.map((traveller) => ({
-          name: traveller.name.trim(),
-          passport_number: traveller.passport.trim(),
-          date_of_birth: parseDayMonthYear(traveller.dob) ?? '',
-          passport_expiry: parseDayMonthYear(traveller.expiry) ?? '',
+          // Blank optional details go as null; the API names an unnamed traveller "Traveller 2" and so on.
+          name: traveller.name.trim() || null,
+          passport_number: traveller.passport.trim() || null,
+          date_of_birth: parseDayMonthYear(traveller.dob),
+          passport_expiry: parseDayMonthYear(traveller.expiry),
           phone: traveller.phone.trim() || null,
           email: traveller.email.trim() || null,
           passport_scan_token: traveller.scanToken,
