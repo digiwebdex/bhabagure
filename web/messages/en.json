@@ -37,8 +37,10 @@
       "book": "Book now",
       "how": "How booking works",
       "faq": "FAQ",
-      "gallery": "Gallery"
-    }
+      "gallery": "Gallery",
+      "team": "Our team"
+    },
+    "team": "Team"
   },
   "hero": {
     "before": "See the world, ",
@@ -324,7 +326,8 @@
       "hours": "Open every day"
     },
     "team": "Our team",
-    "idLabel": "ID"
+    "idLabel": "ID",
+    "seeTeam": "See the whole team →"
   },
   "blog": {
     "all": "All",
@@ -838,5 +841,13 @@
   "legal": {
     "draftTitle": "Draft — pending review by the company’s lawyer",
     "draftNote": "This page is a draft and is not final. Items marked [CLIENT TO CONFIRM] are still to be decided. Contact us with any questions before booking."
+  },
+  "teamPage": {
+    "title": "Our team",
+    "lede": "",
+    "intro": "The people who plan your trip, book your tickets and travel with your group — from the first call to the day you are home. Every group has one of our own Bangla-speaking operators with it from departure to return.",
+    "people": "{count, plural, one {Person on the team} other {People on the team}}",
+    "empty": "Our team will be introduced here soon.",
+    "metaDescription": "Meet the Bhabaghure Holidays team in Agargaon, Dhaka: the tour operators and travel advisers behind our Nepal, Thailand and domestic tours."
   }
 }

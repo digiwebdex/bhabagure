@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 import { siteUrl } from '@/lib/content';
 import { loadContent } from '@/lib/content/source';
-import { localizedPath, packagePath, postPath } from '@/lib/links';
+import { localizedPath, packagePath, postPath, teamPath } from '@/lib/links';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = siteUrl();
@@ -15,6 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     entry('/'),
+    entry(teamPath),
     ...packages.filter((p) => p.status === 'published').map((p) => entry(packagePath(p.slug))),
     ...posts.filter((p) => p.status === 'published').map((p) => entry(postPath(p.slug), p.publishedAt)),
   ];

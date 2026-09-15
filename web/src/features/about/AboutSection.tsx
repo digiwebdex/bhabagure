@@ -1,11 +1,14 @@
-import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { Link } from '@/i18n/navigation';
 import type { AppLocale } from '@/i18n/routing';
 import type { SiteViews } from '@/lib/content/views';
 import { formattersFor } from '@/lib/formatters';
-import { initialsOf } from '@/lib/initials';
+import { teamPath } from '@/lib/links';
+
+import { aboutFacts } from './facts';
+import { TeamGrid } from './TeamGrid';
 
 interface AboutSectionProps {
   locale: AppLocale;
@@ -14,19 +17,13 @@ interface AboutSectionProps {
   settings: SiteViews['settings'];
 }
 
-/** Company description, four fact cards and the CMS-managed team grid. */
+/** Company description, four fact cards and the CMS-managed team grid, with the way to the full team page. */
 export async function AboutSection({ locale, team, stats, settings }: AboutSectionProps) {
   const t = await getTranslations({ locale });
   const f = formattersFor(locale);
   const licence = f.digits(settings.civilAviationNo);
   const paragraphs = (t.raw('about.paras') as string[]).map((_, i) => t(`about.paras.${i}`, { licence }));
-
-  const facts = [
-    { value: f.number(stats.packages), label: t('about.facts.packages') },
-    { value: f.number(stats.destinations), label: t('about.facts.destinations') },
-    { value: licence, label: t('about.facts.licence') },
-    { value: `${f.number(settings.hours.opens)}–${f.number(settings.hours.closes - 12)}`, label: t('about.facts.hours') },
-  ];
+  const facts = aboutFacts(t, f, stats, settings);
 
   return (
     <section id="about" className="border-t border-hairline-soft bg-white">
@@ -50,29 +47,13 @@ export async function AboutSection({ locale, team, stats, settings }: AboutSecti
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <h3 className="text-19 font-bold tracking-heading">{t('about.team')}</h3>
-            <ul className="grid-auto-fit-190 grid gap-4">
-              {team.map((member) => (
-                <li key={member.employeeCode} data-reveal className="flex flex-col overflow-hidden rounded-20 border border-hairline bg-white">
-                  <div className="relative flex aspect-square w-full items-center justify-center bg-image-placeholder">
-                    {member.photo ? (
-                      <Image src={member.photo.url} alt={member.photo.alt || member.name} fill sizes="(min-width: 1200px) 270px, 50vw" className="object-cover" />
-                    ) : (
-                      <span aria-hidden className="font-display text-40 font-extrabold text-muted-label/40">
-                        {initialsOf(member.name)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1 p-4">
-                    <strong className="text-16 leading-1.3 font-semibold">{member.name}</strong>
-                    <span className="text-13 text-muted">{locale === 'bn' ? `${member.role} · ${member.roleEn}` : member.role}</span>
-                    <span className="mt-0.5 font-display text-12 font-bold tracking-caps-print text-blue">
-                      {t('about.idLabel')} {member.employeeCode}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 className="text-19 font-bold tracking-heading">{t('about.team')}</h3>
+              <Link href={teamPath} className="text-14 font-semibold whitespace-nowrap hover:text-orange">
+                {t('about.seeTeam')}
+              </Link>
+            </div>
+            <TeamGrid locale={locale} team={team} />
           </div>
         </div>
       </div>

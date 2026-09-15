@@ -6,11 +6,14 @@ const headerHeight = (page: Page) => page.locator('header').first().evaluate((el
 
 test.describe('header', () => {
   test('one 73px row from 900px up, two rows (120px) below', async ({ page }) => {
-    for (const [width, expected] of [[1280, 73], [900, 73], [899, 120], [390, 120]] as const) {
-      await page.setViewportSize({ width, height: 800 });
-      await page.goto('/en');
-      expect(await headerHeight(page), `header at ${width}px`).toBe(expected);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `no sideways scroll at ${width}px`).toBe(true);
+    // Both languages: the Bangla labels are the longer ones, and the team page link made seven.
+    for (const path of ['/en', '/']) {
+      for (const [width, expected] of [[1280, 73], [900, 73], [899, 120], [390, 120]] as const) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto(path);
+        expect(await headerHeight(page), `header at ${width}px on ${path}`).toBe(expected);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `no sideways scroll at ${width}px on ${path}`).toBe(true);
+      }
     }
   });
 
@@ -111,6 +114,42 @@ test.describe('language', () => {
     const response = await page.request.get('/bn/blog', { maxRedirects: 0 });
     expect(response.status()).toBe(308);
     expect(response.headers().location).toBe('/blog');
+  });
+});
+
+test.describe('team page', () => {
+  test('the header link opens /ourteam with every member the About section shows, in both languages', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/en');
+    const members = await page.locator('#about li').count();
+    expect(members).toBeGreaterThan(0);
+
+    const nav = page.locator('header nav');
+    await nav.getByRole('link', { name: 'Team', exact: true }).click();
+    await expect(page).toHaveURL(/\/en\/ourteam$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Our team' })).toBeVisible();
+    await expect(page.locator('#team li')).toHaveCount(members);
+    await expect(nav.getByRole('link', { name: 'Team', exact: true })).toHaveAttribute('aria-current', 'page');
+    // The contact section is on this page too, so the header's Contact stays here; About goes back home.
+    await expect(nav.getByRole('link', { name: 'Contact', exact: true })).toHaveAttribute('href', '#contact');
+    await expect(nav.getByRole('link', { name: 'About', exact: true })).toHaveAttribute('href', '/en#about');
+
+    await page.goto('/ourteam');
+    await expect(page.getByRole('heading', { level: 1, name: 'আমাদের টিম' })).toBeVisible();
+    await expect(page.locator('#team li')).toHaveCount(members);
+  });
+
+  test('the About section, the footer and the ☰ sheet lead to it', async ({ page }) => {
+    await page.goto('/en');
+    await page.locator('#about').getByRole('link', { name: 'See the whole team →' }).click();
+    await expect(page).toHaveURL(/\/en\/ourteam$/);
+    await expect(page.locator('footer').getByRole('link', { name: 'Our team', exact: true })).toHaveAttribute('href', '/en/ourteam');
+
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto('/en');
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await page.locator('#site-menu').getByRole('link', { name: /^Our team/ }).click();
+    await expect(page).toHaveURL(/\/en\/ourteam$/);
   });
 });
 

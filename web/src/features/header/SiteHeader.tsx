@@ -10,6 +10,7 @@ import { Link } from '@/i18n/navigation';
 import { restoreSession } from '@/lib/customer-api';
 import { useBooking } from '@/state/booking';
 import { initialsOf } from '@/lib/initials';
+import { teamPath } from '@/lib/links';
 import { useCustomerSession } from '@/state/customer-session';
 import { useSiteUi } from '@/state/site-ui';
 import { useTripSearch } from '@/state/trip-search';
@@ -19,16 +20,19 @@ import { LanguageToggle } from './LanguageToggle';
 interface SiteHeaderProps {
   /** The page's path without locale prefix, e.g. "/" or "/blog/nagarkot". */
   pathname: string;
+  /** Home-page sections this page has too: their links stay on the page. */
+  pageSections?: string[];
 }
 
-type NavItem = { kind: 'section'; id: string; key: string } | { kind: 'book'; key: string };
+type NavItem = { kind: 'section'; id: string; key: string } | { kind: 'page'; href: string; key: string } | { kind: 'book'; key: string };
 
-/** README: six section links on desktop; FAQ, gallery and "how booking works" join them in the ☰ sheet. */
+/** README: the section links on desktop, plus the team page; FAQ, gallery and "how booking works" join them in the ☰ sheet. */
 const DESKTOP_NAV: NavItem[] = [
   { kind: 'section', id: 'services', key: 'services' },
   { kind: 'section', id: 'packages', key: 'packages' },
   { kind: 'section', id: 'departures', key: 'departures' },
   { kind: 'section', id: 'about', key: 'about' },
+  { kind: 'page', href: teamPath, key: 'team' },
   { kind: 'section', id: 'blog', key: 'news' },
   { kind: 'book', key: 'book' },
 ];
@@ -38,6 +42,7 @@ const SHEET_NAV: NavItem[] = [
   { kind: 'section', id: 'packages', key: 'packages' },
   { kind: 'section', id: 'departures', key: 'departures' },
   { kind: 'section', id: 'about', key: 'about' },
+  { kind: 'page', href: teamPath, key: 'team' },
   { kind: 'section', id: 'blog', key: 'news' },
   { kind: 'book', key: 'book' },
   { kind: 'section', id: 'how', key: 'how' },
@@ -49,7 +54,7 @@ const SHEET_NAV: NavItem[] = [
  * Sticky header. ≥900px: one 73px row — logo, six links, sign-in, language, Contact.
  * <900px: 120px in two rows — logo above ☰, sign-in, language, Contact — with the links in a sheet.
  */
-export function SiteHeader({ pathname }: SiteHeaderProps) {
+export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
   const t = useTranslations('nav');
   const common = useTranslations('common');
   const { packages, pricing } = useSiteContent();
@@ -75,7 +80,7 @@ export function SiteHeader({ pathname }: SiteHeaderProps) {
   };
 
   const sectionLink = (id: string, label: string, className: string, onClick?: () => void) =>
-    isHome ? (
+    isHome || pageSections.includes(id) ? (
       <a key={id} href={`#${id}`} onClick={onClick} className={className}>
         {label}
       </a>
@@ -107,6 +112,15 @@ export function SiteHeader({ pathname }: SiteHeaderProps) {
                 <button key="book" type="button" onClick={openBooking} className="cursor-pointer whitespace-nowrap text-ink-deep hover:text-orange">
                   {t(item.key)}
                 </button>
+              ) : item.kind === 'page' ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={pathname === item.href ? 'page' : undefined}
+                  className="whitespace-nowrap text-ink-deep hover:text-orange aria-[current=page]:text-orange-deep"
+                >
+                  {t(item.key)}
+                </Link>
               ) : (
                 sectionLink(item.id, t(item.key), 'whitespace-nowrap text-ink-deep hover:text-orange')
               ),
@@ -181,6 +195,19 @@ export function SiteHeader({ pathname }: SiteHeaderProps) {
                 </span>
               </>
             );
+            if (item.kind === 'page') {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMenu}
+                  aria-current={pathname === item.href ? 'page' : undefined}
+                  className={`${row} font-medium text-ink-deep aria-[current=page]:text-orange-deep`}
+                >
+                  {label}
+                </Link>
+              );
+            }
             return isHome ? (
               <a key={item.id} href={`#${item.id}`} onClick={closeMenu} className={`${row} font-medium text-ink-deep`}>
                 {label}

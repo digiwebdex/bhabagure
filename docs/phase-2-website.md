@@ -324,3 +324,23 @@ Handoff files: re-synced on 2026-09-13 and checked against what was built — th
 timings and admin dark palette all match. One contradiction remains: the admin prototype's Pricing screen
 still shows the old rules (`Bhabaghure Admin.dc.html` lines 1877 and 1881: group slab 4+ −4%, 10+ −8%, and
 "single supplement +12% for solo travellers"). The README's five tiers are what the API and website use.
+
+### Added later: the team page (2026-09-15)
+
+- **`/ourteam`** (Bangla) and **`/en/ourteam`**, not in the prototype, built in the home page's style:
+  - a short navy banner with the title, an intro and the About fact cards plus the team size;
+  - every visible member from the CMS Team screen in the home page's cards (`features/about/TeamGrid.tsx`, shared with
+    About); the grid keeps card widths with a small team, and puts two cards per row on phones;
+  - the home page's contact section, which the header's Contact link now reaches on the page.
+- **Links to it:**
+  - the header, as a seventh link after About. It reads "Team" in English and "আমাদের টিম" in Bangla, the widest labels
+    that still fit one row at 900px;
+  - the ☰ sheet and the footer ("Our team");
+  - About's "See the whole team →".
+- **Also:** in the sitemap. The home page's About section still shows the team.
+- **Answers (2026-09-15):** keep the team in About with the link; the link in the header, the ☰ menu and the footer; the
+  same card as the home page (no bios); a short navy banner, not the video hero.
+- **e2e, `website.spec.ts`:**
+  - the header row check now covers Bangla as well as English;
+  - the header link opens the page with the same members as About, in both languages;
+  - the About link, the footer and the ☰ sheet lead there.

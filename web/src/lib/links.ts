@@ -9,6 +9,8 @@ export function localizedPath(locale: AppLocale, path: string): string {
 
 export const packagePath = (slug: string) => `/packages/${slug}`;
 export const postPath = (slug: string) => `/blog/${slug}`;
+/** The team page (bhabaghure.com.bd/ourteam, /en/ourteam). */
+export const teamPath = '/ourteam';
 
 /** The slug in /packages/<slug> or /en/packages/<slug>, else null. */
 export function packageSlugFromPathname(pathname: string): string | null {

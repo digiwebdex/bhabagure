@@ -21,11 +21,13 @@ interface SiteChromeProps {
   views: SiteViews;
   /** The page's path without locale prefix — drives the language toggle and in-page links. */
   pathname: string;
+  /** Home-page sections this page also has (e.g. "contact"): the header links to them on the page instead of home. */
+  pageSections?: string[];
   children: ReactNode;
 }
 
 /** Header, footer, floating buttons, assistant and modals shared by every website page. */
-export async function SiteChrome({ locale, views, pathname, children }: SiteChromeProps) {
+export async function SiteChrome({ locale, views, pathname, pageSections, children }: SiteChromeProps) {
   const t = await getTranslations({ locale, namespace: 'common' });
 
   return (
@@ -35,7 +37,7 @@ export async function SiteChrome({ locale, views, pathname, children }: SiteChro
           {t('skipToContent')}
         </a>
         <ScrollProgress />
-        <SiteHeader pathname={pathname} />
+        <SiteHeader pathname={pathname} pageSections={pageSections} />
         <main id="main" className="flex-1">
           {children}
         </main>
