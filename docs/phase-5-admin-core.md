@@ -66,7 +66,7 @@ A completeness critic then compared their findings. Three adversarial verifiers 
 - Bookings (list rebuilt on the shared row-actions table; the Phase 3 detail page stays);
 - Customers & leads;
 - Quotations;
-- Payments & invoices;
+- Payments & cash book;
 - the defects in §10.
 
 **Not in Phase 5** (the other §2 screens, each with the module that needs it): Corporate, B2B agent portal, Flights, Hotels, Visa tracker, Departure calendar, Itinerary builder, Manifest, Ops checklist, Suppliers, Accounting, Refunds, Reports, Inbox, Campaigns, Attendance & salary, Staff & bonus, System, Document vault & tasks, Roles & audit, Settings & import. Also out: the customer portal (Phase 6) and the wallet. Nothing is linked in the sidebar before it exists.
@@ -144,7 +144,7 @@ Without a phone or email the action is disabled with the reason.
 - **Sidebar, in the design's group order, built screens only:**
   - Dashboard (no group heading)
   - বিক্রয় / Sales: Bookings (badge) · Quotations (badge) · Customers & leads · Packages · Pricing & seats
-  - হিসাব / Finance: Payments & invoices
+  - হিসাব / Finance: Payments & cash book
   - যোগাযোগ / Communication: Notifications · Website: Blog · Team · Reviews · Gallery · Media · Site settings
 
   The Services, Operations, HR and System groups appear with their modules. Every item is permission-filtered, as it is today.
@@ -209,7 +209,7 @@ Every number is computed in Dhaka time, so there are no literal values.
 - **Named "Quotation"**, because "quote" already means a booking's draft pricing on the booking page.
 - **How much of the lifecycle to build** is question 2.
 
-### 4.6 Payments & invoices
+### 4.6 Payments & cash book (renamed in Phase 9, when Invoices got its own screen)
 
 - **Company balance:** the journal balance of the money accounts. Cash, bank, mobile wallets and SSLCommerz clearing are shown separately, so money not yet settled is visible.
 - **Method cards** for this Dhaka month: bKash, Nagad, SSLCommerz (card, bKash or Nagad through the gateway), and cash or bank. Each shows the amount net of reversals and the number of payments.

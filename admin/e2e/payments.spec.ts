@@ -8,8 +8,8 @@ import { FIRST_LOAD, PHOTO, signIn } from './helpers'
  */
 test('an admin posts a cash out with a receipt, finds it in the cash book and reverses it; the balance follows', async ({ page }) => {
   await signIn(page, 'admin')
-  await page.getByRole('navigation').getByRole('link', { name: /Payments & invoices/ }).click()
-  await expect(page.getByRole('heading', { name: 'Payments & invoices', level: 1 })).toBeVisible()
+  await page.getByRole('navigation').getByRole('link', { name: /Payments & cash book/ }).click()
+  await expect(page.getByRole('heading', { name: 'Payments & cash book', level: 1 })).toBeVisible()
   const balance = page.getByTestId('company-balance')
   await expect(balance).toBeVisible(FIRST_LOAD)
   const before = (await balance.locator('span').nth(1).textContent())!.trim()
@@ -78,7 +78,7 @@ test('a deal with an advance shows what is due, takes the rest and is marked pai
 
 test('staff without payment permissions have no Payments screen', async ({ page }) => {
   await signIn(page, 'sales_agent')
-  await expect(page.getByRole('navigation').getByRole('link', { name: /Payments & invoices/ })).toHaveCount(0)
+  await expect(page.getByRole('navigation').getByRole('link', { name: /Payments & cash book/ })).toHaveCount(0)
   await page.goto('/payments')
   await expect(page.getByTestId('company-balance')).toHaveCount(0)
   await expect(page.getByTestId('cash-book-table')).toHaveCount(0)

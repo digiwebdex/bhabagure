@@ -19,7 +19,7 @@ use App\Support\Payments\PaymentOptions;
  */
 final class InvoiceView
 {
-    public const TEMPLATE_VERSION = '2';
+    public const TEMPLATE_VERSION = '3';
 
     /** @return array<string, mixed> */
     public function data(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false): array
@@ -85,10 +85,12 @@ final class InvoiceView
                 'name' => $invoice->billed_name,
                 'lines' => array_values(array_filter([$invoice->billed_phone ? $this->phone($invoice->billed_phone) : null, $invoice->billed_email, $invoice->billed_address])),
             ],
-            'meta' => $deal ? [
+            'meta' => $deal ? array_values(array_filter([
                 ['ইনভয়েস তারিখ · Date', $date($invoice->issued_on)],
+                // A staff-written invoice can carry a date it is owed by (docs/phase-9-accounts.md §5).
+                $invoice->due_on ? ['পরিশোধের শেষ তারিখ · Due', $date($invoice->due_on)] : null,
                 ['প্রস্তুতকারী · Issued by', $invoice->sales_agent_name ?? '—'],
-            ] : [
+            ])) : [
                 ['ইনভয়েস তারিখ · Date', $date($invoice->issued_on)],
                 ['বুকিং রেফ · Booking', $invoice->booking_reference ?? '—'],
                 ['যাত্রার তারিখ · Travel', $travel],
@@ -100,9 +102,14 @@ final class InvoiceView
                 'code' => $invoice->package_code,
                 'detail' => implode(' · ', $packageDetail),
             ],
+            // A line's own discount and VAT are said under it: otherwise the amount would not read as quantity × rate.
             'items' => $invoice->items->map(fn (InvoiceItem $item) => [
                 'title' => $locale === 'bn' ? ($item->title_bn ?: $item->title_en) : $item->title_en,
-                'note' => $item->note,
+                'note' => implode(' · ', array_filter([
+                    $item->note,
+                    (float) $item->discount_amount > 0 ? ($locale === 'bn' ? 'ডিসকাউন্ট ' : 'Discount ').'− '.$bdt($item->discount_amount) : null,
+                    (float) $item->vat_amount > 0 ? ($locale === 'bn' ? 'ভ্যাট ' : 'VAT ').Numerals::percent((float) $item->vat_rate, $locale).' '.$bdt($item->vat_amount) : null,
+                ])) ?: null,
                 'quantity' => $n((float) $item->quantity),
                 'rate' => (float) $item->unit_price > 0 ? $bdt($item->unit_price) : ($locale === 'bn' ? 'অন্তর্ভুক্ত' : 'Included'),
                 'amount' => (float) $item->line_total > 0 ? $bdt($item->line_total) : '—',
@@ -115,7 +122,10 @@ final class InvoiceView
             'totals' => array_values(array_filter([
                 ['সাব-টোটাল · Subtotal', $bdt($subtotal)],
                 (float) $invoice->discount_amount > 0 ? ['ডিসকাউন্ট · Discount'.($invoice->discount_label ? " ({$invoice->discount_label})" : ''), '− '.$bdt($invoice->discount_amount)] : null,
-                ['সার্ভিস চার্জ ও ভ্যাট · VAT ('.Numerals::percent((float) $invoice->vat_rate, $locale).')', $bdt($invoice->vat_amount)],
+                // One rate on the whole invoice is named; VAT that came from the lines is only totalled here.
+                (float) $invoice->vat_rate > 0 || (float) $invoice->vat_amount > 0
+                    ? ['সার্ভিস চার্জ ও ভ্যাট · VAT'.((float) $invoice->vat_rate > 0 ? ' ('.Numerals::percent((float) $invoice->vat_rate, $locale).')' : ''), $bdt($invoice->vat_amount)]
+                    : null,
             ])),
             'total' => $bdt($invoice->total_amount),
             'paid' => $bdt($invoice->paid_amount),
@@ -124,9 +134,11 @@ final class InvoiceView
             'payments' => $payments,
             // Phase 8 §4.F: how to pay what is still due, while the invoice is open.
             'howToPay' => $invoice->status === Invoice::ISSUED ? PaymentOptions::lines(Money::toNumber($invoice->balance_due) ?? 0, $locale) : [],
-            'terms' => $deal ? [
+            // Whatever staff wrote at the foot of this one invoice comes first, then the standing terms.
+            'terms' => $deal ? array_values(array_filter([
+                $invoice->footer,
                 'চুক্তি অনুযায়ী বাকি অর্থ পরিশোধযোগ্য। এই ইনভয়েস কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
-            ] : [
+            ])) : [
                 'যাত্রার ২১ দিন আগে বাতিল করলে নন-রিফান্ডেবল অংশ বাদে অর্থ ফেরত দেওয়া হয়। পাসপোর্টের মেয়াদ যাত্রার তারিখ থেকে কমপক্ষে ৬ মাস থাকতে হবে।',
                 'ভিসা প্রত্যাখ্যাত হলে প্রসেসিং ফি অফেরতযোগ্য। এই ইনভয়েস কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
             ],

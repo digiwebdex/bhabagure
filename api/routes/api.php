@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\DownloadLogController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
+use App\Http\Controllers\Api\V1\Admin\InvoiceBuilderController;
 use App\Http\Controllers\Api\V1\Admin\JournalController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -467,6 +468,15 @@ Route::prefix('v1')->group(function () {
                 Route::get('reference-presets', 'index');
                 Route::post('reference-presets', 'store');
                 Route::delete('reference-presets/{id}', 'destroy')->whereNumber('id');
+            });
+            // Invoices staff write themselves (docs/phase-9-accounts.md §5): the list, the builder, and issuing a draft.
+            // Paying and voiding stay on the deal endpoints below, which is where the ledger already handles them.
+            Route::controller(InvoiceBuilderController::class)->group(function () {
+                Route::get('invoices', 'index');
+                Route::get('invoices/{id}', 'show')->whereNumber('id');
+                Route::post('invoices', 'store')->middleware('permission:invoices.manage,staff');
+                Route::put('invoices/{id}', 'update')->whereNumber('id')->middleware('permission:invoices.manage,staff');
+                Route::post('invoices/{id}/issue', 'issue')->whereNumber('id')->middleware('permission:invoices.manage,staff');
             });
             Route::controller(DealController::class)->group(function () {
                 Route::get('deals', 'index');

@@ -52,10 +52,33 @@ So the engine was complete and the screens were missing. Nothing about how money
 - Both download as CSV (`?format=csv`, UTF-8 with a byte-order mark so Excel reads Bangla names).
 - API: `GET /admin/reports/account-transactions`, `GET /admin/reports/general-ledger`.
 
-## 5. Invoice builder (next)
+## 5. Invoice builder (built)
 
-Today a deal invoice is one line with a title and a total. The plan: multiple lines with per-line discount and VAT,
-saved as a draft and then issued, and the extra print sizes (A5, POS slip, delivery receipt) beside the A4 invoice.
+An invoice staff write themselves, beside the ones a booking issues.
+
+- **The list** — tabs for all, unpaid, partly paid, paid, overdue and drafts, each with its count; filters by date and a
+  search over the number, the customer and the title; the period's invoiced and outstanding totals.
+- **The builder** — who it is for (a customer found by name or number, or a name and number that make the record), as
+  many lines as it needs with a per-line discount and VAT rate, a discount on the whole invoice, a due date, a note and
+  the words printed at the foot.
+- **Draft, then issued.** A draft has no number, is not in the books and can be changed freely. Issuing gives it the
+  next invoice number, posts receivable, sales and VAT to the journal, and freezes the figures — a mistake is voided and
+  written again. Paying and voiding stay on the deal endpoints, where the ledger already handles them.
+- **The printed invoice** says a line's own discount and VAT under it (the amount is the line after its discount, so it
+  would not otherwise read as quantity × rate), the due date, and the staff footer above the standing terms.
+- **Every invoice belongs to someone.** The invoices table insists on a customer or a B2B client, so what is owed can
+  always be traced; a name and number typed into the builder find or make that customer record.
+- **Record payment** on a row takes money against the invoice through the same endpoint the Payments screen uses — one
+  payment, one cash book entry, one ledger posting — with the receipt required as everywhere money is recorded by hand.
+  It needs `transactions.create_manual`, and a booking's invoice is paid on its booking, where it belongs.
+- **Send reminder** is the SMS or email link on the row, written with the number and the amount still owed, sent from
+  the staff member's own device — nothing is sent by the system, so nothing is logged.
+- The older screen is now **Payments & cash book**: with Invoices beside it, two entries both called "invoices" in the
+  sidebar would have said nothing.
+- API: `GET/POST /admin/invoices`, `GET/PUT /admin/invoices/{id}`, `POST /admin/invoices/{id}/issue`. Reading needs
+  `payments.view`, writing `invoices.manage`.
+
+Still to come: the extra print sizes (A5, POS slip, delivery receipt) beside the A4 invoice.
 
 ## 6. Carrying the books across (next)
 

@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InvoiceItem extends Model
 {
-    protected $fillable = ['kind', 'title_en', 'title_bn', 'detail', 'note', 'quantity', 'unit_price', 'line_total', 'sort_order'];
+    protected $fillable = ['kind', 'title_en', 'title_bn', 'detail', 'note', 'quantity', 'unit_price', 'discount_amount', 'vat_rate', 'vat_amount', 'line_total', 'sort_order'];
 
     protected function casts(): array
     {
-        return ['quantity' => 'decimal:2', 'unit_price' => 'decimal:2', 'line_total' => 'decimal:2'];
+        return ['quantity' => 'decimal:2', 'unit_price' => 'decimal:2', 'discount_amount' => 'decimal:2', 'vat_rate' => 'decimal:2', 'vat_amount' => 'decimal:2', 'line_total' => 'decimal:2'];
     }
 
     protected static function booted(): void

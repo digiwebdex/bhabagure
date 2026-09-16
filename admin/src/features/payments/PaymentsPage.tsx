@@ -25,7 +25,7 @@ const lastDay = (month: string) => {
 }
 
 /**
- * Payments & invoices (docs/phase-5-admin-core.md §4.6): the company balance (only with its permission — the API
+ * Payments & cash book (docs/phase-5-admin-core.md §4.6): the company balance (only with its permission — the API
  * refuses it otherwise), the month's money by method, online payments to review, the cash book, manual cash in/out and
  * deals. Every figure comes from the append-only cash book and journal.
  */

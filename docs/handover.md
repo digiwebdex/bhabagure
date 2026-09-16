@@ -39,6 +39,13 @@ are corrected by reversing, never editing), and two reports, **Account transacti
 downloadable as CSV. `accounts.view` opens them, `accounts.manage` edits accounts and `journal.post` writes entries; the
 accountant holds all three, an admin may look.
 
+Phase 9 also adds **Invoices**: a list with tabs for unpaid, partly paid, paid, overdue and drafts, and a builder for
+invoices staff write themselves — a customer found by name or number (or a name and number that make the record), as
+many lines as it needs with a per-line discount and VAT rate, a discount on the whole invoice, a due date and the words
+printed at the foot. It is a draft, out of the books and freely changed, until it is issued; issuing numbers it, posts
+it to the journal and freezes the figures, and a mistake is then voided and written again. Reading the list needs
+`payments.view`, writing needs `invoices.manage`.
+
 ---
 
 ## 0. At a glance
@@ -636,9 +643,9 @@ So nobody is surprised. None of these exists in v1.0 unless a line says otherwis
 - **Refunds:** no refund or credit-note workflow.
   - An online payment is refunded in the SSLCommerz panel.
   - A staff-recorded payment is corrected with *Reverse* and a reason.
-- **Accounting and reports:** the double-entry journal is kept, but it has no screens for the chart of accounts, trial
-  balance, ageing or VAT/tax returns. There is no reports module and no CSV or Excel export. Supplier costs and profit
-  per tour aren't recorded.
+- **Accounting and reports:** the chart of accounts, journal entries, account transactions and the general ledger are
+  built (Phase 9), with CSV download. Still missing: ageing, VAT and tax returns, supplier costs and profit per tour.
+  Invoices print A4 only — no A5, POS slip or delivery receipt.
 - **Operations:** no departure calendar, itinerary builder, manifest or rooming list, on-tour expenses, or departure
   checklist.
 - **Messaging and marketing:**
