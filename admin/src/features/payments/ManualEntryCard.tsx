@@ -48,7 +48,7 @@ export function ManualEntryCard() {
 
   return (
     <Card>
-      <CardTitle bn="ম্যানুয়াল লেনদেন" en="Manual cash in / out" />
+      <CardTitle title="Manual cash in / out" />
       <form
         className="flex flex-col gap-3"
         data-testid="manual-entry"

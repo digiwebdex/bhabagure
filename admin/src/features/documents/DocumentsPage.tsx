@@ -110,7 +110,7 @@ export function DocumentsPage() {
 
       <Card padded={false} className="overflow-hidden">
         <div className="border-b border-app-line p-3.5">
-          <CardTitle bn="যাত্রীর কাগজপত্র" en="Traveller documents" aside={<span className="text-12 text-app-muted">{t('documents.queueNote')}</span>} />
+          <CardTitle title="Traveller documents" aside={<span className="text-12 text-app-muted">{t('documents.queueNote')}</span>} />
         </div>
         {list.isPending ? (
           <Loading />

@@ -24,8 +24,7 @@ export function BonusLedgerCard({ staffId, name }: { staffId: number; name: stri
   return (
     <Card>
       <CardTitle
-        bn="বোনাস অ্যাকাউন্ট"
-        en="Bonus account"
+        title="Bonus account"
         aside={
           ledger.data?.data.actions.credit ? (
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setCrediting(true)}>

@@ -122,7 +122,7 @@ test('a booking shows its messages; staff send a WhatsApp to the number on recor
   await expect(page.getByTestId('notification-row').filter({ hasText: 'New booking alert' }).first()).toContainText('Open booking')
   // What each channel costs this month; WhatsApp and email messages cost nothing per message.
   await expect(page.getByTestId('cost-summary')).toContainText('SMS')
-  await expect(page.getByTestId('notification-row').filter({ hasText: 'Message from staff' }).first().getByTestId('notification-cost')).toHaveText('৳ 0')
+  await expect(page.getByTestId('notification-row').filter({ hasText: 'Message from staff' }).first().getByTestId('notification-cost')).toHaveText('BDT 0')
 })
 
 test('the SMS template shows its part count and estimated cost, and warns above three parts', async ({ page }) => {
@@ -134,15 +134,15 @@ test('the SMS template shows its part count and estimated cost, and warns above 
   await page.getByRole('button', { name: /^Payment received/ }).click()
   const editor = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Payment received', level: 2 }) })
   await editor.getByRole('radio', { name: 'SMS' }).click()
-  await editor.getByRole('radio', { name: 'বাংলা' }).click()
+  await editor.getByRole('radio', { name: 'Bangla' }).click()
   const estimate = editor.getByTestId('sms-estimate')
   await expect(estimate).toContainText('Unicode / Bangla')
-  await expect(estimate).toContainText(/\d parts? · .* · about ৳ 0\.\d\d a message|about ৳ \d/)
+  await expect(estimate).toContainText(/\d parts? · .* · about BDT 0\.\d\d a message|about BDT \d/)
   await expect(estimate.getByRole('alert')).toHaveCount(0)
 
   await editor.getByLabel('SMS text').fill('ক'.repeat(250))
   await expect(estimate).toContainText('4 parts')
-  await expect(estimate).toContainText('৳ 1.40')
+  await expect(estimate).toContainText('BDT 1.40')
   await expect(estimate.getByRole('alert')).toContainText('Longer than 3 parts')
 })
 

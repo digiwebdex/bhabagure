@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { formatBdt, formatBdtCompact, formatDate, formatDateRange, formatNumber, formatPercent, formatRelativeAge, formatWeekdayDate, localizeDigits, type NumberFormatOptions } from '@bhabaghure/format'
 
@@ -18,32 +17,33 @@ export function todayInDhaka(): string {
   return dhaka(new Date().toISOString()).date
 }
 
-/** Binds the shared formatter to the active language. The only way the admin renders numbers. */
+/**
+ * The shared formatter for the staff panel, which is English only (2026-09-16). Amounts carry the code, "BDT 1,53,000":
+ * the taka sign stays on what customers read — the website, the portal and printed invoices.
+ */
 export function useFormat() {
-  const { i18n } = useTranslation()
-  const locale: AppLocale = i18n.resolvedLanguage === 'en' ? 'en' : 'bn'
+  const locale: AppLocale = 'en'
 
   return useMemo(
     () => ({
       locale,
-      // Decimals only: "BDT" is for SMS text, which the API writes; every screen shows "৳".
-      bdt: (value: number | string, options?: NumberFormatOptions) => formatBdt(value, locale, { decimals: options?.decimals }),
-      /** Summary figures: '৳ 14.2L' / '৳ ১৪.২ লাখ', '৳ 2.4Cr' / '৳ ২.৪ কোটি'; below one lakh the full amount. */
-      bdtCompact: (value: number | string) => formatBdtCompact(value, locale),
+      bdt: (value: number | string, options?: NumberFormatOptions) => formatBdt(value, locale, { decimals: options?.decimals, currency: 'code' }),
+      /** Summary figures: 'BDT 14.2L', 'BDT 2.4Cr'; below one lakh the full amount. */
+      bdtCompact: (value: number | string) => formatBdtCompact(value, locale, { currency: 'code' }),
       number: (value: number | string, options?: NumberFormatOptions) => formatNumber(value, locale, options),
       percent: (value: number) => formatPercent(value, locale),
-      /** 'YYYY-MM-DD' (or an ISO timestamp, taken on its Dhaka date) → '24 Sep 2026' / '২৪ সেপ্টেম্বর ২০২৬'. */
+      /** 'YYYY-MM-DD' (or an ISO timestamp, taken on its Dhaka date) → '24 Sep 2026'. */
       date: (iso: string) => formatDate(iso.length > 10 ? dhaka(iso).date : iso, locale),
-      /** 'YYYY-MM' → 'September 2026' / 'সেপ্টেম্বর ২০২৬' (the date's day dropped). */
+      /** 'YYYY-MM' → 'September 2026' (the date's day dropped). */
       month: (yearMonth: string) => formatDate(`${yearMonth}-01`, locale).replace(/^\S+\s/u, ''),
-      /** An ISO timestamp in Dhaka time → '24 Oct 2026, 10:00' / '২৪ অক্টোবর ২০২৬, ১০:০০'. */
+      /** An ISO timestamp in Dhaka time → '24 Oct 2026, 10:00'. */
       dateTime: (iso: string) => {
         const { date, time } = dhaka(iso)
         return `${formatDate(date, locale)}, ${localizeDigits(time, locale)}`
       },
-      /** Identifiers (phone, codes): localized digits, never grouped. */
+      /** Identifiers (phone, codes): never grouped. */
       digits: (text: string) => localizeDigits(text, locale),
-      /** How long something has waited, from whole minutes: '26 h' / '২৬ ঘণ্টা'. */
+      /** How long something has waited, from whole minutes: '26 h'. */
       relativeAge: (minutes: number) => formatRelativeAge(minutes, locale),
       /** 'Tuesday, 22 September 2026' — for 'YYYY-MM-DD', or today's Dhaka date when omitted. */
       weekdayDate: (iso?: string) => formatWeekdayDate(iso ?? todayInDhaka(), locale),

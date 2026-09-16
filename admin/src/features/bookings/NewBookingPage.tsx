@@ -114,7 +114,7 @@ export function NewBookingPage() {
       >
         <div className="flex flex-col gap-admin-gap">
           <Card>
-            <CardTitle bn="গ্রাহক" en="Customer" />
+            <CardTitle title="Customer" />
             <Chips label={t('newBooking.customer')} value={mode} onChange={setMode} options={[{ value: 'new', label: t('newBooking.newLead') }, { value: 'existing', label: t('newBooking.existing') }]} />
             {mode === 'new' ? (
               <div className="grid-auto-fit-200 grid gap-3">
@@ -152,7 +152,7 @@ export function NewBookingPage() {
           </Card>
 
           <Card>
-            <CardTitle bn="যাত্রী" en="Travellers" aside={<span className="text-12 text-app-muted">{t('newBooking.passportsLater')}</span>} />
+            <CardTitle title="Travellers" aside={<span className="text-12 text-app-muted">{t('newBooking.passportsLater')}</span>} />
             {travellers.map((traveller, index) => (
               <fieldset key={index} className="m-0 flex flex-col gap-2.5 rounded-10 border border-app-line p-3">
                 <legend className="px-1 text-13 font-semibold">{index === 0 ? t('newBooking.leadTraveller') : t('newBooking.traveller', { n: number(index + 1) })}</legend>
@@ -176,7 +176,7 @@ export function NewBookingPage() {
         </div>
 
         <Card>
-          <CardTitle bn="প্যাকেজ ও মূল্য" en="Package & price" />
+          <CardTitle title="Package & price" />
           <SelectInput
             label={t('bookings.package')}
             value={slug}
@@ -184,7 +184,7 @@ export function NewBookingPage() {
               setSlug(value)
               setTravelDate('')
             }}
-            options={[{ value: '', label: t('common.choose') }, ...options.data.packages.map((p) => ({ value: p.slug, label: (locale === 'bn' ? p.title_bn : null) || p.title_en }))]}
+            options={[{ value: '', label: t('common.choose') }, ...options.data.packages.map((p) => ({ value: p.slug, label: p.title_en || p.title_bn || p.slug }))]}
             error={fieldError('package_slug')}
           />
           {pkg && pkg.departures.length > 0 ? (
@@ -208,7 +208,7 @@ export function NewBookingPage() {
               />
             ) : null}
             <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
-            <SelectInput label={t('newBooking.messagesIn')} value={bookingLocale} onChange={(value) => setBookingLocale(value as 'bn' | 'en')} options={[{ value: 'bn', label: 'বাংলা' }, { value: 'en', label: 'English' }]} />
+            <SelectInput label={t('newBooking.messagesIn')} value={bookingLocale} onChange={(value) => setBookingLocale(value as 'bn' | 'en')} options={[{ value: 'bn', label: 'Bangla' }, { value: 'en', label: 'English' }]} />
           </div>
           {options.data.addons.length > 0 ? (
             <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
@@ -217,7 +217,7 @@ export function NewBookingPage() {
                 <label key={addon.code} className="flex items-center justify-between gap-3 text-14">
                   <span className="flex items-center gap-2">
                     <input type="checkbox" checked={addons.includes(addon.code)} onChange={(event) => setAddons((all) => (event.target.checked ? [...all, addon.code] : all.filter((code) => code !== addon.code)))} />
-                    {(locale === 'bn' ? addon.name_bn : null) || addon.name_en}
+                    {addon.name_en || addon.name_bn}
                   </span>
                   <span className="font-display text-13 text-app-muted">{bdt(addon.price)}</span>
                 </label>

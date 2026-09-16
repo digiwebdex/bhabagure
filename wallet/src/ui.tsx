@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 /** The prototype's frame: the bar with the wordmark and the isolation badge, the page, and the footer note. */
 export function Shell({ children, actions }: { children?: ReactNode; actions?: ReactNode }) {
-  const { t, i18n } = useTranslation()
-  const en = i18n.resolvedLanguage === 'en'
+  const { t } = useTranslation()
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -19,16 +18,6 @@ export function Shell({ children, actions }: { children?: ReactNode; actions?: R
               <span aria-hidden className="size-1.75 rounded-full bg-wallet-violet" />
               {t('isolationBadge')}
             </span>
-            <button
-              type="button"
-              onClick={() => void i18n.changeLanguage(en ? 'bn' : 'en')}
-              className="flex cursor-pointer items-center gap-1.75 rounded-pill border border-wallet-input bg-transparent px-3.5 py-1.75 text-13 font-bold text-wallet-text"
-              aria-label={t('switchLanguage')}
-            >
-              <span className={en ? 'opacity-40' : ''}>বাং</span>
-              <span aria-hidden className="h-3 w-px bg-wallet-input" />
-              <span className={en ? '' : 'opacity-40'}>EN</span>
-            </button>
             {actions}
           </div>
         </div>

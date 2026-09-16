@@ -1,4 +1,3 @@
-import i18n from '../i18n'
 
 /**
  * The wallet API, on this page's own origin (docs/phase-7-hr-attendance-bonus-wallet.md §8). The session is the
@@ -38,7 +37,7 @@ async function send(path: string, init: RequestInit = {}): Promise<Response> {
     headers: {
       Accept: 'application/json',
       'X-Wallet-Request': '1',
-      'X-Locale': i18n.resolvedLanguage === 'en' ? 'en' : 'bn',
+      'X-Locale': 'en',
       ...(init.body === undefined || isForm ? {} : { 'Content-Type': 'application/json' }),
     },
   })

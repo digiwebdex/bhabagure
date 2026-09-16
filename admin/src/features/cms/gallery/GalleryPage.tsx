@@ -12,7 +12,7 @@ type GalleryForm = Pick<GalleryItem, 'kind' | 'url' | 'caption_bn' | 'caption_en
 
 export function GalleryPage() {
   const { t } = useTranslation()
-  const { number, locale } = useFormat()
+  const { number } = useFormat()
 
   return (
     <PublishedList<GalleryItem, GalleryForm>
@@ -32,7 +32,7 @@ export function GalleryPage() {
                 <Badge tone={item.kind === 'reel' ? 'blue' : 'slate'}>{t(`gallery.kinds.${item.kind}`)}</Badge>
                 {item.view_count !== null ? <span className="text-12 text-app-muted">{t('gallery.views', { n: number(item.view_count) })}</span> : null}
               </span>
-              <span className="truncate text-13">{(locale === 'bn' ? item.caption_bn : item.caption_en) ?? item.url}</span>
+              <span className="truncate text-13">{item.caption_en || item.caption_bn || item.url}</span>
             </span>
           </>
         ),

@@ -124,14 +124,14 @@ function Kpi({ label, value, note, tone, to, title, testId }: { label: string; v
 
 function AlertsCard({ alerts }: { alerts: Alert[] }) {
   const { t } = useTranslation()
-  const { number, date, dateTime, locale } = useFormat()
+  const { number, date, dateTime } = useFormat()
 
   const describe = (alert: Alert): { text: string; meta: string; color: string } => {
     switch (alert.kind) {
       case 'passports_missing':
         return {
           text: t('dashboard.alert.passports', { count: alert.count, n: number(alert.count), reference: alert.reference }),
-          meta: `${(locale === 'bn' ? alert.package_bn : null) || alert.package_en} · ${t('dashboard.departs', { date: date(alert.date) })} · ${alert.names.join(', ')}`,
+          meta: `${alert.package_en || alert.package_bn} · ${t('dashboard.departs', { date: date(alert.date) })} · ${alert.names.join(', ')}`,
           color: 'bg-red',
         }
       case 'whatsapp_disconnected':
@@ -147,7 +147,7 @@ function AlertsCard({ alerts }: { alerts: Alert[] }) {
 
   return (
     <Card>
-      <CardTitle bn="অ্যালার্ট" en="Alerts" />
+      <CardTitle title="Alerts" />
       {alerts.length === 0 ? (
         <p className="m-0 text-13 text-app-muted">{t('dashboard.noAlerts')}</p>
       ) : (
@@ -174,11 +174,11 @@ function AlertsCard({ alerts }: { alerts: Alert[] }) {
 
 function DeparturesCard({ data }: { data: Dashboard }) {
   const { t } = useTranslation()
-  const { number, date, locale } = useFormat()
+  const { number, date } = useFormat()
 
   return (
     <Card>
-      <CardTitle bn="আসন্ন যাত্রা" en="Upcoming departures · seats left" />
+      <CardTitle title="Upcoming departures · seats left" />
       {data.upcoming.length === 0 ? (
         <p className="m-0 text-13 text-app-muted">{t('dashboard.noDepartures')}</p>
       ) : (
@@ -189,7 +189,7 @@ function DeparturesCard({ data }: { data: Dashboard }) {
               <li key={departure.id} className="flex flex-col gap-1.5 border-b border-app-line py-2.5 last:border-b-0">
                 <span className="flex justify-between gap-2.5 text-14">
                   <Link to={`/packages/${departure.package_id}`} className="truncate font-medium text-app-text">
-                    {(locale === 'bn' ? departure.title_bn : null) || departure.title_en}
+                    {departure.title_en || departure.title_bn}
                   </Link>
                   <span className="font-display whitespace-nowrap text-app-muted">{date(departure.date)}</span>
                 </span>
@@ -216,19 +216,19 @@ function DeparturesCard({ data }: { data: Dashboard }) {
 
 function DestinationsCard({ rows }: { rows: NonNullable<Dashboard['by_destination']> }) {
   const { t } = useTranslation()
-  const { bdtCompact, bdt, locale } = useFormat()
+  const { bdtCompact, bdt } = useFormat()
   const top = Math.max(1, ...rows.map((row) => row.amount))
 
   return (
     <Card>
-      <CardTitle bn="গন্তব্যভিত্তিক আদায়" en="Collected by destination" aside={<span className="text-12 text-app-muted">{t('dashboard.thisMonth')}</span>} />
+      <CardTitle title="Collected by destination" aside={<span className="text-12 text-app-muted">{t('dashboard.thisMonth')}</span>} />
       {rows.length === 0 ? (
         <p className="m-0 text-13 text-app-muted">{t('dashboard.nothingCollected')}</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="dashboard-destinations">
           {rows.map((row) => (
             <li key={row.destination_id ?? 'other'} className="grid grid-cols-[minmax(72px,0.8fr)_minmax(90px,1fr)_minmax(72px,0.8fr)] items-center gap-2.5 text-14">
-              <span className="truncate">{row.destination_id === null ? t('dashboard.other') : (locale === 'bn' ? row.name_bn : row.name_en) || row.name_en}</span>
+              <span className="truncate">{row.destination_id === null ? t('dashboard.other') : (row.name_en || row.name_bn) || row.name_en}</span>
               <span className="h-2.5 overflow-hidden rounded-5 bg-app-line">
                 <span className="block h-full bg-blue" style={{ width: `${Math.max(0, Math.round((row.amount / top) * 100))}%` }} />
               </span>
@@ -273,7 +273,7 @@ function RecentBookings({ rows }: { rows: BookingSummary[] }) {
         <div className="flex max-w-64 flex-col">
           <span className="font-medium">{b.customer?.name ?? '—'}</span>
           <span className="truncate text-12 text-app-muted">
-            {(locale === 'bn' ? b.package_title_bn : null) || b.package_title_en} · {b.travel_start ? date(b.travel_start) : '—'} · {t('bookings.paxCount', { count: b.pax_count, n: number(b.pax_count) })}
+            {b.package_title_en || b.package_title_bn} · {b.travel_start ? date(b.travel_start) : '—'} · {t('bookings.paxCount', { count: b.pax_count, n: number(b.pax_count) })}
           </span>
         </div>
       ),
@@ -294,7 +294,7 @@ function RecentBookings({ rows }: { rows: BookingSummary[] }) {
   return (
     <Card padded={false} className="overflow-hidden">
       <div className="flex items-baseline justify-between gap-2 border-b border-app-line px-4.5 py-3.5">
-        <CardTitle bn="সাম্প্রতিক বুকিং" en="Recent bookings" />
+        <CardTitle title="Recent bookings" />
         <Link to="/bookings" className="text-13">
           {t('dashboard.allBookings')}
         </Link>

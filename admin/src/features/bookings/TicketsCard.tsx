@@ -40,8 +40,7 @@ export function TicketsCard({ booking }: { booking: BookingDetail }) {
   return (
     <Card>
       <CardTitle
-        bn="ই-টিকেট"
-        en="E-tickets"
+        title="E-tickets"
         aside={
           booking.actions.manage_tickets ? (
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setAdding(true)}>

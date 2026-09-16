@@ -85,13 +85,12 @@ export function Shell() {
 }
 
 function SidebarContent() {
-  const { t, i18n } = useTranslation()
-  const { locale, number } = useFormat()
+  const { t } = useTranslation()
+  const { number } = useFormat()
   const { theme, toggle } = useTheme()
   const { can, signOut } = useAuth()
   const staff = useStaff()
   const counts = useNavCounts(NAV_GROUPS.some((group) => group.items.some((item) => item.badge && can(...item.permissions))))
-  const isBn = locale === 'bn'
 
   const controlClass = 'flex cursor-pointer items-center gap-2 rounded-10 border border-white/15 bg-transparent px-3 py-2 text-left text-13 text-inherit'
   const initials = staff.name
@@ -106,7 +105,7 @@ function SidebarContent() {
       <div className="flex flex-col gap-1.75 px-2 pt-1 pb-5">
         <img src="/brand/logo-wordmark-light.png" alt={t('shell.brand')} className="block h-auto w-full max-w-sidebar-logo" />
         <span className="pl-0.5 font-display text-10 tracking-eyebrow-wide text-orange uppercase">
-          {t(`roles.${staff.is_super_admin ? 'super_admin' : (staff.role ?? 'staff')}`, { defaultValue: (isBn ? staff.role_name_bn : staff.role_name_en) ?? staff.role_name_en ?? '' })}
+          {t(`roles.${staff.is_super_admin ? 'super_admin' : (staff.role ?? 'staff')}`, { defaultValue: staff.role_name_en ?? '' })}
         </span>
       </div>
 
@@ -132,8 +131,7 @@ function SidebarContent() {
                         <>
                           <span className={`flex size-5.5 shrink-0 items-center justify-center rounded-6 font-display text-11 font-extrabold text-white ${isActive ? 'bg-orange' : 'bg-white/10'}`}>{item.icon}</span>
                           <span className="flex min-w-0 flex-1 flex-col leading-1.4">
-                            <span>{t(`nav.items.${item.key}`, { lng: isBn ? 'bn' : 'en' })}</span>
-                            {isBn ? <span className="font-display text-11 opacity-70">{t(`nav.items.${item.key}`, { lng: 'en' })}</span> : null}
+                            <span>{t(`nav.items.${item.key}`)}</span>
                           </span>
                         </>
                       )}
@@ -158,11 +156,6 @@ function SidebarContent() {
       </nav>
 
       <div className="mt-auto flex shrink-0 flex-col gap-2 px-2 pt-6">
-        <button type="button" className={controlClass} onClick={() => void i18n.changeLanguage(isBn ? 'en' : 'bn')}>
-          <span className={isBn ? undefined : 'opacity-40'}>বাংলা</span>
-          <span aria-hidden className="h-2.75 w-px bg-white/25" />
-          <span className={isBn ? 'opacity-40' : undefined}>English</span>
-        </button>
         <button type="button" className={controlClass} onClick={toggle}>
           {theme === 'light' ? t('shell.darkMode') : t('shell.lightMode')}
         </button>

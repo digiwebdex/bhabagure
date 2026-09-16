@@ -26,22 +26,22 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
   await page.getByLabel('Package', { exact: true }).selectOption(MUSTANG)
   await page.getByLabel('Travellers', { exact: true }).selectOption('2')
   await page.getByLabel('Valid for', { exact: true }).selectOption('7')
-  await expect(page.getByTestId('quotation-total')).toHaveText('৳ 1,53,000')
+  await expect(page.getByTestId('quotation-total')).toHaveText('BDT 1,53,000')
 
   // A discount shows at once, priced the same way the API prices it.
-  await page.getByLabel('Discount (৳)').fill('3000')
-  await expect(page.getByTestId('quotation-total')).toHaveText('৳ 1,49,940')
-  await page.getByLabel('Discount (৳)').fill('0')
-  await expect(page.getByTestId('quotation-total')).toHaveText('৳ 1,53,000')
+  await page.getByLabel('Discount (BDT)').fill('3000')
+  await expect(page.getByTestId('quotation-total')).toHaveText('BDT 1,49,940')
+  await page.getByLabel('Discount (BDT)').fill('0')
+  await expect(page.getByTestId('quotation-total')).toHaveText('BDT 1,53,000')
 
-  await page.getByRole('button', { name: 'Send quote · ৳ 1,53,000' }).click()
+  await page.getByRole('button', { name: 'Send quote · BDT 1,53,000' }).click()
   const sent = page.getByText(/QT-\d{4,} sent by WhatsApp and email/)
   await expect(sent).toBeVisible()
   const number = (await sent.textContent())!.match(/QT-\d{4,}/)![0]
 
   const row = page.getByTestId('quotations-table').locator('tbody tr').filter({ hasText: number })
   await expect(row).toContainText(name)
-  await expect(row).toContainText('৳ 1,53,000')
+  await expect(row).toContainText('BDT 1,53,000')
   await expect(row).toContainText('Sent')
   await expect(row.getByRole('link', { name: `WhatsApp — ${number}` })).toHaveAttribute('href', /^https:\/\/wa\.me\/8801\d{9}\?text=/)
 
@@ -53,7 +53,7 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
   await page.goto('/quotations')
   await page.getByTestId('quotations-table').locator('tbody tr').filter({ hasText: number }).getByRole('link', { name: `Convert to booking — ${number}` }).click(FIRST_LOAD)
   const dialog = page.getByRole('dialog')
-  await expect(dialog).toContainText('৳ 1,53,000')
+  await expect(dialog).toContainText('BDT 1,53,000')
   // No date was fixed on the quotation: the booking needs one.
   await expect(dialog.getByRole('button', { name: 'Create booking' })).toBeDisabled()
   if (await dialog.getByLabel('Departure', { exact: true }).count()) await dialog.getByLabel('Departure', { exact: true }).selectOption({ index: 1 })
@@ -66,7 +66,7 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
   await expect(page.getByRole('heading', { level: 1 })).toContainText(/BH-\d{4}-\d{3,}/, FIRST_LOAD)
   const reference = (await page.getByRole('heading', { level: 1 }).textContent())!.match(/BH-\d{4}-\d{3,}/)?.[0]
   expect(reference).toBeTruthy()
-  await expect(page.getByText('৳ 1,53,000').first()).toBeVisible()
+  await expect(page.getByText('BDT 1,53,000').first()).toBeVisible()
 
   await page.goto('/quotations?status=converted')
   const booked = page.getByTestId('quotations-table').locator('tbody tr').filter({ hasText: number })
@@ -120,7 +120,7 @@ test('revising a sent quotation opens a new draft that sending replaces the orig
   // Three travellers now: re-priced live, saved, sent.
   await page.getByLabel('Travellers', { exact: true }).selectOption('3')
   const total = (await page.getByTestId('quotation-total').textContent())!.trim()
-  expect(total).not.toBe('৳ 1,53,000')
+  expect(total).not.toBe('BDT 1,53,000')
   await page.getByRole('button', { name: 'Save draft' }).click()
   await expect(page.getByText('Saved')).toBeVisible()
   await page.getByTestId('quotation-actions').getByRole('button', { name: 'Send quote' }).click()

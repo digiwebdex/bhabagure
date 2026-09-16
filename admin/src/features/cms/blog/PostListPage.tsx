@@ -18,7 +18,7 @@ import { toneClass } from './tone'
 
 export function PostListPage() {
   const { t } = useTranslation()
-  const { date, locale } = useFormat()
+  const { date } = useFormat()
   const [status, setStatus] = useState<ContentStatus | 'all'>('all')
   const [category, setCategory] = useState('')
   const [search, setSearch] = useState('')
@@ -31,7 +31,7 @@ export function PostListPage() {
       <div className="flex flex-col gap-2.5">
         <Chips label={t('common.status')} value={status} onChange={setStatus} options={[{ value: 'all', label: t('common.all') }, { value: 'published', label: t('status.published') }, { value: 'draft', label: t('status.draft') }]} />
         {categories.data ? (
-          <Chips label={t('blog.category')} value={category} onChange={setCategory} options={[{ value: '', label: t('blog.allCategories') }, ...categories.data.data.map((c) => ({ value: c.slug, label: locale === 'bn' ? c.name_bn : c.name_en }))]} />
+          <Chips label={t('blog.category')} value={category} onChange={setCategory} options={[{ value: '', label: t('blog.allCategories') }, ...categories.data.data.map((c) => ({ value: c.slug, label: c.name_en || c.name_bn }))]} />
         ) : null}
       </div>
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
@@ -49,10 +49,10 @@ export function PostListPage() {
                     <MediaThumb media={post.cover} className="size-14" />
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="flex flex-wrap items-center gap-2">
-                        {post.category ? <span className={`rounded-pill px-2 py-0.5 font-display text-11 font-extrabold uppercase ${toneClass[post.category.tone]}`}>{locale === 'bn' ? post.category.name_bn : post.category.name_en}</span> : null}
+                        {post.category ? <span className={`rounded-pill px-2 py-0.5 font-display text-11 font-extrabold uppercase ${toneClass[post.category.tone]}`}>{post.category.name_en || post.category.name_bn}</span> : null}
                         {post.published_at ? <span className="text-12 text-app-muted">{date(post.published_at)}</span> : null}
                       </span>
-                      <span className="truncate text-14 font-medium">{locale === 'bn' ? post.title_bn : post.title_en}</span>
+                      <span className="truncate text-14 font-medium">{post.title_en || post.title_bn}</span>
                     </span>
                     <StatusBadge status={post.is_scheduled ? 'scheduled' : post.status} />
                   </Link>
@@ -69,19 +69,19 @@ export function PostListPage() {
 
 function CategoriesCard() {
   const { t } = useTranslation()
-  const { number, locale } = useFormat()
+  const { number } = useFormat()
   const categories = useCategories()
   const [editing, setEditing] = useState<BlogCategory | 'new' | null>(null)
 
   return (
     <Card>
-      <CardTitle bn="ক্যাটাগরি" en="Categories" aside={<button type="button" className={buttonClass('outline', 'sm')} onClick={() => setEditing('new')}>{t('common.add')}</button>} />
+      <CardTitle title="Categories" aside={<button type="button" className={buttonClass('outline', 'sm')} onClick={() => setEditing('new')}>{t('common.add')}</button>} />
       {categories.isPending ? <Loading /> : categories.isError ? <ErrorNotice error={categories.error} /> : (
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
           {categories.data.data.map((category) => (
             <li key={category.id}>
               <button type="button" onClick={() => setEditing(category)} className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-10 border-0 bg-app-surface-2 px-3 py-2.5 text-left text-14 text-app-text">
-                <span className={`rounded-pill px-2 py-0.5 font-display text-11 font-extrabold uppercase ${toneClass[category.tone]}`}>{locale === 'bn' ? category.name_bn : category.name_en}</span>
+                <span className={`rounded-pill px-2 py-0.5 font-display text-11 font-extrabold uppercase ${toneClass[category.tone]}`}>{category.name_en || category.name_bn}</span>
                 <span className="text-12 text-app-muted">{t('blog.postCount', { count: category.posts_count ?? 0, n: number(category.posts_count ?? 0) })}</span>
               </button>
             </li>

@@ -14,7 +14,7 @@ export function MyPayslipsCard() {
 
   return (
     <Card>
-      <CardTitle bn="আমার পে-স্লিপ" en="My payslips" />
+      <CardTitle title="My payslips" />
       {payslips.isPending ? (
         <Loading />
       ) : payslips.isError ? (

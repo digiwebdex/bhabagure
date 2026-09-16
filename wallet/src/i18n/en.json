@@ -36,8 +36,11 @@
   },
   "cash": {
     "kind": "Cash in or out",
-    "kinds": { "in": "Cash in", "out": "Cash out" },
-    "amount": "Amount (৳)",
+    "kinds": {
+      "in": "Cash in",
+      "out": "Cash out"
+    },
+    "amount": "Amount (BDT)",
     "sourceIn": "Which business or source",
     "sourceOut": "Which account it came from",
     "manageSources": "Add a business or source",
@@ -91,7 +94,11 @@
   },
   "history": {
     "title": "Transaction history",
-    "filters": { "all": "All", "in": "Cash in", "out": "Cash out" },
+    "filters": {
+      "all": "All",
+      "in": "Cash in",
+      "out": "Cash out"
+    },
     "empty": "No transactions here.",
     "date": "Date",
     "reference": "Reference",

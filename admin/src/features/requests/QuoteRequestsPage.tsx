@@ -21,7 +21,7 @@ export type RequestSpec<T extends QuoteRequest> = {
   kind: RequestKind
   /** i18n namespace: air.*, hotel.* */
   ns: string
-  cardTitle: { bn: string; en: string }
+  cardTitle: string
   testId: string
   /** The request in a few words: "Dhaka → Bangkok", "Cox's Bazar". */
   summary: (row: T) => string
@@ -198,7 +198,7 @@ export function QuoteRequestsPage<T extends QuoteRequest>({ spec }: { spec: Requ
 
       <Card padded={false} className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-app-line p-3.5">
-          <CardTitle bn={spec.cardTitle.bn} en={spec.cardTitle.en} aside={<span className="text-12 text-app-muted">{t(`${ns}.queueNote`)}</span>} />
+          <CardTitle title={spec.cardTitle} aside={<span className="text-12 text-app-muted">{t(`${ns}.queueNote`)}</span>} />
           <input type="search" value={filters.search} onChange={(event) => set({ search: event.target.value })} placeholder={t(`${ns}.search`)} aria-label={t(`${ns}.search`)} className={controlClass()} />
         </div>
         {list.isPending ? (

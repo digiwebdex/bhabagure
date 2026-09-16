@@ -58,11 +58,11 @@ test.describe('packages', () => {
     await page.getByLabel('Title (English)', { exact: true }).fill('Pokhara Lake Escape')
     await expect(page.getByLabel('Web address (slug)')).toHaveValue('pokhara-lake-escape')
     await page.getByLabel('Package code').fill('Nepal 77')
-    await page.getByLabel('Destination').selectOption({ label: 'নেপাল · Nepal' })
+    await page.getByLabel('Destination').selectOption({ label: 'Nepal' })
     await page.getByLabel('Days').fill('৪') // Bengali digits are accepted
     await page.getByLabel('Nights').fill('3')
     await page.getByLabel('Regular price per person').fill('32000')
-    await expect(page.getByText('৳ 32,000 per person')).toBeVisible()
+    await expect(page.getByText('BDT 32,000 per person')).toBeVisible()
 
     await page.getByRole('button', { name: '+ Add day' }).click()
     await page.getByLabel('Title (English)', { exact: true }).nth(1).fill('DHAKA ➔ POKHARA')
@@ -139,7 +139,7 @@ test.describe('website content', () => {
     await page.getByLabel('Title (English)', { exact: true }).fill('Sajek in winter')
     await page.getByLabel('Excerpt (Bangla)').fill('মেঘের দেশে তিন দিন।')
     await page.getByLabel('Excerpt (English)').fill('Three days above the clouds.')
-    await page.getByLabel('Category').selectOption({ label: 'গন্তব্য · Destinations' })
+    await page.getByLabel('Category').selectOption({ label: 'Destinations' })
 
     await page.locator('.ProseMirror').nth(0).click()
     await page.keyboard.type('মেঘ আর পাহাড়।')
@@ -181,8 +181,8 @@ test.describe('website content', () => {
 
     const example = page.getByRole('table')
     // 1 traveller in a shared room: list price, no uplift. 75,000 + 2% service = 76,500.
-    await expect(example.getByRole('row').nth(1)).toContainText('৳ 75,000')
-    await expect(example.getByRole('row').nth(1)).toContainText('৳ 76,500')
+    await expect(example.getByRole('row').nth(1)).toContainText('BDT 75,000')
+    await expect(example.getByRole('row').nth(1)).toContainText('BDT 76,500')
 
     await page.getByLabel('Supplement % of the per-person rate').fill('15')
     await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -205,19 +205,19 @@ test.describe('website content', () => {
     await dialog.getByLabel('Visa type (English)').fill('eVisa')
     await dialog.getByLabel('Country code').fill('my')
     await expect(dialog.getByLabel('Country code')).toHaveValue('MY')
-    await dialog.getByLabel('Price per person (৳)').fill('4200')
-    await expect(dialog.getByText('৳ 4,200 · Including our service charge.', { exact: false })).toBeVisible()
+    await dialog.getByLabel('Price per person (BDT)').fill('4200')
+    await expect(dialog.getByText('BDT 4,200 · Including our service charge.', { exact: false })).toBeVisible()
     await dialog.getByLabel('Requirements (English)').fill('Passport valid for 6 months\nOne photo, white background')
     await dialog.getByRole('button', { name: 'Save' }).click()
     const row = page.getByRole('listitem').filter({ hasText: 'Malaysia · eVisa' })
-    await expect(row).toContainText('৳ 4,200 · no processing time · 2 requirements')
+    await expect(row).toContainText('BDT 4,200 · no processing time · 2 requirements')
 
     await row.getByRole('button', { name: 'Publish' }).click()
     await expect(page.getByText('Say how long processing takes.')).toBeVisible()
     await expect(page.getByText('List the requirements in both languages, one per line.')).toBeVisible()
     expect((await (await request.get(`${API_URL}/api/v1/public/visas`)).json()).data).toHaveLength(0)
 
-    await row.getByText('৳ 4,200 · no processing time').click()
+    await row.getByText('BDT 4,200 · no processing time').click()
     dialog = page.getByRole('dialog')
     await dialog.getByLabel('Processing time (English)').fill('3–5 working days')
     await dialog.getByLabel('Requirements (Bangla)').fill('৬ মাস মেয়াদি পাসপোর্ট\nসাদা ব্যাকগ্রাউন্ডে একটি ছবি')

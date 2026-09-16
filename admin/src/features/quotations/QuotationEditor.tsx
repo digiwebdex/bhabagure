@@ -66,7 +66,7 @@ type Draft = ReturnType<typeof useQuotationForm>
 
 export function QuotationFields({ draft, options, fieldError }: { draft: Draft; options: QuotationOptions; fieldError: (name: string) => string | undefined }) {
   const { t } = useTranslation()
-  const { bdt, number, date, locale } = useFormat()
+  const { bdt, number, date } = useFormat()
   const { form, set, pkg } = draft
   if (!form) return null
 
@@ -76,7 +76,7 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
         label={t('bookings.package')}
         value={form.package_slug}
         onChange={(package_slug) => set({ package_slug, travel_date: '', hotel_category: null })}
-        options={[{ value: '', label: t('common.choose') }, ...options.packages.map((p) => ({ value: p.slug, label: (locale === 'bn' ? p.title_bn : null) || p.title_en }))]}
+        options={[{ value: '', label: t('common.choose') }, ...options.packages.map((p) => ({ value: p.slug, label: p.title_en || p.title_bn || p.slug }))]}
         error={fieldError('package_slug')}
       />
       {pkg && pkg.departures.length > 0 ? (
@@ -128,7 +128,7 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
             <label key={addon.code} className="flex items-center justify-between gap-3 text-14">
               <span className="flex items-center gap-2">
                 <input type="checkbox" checked={form.addons.includes(addon.code)} onChange={(event) => set({ addons: event.target.checked ? [...form.addons, addon.code] : form.addons.filter((code) => code !== addon.code) })} />
-                {(locale === 'bn' ? addon.name_bn : null) || addon.name_en}
+                {addon.name_en || addon.name_bn}
               </span>
               <span className="font-display text-13 text-app-muted">{bdt(addon.price)}</span>
             </label>

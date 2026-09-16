@@ -54,7 +54,7 @@ export function StaffProfilePage() {
           <AccessCard staff={staff} />
           {can('payroll.view') || can('payroll.manage') ? (
             <Card>
-              <CardTitle bn="মূল বেতন" en="Base salary" />
+              <CardTitle title="Base salary" />
               <SalaryHistory staffId={staff.id} />
             </Card>
           ) : null}
@@ -116,7 +116,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="অ্যাকাউন্ট ও এইচআর রেকর্ড" en="Account & HR record" />
+      <CardTitle title="Account & HR record" />
       <fieldset disabled={!editable} className="m-0 flex flex-col gap-3.5 border-0 p-0">
         <Pair>
           <TextInput label={t('staff.name')} value={form.name} onChange={set('name')} error={fieldError('name')} maxLength={120} />
@@ -182,7 +182,7 @@ function AccessCard({ staff }: { staff: StaffDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="রোল ও অ্যাকসেস" en="Role & access" />
+      <CardTitle title="Role & access" />
       {staff.actions.change_role ? (
         <div className="flex flex-wrap items-end gap-2">
           <SelectInput label={t('staff.role')} value={role} onChange={setRole} options={roles.map((option) => ({ value: option.name, label: roleLabel(option, locale) }))} className="min-w-56 flex-1" />
@@ -280,8 +280,7 @@ function DocumentsCard({ staff, documents }: { staff: StaffDetail; documents: St
   return (
     <Card>
       <CardTitle
-        bn="ডকুমেন্ট"
-        en="Documents"
+        title="Documents"
         aside={
           manage ? (
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setUploading(true)}>

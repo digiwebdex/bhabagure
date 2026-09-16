@@ -69,7 +69,7 @@ function PricingEditor({ initial }: { initial: Pricing }) {
     <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
       <div className="flex min-w-0 flex-col gap-4.5">
         <Card>
-          <CardTitle bn="গ্রুপ স্ল্যাব" en="Group slab · per-person discount" />
+          <CardTitle title="Group slab · per-person discount" />
           <p className="m-0 text-13 leading-1.6 text-app-muted">{t('pricing.slabNote')}</p>
           {error('slabs') ? <span role="alert" className="text-12 font-semibold text-red">{error('slabs')}</span> : null}
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
@@ -91,13 +91,13 @@ function PricingEditor({ initial }: { initial: Pricing }) {
         </Card>
 
         <Card>
-          <CardTitle bn="সিঙ্গেল রুম সাপ্লিমেন্ট" en="Single-room supplement" />
+          <CardTitle title="Single-room supplement" />
           <p className="m-0 text-13 leading-1.6 text-app-muted">{t('pricing.supplementNote')}</p>
           <NumberInput label={t('pricing.supplementPercent')} value={form.single_room_supplement_percent} onChange={(value) => setForm({ ...form, single_room_supplement_percent: value ?? 0 })} error={error('single_room_supplement_percent')} preview={(value) => `+${percent(value)}`} />
         </Card>
 
         <Card>
-          <CardTitle bn="চার্জ ও সীমা" en="Charges and limits" />
+          <CardTitle title="Charges and limits" />
           <Pair>
             <NumberInput label={t('pricing.serviceCharge')} value={form.service_charge_percent} onChange={(value) => setForm({ ...form, service_charge_percent: value ?? 0 })} error={error('service_charge_percent')} preview={percent} />
             <NumberInput label={t('pricing.maxTravellers')} value={form.max_travellers} onChange={(value) => setForm({ ...form, max_travellers: value ?? 0 })} error={error('max_travellers')} />
@@ -105,7 +105,7 @@ function PricingEditor({ initial }: { initial: Pricing }) {
         </Card>
 
         <Card>
-          <CardTitle bn="অনলাইন পেমেন্ট চার্জ" en="Online payment charge" />
+          <CardTitle title="Online payment charge" />
           <p className="m-0 text-13 leading-1.6 text-app-muted">{t('pricing.onlineChargeNote')}</p>
           <NumberInput
             label={t('pricing.onlineCharge')}
@@ -126,7 +126,7 @@ function PricingEditor({ initial }: { initial: Pricing }) {
       </div>
 
       <Card className="lg:sticky lg:top-5">
-        <CardTitle bn="উদাহরণ" en="Worked example" />
+        <CardTitle title="Worked example" />
         <NumberInput label={t('pricing.examplePrice')} value={examplePrice} onChange={setExamplePrice} preview={(value) => bdt(value)} />
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-13">
@@ -160,13 +160,13 @@ function PricingEditor({ initial }: { initial: Pricing }) {
 
 function AddonsCard() {
   const { t } = useTranslation()
-  const { bdt, locale } = useFormat()
+  const { bdt } = useFormat()
   const addons = useQuery({ queryKey: ['addons'], queryFn: ({ signal }) => api.get<Data<Addon[]>>('admin/addons', signal) })
   const [editing, setEditing] = useState<Addon | 'new' | null>(null)
 
   return (
     <Card>
-      <CardTitle bn="অ্যাড-অন" en="Add-ons · offered at booking" aside={<button type="button" className={buttonClass('outline', 'sm')} onClick={() => setEditing('new')}>{t('common.add')}</button>} />
+      <CardTitle title="Add-ons · offered at booking" aside={<button type="button" className={buttonClass('outline', 'sm')} onClick={() => setEditing('new')}>{t('common.add')}</button>} />
       <p className="m-0 text-13 text-app-muted">{t('pricing.addonsNote')}</p>
       {addons.isPending ? <Loading /> : addons.isError ? <ErrorNotice error={addons.error} /> : (
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
@@ -174,7 +174,7 @@ function AddonsCard() {
             <li key={addon.id}>
               <button type="button" onClick={() => setEditing(addon)} className="flex w-full cursor-pointer flex-wrap items-center justify-between gap-3 rounded-10 border-0 bg-app-surface-2 px-3 py-2.5 text-left text-14 text-app-text">
                 <span className="flex min-w-0 flex-col">
-                  <span className="font-medium">{locale === 'bn' ? addon.name_bn : addon.name_en}</span>
+                  <span className="font-medium">{addon.name_en || addon.name_bn}</span>
                   <span className="text-12 text-app-muted">{t(`pricing.units.${addon.unit}`)}</span>
                 </span>
                 <span className="flex items-center gap-2">

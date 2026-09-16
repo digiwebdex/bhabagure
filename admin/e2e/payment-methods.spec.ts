@@ -40,8 +40,8 @@ test('the payment methods are entered in Site settings, and a bKash payment reco
   const dialog = page.getByRole('dialog', { name: 'Record payment' })
   await dialog.getByLabel('Amount').fill('10000')
   await dialog.getByLabel('Method').selectOption('bkash')
-  // 1.3% of ৳ 10,000 = ৳ 130, and the charge needs the bKash transaction ID.
-  const chargeSwitch = dialog.getByRole('switch', { name: 'Customer also paid the ৳ 130 bKash charge' })
+  // 1.3% of BDT 10,000 = BDT 130, and the charge needs the bKash transaction ID.
+  const chargeSwitch = dialog.getByRole('switch', { name: 'Customer also paid the BDT 130 bKash charge' })
   await chargeSwitch.click()
   await dialog.getByLabel('Attach the receipt, bank slip or screenshot').setInputFiles(PHOTO)
   await dialog.getByRole('button', { name: 'Record payment' }).click()
@@ -50,8 +50,8 @@ test('the payment methods are entered in Site settings, and a bKash payment reco
   await dialog.getByLabel('Reference').fill(`TRX${Date.now()}`)
   await dialog.getByRole('button', { name: 'Record payment' }).click()
   await expect(dialog).toBeHidden()
-  // The booking is paid ৳ 10,000; the ৳ 130 is a charge beside it, on the invoice too.
-  await expect(payments).toContainText('৳ 10,000')
+  // The booking is paid BDT 10,000; the BDT 130 is a charge beside it, on the invoice too.
+  await expect(payments).toContainText('BDT 10,000')
   await expect(payments).toContainText('bKash · bKash charge')
-  await expect(payments).toContainText('৳ 130')
+  await expect(payments).toContainText('BDT 130')
 })

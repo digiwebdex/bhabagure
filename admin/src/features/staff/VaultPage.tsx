@@ -124,7 +124,7 @@ export function VaultPage() {
 
       <Card padded={false} className="overflow-hidden">
         <div className="border-b border-app-line p-3.5">
-          <CardTitle bn="স্টাফের ডকুমেন্ট" en="Staff documents" aside={<span className="text-12 text-app-muted">{t('vault.protectedNote')}</span>} />
+          <CardTitle title="Staff documents" aside={<span className="text-12 text-app-muted">{t('vault.protectedNote')}</span>} />
         </div>
         {list.isPending ? (
           <Loading />

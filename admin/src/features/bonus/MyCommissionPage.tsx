@@ -79,7 +79,7 @@ function Commission({ data }: { data: MyCommission }) {
         <div className="flex flex-col gap-4.5">
           <WithdrawalForm data={data} />
           <Card>
-            <CardTitle bn="আমার উইথড্র" en="My withdrawals" />
+            <CardTitle title="My withdrawals" />
             {data.withdrawals.length === 0 ? (
               <p className="m-0 text-13 text-app-muted">{t('myCommission.noWithdrawals')}</p>
             ) : (
@@ -116,7 +116,7 @@ function Commission({ data }: { data: MyCommission }) {
           </Card>
         </div>
         <Card>
-          <CardTitle bn="বোনাস লেজার" en="Bonus ledger" />
+          <CardTitle title="Bonus ledger" />
           <EntryList entries={data.entries} />
         </Card>
       </div>
@@ -140,7 +140,7 @@ function WithdrawalForm({ data }: { data: MyCommission }) {
 
   return (
     <Card>
-      <CardTitle bn="টাকা তোলার অনুরোধ" en="Request a withdrawal" />
+      <CardTitle title="Request a withdrawal" />
       <form
         className="flex flex-col gap-3"
         data-testid="withdrawal-form"

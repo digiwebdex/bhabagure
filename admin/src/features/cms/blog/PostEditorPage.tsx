@@ -77,7 +77,7 @@ function Editor({ post }: { post: BlogPost | null }) {
   }
 
   const websiteUrl = `${SITE_URL}${locale === 'en' ? '/en' : ''}/blog/${form.slug || '…'}`
-  const title = (locale === 'bn' ? form.title_bn : form.title_en) || t('blog.untitled')
+  const title = form.title_en || form.title_bn || t('blog.untitled')
   const saveError = save.error instanceof ApiError && save.error.status === 422 ? new ApiError(422, { message: t('errors.fixFields') }) : save.error
 
   return (
@@ -99,7 +99,7 @@ function Editor({ post }: { post: BlogPost | null }) {
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
         <div className="flex min-w-0 flex-col gap-4.5">
           <Card>
-            <CardTitle bn="শিরোনাম ও সারাংশ" en="Title and excerpt" />
+            <CardTitle title="Title and excerpt" />
             <Pair>
               <TextInput label={t('fields.titleBn')} value={form.title_bn} onChange={(value) => set('title_bn', value)} error={error('title_bn')} />
               <TextInput label={t('fields.titleEn')} value={form.title_en} onChange={(value) => setForm((current) => ({ ...current, title_en: value, slug: post || current.slug !== slugify(current.title_en) ? current.slug : slugify(value) }))} error={error('title_en')} />
@@ -110,22 +110,22 @@ function Editor({ post }: { post: BlogPost | null }) {
             </Pair>
           </Card>
           <Card>
-            <CardTitle bn="লেখা · বাংলা" en="Body · Bangla" />
+            <CardTitle title="Body · Bangla" />
             <RichTextEditor label={t('blog.bodyBn')} value={form.body_bn} onChange={(html) => set('body_bn', html)} error={error('body_bn')} />
           </Card>
           <Card>
-            <CardTitle bn="লেখা · ইংরেজি" en="Body · English" />
+            <CardTitle title="Body · English" />
             <RichTextEditor label={t('blog.bodyEn')} value={form.body_en} onChange={(html) => set('body_en', html)} error={error('body_en')} />
           </Card>
           <Card>
-            <CardTitle bn="এসইও" en="SEO · search results and sharing" />
+            <CardTitle title="SEO · search results and sharing" />
             <SeoFields values={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))} url={websiteUrl} fallbackTitle={title} />
           </Card>
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4.5 lg:sticky lg:top-5">
           <Card>
-            <CardTitle bn="প্রকাশ" en="Publishing" aside={<StatusBadge status={post?.is_scheduled ? 'scheduled' : (post?.status ?? 'draft')} />} />
+            <CardTitle title="Publishing" aside={<StatusBadge status={post?.is_scheduled ? 'scheduled' : (post?.status ?? 'draft')} />} />
             <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
               {postChecklist(form).map((item) => (
                 <li key={item.key} className="flex items-center gap-2 text-13">
@@ -154,13 +154,13 @@ function Editor({ post }: { post: BlogPost | null }) {
           </Card>
 
           <Card>
-            <CardTitle bn="বিস্তারিত" en="Details" />
+            <CardTitle title="Details" />
             <SelectInput
               label={t('blog.category')}
               value={String(form.blog_category_id || '')}
               onChange={(value) => set('blog_category_id', Number(value))}
               error={error('blog_category_id')}
-              options={[{ value: '', label: t('common.choose') }, ...(categories.data?.data ?? []).map((c) => ({ value: String(c.id), label: `${c.name_bn} · ${c.name_en}` }))]}
+              options={[{ value: '', label: t('common.choose') }, ...(categories.data?.data ?? []).map((c) => ({ value: String(c.id), label: c.name_en || c.name_bn }))]}
             />
             <TextInput label={t('fields.slug')} value={form.slug} onChange={(value) => set('slug', value)} error={error('slug')} hint={<span className="break-all">{websiteUrl}</span>} />
             <Pair>
@@ -171,7 +171,7 @@ function Editor({ post }: { post: BlogPost | null }) {
           </Card>
 
           <Card>
-            <CardTitle bn="কভার ছবি" en="Cover image" />
+            <CardTitle title="Cover image" />
             {cover ? <MediaThumb media={cover} className="aspect-4/3 w-full rounded-13" /> : <p className="m-0 text-13 text-app-muted">{t('blog.noCover')}</p>}
             <div className="flex gap-2">
               <button type="button" className={buttonClass('primary', 'sm')} onClick={() => setPicking(true)}>{cover ? t('common.change') : t('common.choose')}</button>

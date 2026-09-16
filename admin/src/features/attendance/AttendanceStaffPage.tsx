@@ -46,7 +46,7 @@ export function AttendanceStaffPage() {
       <div className="grid items-start gap-4.5 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
         <Card padded={false} className="overflow-hidden">
           <div className="border-b border-app-line p-3.5">
-            <CardTitle bn="দৈনিক পাঞ্চ" en="Daily punches" aside={<span className="text-12 text-app-muted">{t('attendance.fromDevice')}</span>} />
+            <CardTitle title="Daily punches" aside={<span className="text-12 text-app-muted">{t('attendance.fromDevice')}</span>} />
           </div>
           <DaysTable
             days={person.days}
@@ -70,7 +70,7 @@ export function AttendanceStaffPage() {
         <div className="flex flex-col gap-4.5">
           <CorrectionsCard person={person} manage={manage} />
           <Card>
-            <CardTitle bn="ছুটি" en="Leave" />
+            <CardTitle title="Leave" />
             {person.leave.length === 0 ? (
               <p className="m-0 text-13 text-app-muted">{t('leave.noneThisMonth')}</p>
             ) : (
@@ -144,7 +144,7 @@ function CorrectionsCard({ person, manage }: { person: PersonMonth; manage: bool
 
   return (
     <Card>
-      <CardTitle bn="সংশোধন" en="Corrections" />
+      <CardTitle title="Corrections" />
       {person.corrections.length === 0 ? (
         <p className="m-0 text-13 text-app-muted">{t('attendance.noCorrections')}</p>
       ) : (

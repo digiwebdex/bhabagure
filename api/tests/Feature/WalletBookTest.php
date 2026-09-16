@@ -93,7 +93,7 @@ class WalletBookTest extends TestCase
 
         $this->wallet('POST', "deals/{$id}/payments", ['amount' => 50000], $this->session)->assertUnprocessable()->assertJsonPath('code', 'payment_over_due');
         $paid = $this->wallet('POST', "deals/{$id}/payments", ['amount' => 40000], $this->session)->assertCreated()
-            ->assertJsonPath('data.due', 0)->assertJsonPath('data.settled', true)->assertJsonPath('data.payments.1.reference', 'বাকি পরিশোধ');
+            ->assertJsonPath('data.due', 0)->assertJsonPath('data.settled', true)->assertJsonPath('data.payments.1.reference', 'Due payment');
 
         // The advance and payment are cash in under the deal's name; reversing a payment makes it due again.
         $summary = $this->wallet('GET', 'summary', session: $this->session);

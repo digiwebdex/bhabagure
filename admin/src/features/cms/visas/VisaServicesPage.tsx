@@ -14,7 +14,7 @@ type VisaForm = Omit<VisaService, 'id' | 'sort_order' | 'status'>
  */
 export function VisaServicesPage() {
   const { t } = useTranslation()
-  const { locale, bdt } = useFormat()
+  const { bdt } = useFormat()
   const lines = (text: string | null) => (text ?? '').split(/\r?\n/).filter((line) => line.trim() !== '').length
 
   return (
@@ -30,14 +30,14 @@ export function VisaServicesPage() {
         content: (
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="truncate text-14 font-medium">
-              {visa.country_code ? `${visa.country_code} · ` : ''}{locale === 'bn' ? visa.country_bn : visa.country_en} · {locale === 'bn' ? visa.visa_type_bn : visa.visa_type_en}
+              {visa.country_code ? `${visa.country_code} · ` : ''}{visa.country_en || visa.country_bn} · {visa.visa_type_en || visa.visa_type_bn}
             </span>
             <span className="text-12 text-app-muted">
               {visa.price === null ? t('visas.onRequest') : bdt(visa.price)}
               {' · '}
-              {(locale === 'bn' ? visa.processing_bn : visa.processing_en) ?? t('visas.noProcessing')}
+              {(visa.processing_en || visa.processing_bn) ?? t('visas.noProcessing')}
               {' · '}
-              {t('visas.requirementCount', { count: lines(locale === 'bn' ? visa.requirements_bn : visa.requirements_en) })}
+              {t('visas.requirementCount', { count: lines(visa.requirements_en || visa.requirements_bn) })}
             </span>
           </span>
         ),

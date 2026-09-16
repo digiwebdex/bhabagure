@@ -47,33 +47,33 @@ test('an admin sets a base salary, adds an allowance, finalises last month and p
   await salary.getByLabel('Reason').fill('Joining salary')
   await salary.getByRole('button', { name: 'Save salary' }).click()
   await expect(salary.getByTestId('salary-history')).toContainText(`From ${month.label}`)
-  await expect(salary.getByTestId('salary-history')).toContainText('৳ 30,000')
+  await expect(salary.getByTestId('salary-history')).toContainText('BDT 30,000')
   await salary.getByRole('button', { name: 'Close' }).click()
 
-  // Two late days at half pay: 30,000 − 30,000 ÷ 26 × 2 × 50 % = ৳ 28,846, whatever the month's length.
-  await expect(row).toContainText('৳ 28,846')
-  await expect(row).toContainText('− ৳ 1,153.85')
+  // Two late days at half pay: 30,000 − 30,000 ÷ 26 × 2 × 50 % = BDT 28,846, whatever the month's length.
+  await expect(row).toContainText('BDT 28,846')
+  await expect(row).toContainText('− BDT 1,153.85')
 
   await row.getByRole('button', { name: `Adjust pay — ${PERSON}` }).click()
   const adjust = page.getByRole('dialog', { name: `Adjust pay · ${PERSON} · ${month.label}` })
   await adjust.getByLabel('Amount').fill('1500')
   await adjust.getByLabel('Reason').fill('Mustang tour allowance')
-  await expect(adjust).toContainText('Payable after this: ৳ 30,346')
+  await expect(adjust).toContainText('Payable after this: BDT 30,346')
   await adjust.getByRole('button', { name: 'Add adjustment' }).click()
   await expect(page.getByTestId('payroll-adjustments')).toContainText('Mustang tour allowance')
-  await expect(row).toContainText('+ ৳ 1,500')
-  await expect(row).toContainText('৳ 30,346')
+  await expect(row).toContainText('+ BDT 1,500')
+  await expect(row).toContainText('BDT 30,346')
 
   // The Attendance table shows the same pay in the design's salary columns.
   await page.getByRole('link', { name: 'Attendance and rules' }).click()
   const attendanceRow = page.getByTestId('attendance-month-table').locator('tbody tr').filter({ hasText: PERSON })
-  await expect(attendanceRow).toContainText('৳ 30,000', FIRST_LOAD)
-  await expect(attendanceRow).toContainText('৳ 30,346')
+  await expect(attendanceRow).toContainText('BDT 30,000', FIRST_LOAD)
+  await expect(attendanceRow).toContainText('BDT 30,346')
   await page.getByRole('link', { name: 'Salary sheet' }).click()
 
   await page.getByRole('button', { name: `Finalise ${month.label}` }).click(FIRST_LOAD)
   const finalise = page.getByRole('dialog', { name: `Finalise ${month.label}?` })
-  await expect(finalise).toContainText('৳ 30,346 in total')
+  await expect(finalise).toContainText('BDT 30,346 in total')
   await expect(finalise).toContainText('without a base salary')
   await finalise.getByRole('button', { name: 'Finalise', exact: true }).click()
   // The e2e queue is synchronous: the payslip is rendered and emailed inside this request.
@@ -83,7 +83,7 @@ test('an admin sets a base salary, adds an allowance, finalises last month and p
 
   await row.getByRole('button', { name: `Mark paid — ${PERSON}` }).click()
   const pay = page.getByRole('dialog', { name: `Pay ${PERSON} · ${month.label}` })
-  await expect(pay).toContainText('৳ 30,346')
+  await expect(pay).toContainText('BDT 30,346')
   await pay.getByLabel('Method').selectOption({ label: 'bKash' })
   await pay.getByLabel('Reference').fill('TRX-E2E-PAY')
   await pay.getByLabel('Attach the receipt, bank slip or screenshot').setInputFiles(PHOTO)
@@ -101,7 +101,7 @@ test('the staff member finds the paid month under My payslips, and has no Salary
   await page.goto('/my-attendance')
   const payslips = page.getByTestId('my-payslips')
   await expect(payslips).toContainText(month.label, FIRST_LOAD)
-  await expect(payslips).toContainText('৳ 30,346')
+  await expect(payslips).toContainText('BDT 30,346')
   await expect(payslips).toContainText('Paid')
 
   await expectPdfTab(page, /\/profile\/payslips\/\d+$/, () => payslips.getByRole('button', { name: `Open the payslip for ${month.label}` }).click())
@@ -115,7 +115,7 @@ test('reversing the salary cash-out in the cash book leaves the month unpaid aga
   await signIn(page, 'admin')
   await page.goto('/payments')
   const entry = page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: `Salary ${month.value} · ${PERSON}` })
-  await expect(entry).toContainText('− ৳ 30,346', FIRST_LOAD)
+  await expect(entry).toContainText('− BDT 30,346', FIRST_LOAD)
   await entry.getByRole('button', { name: /^Reverse… — #\d+$/ }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Reason').fill('Sent to the wrong bKash number')

@@ -23,7 +23,7 @@ export function ProfilePage() {
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
         {whatsapp.isPending ? <Loading /> : whatsapp.isError ? <ErrorNotice error={whatsapp.error} /> : <WhatsAppCard state={whatsapp.data.data} />}
         <Card>
-          <CardTitle bn="পাসওয়ার্ড" en="Password" />
+          <CardTitle title="Password" />
           <Link to="/change-password" className={buttonClass('outline', 'md', 'self-start')}>
             {t('profile.changePassword')}
           </Link>
@@ -56,7 +56,7 @@ function MyRecordCard() {
 
   return (
     <Card>
-      <CardTitle bn="আমার এইচআর রেকর্ড" en="My HR record" />
+      <CardTitle title="My HR record" />
       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-13.5" data-testid="my-record">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
@@ -100,7 +100,7 @@ function WhatsAppCard({ state }: { state: MyWhatsApp }) {
 
   return (
     <Card>
-      <CardTitle bn="আমার WhatsApp নম্বর" en="My WhatsApp number" aside={state.verified ? <Badge tone="green">{t('profile.verified')}</Badge> : state.number ? <Badge tone="orange">{t('profile.notVerified')}</Badge> : null} />
+      <CardTitle title="My WhatsApp number" aside={state.verified ? <Badge tone="green">{t('profile.verified')}</Badge> : state.number ? <Badge tone="orange">{t('profile.notVerified')}</Badge> : null} />
       <p className="m-0 text-13 leading-1.6 text-app-muted">{t('profile.whatsAppNote')}</p>
 
       {state.number && !editing ? (

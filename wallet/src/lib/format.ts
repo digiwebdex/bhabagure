@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { formatBdt, formatDate, formatNumber } from '@bhabaghure/format'
 
@@ -10,15 +9,14 @@ export function todayInDhaka(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date())
 }
 
-/** The shared formatter bound to the language: ৳ with Indian grouping, Bangla digits in Bangla. */
+/** The shared formatter: English, amounts as "BDT 1,53,000" with Indian grouping (staff software, 2026-09-16). */
 export function useFormat() {
-  const { i18n } = useTranslation()
-  const locale: AppLocale = i18n.resolvedLanguage === 'en' ? 'en' : 'bn'
+  const locale: AppLocale = 'en'
 
   return useMemo(
     () => ({
       locale,
-      bdt: (value: number) => formatBdt(value, locale),
+      bdt: (value: number) => formatBdt(value, locale, { currency: 'code' }),
       number: (value: number) => formatNumber(value, locale),
       date: (iso: string) => formatDate(iso.slice(0, 10), locale),
       month: () => formatDate(`${todayInDhaka().slice(0, 7)}-01`, locale).replace(/^\S+\s/u, ''),

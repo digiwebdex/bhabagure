@@ -31,7 +31,7 @@ export function DealsCard() {
 
   return (
     <Card>
-      <CardTitle bn="ডিল · অগ্রিম ও বাকি" en="Deals · advance & due" aside={deals.data ? <span className="text-13 font-semibold text-amber">{t('payments.totalDue', { amount: bdt(deals.data.meta.total_due) })}</span> : null} />
+      <CardTitle title="Deals · advance & due" aside={deals.data ? <span className="text-13 font-semibold text-amber">{t('payments.totalDue', { amount: bdt(deals.data.meta.total_due) })}</span> : null} />
       {can('invoices.manage') ? <NewDealForm /> : null}
       <Chips label={t('payments.dealState')} value={state} onChange={setState} options={STATES.map((value) => ({ value, label: t(`payments.dealStates.${value}`) }))} />
       {deals.isPending ? (

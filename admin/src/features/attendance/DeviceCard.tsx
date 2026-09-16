@@ -34,7 +34,7 @@ export function DevicesPanel() {
     <>
       {devices.data.data.length === 0 ? (
         <Card>
-          <CardTitle bn="হাজিরা ডিভাইস" en="Attendance device" />
+          <CardTitle title="Attendance device" />
           <p className="m-0 text-13.5 leading-1.6 text-app-muted">{t('attendance.noDevice')}</p>
           {manage ? (
             <button type="button" className={buttonClass('cta', 'md', 'self-start')} onClick={() => setAdding(true)}>
@@ -81,7 +81,7 @@ function DeviceCard({ device, manage, onToken }: { device: AttendanceDevice; man
 
   return (
     <Card>
-      <CardTitle bn="হাজিরা ডিভাইস" en="Attendance device" aside={<Badge tone={STATE_TONES[device.state]}>{t(`attendance.states.${device.state}`)}</Badge>} />
+      <CardTitle title="Attendance device" aside={<Badge tone={STATE_TONES[device.state]}>{t(`attendance.states.${device.state}`)}</Badge>} />
       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-13" data-testid="device-card">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">

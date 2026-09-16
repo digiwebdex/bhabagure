@@ -6,7 +6,7 @@ const route = (row: AirInquiry) => `${row.from ?? '?'} → ${row.to ?? '?'}`
 const AIR: RequestSpec<AirInquiry> = {
   kind: 'air',
   ns: 'air',
-  cardTitle: { bn: 'টিকেট ইনকোয়্যারি', en: 'Ticket enquiries' },
+  cardTitle: 'Ticket enquiries',
   testId: 'air-inquiries-table',
   summary: route,
   details: (row, { date, number }, t) =>

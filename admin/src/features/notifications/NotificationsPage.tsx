@@ -67,8 +67,7 @@ function ConnectionCard({ overview }: { overview: NotificationOverview }) {
   return (
     <Card>
       <CardTitle
-        bn="WhatsApp, ইমেইল ও SMS সংযোগ"
-        en="WhatsApp, email & SMS connection"
+        title="WhatsApp, email & SMS connection"
         aside={<Badge tone={tone}>{t(`notifications.session.${status}`, { defaultValue: status })}</Badge>}
       />
       <div className="grid-auto-fit-260 grid gap-3">
@@ -148,7 +147,7 @@ function TemplatesPanel({ overview }: { overview: NotificationOverview | null })
   return (
     <div className="grid-auto-fit-half-320 grid items-start gap-4.5 xl:grid-cols-[minmax(240px,0.8fr)_minmax(0,1.6fr)]">
       <Card>
-        <CardTitle bn="টেমপ্লেট তালিকা" en="Templates" />
+        <CardTitle title="Templates" />
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {events.map((value) => {
             const rows = all.filter((template) => template.event === value)
@@ -249,7 +248,7 @@ function TemplateEditor({ template, channels, onChannel, notificationsNumber, sm
         ) : (
           <ChannelChip channel={template.channel} />
         )}
-        <Chips label={t('notifications.language')} value={lang} onChange={setLang} options={[{ value: 'bn', label: 'বাংলা' }, { value: 'en', label: 'English' }]} />
+        <Chips label={t('notifications.language')} value={lang} onChange={setLang} options={[{ value: 'bn', label: 'Bangla' }, { value: 'en', label: 'English' }]} />
       </div>
 
       <div className={`flex flex-wrap items-center justify-between gap-2.5 rounded-12 border px-3.5 py-3 ${isEmail ? 'border-blue-wash-line bg-blue-wash' : isSms ? 'border-app-line bg-purple-tint' : 'border-green-line bg-whatsapp-tint'}`}>
@@ -391,7 +390,7 @@ function AlertsEditor({ settings, note }: { settings: NonNullable<ReturnType<typ
 
   return (
     <Card>
-      <CardTitle bn="সেলস টিমের অ্যালার্ট" en="Sales team alerts" />
+      <CardTitle title="Sales team alerts" />
       <p className="m-0 text-13 leading-1.6 text-app-muted">
         {note} <Link to="/profile">{t('notifications.verifyMyNumber')}</Link>
       </p>
@@ -475,7 +474,7 @@ function LogPanel({ costs }: { costs: NotificationOverview['costs'] | null }) {
 
   return (
     <Card>
-      <CardTitle bn="মেসেজ লগ" en="Message log" aside={log.data ? <span className="text-12 text-app-muted">{t('notifications.total', { count: log.data.meta.total, n: number(log.data.meta.total) })}</span> : null} />
+      <CardTitle title="Message log" aside={log.data ? <span className="text-12 text-app-muted">{t('notifications.total', { count: log.data.meta.total, n: number(log.data.meta.total) })}</span> : null} />
       {costs ? <CostSummary costs={costs} /> : null}
       <p className="m-0 text-12 text-app-muted">{t('notifications.costNote')}</p>
       <div className="flex flex-wrap items-center gap-3">

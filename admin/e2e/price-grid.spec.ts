@@ -28,7 +28,7 @@ test('the editor prices a package by hotel category, and a new booking in 4-star
     }
     // A row without the 1-traveller price isn't sold.
     await grid.getByLabel('5-star, 2 travellers', { exact: true }).fill('40000')
-    await expect(page.getByTestId('price-grid-summary')).toHaveText('Sold in: Basic / 3-star, 4-star · cards show ৳ 18,000 per person')
+    await expect(page.getByTestId('price-grid-summary')).toHaveText('Sold in: Basic / 3-star, 4-star · cards show BDT 18,000 per person')
     await expect(page.getByLabel('Regular price', { exact: false })).toBeDisabled()
     await page.getByRole('button', { name: 'Save', exact: true }).first().click()
     await expect(page.getByText('5-star: Enter the price for 1 traveller: every other group size falls back to it.')).toBeVisible()
@@ -52,12 +52,12 @@ test('the editor prices a package by hotel category, and a new booking in 4-star
 
     const category = page.getByLabel('Hotel category', { exact: true })
     await expect(category).toHaveValue('3')
-    await expect(page.getByTestId('new-booking-total')).toHaveText('৳ 55,080')
+    await expect(page.getByTestId('new-booking-total')).toHaveText('BDT 55,080')
     await category.selectOption('4')
-    await expect(page.getByTestId('new-booking-total')).toHaveText('৳ 76,500')
-    await page.getByRole('button', { name: 'Create booking · ৳ 76,500' }).click()
+    await expect(page.getByTestId('new-booking-total')).toHaveText('BDT 76,500')
+    await page.getByRole('button', { name: 'Create booking · BDT 76,500' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toContainText(/BH-\d{4}-\d{3,}/, FIRST_LOAD)
-    await expect(page.locator('main')).toContainText('৳ 76,500', FIRST_LOAD)
+    await expect(page.locator('main')).toContainText('BDT 76,500', FIRST_LOAD)
     await expect(page.getByTestId('booking-hotel-category')).toHaveText('Hotel category: 4-star')
 
     const stored = artisan('tinker', `--execute=echo json_encode(App\\Models\\Booking::query()->latest('id')->first(['hotel_category', 'unit_price']));`).trim().split(/\r?\n/).pop()!

@@ -32,7 +32,7 @@ export function WithdrawalsCard({ initial = 'open' }: { initial?: WithdrawalFilt
 
   return (
     <Card>
-      <CardTitle bn="উইথড্র রিকোয়েস্ট" en="Bonus withdrawals" />
+      <CardTitle title="Bonus withdrawals" />
       <Chips
         label={t('common.status')}
         value={status}

@@ -35,7 +35,7 @@ function RequestBody<T extends QuoteRequest>({ spec, row, startReplying, onClose
     [t('newBooking.email'), row.email ?? '—'],
     ...spec.facts(row, format, t),
     [t(`${spec.ns}.received`), dateTime(row.created_at)],
-    [t(`${spec.ns}.language`), row.locale === 'en' ? 'English' : 'বাংলা'],
+    [t(`${spec.ns}.language`), row.locale === 'en' ? 'English' : 'Bangla'],
   ]
 
   return (

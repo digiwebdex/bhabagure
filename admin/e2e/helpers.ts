@@ -16,15 +16,13 @@ export const password = () => (JSON.parse(readFileSync(resolve(import.meta.dirna
  */
 export const FIRST_LOAD = { timeout: 15_000 }
 
-/** Signs in through the real login form, in English so assertions read naturally. */
+/** Signs in through the real login form. The panel is English only. */
 export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_operator' | 'sales_agent' | 'new.hire') {
   // Start signed out. A refresh cookie left by an earlier sign-in on this page, or by staffApi (it shares the browser's
   // cookies), restores that session, and the admin rightly sends a signed-in visitor from /login to the dashboard.
   // Whether the form shows first was a race that slower machines lost.
   await page.context().clearCookies()
   await page.goto('/login')
-  await page.evaluate(() => localStorage.setItem('bh-lang', 'en'))
-  await page.reload()
   await page.getByLabel('Email').fill(`${role}@e2e.test`)
   await page.getByLabel('Password').fill(password())
   await page.getByRole('button', { name: 'Sign in' }).click()
@@ -72,7 +70,7 @@ export async function staffApi(page: Page, role: 'admin' | 'sales_agent') {
   }
 }
 
-/** A lead and a quotation for them at the Mustang price (2 travellers, ৳ 1,53,000), sent unless asked not to. */
+/** A lead and a quotation for them at the Mustang price (2 travellers, BDT 1,53,000), sent unless asked not to. */
 export async function quotationFor(page: Page, name: string, { send = true, role = 'admin' as 'admin' | 'sales_agent' } = {}): Promise<{ id: number; number: string; customerId: number }> {
   const api = await staffApi(page, role)
   const phone = `0171${String(Date.now()).slice(-7)}`

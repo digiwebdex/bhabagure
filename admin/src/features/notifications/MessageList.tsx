@@ -69,7 +69,7 @@ function statusNote(message: NotificationMessage, t: (key: string, options?: Rec
   return null
 }
 
-/** "2 parts · ৳ ০.৭০" for an SMS; the cost of any sent message in the log. */
+/** "2 parts · BDT 0.70" for an SMS; the cost of any sent message in the log. */
 function CostNote({ message }: { message: NotificationMessage }) {
   const { t } = useTranslation()
   const { bdt, number } = useFormat()

@@ -34,7 +34,7 @@ export function BookingDetailPage() {
 
 function BookingView({ booking }: { booking: BookingDetail }) {
   const { t } = useTranslation()
-  const { date, locale } = useFormat()
+  const { date } = useFormat()
   const toast = useToast()
   const transition = useBookingAction(booking.id, bookingActions.transition(booking.id))
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -46,7 +46,7 @@ function BookingView({ booking }: { booking: BookingDetail }) {
     <>
       <PageHeader
         title={booking.reference}
-        subtitle={`${(locale === 'bn' ? booking.package_title_bn : null) || booking.package_title_en}${booking.travel_start ? ` · ${date(booking.travel_start)}` : ''}`}
+        subtitle={`${booking.package_title_en || booking.package_title_bn}${booking.travel_start ? ` · ${date(booking.travel_start)}` : ''}`}
         actions={
           <>
             <BookingStatusBadge status={booking.status} />
@@ -151,7 +151,7 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="মূল্য ও হিসাব" en="Quote" aside={editable ? <Badge tone="blue">{t('bookings.draft')}</Badge> : <Badge tone="slate">{t('bookings.frozen')}</Badge>} />
+      <CardTitle title="Quote" aside={editable ? <Badge tone="blue">{t('bookings.draft')}</Badge> : <Badge tone="slate">{t('bookings.frozen')}</Badge>} />
       {booking.hotel_category ? (
         <p className="m-0 text-13" data-testid="booking-hotel-category">
           <span className="text-app-muted">{t('grid.hotelCategory')}:</span> <strong>{t(`grid.categories.${booking.hotel_category}`)}</strong>
@@ -286,7 +286,7 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="ইনভয়েস" en="Invoice" aside={current ? <span className="font-display text-13 font-semibold">{current.invoice_number}</span> : <Badge tone="orange">{t('bookings.notIssued')}</Badge>} />
+      <CardTitle title="Invoice" aside={current ? <span className="font-display text-13 font-semibold">{current.invoice_number}</span> : <Badge tone="orange">{t('bookings.notIssued')}</Badge>} />
 
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <button type="button" role="switch" aria-checked={header} onClick={() => setHeader(!header)} className="flex cursor-pointer items-center gap-2.5 rounded-10 border border-app-line bg-app-surface-2 px-3 py-2 text-left text-13">
@@ -300,7 +300,7 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
         </button>
         <span className="flex flex-wrap gap-2">
           <select aria-label={t('bookings.invoiceLanguage')} value={lang} onChange={(event) => setLang(event.target.value as 'bn' | 'en')} className="rounded-9 border border-app-line bg-app-surface-2 px-2.5 py-2 text-13">
-            <option value="bn">বাংলা সংখ্যা</option>
+            <option value="bn">Bangla digits</option>
             <option value="en">English digits</option>
           </select>
           <button type="button" className={buttonClass('primary', 'sm')} disabled={!html} onClick={() => frame.current?.contentWindow?.print()}>
@@ -397,7 +397,7 @@ function PaymentsCard({ booking }: { booking: BookingDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="পেমেন্ট" en="Payments" aside={<PaymentBadge status={booking.payment_status} />} />
+      <CardTitle title="Payments" aside={<PaymentBadge status={booking.payment_status} />} />
       {booking.transactions.length === 0 ? (
         <p className="m-0 text-13 text-app-muted">{t('bookings.noPayments')}</p>
       ) : (
@@ -639,7 +639,7 @@ function TravellersCard({ booking }: { booking: BookingDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="গ্রাহক ও যাত্রী" en="Customer & travellers" />
+      <CardTitle title="Customer & travellers" />
       {booking.customer ? (
         <div className="flex flex-col gap-0.5 text-13">
           <strong className="text-14">{booking.customer.name}</strong>
@@ -709,7 +709,7 @@ function MessagesCard({ booking }: { booking: BookingDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="WhatsApp, ইমেইল ও SMS" en="WhatsApp, email & SMS" />
+      <CardTitle title="WhatsApp, email & SMS" />
       {!booking.notifications_number_published ? (
         <p role="note" className="m-0 rounded-10 border border-orange-line bg-orange-tint px-3 py-2.5 text-12 leading-1.55 text-orange-ink">
           {t('notifications.onHold')}
@@ -815,7 +815,7 @@ function AttemptsCard({ booking }: { booking: BookingDetail }) {
   const tone = (status: string) => (status === 'settled' ? 'green' : status === 'needs_review' ? 'red' : status === 'redirected' || status === 'initiated' ? 'blue' : 'slate')
   return (
     <Card>
-      <CardTitle bn="অনলাইন পেমেন্ট চেষ্টা" en="Online payment attempts" />
+      <CardTitle title="Online payment attempts" />
       <ul className="m-0 flex list-none flex-col p-0">
         {booking.payment_attempts.map((attempt) => (
           <li key={attempt.id} className="flex items-start justify-between gap-3 border-b border-app-line py-2 text-12 last:border-b-0">

@@ -162,7 +162,7 @@ export function BookingListPage() {
       header: t('bookings.package'),
       cell: (booking) => (
         <div className="flex max-w-72 flex-col">
-          <span className="truncate">{(locale === 'bn' ? booking.package_title_bn : null) || booking.package_title_en}</span>
+          <span className="truncate">{booking.package_title_en || booking.package_title_bn}</span>
           <span className="text-12 text-app-muted">
             {booking.travel_start ? date(booking.travel_start) : '—'} · {t('bookings.paxCount', { count: booking.pax_count, n: number(booking.pax_count) })}
           </span>

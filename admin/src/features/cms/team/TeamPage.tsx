@@ -11,7 +11,7 @@ type TeamForm = Pick<TeamMember, 'name_bn' | 'name_en' | 'role_bn' | 'role_en' |
 
 export function TeamPage() {
   const { t } = useTranslation()
-  const { locale, digits } = useFormat()
+  const { digits } = useFormat()
 
   return (
     <PublishedList<TeamMember, TeamForm>
@@ -27,9 +27,9 @@ export function TeamPage() {
           <>
             <MediaThumb media={member.photo} className="size-12 rounded-full" />
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-14 font-medium">{locale === 'bn' ? member.name_bn : member.name_en}</span>
+              <span className="truncate text-14 font-medium">{member.name_en || member.name_bn}</span>
               <span className="text-12 text-app-muted">
-                {locale === 'bn' ? member.role_bn : member.role_en}
+                {member.role_en || member.role_bn}
                 {member.employee_code ? ` · ${digits(member.employee_code)}` : ''}
               </span>
             </span>

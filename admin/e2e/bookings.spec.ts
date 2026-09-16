@@ -15,11 +15,11 @@ test('draft quote, issue, header on and off, record payment, confirm', async ({ 
   const quote = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Quote' }) })
   await quote.getByRole('button', { name: 'One traveller more' }).click()
   await quote.getByLabel('Service charge & VAT').selectOption('5')
-  await quote.getByLabel('Discount (৳)').fill('1000')
-  await expect(quote).toContainText('৳ 2,28,113')
+  await quote.getByLabel('Discount (BDT)').fill('1000')
+  await expect(quote).toContainText('BDT 2,28,113')
   await quote.getByRole('button', { name: 'Save quote' }).click()
   await expect(page.getByText('Quote saved')).toBeVisible()
-  await expect(quote).toContainText('৳ 2,28,113')
+  await expect(quote).toContainText('BDT 2,28,113')
 
   // Issue: the preview shows the number; header off leaves the letterhead out.
   const invoice = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Invoice' }) })

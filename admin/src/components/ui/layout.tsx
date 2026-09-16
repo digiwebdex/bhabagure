@@ -14,20 +14,11 @@ export function Card({ children, className = '', padded = true }: { children: Re
   )
 }
 
-/**
- * Bilingual card heading as in the prototype: in Bangla the English name follows in muted display type;
- * in English only the English name shows.
- */
-export function CardTitle({ bn, en, aside, as: Tag = 'h2' }: { bn: string; en: string; aside?: ReactNode; as?: 'h2' | 'h3' }) {
-  const { i18n } = useTranslation()
-  const isBn = i18n.resolvedLanguage !== 'en'
-
+/** Card heading, as in the prototype. The panel is English only (2026-09-16). */
+export function CardTitle({ title, aside, as: Tag = 'h2' }: { title: string; aside?: ReactNode; as?: 'h2' | 'h3' }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <Tag className="m-0 text-15 font-semibold">
-        {isBn ? bn : en}
-        {isBn ? <span className="font-display text-13 font-normal text-app-muted"> {en}</span> : null}
-      </Tag>
+      <Tag className="m-0 text-15 font-semibold">{title}</Tag>
       {aside}
     </div>
   )

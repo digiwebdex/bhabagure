@@ -97,7 +97,7 @@ function SummaryCards({ summary }: { summary: PaymentsSummary | null }) {
 /** The prototype's blue card. Only rendered when the API sent the balance — it is withheld without the permission. */
 function BalanceCard({ balance }: { balance: Balance }) {
   const { t } = useTranslation()
-  const { bdt, locale } = useFormat()
+  const { bdt } = useFormat()
   const { can } = useAuth()
   const [openingFor, setOpeningFor] = useState(false)
   const missing = balance.accounts.filter((account) => !account.opening)
@@ -109,7 +109,7 @@ function BalanceCard({ balance }: { balance: Balance }) {
       <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-12 opacity-90">
         {balance.accounts.map((account) => (
           <li key={account.code} className="flex justify-between gap-3">
-            <span>{locale === 'bn' ? account.name_bn : account.name_en}</span>
+            <span>{account.name_en || account.name_bn}</span>
             <span className="font-display">{bdt(account.balance)}</span>
           </li>
         ))}
@@ -126,7 +126,7 @@ function BalanceCard({ balance }: { balance: Balance }) {
 
 function OpeningBalanceDialog({ accounts, onClose }: { accounts: Balance['accounts']; onClose: () => void }) {
   const { t } = useTranslation()
-  const { bdt, locale } = useFormat()
+  const { bdt } = useFormat()
   const toast = useToast()
   const [form, setForm] = useState({ account: accounts[0]?.code ?? '', amount: null as number | null, as_of: todayInDhaka(), note: '' })
   const save = usePaymentsMutation(() => paymentActions.openingBalance({ account: form.account, amount: form.amount ?? 0, as_of: form.as_of, note: form.note || null }))
@@ -134,7 +134,7 @@ function OpeningBalanceDialog({ accounts, onClose }: { accounts: Balance['accoun
   return (
     <Dialog open onClose={onClose} title={t('payments.openingTitle')}>
       <p className="m-0 text-13 text-app-muted">{t('payments.openingNote')}</p>
-      <SelectInput label={t('payments.account')} value={form.account} onChange={(account) => setForm({ ...form, account })} options={accounts.map((a) => ({ value: a.code, label: locale === 'bn' ? a.name_bn : a.name_en }))} />
+      <SelectInput label={t('payments.account')} value={form.account} onChange={(account) => setForm({ ...form, account })} options={accounts.map((a) => ({ value: a.code, label: a.name_en || a.name_bn }))} />
       <NumberInput label={t('payments.amount')} value={form.amount} onChange={(amount) => setForm({ ...form, amount })} preview={(value) => bdt(value)} />
       <TextInput label={t('payments.asOf')} type="date" max={todayInDhaka()} value={form.as_of} onChange={(as_of) => setForm({ ...form, as_of })} />
       <TextArea label={t('payments.note')} value={form.note} onChange={(note) => setForm({ ...form, note })} rows={2} />
@@ -172,7 +172,7 @@ function ReviewCard() {
 
   return (
     <Card>
-      <CardTitle bn="অনলাইন পেমেন্ট যাচাই" en="Online payments needing review" aside={<span className="text-12 text-amber">{t('payments.reviewNote')}</span>} />
+      <CardTitle title="Online payments needing review" aside={<span className="text-12 text-amber">{t('payments.reviewNote')}</span>} />
       {queue.isError ? <ErrorNotice error={queue.error} /> : null}
       <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="review-queue">
         {(queue.data ?? []).map((attempt) => (

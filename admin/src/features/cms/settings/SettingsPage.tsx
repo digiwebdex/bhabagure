@@ -24,7 +24,7 @@ export function SettingsPage() {
     <>
       <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
-        <SettingCard settingKey="contact" bn="যোগাযোগ" en="Contact" initial={data.contact ?? { phone: '', phoneAlt: '', whatsapp: '', email: '', facebook: '', instagram: '', website: '' }}>
+        <SettingCard settingKey="contact" title="Contact" initial={data.contact ?? { phone: '', phoneAlt: '', whatsapp: '', email: '', facebook: '', instagram: '', website: '' }}>
           {(value, set, error) => (
             <>
               <Pair>
@@ -52,7 +52,7 @@ export function SettingsPage() {
         </SettingCard>
 
         <div className="flex min-w-0 flex-col gap-4.5">
-          <SettingCard settingKey="company" bn="প্রতিষ্ঠান" en="Company" initial={data.company ?? { name: { bn: '', en: '' }, brand: { bn: '', en: '' } }}>
+          <SettingCard settingKey="company" title="Company" initial={data.company ?? { name: { bn: '', en: '' }, brand: { bn: '', en: '' } }}>
             {(value, set, error) => (
               <>
                 <Pair>
@@ -67,15 +67,15 @@ export function SettingsPage() {
             )}
           </SettingCard>
 
-          <SettingCard settingKey="address" bn="ঠিকানা" en="Address" initial={data.address ?? ''}>
+          <SettingCard settingKey="address" title="Address" initial={data.address ?? ''}>
             {(value, set, error) => <TextArea label={t('settings.address')} value={value} onChange={set} error={error('value')} hint={t('settings.addressHint')} />}
           </SettingCard>
 
-          <SettingCard settingKey="civilAviationNo" bn="লাইসেন্স" en="Licence" initial={data.civilAviationNo ?? ''}>
+          <SettingCard settingKey="civilAviationNo" title="Licence" initial={data.civilAviationNo ?? ''}>
             {(value, set, error) => <TextInput label={t('settings.civilAviationNo')} value={value} onChange={set} error={error('value')} />}
           </SettingCard>
 
-          <SettingCard settingKey="hours" bn="অফিস সময়" en="Opening hours" initial={data.hours ?? { opens: 9, closes: 19 }}>
+          <SettingCard settingKey="hours" title="Opening hours" initial={data.hours ?? { opens: 9, closes: 19 }}>
             {(value, set, error) => (
               <Pair>
                 <NumberInput label={t('settings.opens')} value={value.opens} onChange={(opens) => set({ ...value, opens: opens ?? 0 })} error={error('value.opens')} hint={t('settings.hourHint')} />
@@ -84,7 +84,7 @@ export function SettingsPage() {
             )}
           </SettingCard>
 
-          <SettingCard settingKey="stats" bn="ওয়েবসাইটের পরিসংখ্যান" en="Website stats" initial={data.stats ?? { topReelViewsThousands: 0, banglaSupportPercent: 100 }}>
+          <SettingCard settingKey="stats" title="Website stats" initial={data.stats ?? { topReelViewsThousands: 0, banglaSupportPercent: 100 }}>
             {(value, set, error) => (
               <Pair>
                 <NumberInput label={t('settings.reelViews')} value={value.topReelViewsThousands} onChange={(n) => set({ ...value, topReelViewsThousands: n ?? 0 })} error={error('value.topReelViewsThousands')} hint={t('settings.reelViewsHint')} />
@@ -96,7 +96,7 @@ export function SettingsPage() {
 
         {/* How customers pay by hand (Phase 8 §4.F): shown on the booking page, in the portal, on invoices and in the
             booking message, each with the exact amount. A method left blank is not offered. */}
-        <SettingCard settingKey="payment" bn="পেমেন্ট" en="Payment" initial={data.payment ?? { bank: null, link: null, bkash: null }}>
+        <SettingCard settingKey="payment" title="Payment" initial={data.payment ?? { bank: null, link: null, bkash: null }}>
           {(value, set, error) => (
             <>
               <Pair>
@@ -130,10 +130,9 @@ function bank(current: NonNullable<SiteSettings['payment']>['bank'], patch: Part
   return Object.values(next).every((field) => field.trim() === '') ? null : next
 }
 
-function SettingCard<K extends Key>({ settingKey, bn, en, initial, children }: {
+function SettingCard<K extends Key>({ settingKey, title, initial, children }: {
   settingKey: K
-  bn: string
-  en: string
+  title: string
   initial: NonNullable<SiteSettings[K]>
   children: (value: NonNullable<SiteSettings[K]>, set: (value: NonNullable<SiteSettings[K]>) => void, error: (field: string) => string | undefined) => ReactNode
 }) {
@@ -152,7 +151,7 @@ function SettingCard<K extends Key>({ settingKey, bn, en, initial, children }: {
 
   return (
     <Card>
-      <CardTitle bn={bn} en={en} />
+      <CardTitle title={title} />
       {children(value, setValue, (field) => (save.error instanceof ApiError ? save.error.field(field) : undefined))}
       <ErrorNotice error={save.error instanceof ApiError && save.error.status === 422 ? null : save.error} />
       <button type="button" className={buttonClass(dirty ? 'primary' : 'outline', 'md', 'self-start')} onClick={() => dirty && !save.isPending && save.mutate()} aria-disabled={save.isPending || !dirty}>

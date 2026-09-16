@@ -75,7 +75,7 @@ export function LeaveCard({ status, onStatus }: { status: LeaveFilter; onStatus:
   return (
     <Card padded={false} className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-app-line p-3.5">
-        <CardTitle bn="ছুটির আবেদন" en="Leave requests" />
+        <CardTitle title="Leave requests" />
         <Chips label={t('common.status')} value={status} onChange={(value) => { setPage(1); onStatus(value) }} options={FILTERS.map((value) => ({ value, label: t(`leave.filters.${value}`) }))} />
       </div>
       {list.isPending ? (

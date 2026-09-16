@@ -30,8 +30,8 @@ class VisaServicesTest extends TestCase
             ->json('data');
 
         $this->actingAsApi($admin)->postJson("/api/v1/admin/visas/{$created['id']}/publish")->assertUnprocessable()
-            // In the staff member's language, Bangla by default.
-            ->assertJsonPath('problems', ['প্রসেসিংয়ে কত সময় লাগে লিখুন।', 'দুই ভাষাতেই প্রয়োজনীয় কাগজপত্র লিখুন, প্রতি লাইনে একটি।']);
+            // Staff screens are English only (docs/phase-5-admin-core.md, 2026-09-16).
+            ->assertJsonPath('problems', ['Say how long processing takes.', 'List the requirements in both languages, one per line.']);
         $this->getJson('/api/v1/public/visas')->assertOk()->assertExactJson(['data' => []]);
 
         $this->actingAsApi($admin)->putJson("/api/v1/admin/visas/{$created['id']}", [

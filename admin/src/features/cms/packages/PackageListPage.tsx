@@ -15,7 +15,7 @@ import { DestinationsCard } from './DestinationsCard'
 
 export function PackageListPage() {
   const { t } = useTranslation()
-  const { bdt, number, locale } = useFormat()
+  const { bdt, number } = useFormat()
   const toast = useToast()
   const [status, setStatus] = useState<PackageStatus | 'all'>('all')
   const [destination, setDestination] = useState('')
@@ -60,7 +60,7 @@ export function PackageListPage() {
             label={t('packages.destination')}
             value={destination}
             onChange={setDestination}
-            options={[{ value: '', label: t('packages.allDestinations') }, ...destinations.data.data.map((d) => ({ value: d.slug, label: locale === 'bn' ? d.name_bn : d.name_en }))]}
+            options={[{ value: '', label: t('packages.allDestinations') }, ...destinations.data.data.map((d) => ({ value: d.slug, label: d.name_en || d.name_bn }))]}
           />
         ) : null}
       </div>
@@ -81,9 +81,9 @@ export function PackageListPage() {
                   <Link to={`/packages/${pkg.id}`} className="flex min-w-0 flex-1 flex-col gap-0.5 text-app-text hover:text-app-text">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-display text-12 text-app-muted">{pkg.code}</span>
-                      {pkg.destination ? <span className="text-12 font-semibold text-blue">{locale === 'bn' ? pkg.destination.name_bn : pkg.destination.name_en}</span> : null}
+                      {pkg.destination ? <span className="text-12 font-semibold text-blue">{pkg.destination.name_en || pkg.destination.name_bn}</span> : null}
                     </span>
-                    <span className="truncate text-14 font-medium">{(locale === 'bn' ? pkg.title_bn : null) || pkg.title_en}</span>
+                    <span className="truncate text-14 font-medium">{pkg.title_en || pkg.title_bn}</span>
                     <span className="flex flex-wrap items-center gap-2 text-12 text-app-muted">
                       {t('packages.durationShort', { days: number(pkg.duration_days), nights: number(pkg.duration_nights ?? 0) })}
                       <span className="font-display font-semibold text-app-text">{bdt(pkg.sale_price ?? pkg.regular_price)}</span>

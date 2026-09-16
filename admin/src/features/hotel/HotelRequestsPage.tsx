@@ -4,7 +4,7 @@ import { QuoteRequestsPage, type RequestSpec } from '../requests/QuoteRequestsPa
 const HOTEL: RequestSpec<HotelInquiry> = {
   kind: 'hotel',
   ns: 'hotel',
-  cardTitle: { bn: 'হোটেল কোটেশন অনুরোধ', en: 'Hotel quotation requests' },
+  cardTitle: 'Hotel quotation requests',
   testId: 'hotel-inquiries-table',
   summary: (row) => row.location ?? '?',
   details: (row, { date, number }, t) => {

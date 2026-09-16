@@ -35,7 +35,7 @@ function readFilters(params: URLSearchParams): QuotationFilters {
 /** Quotations (docs/phase-5-admin-core.md §4.5): KPIs, the list on the shared row-actions table, and a new quotation. */
 export function QuotationsPage() {
   const { t } = useTranslation()
-  const { bdt, bdtCompact, number, percent, date, digits, locale } = useFormat()
+  const { bdt, bdtCompact, number, percent, date, digits } = useFormat()
   const { can } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
@@ -63,7 +63,7 @@ export function QuotationsPage() {
   }
 
   const actionsFor = (q: QuotationRow): RowAction[] => {
-    const title = (locale === 'bn' ? q.package_title_bn : null) || q.package_title_en
+    const title = q.package_title_en || q.package_title_bn
     const offered = q.display_status === 'sent' || q.status === 'accepted'
     const contact = contactActions(t, {
       phone: q.customer.phone,
@@ -148,7 +148,7 @@ export function QuotationsPage() {
         <div className="flex max-w-72 flex-col">
           <span className="font-medium">{q.customer.name}</span>
           <span className="truncate text-12 text-app-muted">
-            {(locale === 'bn' ? q.package_title_bn : null) || q.package_title_en} · {t('bookings.paxCount', { count: q.pax_count, n: number(q.pax_count) })}
+            {q.package_title_en || q.package_title_bn} · {t('bookings.paxCount', { count: q.pax_count, n: number(q.pax_count) })}
           </span>
           {can('quotations.view_all') && q.assigned_staff ? <span className="text-12 text-app-muted">{q.assigned_staff.name}</span> : null}
         </div>
@@ -204,7 +204,7 @@ export function QuotationsPage() {
 
           <Card padded={false} className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-app-line px-4.5 py-3.5">
-              <CardTitle bn="কোটেশন" en="Quotations" as="h2" />
+              <CardTitle title="Quotations" as="h2" />
               <span className="text-12 text-app-muted">{t('quotations.validityNote')}</span>
             </div>
             <div className="border-b border-app-line p-3.5">
@@ -334,7 +334,7 @@ function NewQuotationPanel({ customerId, digits }: { customerId: number | null; 
 
   return (
     <Card>
-      <CardTitle bn="নতুন কোটেশন" en="New quotation" as="h2" />
+      <CardTitle title="New quotation" as="h2" />
       <form
         className="flex flex-col gap-3"
         onSubmit={(event) => {

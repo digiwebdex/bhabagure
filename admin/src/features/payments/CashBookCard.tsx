@@ -23,7 +23,7 @@ const blank: CashBookFilters = { direction: 'all', method: '', category: '', fro
  */
 export function CashBookCard() {
   const { t } = useTranslation()
-  const { bdt, dateTime, locale } = useFormat()
+  const { bdt, dateTime } = useFormat()
   const toast = useToast()
   const options = usePaymentOptions()
   const [filters, setFilters] = useState<CashBookFilters>(blank)
@@ -115,7 +115,7 @@ export function CashBookCard() {
   return (
     <Card padded={false} className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-app-line p-4">
-        <CardTitle bn="ক্যাশ বুক" en="Cash book" aside={<span className="text-12 text-app-muted">{t('payments.appendOnly')}</span>} />
+        <CardTitle title="Cash book" aside={<span className="text-12 text-app-muted">{t('payments.appendOnly')}</span>} />
         <div className="flex flex-wrap items-end gap-3">
           <Chips label={t('payments.direction')} value={filters.direction} onChange={(direction) => set({ direction })} options={DIRECTIONS.map((value) => ({ value, label: t(`payments.directions.${value}`) }))} />
         </div>
@@ -143,7 +143,7 @@ export function CashBookCard() {
           <button type="button" className={buttonClass('outline', 'sm')} disabled={filters.page <= 1} onClick={() => setFilters({ ...filters, page: filters.page - 1 })}>
             {t('common.previous')}
           </button>
-          <span className="text-app-muted">{locale === 'bn' ? `${filters.page} / ${book.data.meta.last_page}` : t('common.pageOf', { page: filters.page, last: book.data.meta.last_page })}</span>
+          <span className="text-app-muted">{t('common.pageOf', { page: filters.page, last: book.data.meta.last_page })}</span>
           <button type="button" className={buttonClass('outline', 'sm')} disabled={filters.page >= book.data.meta.last_page} onClick={() => setFilters({ ...filters, page: filters.page + 1 })}>
             {t('common.next')}
           </button>

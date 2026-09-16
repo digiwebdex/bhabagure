@@ -95,7 +95,7 @@ export function SupportPage() {
 
       <Card padded={false} className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-app-line p-3.5">
-          <CardTitle bn="সাপোর্ট টিকেট" en="Support tickets" aside={<span className="text-12 text-app-muted">{t('support.queueNote')}</span>} />
+          <CardTitle title="Support tickets" aside={<span className="text-12 text-app-muted">{t('support.queueNote')}</span>} />
           <input type="search" value={filters.search} onChange={(event) => set({ search: event.target.value })} placeholder={t('support.search')} aria-label={t('support.search')} className={controlClass()} />
         </div>
         {list.isPending ? (

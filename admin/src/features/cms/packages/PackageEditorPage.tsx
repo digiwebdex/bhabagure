@@ -86,7 +86,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
   const checklist = publishChecklist(form, pkg?.images.length ?? 0)
   const websiteUrl = `${SITE_URL}${locale === 'en' ? '/en' : ''}/packages/${form.slug || '…'}`
   const saveError = save.error instanceof ApiError && save.error.status === 422 && save.error.problems.length === 0 ? null : save.error
-  const title = (locale === 'bn' ? form.title_bn : '') || form.title_en || t('packages.untitled')
+  const title = form.title_en || form.title_bn || t('packages.untitled')
 
   return (
     <>
@@ -109,7 +109,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
         <div className="flex min-w-0 flex-col gap-4.5">
           <Card>
-            <CardTitle bn="মূল তথ্য" en="Basics" />
+            <CardTitle title="Basics" />
             <Pair>
               <TextInput label={t('fields.titleBn')} value={form.title_bn} onChange={(value) => set('title_bn', value)} error={error('title_bn')} />
               <TextInput
@@ -138,7 +138,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
                 value={String(form.destination_id || '')}
                 onChange={(value) => set('destination_id', Number(value))}
                 error={error('destination_id')}
-                options={[{ value: '', label: t('common.choose') }, ...(destinations.data?.data ?? []).map((d) => ({ value: String(d.id), label: `${d.name_bn} · ${d.name_en}` }))]}
+                options={[{ value: '', label: t('common.choose') }, ...(destinations.data?.data ?? []).map((d) => ({ value: String(d.id), label: d.name_en || d.name_bn }))]}
               />
               <SelectInput
                 label={t('packages.includesAirfare')}
@@ -187,19 +187,19 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
           </Card>
 
           <Card>
-            <CardTitle bn="ভ্রমণসূচি" en="Itinerary · day by day" aside={<span className="text-12 text-app-muted">{t('packages.dayCount', { count: form.itinerary.length, n: number(form.itinerary.length) })}</span>} />
+            <CardTitle title="Itinerary · day by day" aside={<span className="text-12 text-app-muted">{t('packages.dayCount', { count: form.itinerary.length, n: number(form.itinerary.length) })}</span>} />
             <ItineraryEditor days={form.itinerary} onChange={(days) => set('itinerary', days)} error={error} />
           </Card>
 
           <Card>
-            <CardTitle bn="অন্তর্ভুক্ত" en="Included" />
+            <CardTitle title="Included" />
             <InclusionsEditor path="includes" items={form.includes} onChange={(items) => set('includes', items)} error={error} addLabel={t('packages.addIncluded')} />
-            <CardTitle bn="অন্তর্ভুক্ত নয়" en="Not included" as="h3" />
+            <CardTitle title="Not included" as="h3" />
             <InclusionsEditor path="excludes" items={form.excludes} onChange={(items) => set('excludes', items)} error={error} addLabel={t('packages.addExcluded')} />
           </Card>
 
           <Card>
-            <CardTitle bn="ট্যাগ" en="Tags" />
+            <CardTitle title="Tags" />
             <Pair>
               <TagInput label={t('packages.activities')} values={form.activities} onChange={(values) => set('activities', values)} suggestions={(tags.data?.data ?? []).filter((tag) => tag.type === 'activity').map((tag) => tag.name_en)} />
               <TagInput label={t('packages.tripTypes')} values={form.trip_types} onChange={(values) => set('trip_types', values)} suggestions={(tags.data?.data ?? []).filter((tag) => tag.type === 'trip_type').map((tag) => tag.name_en)} />
@@ -207,14 +207,14 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
           </Card>
 
           <Card>
-            <CardTitle bn="এসইও" en="SEO · search results and sharing" />
+            <CardTitle title="SEO · search results and sharing" />
             <SeoFields values={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))} url={websiteUrl} fallbackTitle={title} />
           </Card>
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4.5 lg:sticky lg:top-5">
           <Card>
-            <CardTitle bn="প্রকাশ" en="Publishing" aside={pkg ? <StatusBadge status={pkg.status} /> : <StatusBadge status="draft" />} />
+            <CardTitle title="Publishing" aside={pkg ? <StatusBadge status={pkg.status} /> : <StatusBadge status="draft" />} />
             <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
               {checklist.map((item) => (
                 <li key={item.key} className="flex items-center gap-2 text-13">
@@ -255,12 +255,12 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
           </Card>
 
           <Card>
-            <CardTitle bn="ছবি" en="Photos" />
+            <CardTitle title="Photos" />
             {pkg ? <PackagePhotos packageId={pkg.id} images={pkg.images} /> : <p className="m-0 text-13 text-app-muted">{t('packages.saveToContinue')}</p>}
           </Card>
 
           <Card>
-            <CardTitle bn="গ্রুপ ডিপার্চার" en="Group departures" />
+            <CardTitle title="Group departures" />
             {pkg ? <DeparturesPanel packageId={pkg.id} durationDays={form.duration_days} /> : <p className="m-0 text-13 text-app-muted">{t('packages.saveToContinue')}</p>}
           </Card>
 

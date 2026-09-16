@@ -1,4 +1,3 @@
-import i18n from '../../i18n'
 
 /**
  * The staff API client. The access token lives in memory only (never localStorage, where any injected script
@@ -57,7 +56,7 @@ export async function request<T>(path: string, { method = 'GET', body, signal, r
       credentials: 'include',
       headers: {
         Accept: 'application/json',
-        'X-Locale': i18n.resolvedLanguage === 'en' ? 'en' : 'bn',
+        'X-Locale': 'en',
         ...(isForm || body === undefined ? {} : { 'Content-Type': 'application/json' }),
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
@@ -115,7 +114,7 @@ export async function fetchDocument(path: string, retry = true): Promise<Blob> {
   try {
     response = await fetch(`${API_URL}/api/v1/${path.replace(/^\//, '')}`, {
       credentials: 'include',
-      headers: { 'X-Locale': i18n.resolvedLanguage === 'en' ? 'en' : 'bn', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+      headers: { 'X-Locale': 'en', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
     })
   } catch {
     throw new NetworkError('Network unavailable')
@@ -138,7 +137,7 @@ export function upload<T>(path: string, form: FormData, onProgress: (fraction: n
     xhr.open('POST', `${API_URL}/api/v1/${path}`)
     xhr.withCredentials = true
     xhr.setRequestHeader('Accept', 'application/json')
-    xhr.setRequestHeader('X-Locale', i18n.resolvedLanguage === 'en' ? 'en' : 'bn')
+    xhr.setRequestHeader('X-Locale', 'en')
     if (accessToken) xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`)
     xhr.upload.onprogress = (event) => event.lengthComputable && onProgress(event.loaded / event.total)
     xhr.onerror = () => reject(new NetworkError('Network unavailable'))

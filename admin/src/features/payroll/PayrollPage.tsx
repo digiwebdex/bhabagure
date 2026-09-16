@@ -55,7 +55,7 @@ function Sheet({ sheet }: { sheet: PayrollSheet }) {
 
   const actionsFor = (row: PayrollRow): RowAction[] => [
     ...(seeDays ? [{ key: 'days', icon: '◉', label: t('payroll.days'), tone: 'muted' as const, to: `/attendance/staff/${row.staff.id}?month=${sheet.month}` }] : []),
-    { key: 'salary', icon: '৳', label: t('payroll.salary'), tone: 'blue', onSelect: () => setOpen({ kind: 'salary', row }) },
+    { key: 'salary', icon: '$', label: t('payroll.salary'), tone: 'blue', onSelect: () => setOpen({ kind: 'salary', row }) },
     ...(!finalised && can('payroll.manage')
       ? [
           {
@@ -220,7 +220,7 @@ function Sheet({ sheet }: { sheet: PayrollSheet }) {
       </Card>
 
       <Card>
-        <CardTitle bn="সমন্বয়" en="Adjustments" aside={<span className="text-12 text-app-muted">{t('payroll.adjustmentsNote')}</span>} />
+        <CardTitle title="Adjustments" aside={<span className="text-12 text-app-muted">{t('payroll.adjustmentsNote')}</span>} />
         {adjustments.length === 0 ? (
           <p className="m-0 text-13 text-app-muted">{t('payroll.noAdjustments')}</p>
         ) : (

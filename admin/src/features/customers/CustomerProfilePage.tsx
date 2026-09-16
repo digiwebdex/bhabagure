@@ -121,7 +121,7 @@ function DetailsCard({ customer }: { customer: CustomerDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="যোগাযোগের তথ্য" en="Contact details" />
+      <CardTitle title="Contact details" />
       <form
         className="flex flex-col gap-3"
         onSubmit={(event) => {
@@ -167,8 +167,7 @@ function PortalCard({ customer }: { customer: CustomerDetail }) {
   return (
     <Card>
       <CardTitle
-        bn="কাস্টমার পোর্টাল"
-        en="Customer portal"
+        title="Customer portal"
         aside={<Badge tone={portal.disabled_at ? 'red' : portal.claimed_at ? 'green' : 'slate'}>{portal.disabled_at ? t('portal.blocked') : portal.claimed_at ? t('portal.active') : t('portal.notClaimed')}</Badge>}
       />
       <dl className="m-0 grid gap-1.5 text-13">
@@ -287,7 +286,7 @@ function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="ওয়েবসাইট থেকে জিজ্ঞাসা" en="Website enquiries" />
+      <CardTitle title="Website enquiries" />
       <ol className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="customer-enquiries">
         {customer.enquiries.map((enquiry) => (
           <li key={enquiry.id} className="flex flex-col gap-1 border-b border-app-line pb-2.5 last:border-b-0">
@@ -327,8 +326,7 @@ function DownloadsCard({ customer }: { customer: CustomerDetail }) {
   return (
     <Card>
       <CardTitle
-        bn="ওয়েবসাইট থেকে ডাউনলোড"
-        en="Downloads from the website"
+        title="Downloads from the website"
         aside={
           can('downloads.view') ? (
             <Link to={`/downloads?search=${encodeURIComponent(customer.phone)}`} className="text-12">
@@ -368,7 +366,7 @@ function ContactLogCard({ customer }: { customer: CustomerDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="যোগাযোগের লগ" en="Contact log" />
+      <CardTitle title="Contact log" />
       {customer.actions.log_contact ? (
         <form
           className="flex flex-col gap-3 rounded-10 border border-app-line p-3"
@@ -425,15 +423,14 @@ function ContactLogCard({ customer }: { customer: CustomerDetail }) {
 
 function QuotationsCard({ customer }: { customer: CustomerDetail }) {
   const { t } = useTranslation()
-  const { bdt, locale } = useFormat()
+  const { bdt } = useFormat()
   const { can } = useAuth()
   if (!can('quotations.view_all', 'quotations.view_own')) return null
 
   return (
     <Card>
       <CardTitle
-        bn="কোটেশন"
-        en="Quotations"
+        title="Quotations"
         aside={
           can('quotations.manage') && customer.lead_state !== 'lost' ? (
             <Link to={`/quotations?customer=${customer.id}`} className={buttonClass('outline', 'sm')}>
@@ -452,7 +449,7 @@ function QuotationsCard({ customer }: { customer: CustomerDetail }) {
                 <Link to={`/quotations/${quotation.id}`} className="font-display font-semibold">
                   {quotation.number}
                 </Link>
-                <span className="text-12 text-app-muted">{(locale === 'bn' ? quotation.package_title_bn : null) || quotation.package_title_en}</span>
+                <span className="text-12 text-app-muted">{quotation.package_title_en || quotation.package_title_bn}</span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="font-display text-13 font-semibold">{bdt(quotation.total_amount)}</span>
@@ -468,11 +465,11 @@ function QuotationsCard({ customer }: { customer: CustomerDetail }) {
 
 function BookingsCard({ customer }: { customer: CustomerDetail }) {
   const { t } = useTranslation()
-  const { bdt, date, locale } = useFormat()
+  const { bdt, date } = useFormat()
 
   return (
     <Card>
-      <CardTitle bn="বুকিং" en="Bookings" />
+      <CardTitle title="Bookings" />
       {customer.bookings.length === 0 ? (
         <p className="m-0 text-13 text-app-muted">{t('customers.noBookings')}</p>
       ) : (
@@ -484,7 +481,7 @@ function BookingsCard({ customer }: { customer: CustomerDetail }) {
                   {booking.reference}
                 </Link>
                 <span className="text-12 text-app-muted">
-                  {(locale === 'bn' ? booking.package_title_bn : null) || booking.package_title_en} · {booking.travel_start ? date(booking.travel_start) : '—'}
+                  {booking.package_title_en || booking.package_title_bn} · {booking.travel_start ? date(booking.travel_start) : '—'}
                 </span>
               </span>
               <span className="flex items-center gap-2">

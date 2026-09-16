@@ -46,15 +46,14 @@ export function MyAttendancePage() {
       <div className="grid items-start gap-4.5 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
         <Card padded={false} className="overflow-hidden">
           <div className="border-b border-app-line p-3.5">
-            <CardTitle bn="আমার পাঞ্চ" en="My punches" aside={<span className="text-12 text-app-muted">{t('myAttendance.askHr')}</span>} />
+            <CardTitle title="My punches" aside={<span className="text-12 text-app-muted">{t('myAttendance.askHr')}</span>} />
           </div>
           {data.data ? <DaysTable days={data.data.data.days} testId="my-days-table" /> : <Loading />}
         </Card>
         <div className="flex flex-col gap-4.5">
           <Card>
             <CardTitle
-              bn="আমার ছুটি"
-              en="My leave"
+              title="My leave"
               aside={
                 <button type="button" className={buttonClass('cta', 'sm')} onClick={() => setFiling(true)}>
                   {t('myAttendance.askLeave')}

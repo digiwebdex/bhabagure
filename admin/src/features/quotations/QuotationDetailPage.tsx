@@ -32,7 +32,7 @@ type Transition = 'send' | 'accept' | 'decline' | 'withdraw' | 'revise'
 
 function Quotation({ q }: { q: QuotationDetail }) {
   const { t } = useTranslation()
-  const { digits, locale } = useFormat()
+  const { digits } = useFormat()
   const toast = useToast()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -43,7 +43,7 @@ function Quotation({ q }: { q: QuotationDetail }) {
   const convertOpen = params.get('convert') === '1' && q.actions.convert
   const transition = useQuotationMutation(({ action, reason }: { action: Transition; reason?: string | null }) => quotationActions.transition(q.id, action, reason === undefined ? undefined : { reason }), (r) => r.data)
   const remove = useQuotationMutation(() => quotationActions.remove(q.id), () => null)
-  const title = (locale === 'bn' ? q.package_title_bn : null) || q.package_title_en
+  const title = q.package_title_en || q.package_title_bn
 
   const run = (action: Transition, done: string, reason?: string | null) =>
     transition.mutate(
@@ -156,7 +156,7 @@ function Quotation({ q }: { q: QuotationDetail }) {
         {q.actions.edit ? <EditorCard q={q} /> : <PriceCard q={q} />}
         <div className="flex flex-col gap-admin-gap">
           <Card>
-            <CardTitle bn="গ্রাহক" en="Customer" />
+            <CardTitle title="Customer" />
             <div className="flex flex-col gap-0.5">
               <Link to={`/customers/${q.customer.id}`} className="font-medium">
                 {q.customer.name}
@@ -233,7 +233,7 @@ function EditorCard({ q }: { q: QuotationDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="খসড়া কোটেশন" en="Draft quotation" aside={<span className="text-12 text-app-muted">{t('quotations.draftNote')}</span>} />
+      <CardTitle title="Draft quotation" aside={<span className="text-12 text-app-muted">{t('quotations.draftNote')}</span>} />
       <form
         className="flex flex-col gap-3"
         onSubmit={(event) => {
@@ -264,7 +264,7 @@ function EditorCard({ q }: { q: QuotationDetail }) {
 /** Sent and after: the frozen lines and amounts, exactly as the customer received them. */
 function PriceCard({ q }: { q: QuotationDetail }) {
   const { t } = useTranslation()
-  const { bdt, number, date, locale } = useFormat()
+  const { bdt, number, date } = useFormat()
   const rows: [string, string][] = [
     [t('bookings.line.package'), bdt(q.amounts.subtotal)],
     ...(q.amounts.single_supplement > 0 ? [[t('bookings.line.single'), bdt(q.amounts.single_supplement)] as [string, string]] : []),
@@ -275,9 +275,9 @@ function PriceCard({ q }: { q: QuotationDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="মূল্য" en="Price" aside={<span className="text-12 text-app-muted">{t('quotations.frozenNote')}</span>} />
+      <CardTitle title="Price" aside={<span className="text-12 text-app-muted">{t('quotations.frozenNote')}</span>} />
       <dl className="m-0 grid-auto-fit-half-160 grid gap-x-4 gap-y-2 text-13">
-        <Fact label={t('bookings.package')} value={(locale === 'bn' ? q.package_title_bn : null) || q.package_title_en} />
+        <Fact label={t('bookings.package')} value={q.package_title_en || q.package_title_bn || '—'} />
         <Fact label={t('newBooking.travelDate')} value={q.travel_date ? date(q.travel_date) : t('quotations.dateLater')} />
         <Fact label={t('quotations.travellers')} value={number(q.pax_count)} />
         <Fact label={t('bookings.room')} value={t(`bookings.rooms.${q.room_type}`)} />
@@ -286,7 +286,7 @@ function PriceCard({ q }: { q: QuotationDetail }) {
         <tbody>
           {q.lines.map((line, index) => (
             <tr key={index} className="border-b border-app-line">
-              <td className="py-1.5 pr-2">{(locale === 'bn' ? line.title_bn : null) || line.title_en}</td>
+              <td className="py-1.5 pr-2">{line.title_en || line.title_bn}</td>
               <td className="py-1.5 pr-2 text-right font-display whitespace-nowrap text-app-muted">
                 {number(line.quantity)} × {bdt(line.unit_price)}
               </td>
@@ -331,7 +331,7 @@ function HistoryCard({ q }: { q: QuotationDetail }) {
 
   return (
     <Card>
-      <CardTitle bn="ইতিহাস" en="History" />
+      <CardTitle title="History" />
       <ol className="m-0 flex list-none flex-col gap-2 p-0">
         {steps.map((key) => (
           <li key={key} className="flex flex-wrap justify-between gap-2 text-13">

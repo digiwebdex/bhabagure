@@ -33,8 +33,6 @@ test('an admin adds a staff member, who sets their own password from the one-tim
   // The newcomer, in a browser of their own.
   const context = await browser.newContext()
   const newcomer = await context.newPage()
-  await newcomer.goto('/login')
-  await newcomer.evaluate(() => localStorage.setItem('bh-lang', 'en'))
   await newcomer.goto(url)
   await expect(newcomer.getByRole('heading', { name: 'Set your password' })).toBeVisible(FIRST_LOAD)
   await expect(newcomer).not.toHaveURL(/#token=/)

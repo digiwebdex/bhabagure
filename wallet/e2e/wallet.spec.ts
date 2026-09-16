@@ -28,8 +28,6 @@ let secret = ''
 
 async function signIn(page: Page, email: string) {
   await page.goto('/')
-  await page.evaluate(() => localStorage.setItem('bh-lang', 'en'))
-  await page.reload()
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(password())
   await page.getByRole('button', { name: 'Continue' }).click()
@@ -50,7 +48,7 @@ test('the super admin sets up an authenticator app, opens the wallet, and an adm
   await expect(page.getByRole('alert')).toContainText('That code isn’t right')
   await page.getByLabel('6-digit code').fill(totp(secret))
   await page.getByRole('button', { name: 'Open the wallet' }).click()
-  await expect(page.getByTestId('wallet-balance')).toHaveText('৳ 0', { timeout: 15_000 })
+  await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 0', { timeout: 15_000 })
   await expect(page.getByText('Private · separate from company books')).toBeVisible()
 })
 
@@ -72,10 +70,10 @@ test('cash in with a saved reference, a deal with its advance and a payment, and
   await form.getByLabel('Save a new reference').fill('Profit share')
   await form.getByRole('button', { name: '+ Save' }).click()
   await expect(form.getByLabel('Reference · what this money is for')).toHaveValue('Profit share')
-  await form.getByLabel('Amount (৳)').fill('120000')
+  await form.getByLabel('Amount (BDT)').fill('120000')
   await form.getByRole('button', { name: 'Add cash in' }).click()
-  await expect(page.getByText('Cash in ৳ 1,20,000 recorded')).toBeVisible()
-  await expect(page.getByTestId('wallet-balance')).toHaveText('৳ 1,20,000')
+  await expect(page.getByText('Cash in BDT 1,20,000 recorded')).toBeVisible()
+  await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 1,20,000')
   await expect(page.getByTestId('breakdown')).toContainText('Family business')
 
   // A deal: the advance can't exceed the total; it goes into the balance, and a payment settles what is due.
@@ -85,23 +83,23 @@ test('cash in with a saved reference, a deal with its advance and a payment, and
   await deal.getByLabel('Advance').fill('90000')
   await expect(deal).toContainText('The advance can’t be more than the deal total.')
   await deal.getByLabel('Advance').fill('40000')
-  await expect(deal).toContainText('Advance ৳ 40,000 will be added to your balance · ৳ 40,000 stays due')
+  await expect(deal).toContainText('Advance BDT 40,000 will be added to your balance · BDT 40,000 stays due')
   await deal.getByRole('button', { name: 'Save deal & advance' }).click()
-  await expect(page.getByText('Deal saved · advance ৳ 40,000 added to balance')).toBeVisible()
-  await expect(page.getByTestId('due-total')).toHaveText('Total due ৳ 40,000')
-  await expect(page.getByTestId('wallet-balance')).toHaveText('৳ 1,60,000')
+  await expect(page.getByText('Deal saved · advance BDT 40,000 added to balance')).toBeVisible()
+  await expect(page.getByTestId('due-total')).toHaveText('Total due BDT 40,000')
+  await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 1,60,000')
   await page.getByTestId('deals').getByRole('button', { name: 'Record payment' }).click()
   await expect(page.getByTestId('deals')).toContainText('Fully paid')
-  await expect(page.getByTestId('wallet-balance')).toHaveText('৳ 2,00,000')
+  await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 2,00,000')
 
   // Reverse the cash in: an entry the other way with the reason; nothing is deleted.
   const history = page.getByTestId('history')
   await history.getByRole('button', { name: 'Reverse “Profit share”' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Reverse ৳ 1,20,000' })
+  const dialog = page.getByRole('dialog', { name: 'Reverse BDT 1,20,000' })
   await dialog.getByLabel('Reason').fill('Entered in the wrong month')
   await dialog.getByRole('button', { name: 'Reverse' }).click()
   await expect(history).toContainText('Reversal · Entered in the wrong month')
-  await expect(page.getByTestId('wallet-balance')).toHaveText('৳ 80,000')
+  await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 80,000')
   await expect(history.getByText('Reversed', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Sign out' }).click()

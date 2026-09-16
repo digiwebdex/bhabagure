@@ -155,7 +155,7 @@ export function DownloadsPage() {
 
       <Card padded={false} className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-app-line p-3.5">
-          <CardTitle bn="ওয়েবসাইট থেকে ডাউনলোড" en="Website downloads" aside={<span className="text-12 text-app-muted">{t('downloads.note')}</span>} />
+          <CardTitle title="Website downloads" aside={<span className="text-12 text-app-muted">{t('downloads.note')}</span>} />
           <input type="search" value={filters.search} onChange={(event) => set({ search: event.target.value })} placeholder={t('downloads.search')} aria-label={t('downloads.search')} className={controlClass()} />
         </div>
         {list.isPending ? (

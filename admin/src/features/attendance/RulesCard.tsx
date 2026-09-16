@@ -31,8 +31,7 @@ function RulesForm({ month, rules, manage }: { month: string; rules: Rules; mana
   return (
     <Card>
       <CardTitle
-        bn="নিয়ম"
-        en="Rules"
+        title="Rules"
         aside={
           <span className="text-12 text-app-muted">
             {/* The migration's starting rules carry January 2000: in force from the beginning, not from a real month. */}

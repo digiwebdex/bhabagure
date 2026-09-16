@@ -125,13 +125,13 @@ export function SeoFields({ values, onChange, url, fallbackTitle }: {
   fallbackTitle: string
 }) {
   const { t } = useTranslation()
-  const { number, locale } = useFormat()
+  const { number } = useFormat()
   const counter = (value: string | null, max: number) => {
     const length = value?.length ?? 0
     return <span className={length > max ? 'text-amber' : undefined}>{t('seo.counter', { n: number(length), max: number(max) })}</span>
   }
-  const previewTitle = (locale === 'bn' ? values.seo_title_bn : values.seo_title_en) || fallbackTitle
-  const previewDescription = locale === 'bn' ? values.seo_description_bn : values.seo_description_en
+  const previewTitle = values.seo_title_en || values.seo_title_bn || fallbackTitle
+  const previewDescription = values.seo_description_en || values.seo_description_bn
 
   return (
     <div className="flex flex-col gap-3">

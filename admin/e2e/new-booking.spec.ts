@@ -23,8 +23,8 @@ test('a sales agent books a walk-in customer at the website price; the booking i
   if (await dateField.count()) await dateField.fill(travel)
   else await page.getByLabel('Departure', { exact: true }).selectOption({ index: 1 })
 
-  await expect(page.getByTestId('new-booking-total')).toHaveText('৳ 1,53,000')
-  await page.getByRole('button', { name: 'Create booking · ৳ 1,53,000' }).click()
+  await expect(page.getByTestId('new-booking-total')).toHaveText('BDT 1,53,000')
+  await page.getByRole('button', { name: 'Create booking · BDT 1,53,000' }).click()
 
   await expect(page).toHaveURL(/\/bookings\/\d+$/)
   // The URL changes before the booking loads; until then the heading is still "New booking".

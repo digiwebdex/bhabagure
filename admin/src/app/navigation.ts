@@ -35,7 +35,7 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
   },
   {
     key: 'finance',
-    items: [{ key: 'payments', path: '/payments', icon: '৳', permissions: ['payments.view'] }],
+    items: [{ key: 'payments', path: '/payments', icon: '$', permissions: ['payments.view'] }],
   },
   {
     key: 'catalogue',
@@ -62,7 +62,7 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     items: [
       { key: 'attendance', path: '/attendance', icon: '◷', permissions: ['attendance.view_all', 'attendance.manage'], badge: 'leave_requests' },
       // Salary from attendance (§6).
-      { key: 'payroll', path: '/payroll', icon: '৳', permissions: ['payroll.view', 'payroll.manage'] },
+      { key: 'payroll', path: '/payroll', icon: 'W', permissions: ['payroll.view', 'payroll.manage'] },
       // Staff & bonus: the badge counts bonus withdrawals waiting for a decision or a payment (§7).
       { key: 'staff', path: '/staff', icon: 'S', permissions: ['staff.manage'], badge: 'bonus_withdrawals' },
       // Everyone's own days and leave (§5.1).

@@ -72,7 +72,7 @@ type NumberProps = Omit<TextProps, 'value' | 'onChange' | 'type'> & { value: num
 
 /**
  * Numeric input. Typed as text so Bengali digits and thousands separators are accepted; the formatted value
- * (e.g. "৳ ৭৫,০০০") shows underneath so the editor can check the amount at a glance.
+ * (e.g. "BDT 75,000") shows underneath so the editor can check the amount at a glance.
  */
 export function NumberInput({ value, onChange, preview, hint, ...props }: NumberProps) {
   // The typed text is kept as typed ("75000." or Bengali digits) and only replaced when the value changes

@@ -26,9 +26,13 @@
 - Staff documents (Vault) stay with the Vault module; when built: private storage, signed-in access, encrypted
   numbers, and a staff member reads only their own documents unless they manage staff.
 
-**Money formatting (global)**
-- "৳" in every interface in both languages: `৳ 1,50,000` (en) / `৳ ১,৫০,০০০` (bn) — website, admin, invoice PDF,
-  email, WhatsApp.
+**Language and money (global; changed 2026-09-16 at the client's request)**
+- **Staff software is English only** — the admin panel, the wallet app, and the API messages those screens show. There
+  is no language switch in either app, and amounts read `BDT 1,50,000`. Staff still type customer content in both
+  languages (package titles, posts, notification templates), and pick the language a customer's messages, invoice or
+  quotation go out in.
+- **What customers read stays Bangla first**: the website and portal (`৳ 1,50,000` / `৳ ১,৫০,০০০`), invoice and
+  quotation PDFs, WhatsApp, SMS and email.
 - Short forms: `৳ 14.2L` / `৳ 2.4Cr` (en), `৳ ১৪.২ লাখ` / `৳ ২.৪ কোটি` (bn). One decimal, as the design's own code
   computes it (`(amount / 100000).toFixed(1) + 'L'`), lakh from 1,00,000 and crore from 1,00,00,000, deciding the
   unit after rounding (99,96,000 → `৳ 1.0Cr`, never `৳ 100.0L`). Below one lakh the full amount.

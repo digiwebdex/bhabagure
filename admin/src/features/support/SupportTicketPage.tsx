@@ -51,7 +51,7 @@ function Ticket({ ticket }: { ticket: SupportTicketDetail }) {
 
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
         <Card>
-          <CardTitle bn="কথোপকথন" en="Conversation" aside={<Badge tone={ticketTone(ticket)}>{ticket.overdue ? t('support.overdue') : t(`support.status.${ticket.status}`)}</Badge>} />
+          <CardTitle title="Conversation" aside={<Badge tone={ticketTone(ticket)}>{ticket.overdue ? t('support.overdue') : t(`support.status.${ticket.status}`)}</Badge>} />
           <ol className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="support-messages">
             {ticket.messages.map((message) => (
               <li
@@ -80,7 +80,7 @@ function Ticket({ ticket }: { ticket: SupportTicketDetail }) {
         </Card>
 
         <Card>
-          <CardTitle bn="গ্রাহক" en="Customer" />
+          <CardTitle title="Customer" />
           <div className="flex flex-col gap-1 text-13">
             <Link to={`/customers/${ticket.customer.id}`} className="text-14 font-semibold">
               {ticket.customer.name}
