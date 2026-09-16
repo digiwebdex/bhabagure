@@ -21,7 +21,8 @@ const TABLES = [
   { name: 'Bookings', url: '/bookings', testId: 'bookings-table', width: 1024, icons: 7 },
   { name: 'Customers', url: '/customers?stage=lead', testId: 'customers-table', width: 700, icons: 7 },
   { name: 'Quotations', url: '/quotations', testId: 'quotations-table', width: 1024, icons: 8 },
-  { name: 'Cash book', url: '/payments', testId: 'cash-book-table', width: 1024, icons: 7 },
+  // The cash book is not here: Transactions has a table of its own, laid out the way the client's books read it,
+  // with the actions behind one button rather than in a sticky column (docs/phase-9-accounts.md §7).
   // View, Reply, WhatsApp and email only, and Mark as quoted (§4.7; the Reply box, Phase 8 §4.B).
   { name: 'Air ticketing', url: '/air-ticketing?state=all', testId: 'air-inquiries-table', width: 700, icons: 5 },
   // The same actions on hotel quotation requests (Phase 8 §4.B).

@@ -12,23 +12,32 @@ test('the accountant keeps the chart of accounts, posts a balanced entry and rev
   const nav = page.getByRole('navigation')
   await expect(nav.getByRole('link', { name: 'A Chart of accounts' })).toBeVisible(FIRST_LOAD)
   await page.goto('/accounts')
-  await expect(page.getByRole('button', { name: '+ New account' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '+ Add a new account' }).first()).toHaveCount(0)
 
   await signIn(page, 'accountant')
   await page.goto('/accounts')
   await expect(page.getByRole('heading', { name: 'Chart of accounts', level: 1 })).toBeVisible(FIRST_LOAD)
-  // Cash is the software's own account: marked, and offered no Delete.
-  const cash = page.getByTestId('accounts-asset').locator('li').filter({ hasText: 'Cash' }).first()
-  await expect(cash).toContainText('Built in')
-  await expect(cash.getByRole('button', { name: 'Delete' })).toHaveCount(0)
 
-  // A staff account takes the next free number in its range.
-  await page.getByRole('button', { name: '+ New account' }).click()
+  // Assets open first, in the sections they are looked for under. Money the gateway owes is in transit, not in hand.
+  const cashAndBank = page.getByTestId('accounts-cash_and_bank')
+  await expect(cashAndBank).toContainText('Cash in hand')
+  await expect(page.getByTestId('accounts-money_in_transit')).toContainText('SSLCommerz clearing')
+  await expect(page.getByTestId('accounts-inventory')).toContainText('You haven’t added any Inventory accounts yet')
+
+  // Cash is the software's own account: marked, and offered no Delete.
+  const cash = cashAndBank.locator('li').filter({ hasText: 'Cash in hand' }).first()
+  await expect(cash).toContainText('Built in')
+  await expect(cash.getByRole('button', { name: 'Delete Cash in hand' })).toHaveCount(0)
+  await expect(cash.getByRole('button', { name: 'Edit Cash in hand' })).toBeVisible()
+
+  // A staff account is added straight into the section it belongs in, and takes the next free number in its range.
+  await page.getByRole('tab', { name: 'Expenses' }).click()
+  await page.getByTestId('accounts-payment_fees').getByRole('button', { name: '+ Add a new account' }).click()
   const dialog = page.getByRole('dialog', { name: 'New account' })
+  await expect(dialog.getByLabel('Section')).toHaveValue('payment_fees')
   await dialog.getByLabel('Account name').fill('Bank charges')
-  await dialog.getByLabel('Kind').selectOption('expense')
   await dialog.getByRole('button', { name: 'Save' }).click()
-  const charges = page.getByTestId('accounts-expense').locator('li').filter({ hasText: 'Bank charges' })
+  const charges = page.getByTestId('accounts-payment_fees').locator('li').filter({ hasText: 'Bank charges' })
   await expect(charges).toContainText('5500', FIRST_LOAD)
 
   // A journal entry must balance before it can be posted.
@@ -52,7 +61,8 @@ test('the accountant keeps the chart of accounts, posts a balanced entry and rev
 
   // The chart shows it, the reports agree, and the entry can be reversed exactly once.
   await page.goto('/accounts')
-  await expect(page.getByTestId('accounts-expense').locator('li').filter({ hasText: 'Bank charges' })).toContainText('BDT 850')
+  await page.getByRole('tab', { name: 'Expenses' }).click()
+  await expect(page.getByTestId('accounts-payment_fees').locator('li').filter({ hasText: 'Bank charges' })).toContainText('BDT 850')
 
   await page.goto('/reports/general-ledger')
   await expect(page.getByText('Debits equal credits')).toBeVisible(FIRST_LOAD)
@@ -66,5 +76,8 @@ test('the accountant keeps the chart of accounts, posts a balanced entry and rev
   await expect(page.getByTestId('journal-entries')).toContainText('Reverses #', FIRST_LOAD)
 
   await page.goto('/accounts')
-  await expect(page.getByTestId('accounts-expense').locator('li').filter({ hasText: 'Bank charges' })).toContainText('BDT 0')
+  await page.getByRole('tab', { name: 'Expenses' }).click()
+  // Reversed, so the account is back to nothing — and a balance of nothing is not printed beside the name at all.
+  const settled = page.getByTestId('accounts-payment_fees').locator('li').filter({ hasText: 'Bank charges' })
+  await expect(settled).toContainText('BDT 0')
 })

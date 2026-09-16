@@ -12,6 +12,12 @@ use App\Services\Ledger\LedgerService;
  */
 final class CashCategories
 {
+    /**
+     * VAT collected from customers and handed over to the government (docs/phase-9-accounts.md §7). Not a manual
+     * category — it has its own action, because its other side is a liability being settled, not a cost.
+     */
+    public const VAT_PAID = 'vat_paid';
+
     /** category => [direction it may take: in · out · both, the account on the other side] */
     public const MANUAL = [
         'other_income' => ['in', Account::OTHER_INCOME],
@@ -34,7 +40,7 @@ final class CashCategories
     /** Every category a cash-book row can carry, for the filter. */
     public static function all(): array
     {
-        return [LedgerService::CATEGORY_PAYMENT, LedgerService::CATEGORY_ONLINE_CHARGE, LedgerService::CATEGORY_GATEWAY_FEE, ...array_keys(self::MANUAL)];
+        return [LedgerService::CATEGORY_PAYMENT, LedgerService::CATEGORY_ONLINE_CHARGE, LedgerService::CATEGORY_GATEWAY_FEE, self::VAT_PAID, ...array_keys(self::MANUAL)];
     }
 
     /** @return list<string> manual categories allowed for a direction */

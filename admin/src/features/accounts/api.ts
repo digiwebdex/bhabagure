@@ -12,6 +12,8 @@ export type AccountRow = {
   code: string
   name: string
   type: AccountType
+  /** The section of the chart it is read under — "cash_and_bank", "operating_expense" and the rest. */
+  group: string | null
   description: string | null
   /** Named by the software and posted to by the ledger: it can be reworded, never removed. */
   is_system: boolean
@@ -22,6 +24,8 @@ export type AccountRow = {
   /** In the account's own direction: assets and expenses rise on debits, the rest on credits. */
   balance: number
   entries: number
+  /** The day it was last posted to, or null if it never has been. */
+  last_entry_on: string | null
 }
 
 export type JournalLine = { account_id: number; code: string; account: string; debit: number; credit: number }
@@ -53,7 +57,10 @@ export type AccountTransactionRow = {
   balance: number
 }
 
-type Chart = { data: AccountRow[]; meta: { types: AccountType[]; totals: Record<AccountType, number> } }
+/** A section of the chart: the heading accounts are looked for under, and what belongs in it. */
+export type AccountSection = { key: string; title: string; help: string }
+
+type Chart = { data: AccountRow[]; meta: { types: AccountType[]; groups: Record<AccountType, AccountSection[]>; totals: Record<AccountType, number> } }
 type Journal = { data: JournalRow[]; meta: { current_page: number; last_page: number; total: number } }
 type AccountTransactions = { data: AccountTransactionRow[]; meta: { account: { id: number; code: string; name: string; type: AccountType }; opening: number; closing: number; debit: number; credit: number } }
 type LedgerRow = { id: number; code: string; name: string; type: AccountType; debit: number; credit: number; balance: number }
@@ -108,7 +115,7 @@ export function useAccountAction<TVariables, TResult>(send: (variables: TVariabl
   })
 }
 
-export type AccountInput = { name: string; type: AccountType; description: string | null; code: string | null; is_money: boolean }
+export type AccountInput = { name: string; type: AccountType; group: string | null; description: string | null; code: string | null; is_money: boolean }
 export type JournalInput = { entry_date: string; description: string; lines: { account_id: number | null; debit: number | null; credit: number | null }[] }
 
 export const accountActions = {

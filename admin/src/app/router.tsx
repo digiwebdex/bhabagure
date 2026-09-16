@@ -48,7 +48,7 @@ const PackageEditorPage = page(() => import('../features/cms/packages/PackageEdi
 const PackageListPage = page(() => import('../features/cms/packages/PackageListPage'), 'PackageListPage')
 const PostEditorPage = page(() => import('../features/cms/blog/PostEditorPage'), 'PostEditorPage')
 const PostListPage = page(() => import('../features/cms/blog/PostListPage'), 'PostListPage')
-const PaymentsPage = page(() => import('../features/payments/PaymentsPage'), 'PaymentsPage')
+const TransactionsPage = page(() => import('../features/transactions/TransactionsPage'), 'TransactionsPage')
 const PricingPage = page(() => import('../features/cms/pricing/PricingPage'), 'PricingPage')
 const QuotationDetailPage = page(() => import('../features/quotations/QuotationDetailPage'), 'QuotationDetailPage')
 const QuotationsPage = page(() => import('../features/quotations/QuotationsPage'), 'QuotationsPage')
@@ -111,7 +111,7 @@ export const router = createBrowserRouter([
       { path: 'documents', element: <Require permissions={bookings}><DocumentsPage /></Require> },
       { path: 'support', element: <Require permissions={['support.manage']}><SupportPage /></Require> },
       { path: 'support/:id', element: <Require permissions={['support.manage']}><SupportTicketPage /></Require> },
-      { path: 'payments', element: <Require permissions={['payments.view']}><PaymentsPage /></Require> },
+      { path: 'transactions', element: <Require permissions={['payments.view']}><TransactionsPage /></Require> },
       { path: 'notifications', element: <Require permissions={['notifications.manage']}><NotificationsPage /></Require> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'packages', element: <Require permissions={packages}><PackageListPage /></Require> },

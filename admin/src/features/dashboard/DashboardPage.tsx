@@ -59,7 +59,7 @@ function Widgets({ data }: { data: Dashboard }) {
     <>
       <div className="grid-auto-fit-180 grid gap-3.5" data-testid="dashboard-kpis">
         {data.collected ? (
-          <Kpi testId="kpi-collected" label={t('dashboard.collected')} value={bdtCompact(data.collected.amount)} title={bdt(data.collected.amount)} note={t('dashboard.invoiced', { amount: bdtCompact(data.collected.invoiced) })} to="/payments" />
+          <Kpi testId="kpi-collected" label={t('dashboard.collected')} value={bdtCompact(data.collected.amount)} title={bdt(data.collected.amount)} note={t('dashboard.invoiced', { amount: bdtCompact(data.collected.invoiced) })} to="/transactions" />
         ) : null}
         {data.bookings ? (
           <Kpi

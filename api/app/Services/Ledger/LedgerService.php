@@ -206,7 +206,8 @@ final class LedgerService
 
         $payment = Transaction::query()->create([
             'direction' => TransactionDirection::In, 'amount' => self::amount($amountPaisa), 'category' => self::CATEGORY_PAYMENT,
-            'method' => $method, 'invoice_id' => $invoice->id, 'customer_id' => $invoice->customer_id, 'client_id' => $invoice->client_id,
+            'method' => $method, 'money_account_id' => self::moneyAccountId($account),
+            'invoice_id' => $invoice->id, 'customer_id' => $invoice->customer_id, 'client_id' => $invoice->client_id,
             'description' => $description, 'reference_label' => $referenceLabel, 'evidence_path' => $evidencePath,
             'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff->id,
         ]);
@@ -234,6 +235,7 @@ final class LedgerService
         ?string $referenceLabel = null,
         ?string $evidencePath = null,
         ?\DateTimeInterface $occurredAt = null,
+        ?Account $into = null,
     ): Transaction {
         $this->assertInTransaction();
         [$allowed, $other] = CashCategories::MANUAL[$category] ?? throw new InvalidArgumentException("Unknown cash category {$category}");
@@ -241,6 +243,14 @@ final class LedgerService
             throw new InvalidArgumentException("{$category} is money {$allowed}, not {$direction->value}.");
         }
         $money = in_array($method, self::STAFF_METHODS, true) ? self::METHOD_ACCOUNTS[$method] : throw new InvalidArgumentException("Unknown payment method {$method}");
+        // Which account the money actually sat in, when it wasn't the one the method usually means — a staff float,
+        // or a second bank account (docs/phase-9-accounts.md §6).
+        if ($into !== null) {
+            if (! $into->isMoney()) {
+                throw new InvalidArgumentException("Account {$into->code} doesn't hold money.");
+            }
+            $money = $into->code;
+        }
         if ($businessLine !== null && ! in_array($businessLine, CashCategories::BUSINESS_LINES, true)) {
             throw new InvalidArgumentException("Unknown business line {$businessLine}");
         }
@@ -251,7 +261,8 @@ final class LedgerService
 
         $entry = Transaction::query()->create([
             'direction' => $direction, 'amount' => self::amount($paisa), 'category' => $category, 'business_line' => $businessLine,
-            'method' => $method, 'description' => $description, 'reference_label' => $referenceLabel, 'evidence_path' => $evidencePath,
+            'method' => $method, 'money_account_id' => self::moneyAccountId($money),
+            'description' => $description, 'reference_label' => $referenceLabel, 'evidence_path' => $evidencePath,
             'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff->id,
         ]);
         $this->post($entry, "Manual {$direction->value} · {$category} · {$description}", null, $staff, $direction === TransactionDirection::In
@@ -313,7 +324,8 @@ final class LedgerService
 
         $reversal = Transaction::query()->create([
             'direction' => $payment->direction->opposite(), 'amount' => $payment->amount, 'category' => $payment->category,
-            'business_line' => $payment->business_line, 'method' => $payment->method, 'booking_id' => $payment->booking_id,
+            'business_line' => $payment->business_line, 'method' => $payment->method, 'money_account_id' => $payment->money_account_id,
+            'booking_id' => $payment->booking_id,
             'invoice_id' => $payment->invoice_id, 'customer_id' => $payment->customer_id, 'client_id' => $payment->client_id,
             'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $payment->id,
             'description' => "Reversal of #{$payment->id}: {$reason}",
@@ -326,7 +338,8 @@ final class LedgerService
                 ->whereNull('reverses_transaction_id')->whereDoesntHave('reversal')->get()
                 ->each(fn (Transaction $charge) => Transaction::query()->create([
                     'direction' => $charge->direction->opposite(), 'amount' => $charge->amount, 'category' => $charge->category,
-                    'business_line' => $charge->business_line, 'method' => $charge->method, 'booking_id' => $charge->booking_id,
+                    'business_line' => $charge->business_line, 'method' => $charge->method, 'money_account_id' => $charge->money_account_id,
+                    'booking_id' => $charge->booking_id,
                     'invoice_id' => $charge->invoice_id, 'customer_id' => $charge->customer_id, 'client_id' => $charge->client_id,
                     'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $charge->id,
                     'description' => "Reversal of #{$charge->id}: {$reason}",
@@ -440,6 +453,66 @@ final class LedgerService
         }
 
         return $this->post(null, $description, null, $staff, $lines, on: $on);
+    }
+
+    /**
+     * VAT collected from customers, paid over to the government (docs/phase-9-accounts.md §7): money out of a money
+     * account against VAT payable, which is the only thing that brings that balance back down.
+     */
+    public function recordVatPayment(
+        string|int|float $amount,
+        string $method,
+        string $description,
+        Staff $staff,
+        ?string $evidencePath = null,
+        ?\DateTimeInterface $occurredAt = null,
+        ?Account $from = null,
+    ): Transaction {
+        $this->assertInTransaction();
+        $code = in_array($method, self::STAFF_METHODS, true) ? self::METHOD_ACCOUNTS[$method] : throw new InvalidArgumentException("Unknown payment method {$method}");
+        if ($from !== null) {
+            if (! $from->isMoney()) {
+                throw new InvalidArgumentException("Account {$from->code} doesn't hold money.");
+            }
+            $code = $from->code;
+        }
+        $paisa = self::paisa($amount);
+        if ($paisa <= 0) {
+            throw new InvalidArgumentException('An amount must be positive.');
+        }
+
+        $entry = Transaction::query()->create([
+            'direction' => TransactionDirection::Out, 'amount' => self::amount($paisa), 'category' => CashCategories::VAT_PAID,
+            'method' => $method, 'money_account_id' => self::moneyAccountId($code),
+            'description' => $description, 'evidence_path' => $evidencePath,
+            'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff->id,
+        ]);
+        $this->post($entry, "VAT paid · {$description}", null, $staff, [
+            [Account::VAT_PAYABLE, $paisa, 0],
+            [$code, 0, $paisa],
+        ], on: $occurredAt);
+
+        return $entry;
+    }
+
+    /**
+     * An account number to its row id, for the cash book's `money_account_id`. Looked up once per request: the chart
+     * is small and never changes mid-request.
+     */
+    public static function moneyAccountId(string $code): ?int
+    {
+        static $ids = [];
+
+        return $ids[$code] ??= Account::query()->where('code', $code)->value('id');
+    }
+
+    /**
+     * How money in this account is usually handled, for the cash book's method column. A float a staff member carries
+     * is cash: it is money in somebody's hands, whatever the account is called.
+     */
+    public static function methodForAccount(string $code): string
+    {
+        return array_search($code, self::METHOD_ACCOUNTS, true) ?: 'cash';
     }
 
     /**

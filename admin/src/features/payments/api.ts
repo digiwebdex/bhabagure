@@ -31,11 +31,15 @@ export type CashEntry = {
   reverses_id: number | null
   reversed_by: { id: number; occurred_at: string } | null
   has_evidence: boolean
-  actions: { reverse: boolean }
+  /** The account the money sat in. Older entries carry only the code the method has always meant. */
+  account: { code: string; name: string | null } | null
+  /** Who has checked it, if anyone. The entry itself is never touched to record this. */
+  approved: { at: string; by: string | null; note: string | null } | null
+  actions: { reverse: boolean; approve: boolean }
   reverse_blocked: 'is_reversal' | 'reversed' | 'online' | 'fee_line' | 'permission' | null
 }
 
-export type CashBookFilters = { direction: 'all' | 'in' | 'out'; method: string; category: string; from: string; to: string; search: string; page: number }
+export type CashBookFilters = { direction: 'all' | 'in' | 'out'; account: string; category: string; from: string; to: string; search: string; staff_id: string; approved: 'all' | 'yes' | 'no'; page: number }
 
 export type PaymentOptions = {
   methods: string[]
@@ -89,7 +93,8 @@ export function usePaymentOptions() {
 export function useCashBook(filters: CashBookFilters) {
   const params = new URLSearchParams({ page: String(filters.page) })
   if (filters.direction !== 'all') params.set('direction', filters.direction)
-  for (const key of ['method', 'category', 'from', 'to'] as const) if (filters[key]) params.set(key, filters[key])
+  for (const key of ['account', 'category', 'from', 'to', 'staff_id'] as const) if (filters[key]) params.set(key, filters[key])
+  if (filters.approved !== 'all') params.set('approved', filters.approved === 'yes' ? '1' : '0')
   if (filters.search.trim()) params.set('search', filters.search.trim())
   return useQuery({
     queryKey: ['payments', 'cash-book', params.toString()],
@@ -128,6 +133,10 @@ export const paymentActions = {
   openingBalance: (body: { account: string; amount: number; as_of: string; note: string | null }) => api.post<Data<Balance>>('admin/opening-balances', body),
   /** Money moved between the company's own money accounts: no total changes, so it is a journal entry, not a cash entry. */
   transfer: (body: { from: string; to: string; amount: number; description: string; occurred_on: string }) => api.post<Data<Balance>>('admin/transfers', body),
+  /** VAT collected from customers, handed over to the government; multipart, because its receipt goes with it. */
+  payVat: (body: FormData) => api.post<Data<CashEntry>>('admin/vat-payments', body),
+  /** Ticking off an entry someone has checked, or taking the tick back. The entry itself is never edited. */
+  approve: (id: number, body: { approved: boolean; note?: string }) => api.post<Data<CashEntry>>(`admin/cash-book/${id}/approve`, body),
   addPreset: (body: { label: string; direction: 'in' | 'out' | null }) => api.post<Data<ReferencePreset>>('admin/reference-presets', body),
   removePreset: (id: number) => api.delete<null>(`admin/reference-presets/${id}`),
   /** Multipart when there is an advance: its receipt goes with it. */

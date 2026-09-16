@@ -79,7 +79,7 @@ class Account extends Model
         'expense' => [5500, 5999],
     ];
 
-    protected $fillable = ['code', 'name_en', 'name_bn', 'type', 'is_system', 'is_money', 'description', 'archived_at', 'created_by_staff_id'];
+    protected $fillable = ['code', 'name_en', 'name_bn', 'type', 'group', 'is_system', 'is_money', 'description', 'archived_at', 'created_by_staff_id'];
 
     protected function casts(): array
     {

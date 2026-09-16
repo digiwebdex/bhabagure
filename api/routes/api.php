@@ -463,6 +463,10 @@ Route::prefix('v1')->group(function () {
                 Route::post('opening-balances', 'storeOpeningBalance');
                 // Money moved between the company's own accounts — cash banked, a float handed over (§6).
                 Route::post('transfers', 'transfer');
+                // VAT collected from customers, handed over to the government (§7).
+                Route::post('vat-payments', 'payVat')->middleware('throttle:media-upload');
+                // Ticking off an entry someone has checked; the entry itself is never touched (§7).
+                Route::post('cash-book/{id}/approve', 'approve')->whereNumber('id');
                 Route::get('payment-attempts/review', 'reviewIndex');
                 Route::post('payment-attempts/{id}/review', 'markReviewed')->whereNumber('id');
             });

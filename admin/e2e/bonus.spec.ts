@@ -72,7 +72,7 @@ test('the Staff badge opens the waiting withdrawal; the admin approves it and pa
   await expect(page.getByText(`${PERSON}’s withdrawal paid · in the cash book under Staff bonuses`)).toBeVisible()
   await expect(badge).toHaveCount(0)
 
-  await page.goto('/payments')
+  await page.goto('/transactions')
   const entry = page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: PERSON }).filter({ hasText: 'Bonus withdrawal' })
   await expect(entry).toContainText('− BDT 2,500', FIRST_LOAD)
 

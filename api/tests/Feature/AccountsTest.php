@@ -7,6 +7,8 @@ use App\Models\Booking;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\Staff;
+use App\Models\Transaction;
+use App\Services\Ledger\AccountBooks;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -228,6 +230,70 @@ class AccountsTest extends TestCase
         $this->actingAsApi($admin)->postJson('/api/v1/admin/transfers', [
             'from' => Account::CASH, 'to' => Account::CASH, 'amount' => 100, 'description' => 'Same account',
         ])->assertUnprocessable()->assertJsonValidationErrors('from');
+    }
+
+    #[Test]
+    public function the_chart_reads_in_sections_and_an_account_can_only_sit_in_one_of_its_own_kind(): void
+    {
+        $accountant = $this->accountant();
+        $chart = $this->actingAsApi($accountant)->getJson('/api/v1/admin/accounts')->assertOk()->json();
+
+        // Every section of every kind is offered, in order, so an empty one says so rather than disappearing.
+        $this->assertSame('cash_and_bank', $chart['meta']['groups']['asset'][0]['key']);
+        $this->assertSame('Cash and Bank', $chart['meta']['groups']['asset'][0]['title']);
+        $this->assertNotEmpty($chart['meta']['groups']['asset'][0]['help']);
+        $this->assertSame(['income', 'sale_return', 'discount', 'other_income', 'uncategorized_income', 'fx_gain'], array_column($chart['meta']['groups']['income'], 'key'));
+
+        // The software's own accounts already sit where they are read: money the gateway still owes is in transit.
+        $by = collect($chart['data'])->keyBy('code');
+        $this->assertSame('cash_and_bank', $by[Account::CASH]['group']);
+        $this->assertSame('money_in_transit', $by[Account::SSLCOMMERZ_CLEARING]['group']);
+        $this->assertSame('sales_taxes', $by[Account::VAT_PAYABLE]['group']);
+
+        // A staff account is put in a section of its own kind, and only its own kind.
+        $created = $this->actingAsApi($accountant)->postJson('/api/v1/admin/accounts', ['name' => 'Courier', 'type' => 'expense', 'group' => 'operating_expense'])
+            ->assertCreated()->json('data');
+        $this->assertSame('operating_expense', $created['group']);
+        $this->actingAsApi($accountant)->postJson('/api/v1/admin/accounts', ['name' => 'Wrong', 'type' => 'expense', 'group' => 'cash_and_bank'])
+            ->assertUnprocessable()->assertJsonValidationErrors('group');
+
+        // Left unsaid, it falls into the usual section for its kind rather than vanishing from the chart.
+        $this->assertSame('other_short_term_asset', $this->actingAsApi($accountant)->postJson('/api/v1/admin/accounts', ['name' => 'Deposit held', 'type' => 'asset'])
+            ->assertCreated()->json('data.group'));
+    }
+
+    #[Test]
+    public function an_entry_is_ticked_off_without_ever_being_touched_and_vat_is_paid_over(): void
+    {
+        $this->seed(ContentSeeder::class);
+        $this->issueAndPayABooking();
+        $admin = $this->staff('admin');
+        $accountant = $this->accountant();
+
+        $entry = $this->actingAsApi($admin)->getJson('/api/v1/admin/cash-book')->assertOk()->json('data.0');
+        $this->assertNull($entry['approved'], 'nothing is approved until somebody says so');
+
+        // The tick is a record of its own: the cash book row is append-only and is not edited to carry it.
+        $before = Transaction::query()->findOrFail($entry['id'])->getAttributes();
+        $approved = $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$entry['id']}/approve", ['approved' => true, 'note' => 'Checked against the slip'])
+            ->assertOk()->json('data.approved');
+        $this->assertSame('Checked against the slip', $approved['note']);
+        $this->assertNotNull($approved['by']);
+        $this->assertSame($before, Transaction::query()->findOrFail($entry['id'])->getAttributes(), 'not one column of the entry changed');
+
+        // It can be taken back, which removes the record rather than editing anything.
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$entry['id']}/approve", ['approved' => false])->assertOk()->assertJsonPath('data.approved', null);
+        // Recording money and checking it are separate: the accountant records, the admin checks.
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$entry['id']}/approve", ['approved' => true])->assertForbidden();
+
+        // VAT collected is handed over to the government: the only thing that brings that balance back down.
+        $owed = fn () => collect(app(AccountBooks::class)->chart())->firstWhere('code', Account::VAT_PAYABLE)['balance'];
+        $this->assertEquals(1500.0, $owed());
+        Storage::fake('local');
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/vat-payments', [
+            'amount' => 1500, 'method' => 'bank_transfer', 'description' => 'August VAT return', 'evidence' => $this->receipt(),
+        ])->assertCreated()->assertJsonPath('data.direction', 'out');
+        $this->assertEquals(0.0, $owed(), 'the VAT owed is settled');
     }
 
     /** @param list<array<string, mixed>> $lines */

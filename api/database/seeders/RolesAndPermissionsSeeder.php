@@ -45,6 +45,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'payments.view' => ['finance', 'পেমেন্ট দেখা', 'View payments'],
         'invoices.manage' => ['finance', 'ইনভয়েস ব্যবস্থাপনা', 'Manage invoices'],
         'transactions.create_manual' => ['finance', 'ম্যানুয়াল লেনদেন এন্ট্রি', 'Record manual transactions'],
+        // Ticking off entries that have been checked (docs/phase-9-accounts.md §7). Recording money and checking it
+        // are deliberately separate: whoever writes an entry should not be the one who says it has been reviewed.
+        'transactions.approve' => ['finance', 'লেনদেন অনুমোদন', 'Approve cash book entries'],
         'ledger.view_company_balance' => ['finance', 'কোম্পানির ব্যালেন্স দেখা', 'View company balance'],
         'accounts.view' => ['finance', 'হিসাবের তালিকা ও খাতা দেখা', 'View the chart of accounts and ledger'],
         'accounts.manage' => ['finance', 'হিসাব যোগ ও সম্পাদনা', 'Add and edit accounts'],
@@ -80,7 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'quotations.view_all', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage', 'hotel_inquiries.view', 'hotel_inquiries.manage',
             'customers.view', 'customers.manage',
             'clients.manage', 'b2b_rates.manage', 'packages.manage', 'pricing.manage', 'payments.view', 'invoices.manage',
-            'transactions.create_manual', 'ledger.view_company_balance', 'accounts.view', 'staff.manage', 'bonus.manage', 'commission.view_all',
+            'transactions.create_manual', 'transactions.approve', 'ledger.view_company_balance', 'accounts.view', 'staff.manage', 'bonus.manage', 'commission.view_all',
             'staff_documents.view', 'staff_documents.manage', 'attendance.view_all', 'attendance.manage', 'payroll.manage',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
             'notifications.send', 'notifications.manage', 'support.manage',

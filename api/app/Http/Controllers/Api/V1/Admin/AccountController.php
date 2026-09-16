@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Services\AuditLogger;
 use App\Services\Ledger\AccountBooks;
+use App\Support\Ledger\AccountGroups;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -29,6 +30,9 @@ class AccountController extends Controller
             'data' => $rows->values(),
             'meta' => [
                 'types' => Account::TYPES,
+                // The sections each kind is read under, in order, so the screen can show them all — an empty one says
+                // so rather than disappearing (docs/phase-9-accounts.md §2).
+                'groups' => collect(Account::TYPES)->mapWithKeys(fn (string $type) => [$type => AccountGroups::describe($type)]),
                 'totals' => collect(Account::TYPES)->mapWithKeys(fn (string $type) => [
                     $type => round($rows->where('type', $type)->sum('balance'), 2),
                 ]),
@@ -45,6 +49,7 @@ class AccountController extends Controller
             // The staff panel is English only; the Bangla name stays in step for anything printed in Bangla.
             'name_bn' => $data['name'],
             'type' => $data['type'],
+            'group' => $data['group'] ?? AccountGroups::DEFAULTS[$data['type']],
             'description' => $data['description'] ?? null,
             'is_system' => false,
             'is_money' => $data['is_money'] ?? false,
@@ -64,6 +69,8 @@ class AccountController extends Controller
         if (! $account->is_system) {
             $account->fill(['type' => $data['type'], 'code' => $data['code'] ?? $account->code, 'is_money' => $data['is_money'] ?? false]);
         }
+        // A system account can be moved to another section: where it is read is staff's, what it posts to is not.
+        $account->fill(['group' => $data['group'] ?? $account->group ?? AccountGroups::DEFAULTS[$account->type]]);
         $account->save();
         $this->audit->record('account.updated', $request->user('staff'), $account, ['code' => $account->code, 'name' => $account->name_en]);
 
@@ -94,11 +101,16 @@ class AccountController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'type' => ['required', Rule::in(Account::TYPES)],
+            // The section it is read under. It must belong to the kind: a liability can't sit under Operating Expense.
+            'group' => ['nullable', 'string', 'max:40'],
             'description' => ['nullable', 'string', 'max:300'],
             'code' => ['nullable', 'string', 'regex:/^\d{4}$/', Rule::unique('accounts', 'code')->ignore($account?->id)],
             // A float somebody holds, counted inside the company balance (docs/phase-9-accounts.md §6).
             'is_money' => ['nullable', 'boolean'],
         ]);
+        if (isset($data['group']) && ! AccountGroups::belongsTo($data['group'], $data['type'])) {
+            throw ValidationException::withMessages(['group' => __('accounts.group_kind')]);
+        }
         if (($data['is_money'] ?? false) && $data['type'] !== 'asset') {
             throw ValidationException::withMessages(['is_money' => __('accounts.money_is_an_asset')]);
         }
@@ -135,8 +147,8 @@ class AccountController extends Controller
     {
         return [
             'id' => $account->id, 'code' => $account->code, 'name' => $account->name_en, 'type' => $account->type,
-            'description' => $account->description, 'is_system' => $account->is_system, 'is_money' => $account->isMoney(),
-            'debit' => 0.0, 'credit' => 0.0, 'balance' => 0.0, 'entries' => 0,
+            'group' => $account->group, 'description' => $account->description, 'is_system' => $account->is_system, 'is_money' => $account->isMoney(),
+            'debit' => 0.0, 'credit' => 0.0, 'balance' => 0.0, 'entries' => 0, 'last_entry_on' => null,
         ];
     }
 }

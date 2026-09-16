@@ -51,6 +51,16 @@ required), **Send reminder** by SMS or email — written by the staff member, se
 `notifications.send` — **Share invoice** (the customer's own link), **Details**, **Edit**, **Delete** for a draft, and
 the four printed copies: A4, A5, an 80mm counter slip, and a delivery receipt with no prices and a signature line.
 
+**Transactions** replaced the Payments screen on 2026-09-17, so there is one cash book in one place. The account picker
+carries every balance (the company balance lives there), then Cash in · Cash out · Transfer balance · More, a period
+filter, and the entries with their reference, who recorded them, the account, the category and the receipt. A tick marks
+an entry as checked — it needs `transactions.approve`, which the admin holds and the accountant does not. **VAT payment**
+under More hands the VAT you have collected over to the government, which is the only thing that brings that balance down.
+Nothing on this screen edits an entry: a mistake is corrected with a reversing entry, and the row says so.
+
+**Chart of accounts** now reads in the client's own sections — Cash and Bank, Money in Transit, Operating Expense and
+the rest — one kind at a time across the top.
+
 The printed invoice itself was rebuilt on 2026-09-17 to the layout the client already used: letterhead with the Civil
 Aviation number, barcode over the invoice number, the two dates in a blue band, `Sl. · Item · Qty · Price · Total`, the
 total in figures and in words, each payment with its reference, Amount Due, Total received, Notes / Terms, and customer

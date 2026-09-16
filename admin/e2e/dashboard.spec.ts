@@ -17,7 +17,7 @@ test('the dashboard shows what just happened, and Collected is the same figure a
   // Collected is one figure: the Dashboard card and the Payments card agree to the taka.
   const collected = (await page.getByTestId('kpi-collected').locator('span').nth(1).getAttribute('title'))!
   await page.getByTestId('kpi-collected').click()
-  await expect(page).toHaveURL(/\/payments$/)
+  await expect(page).toHaveURL(/\/transactions$/)
   await expect(page.getByTestId('payments-collected')).toHaveText(collected, FIRST_LOAD)
 
   // A new lead raises New leads on the next visit.

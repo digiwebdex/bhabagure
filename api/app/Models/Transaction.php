@@ -17,7 +17,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'direction', 'amount', 'category', 'business_line', 'method', 'external_ref', 'booking_id', 'invoice_id', 'customer_id', 'client_id',
-        'description', 'reference_label', 'evidence_path', 'occurred_at', 'recorded_by_staff_id', 'reverses_transaction_id',
+        'description', 'reference_label', 'evidence_path', 'occurred_at', 'recorded_by_staff_id', 'reverses_transaction_id', 'money_account_id',
     ];
 
     protected $hidden = ['evidence_path'];
@@ -30,6 +30,18 @@ class Transaction extends Model
     public function reverses(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_transaction_id');
+    }
+
+    /** The account the money landed in or left. Null on entries written before the column existed. */
+    public function moneyAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'money_account_id');
+    }
+
+    /** Whoever has checked this entry, if anyone has (docs/phase-9-accounts.md §7). */
+    public function approval(): HasOne
+    {
+        return $this->hasOne(TransactionApproval::class);
     }
 
     /** The entry that reversed this one, if any (an entry is reversed at most once). */

@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\OpeningBalance;
 use App\Models\PaymentAttempt;
 use App\Models\Transaction;
+use App\Models\TransactionApproval;
 use App\Services\AuditLogger;
 use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
@@ -73,9 +74,25 @@ class PaymentsController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d'],
             'search' => ['nullable', 'string', 'max:100'],
+            // The account the money sat in, whoever recorded it, and whether anyone has checked it (§7).
+            'account' => ['nullable', Rule::exists('accounts', 'code')->where('is_money', true)],
+            'staff_id' => ['nullable', 'integer'],
+            'approved' => ['nullable', 'boolean'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $page = self::filtered($filters)->with(AdminCashEntry::RELATIONS)->orderByDesc('occurred_at')->orderByDesc('id')->paginate(30);
+        $page = self::filtered($filters)
+            ->when($filters['account'] ?? null, function (Builder $query, string $code) {
+                $id = LedgerService::moneyAccountId($code);
+                // Entries from before the account was recorded fall back to the one their method has always meant.
+                $query->where(fn (Builder $inner) => $inner->where('money_account_id', $id)
+                    ->orWhere(fn (Builder $old) => $old->whereNull('money_account_id')->whereIn('method', array_keys(LedgerService::METHOD_ACCOUNTS, $code, true))));
+            })
+            ->when($filters['staff_id'] ?? null, fn (Builder $query, int $id) => $query->where('recorded_by_staff_id', $id))
+            ->when(isset($filters['approved']), fn (Builder $query) => $filters['approved']
+                ? $query->whereHas('approval')
+                : $query->whereDoesntHave('approval'))
+            ->with(AdminCashEntry::RELATIONS)->orderByDesc('occurred_at')->orderByDesc('id')->paginate(30);
         $staff = $request->user('staff');
 
         return response()->json([
@@ -108,7 +125,10 @@ class PaymentsController extends Controller
         $data = $request->validate([
             'direction' => ['required', Rule::in(['in', 'out'])],
             'amount' => ['required', 'numeric', 'min:1', 'max:9999999999'],
-            'method' => ['required', Rule::in(LedgerService::STAFF_METHODS)],
+            // Either the account the money sat in, or the method it came by — the screen asks for the account, which
+            // says the same thing and more: it tells the office drawer from a float somebody carries.
+            'account' => ['required_without:method', 'nullable', Rule::exists('accounts', 'code')->where('is_money', true)],
+            'method' => ['required_without:account', 'nullable', Rule::in(LedgerService::STAFF_METHODS)],
             'category' => ['required', Rule::in(CashCategories::forDirection((string) $request->input('direction')))],
             'business_line' => ['nullable', Rule::in(CashCategories::BUSINESS_LINES)],
             'description' => ['required', 'string', 'min:3', 'max:300'],
@@ -117,12 +137,15 @@ class PaymentsController extends Controller
             'evidence' => EvidenceStore::rules(),
         ]);
 
-        $entry = $evidence->with($request->file('evidence'), fn (?string $path) => DB::transaction(function () use ($ledger, $audit, $data, $staff, $path) {
+        $into = isset($data['account']) ? Account::query()->where('code', $data['account'])->first() : null;
+        $method = $data['method'] ?? LedgerService::methodForAccount($into->code);
+
+        $entry = $evidence->with($request->file('evidence'), fn (?string $path) => DB::transaction(function () use ($ledger, $audit, $data, $staff, $path, $into, $method) {
             $entry = $ledger->recordManualEntry(
-                TransactionDirection::from($data['direction']), $data['amount'], $data['method'], $data['category'], $data['business_line'] ?? null,
-                trim($data['description']), $staff, ($data['reference'] ?? null) ?: null, $path, self::onDay($data['occurred_on'] ?? null),
+                TransactionDirection::from($data['direction']), $data['amount'], $method, $data['category'], $data['business_line'] ?? null,
+                trim($data['description']), $staff, ($data['reference'] ?? null) ?: null, $path, self::onDay($data['occurred_on'] ?? null), $into,
             );
-            $audit->record('cash.manual_entry', $staff, $entry, ['direction' => $data['direction'], 'amount' => $entry->amount, 'category' => $data['category']]);
+            $audit->record('cash.manual_entry', $staff, $entry, ['direction' => $data['direction'], 'amount' => $entry->amount, 'category' => $data['category'], 'account' => $into?->code]);
 
             return $entry;
         }));
@@ -219,6 +242,60 @@ class PaymentsController extends Controller
         }
 
         return response()->json(['data' => $this->balances($ledger)], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Ticking off a cash book entry that has been checked, or taking the tick back (docs/phase-9-accounts.md §7). The
+     * entry is never touched — the approval is its own record — so this says nothing about whether the money is real,
+     * only that someone has looked.
+     */
+    public function approve(Request $request, int $id, AuditLogger $audit): JsonResponse
+    {
+        $staff = $request->user('staff');
+        abort_unless($staff->can('transactions.approve'), 403, __('auth.forbidden'));
+        $entry = Transaction::query()->findOrFail($id);
+        $approved = $request->validate(['approved' => ['required', 'boolean'], 'note' => ['nullable', 'string', 'max:300']]);
+
+        if ($approved['approved']) {
+            TransactionApproval::query()->updateOrCreate(
+                ['transaction_id' => $entry->id],
+                ['approved_by_staff_id' => $staff->id, 'approved_at' => now(), 'note' => $approved['note'] ?? null],
+            );
+        } else {
+            TransactionApproval::query()->where('transaction_id', $entry->id)->delete();
+        }
+        $audit->record($approved['approved'] ? 'cash_entry.approved' : 'cash_entry.approval_withdrawn', $staff, $entry);
+
+        return response()->json(['data' => AdminCashEntry::row($entry->fresh()->load(AdminCashEntry::RELATIONS), $staff)]);
+    }
+
+    /**
+     * VAT collected from customers, paid over to the government (docs/phase-9-accounts.md §7). Money out of a chosen
+     * account against VAT payable, with its receipt: without it the VAT owed figure would only ever grow.
+     */
+    public function payVat(Request $request, LedgerService $ledger, EvidenceStore $evidence, AuditLogger $audit): JsonResponse
+    {
+        $staff = $request->user('staff');
+        abort_unless($staff->can('transactions.create_manual'), 403, __('auth.forbidden'));
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1', 'max:9999999999'],
+            // The account it is paid from says everything the method does, and more: the screen asks only for that.
+            'account' => ['required_without:method', 'nullable', Rule::exists('accounts', 'code')->where('is_money', true)],
+            'method' => ['required_without:account', 'nullable', Rule::in(LedgerService::STAFF_METHODS)],
+            'occurred_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
+            'description' => ['nullable', 'string', 'max:200'],
+            'evidence' => EvidenceStore::rules(),
+        ]);
+        $from = isset($data['account']) ? Account::query()->where('code', $data['account'])->first() : null;
+        $method = $data['method'] ?? LedgerService::methodForAccount($from->code);
+
+        $entry = $evidence->with($request->file('evidence'), fn (?string $path) => DB::transaction(fn () => $ledger->recordVatPayment(
+            $data['amount'], $method, trim($data['description'] ?? '') ?: 'VAT paid to the government', $staff, $path,
+            isset($data['occurred_on']) ? Carbon::parse("{$data['occurred_on']} 12:00", 'Asia/Dhaka')->utc() : null, $from,
+        )));
+        $audit->record('ledger.vat_paid', $staff, $entry, ['amount' => $entry->amount]);
+
+        return response()->json(['data' => AdminCashEntry::row($entry->load(AdminCashEntry::RELATIONS), $staff)], Response::HTTP_CREATED);
     }
 
     /**

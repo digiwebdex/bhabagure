@@ -113,10 +113,11 @@ test('the staff member finds the paid month under My payslips, and has no Salary
 
 test('reversing the salary cash-out in the cash book leaves the month unpaid again', async ({ page }) => {
   await signIn(page, 'admin')
-  await page.goto('/payments')
+  await page.goto('/transactions')
   const entry = page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: `Salary ${month.value} · ${PERSON}` })
   await expect(entry).toContainText('− BDT 30,346', FIRST_LOAD)
-  await entry.getByRole('button', { name: /^Reverse… — #\d+$/ }).click()
+  await entry.getByRole('button', { name: /^Actions — #\d+$/ }).click()
+  await page.getByRole('menuitem', { name: 'Reverse…' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Reason').fill('Sent to the wrong bKash number')
   await dialog.getByRole('button', { name: 'Reverse…' }).click()

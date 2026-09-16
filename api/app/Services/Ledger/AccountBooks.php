@@ -31,7 +31,7 @@ final class AccountBooks
 
         return Account::query()->orderByRaw('FIELD(type, ?, ?, ?, ?, ?)', Account::TYPES)->orderBy('code')->get()
             ->map(function (Account $account) use ($sums) {
-                $row = $sums[$account->id] ?? ['debit' => 0.0, 'credit' => 0.0, 'entries' => 0];
+                $row = $sums[$account->id] ?? ['debit' => 0.0, 'credit' => 0.0, 'entries' => 0, 'last_entry_on' => null];
 
                 return [
                     'id' => $account->id,
@@ -39,6 +39,8 @@ final class AccountBooks
                     'name' => $account->name_en,
                     'name_bn' => $account->name_bn,
                     'type' => $account->type,
+                    // The section the chart reads it under (docs/phase-9-accounts.md §2).
+                    'group' => $account->group,
                     'description' => $account->description,
                     'is_system' => $account->is_system,
                     'is_money' => $account->isMoney(),
@@ -47,6 +49,8 @@ final class AccountBooks
                     'credit' => round($row['credit'], 2),
                     'balance' => self::balance($account->type, $row['debit'], $row['credit']),
                     'entries' => (int) $row['entries'],
+                    // When the account was last used, which is how the chart says whether it is live or forgotten.
+                    'last_entry_on' => $row['last_entry_on'],
                 ];
             });
     }
@@ -130,9 +134,11 @@ final class AccountBooks
         return $this->lines($from, $to)
             ->when($account !== null, fn (Builder $query) => $query->where('journal_lines.account_id', $account->id))
             ->groupBy('journal_lines.account_id')
-            ->selectRaw('journal_lines.account_id, SUM(journal_lines.debit) AS debit, SUM(journal_lines.credit) AS credit, COUNT(DISTINCT journal_lines.journal_entry_id) AS entries')
+            ->selectRaw('journal_lines.account_id, SUM(journal_lines.debit) AS debit, SUM(journal_lines.credit) AS credit, COUNT(DISTINCT journal_lines.journal_entry_id) AS entries, MAX(journal_entries.entry_date) AS last_entry_on')
             ->get()
-            ->mapWithKeys(fn ($row) => [(int) $row->account_id => ['debit' => (float) $row->debit, 'credit' => (float) $row->credit, 'entries' => (int) $row->entries]])
+            ->mapWithKeys(fn ($row) => [(int) $row->account_id => [
+                'debit' => (float) $row->debit, 'credit' => (float) $row->credit, 'entries' => (int) $row->entries, 'last_entry_on' => $row->last_entry_on,
+            ]])
             ->all();
     }
 

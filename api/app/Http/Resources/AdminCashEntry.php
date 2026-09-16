@@ -11,7 +11,7 @@ use App\Support\Money;
 /** Cash-book rows for the admin (docs/phase-5-admin-core.md §4.6). Amounts are numbers; evidence is a flag, never a path. */
 final class AdminCashEntry
 {
-    public const RELATIONS = ['booking:id,reference,customer_id', 'invoice:id,invoice_number,kind,title', 'customer:id,name,phone,email', 'client:id,name,contact_phone,contact_email', 'recordedBy:id,name', 'reversal:id,reverses_transaction_id,occurred_at'];
+    public const RELATIONS = ['booking:id,reference,customer_id', 'invoice:id,invoice_number,kind,title', 'customer:id,name,phone,email', 'client:id,name,contact_phone,contact_email', 'recordedBy:id,name', 'reversal:id,reverses_transaction_id,occurred_at', 'moneyAccount:id,code,name_en', 'approval.approvedBy:id,name'];
 
     /** @return array<string, mixed> */
     public static function row(Transaction $entry, Staff $viewer): array
@@ -34,11 +34,22 @@ final class AdminCashEntry
             'invoice' => $entry->invoice ? ['id' => $entry->invoice->id, 'number' => $entry->invoice->invoice_number, 'kind' => $entry->invoice->kind, 'title' => $entry->invoice->title] : null,
             'party' => $party,
             'recorded_by' => $entry->recordedBy ? ['id' => $entry->recordedBy->id, 'name' => $entry->recordedBy->name] : null,
+            // The account the money landed in or left. Entries from before the column fall back to the method's account.
+            'account' => $entry->moneyAccount
+                ? ['code' => $entry->moneyAccount->code, 'name' => $entry->moneyAccount->name_en]
+                : (isset(LedgerService::METHOD_ACCOUNTS[$entry->method]) ? ['code' => LedgerService::METHOD_ACCOUNTS[$entry->method], 'name' => null] : null),
+            // Who has checked it, if anyone (docs/phase-9-accounts.md §7). The entry itself is never touched.
+            'approved' => $entry->approval ? [
+                'at' => $entry->approval->approved_at->toIso8601String(),
+                'by' => $entry->approval->approvedBy?->name,
+                'note' => $entry->approval->note,
+            ] : null,
             'reverses_id' => $entry->reverses_transaction_id,
             'reversed_by' => $entry->reversal ? ['id' => $entry->reversal->id, 'occurred_at' => $entry->reversal->occurred_at->toIso8601String()] : null,
             'has_evidence' => $entry->evidence_path !== null,
             'actions' => [
                 'reverse' => $viewer->can('transactions.create_manual') && $entry->reversal === null && LedgerService::reversible($entry),
+                'approve' => $viewer->can('transactions.approve'),
             ],
             // Why ✕ is unavailable, for its tooltip.
             'reverse_blocked' => match (true) {

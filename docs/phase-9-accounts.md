@@ -1,6 +1,6 @@
 # Phase 9 — Accounts: chart of accounts, journal, reports (and the books the client already keeps)
 
-**Status (2026-09-16): §2–§4 built; §5 (invoice builder) and §6 (import) next.**
+**Status (2026-09-17): §2–§7 built; §8 (carrying the books across) waits on the client's export.**
 
 **Why.** The client keeps the company's books in a small accounting service and wants the same Accounts screens inside
 Bhabaghure, with the real books carried across. Bhabaghure already posts every booking, payment and invoice into a
@@ -79,6 +79,19 @@ An invoice staff write themselves, beside the ones a booking issues.
 - **Share invoice** hands over the customer's own link, to copy or to pass to WhatsApp on the staff member's own device.
 - **Printed four ways** from the row: A4, A5, an 80mm counter slip, and a delivery receipt — the last with no prices and
   a line to sign for the documents handed over.
+- **Details** reads the invoice back the way the customer's copy reads, with every payment against it.
+- **Delete** throws away a draft. An issued invoice is never deleted — the customer has a copy and the books have the
+  entry — so that one is voided on its deal, which reverses the journal.
+- API: `GET/POST /admin/invoices`, `GET/PUT /admin/invoices/{id}`, `POST /admin/invoices/{id}/issue`,
+  `DELETE /admin/invoices/{id}`, `POST /admin/invoices/{id}/reminders`. Reading needs `payments.view`, writing
+  `invoices.manage`, sending a reminder `notifications.send`.
+
+**Matched to the books the client already keeps.** The screen follows their old system: the state bar across the top,
+the customer/from/to/invoice-ID filters, the number with who wrote it and who last touched it, the customer, the date,
+the total, what is owed with how late it is, the state, and then Payment · Send reminder with everything else behind
+one button. Three of their options are deliberately not here: **Return** (there is no refund or credit-note workflow —
+a staff-recorded payment is corrected by reversing it), the **row checkboxes** (nothing acts on a selection), and the
+**SMS credit** figure (we do not hold a credit balance; the composer says the part count instead).
 
 **The printed page (2026-09-17).** The client sent their own invoice and asked for it, so the print view was rebuilt to
 match: the letterhead with the Civil Aviation number, the barcode over the invoice number, INVOICE set large at the
@@ -92,24 +105,60 @@ This is the shared print view, so booking invoices and quotations changed with i
 prints. It replaces the layout from `_design/Bhabaghure Invoice.dc.html`. A4 reserves the exact height a pre-printed pad
 needs whether the header is printed or not, so nothing below it moves; A5 is always printed whole, so there the
 letterhead takes only the room it needs.
-- **Details** reads the invoice back the way the customer's copy reads, with every payment against it.
-- **Delete** throws away a draft. An issued invoice is never deleted — the customer has a copy and the books have the
-  entry — so that one is voided on its deal, which reverses the journal.
-- The older screen is now **Payments & cash book**: with Invoices beside it, two entries both called "invoices" in the
-  sidebar would have said nothing.
 
-**Matched to the books the client already keeps.** The screen follows their old system: the state bar across the top,
-the customer/from/to/invoice-ID filters, the number with who wrote it and who last touched it, the customer, the date,
-the total, what is owed with how late it is, the state, and then Payment · Send reminder with everything else behind
-one button. Three of their options are deliberately not here: **Return** (there is no refund or credit-note workflow —
-a staff-recorded payment is corrected by reversing it), the **row checkboxes** (nothing acts on a selection), and the
-**SMS credit** figure (we do not hold a credit balance; the composer says the part count instead).
-- API: `GET/POST /admin/invoices`, `GET/PUT /admin/invoices/{id}`, `POST /admin/invoices/{id}/issue`. Reading needs
-  `payments.view`, writing `invoices.manage`.
+## 6. Where money sits, and moving it (built)
 
-Still to come: the extra print sizes (A5, POS slip, delivery receipt) beside the A4 invoice.
+Whether an account holds money is a property of the account (`accounts.is_money`), not a fixed list of six codes in the
+source. The company keeps cash in named floats — Riad, Jannat and Ashik each carry one — as well as in the office
+drawer and the bank, and each has to be visible on its own inside the company balance. Only an asset can hold money,
+and the answer is settled before an account's first entry: changing it afterwards would move the company balance under
+everyone's feet.
 
-## 6. Carrying the books across (next)
+With that comes the transfer the books were missing: cash banked, a float handed over, a wallet emptied into the bank.
+Nothing comes in or goes out, so it is one journal entry and never a cash book row, and no account can hand over money
+it does not hold. `POST /admin/transfers`, needing `transactions.create_manual`.
+
+A payment can also name the account it landed in rather than taking the one its method implies — cash into the office
+drawer and cash into a staff member's float are the same method and different money.
+
+## 7. The Accounting screens, as the client already works (built)
+
+The client sent their own Chart Of Account and Transactions screens and asked for the same. Both were rebuilt to match.
+
+**Chart Of Account.** One kind at a time across a gradient bar — Assets · Liabilities & credit cards · Income ·
+Expenses · Equity — and under each, the sections accounts are actually looked for in: Cash and Bank, Money in Transit,
+Expected Payments from Customers, Operating Expense, Cost of Goods Sold, Business Owner Contribution and the rest
+(`App\Support\Ledger\AccountGroups`, 33 in all). A section that holds nothing says so rather than disappearing. Each
+row shows the balance in brackets, the account number, when it was last used, its description, and edit and delete.
+Adding starts from the section's own button, so the new account lands where it was asked for. The number and
+description sit behind "Edit account ID and description", as they do on theirs.
+
+Every account the software posts to already has its section — SSLCommerz clearing is **Money in Transit**, which is
+exactly what it is: taken from the customer, not yet settled. A section belongs to one kind, so a liability can never
+be filed under Operating Expense.
+
+**Transactions** replaced the Payments screen: one cash book, in one place. The account picker carries every balance
+(the company balance lives there now), then Cash in · Cash out · Transfer balance · More, the period filter, and the
+table — date with its reference and a Cash in/out badge and who recorded it, description, account, category, amount
+and its receipt. The deals card went with it: standalone invoices are the Invoices screen's job now. The SSLCommerz
+review queue moved across and shows only when something needs checking.
+
+Three things theirs has that ours will not:
+
+- **Edit** and **Delete** on a posted entry. The cash book is append-only, in the database as well as the code, and
+  that is what makes every figure above it worth reading. A mistake is corrected with a reversing entry, and the row
+  says so where the Edit would have been.
+- Because of that, the **approval tick** is a record of its own (`transaction_approvals`), not a column on the entry:
+  ticking one off changes not a single column of it. It needs `transactions.approve`, which the admin holds and the
+  accountant does not — whoever records money should not be the one who says it has been checked.
+- **VAT payment** is new here, not copied: money out of a chosen account against VAT payable, with its receipt. Without
+  it the VAT owed figure only ever grows.
+
+An entry now records **which account** the money sat in (`transactions.money_account_id`), not just the method it came
+by, so the office drawer and a staff member's float are told apart. Entries written before that keep a null and fall
+back to the account their method has always meant; they are not back-filled, because the table refuses an update.
+
+## 8. Carrying the books across (next)
 
 **Decided with the client (2026-09-16):** import everything — accounts and balances, customers, invoices and cash
 transactions — because both systems are the same company, and clear Bhabaghure's demo data first (one test customer and
