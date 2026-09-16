@@ -7,17 +7,15 @@ import { Link, useNavigate } from 'react-router'
 import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
 import { ErrorNotice, useToast } from '../../components/ui/feedback'
-import { SelectInput, TextInput } from '../../components/ui/fields'
+import { NumberInput, SelectInput, TextInput } from '../../components/ui/fields'
 import { Card, CardTitle, Chips, Loading, PageHeader } from '../../components/ui/layout'
 import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import type { BookingDetail, BookingFormOptions as Options } from './api'
 
-type Traveller = { name: string; passport_number: string; date_of_birth: string; passport_expiry: string }
 type CustomerHit = { id: number; name: string; phone: string }
 
-const blankTraveller = (): Traveller => ({ name: '', passport_number: '', date_of_birth: '', passport_expiry: '' })
 
 /**
  * "+ New booking" (docs/phase-5-admin-core.md §4.3). Priced with @bhabaghure/pricing from the options the API sends —
@@ -39,7 +37,7 @@ export function NewBookingPage() {
   const [room, setRoom] = useState<RoomType>('twin')
   const [hotelCategory, setHotelCategory] = useState<HotelCategory | null>(null)
   const [addons, setAddons] = useState<string[]>([])
-  const [travellers, setTravellers] = useState<Traveller[]>([blankTraveller()])
+  const [pax, setPax] = useState(1)
   const [bookingLocale, setBookingLocale] = useState<'bn' | 'en'>(locale)
 
   const hits = useQuery({
@@ -52,7 +50,6 @@ export function NewBookingPage() {
   // A package priced by hotel category is booked in one of its categories; basic/3-star until another is picked.
   const categories = gridCategories(pkg?.price_grid)
   const category = categories.length === 0 ? null : hotelCategory && categories.includes(hotelCategory) ? hotelCategory : defaultHotelCategory(pkg?.price_grid)
-  const pax = travellers.length
   const chosenAddons = (options.data?.addons ?? []).filter((addon) => addons.includes(addon.code))
   // Recomputed each render; the React Compiler memoises it.
   const quote = (() => {
@@ -74,12 +71,6 @@ export function NewBookingPage() {
         room,
         hotel_category: category,
         addons,
-        travellers: travellers.map((traveller) => ({
-          name: traveller.name,
-          passport_number: traveller.passport_number.trim().toUpperCase() || null,
-          date_of_birth: traveller.date_of_birth || null,
-          passport_expiry: traveller.passport_expiry || null,
-        })),
         expected_total: quote?.total ?? 0,
         locale: bookingLocale,
       }),
@@ -98,8 +89,7 @@ export function NewBookingPage() {
   // The phone number already belongs to a customer: say so beside the customer fields; they can be picked instead.
   const existing = create.error instanceof ApiError && create.error.code === 'customer_exists' ? create.error : null
   const fieldError = (name: string) => (create.error instanceof ApiError ? create.error.field(name) : undefined)
-  const setTraveller = (index: number, patch: Partial<Traveller>) => setTravellers((all) => all.map((traveller, i) => (i === index ? { ...traveller, ...patch } : traveller)))
-  const canSubmit = !!quote && !!travelDate && travellers.every((traveller) => traveller.name.trim()) && (mode === 'existing' ? !!picked : !!customer.name.trim() && !!customer.phone.trim())
+  const canSubmit = !!quote && !!travelDate && (mode === 'existing' ? !!picked : !!customer.name.trim() && !!customer.phone.trim())
 
   return (
     <>
@@ -151,28 +141,6 @@ export function NewBookingPage() {
             ) : null}
           </Card>
 
-          <Card>
-            <CardTitle title="Travellers" aside={<span className="text-12 text-app-muted">{t('newBooking.passportsLater')}</span>} />
-            {travellers.map((traveller, index) => (
-              <fieldset key={index} className="m-0 flex flex-col gap-2.5 rounded-10 border border-app-line p-3">
-                <legend className="px-1 text-13 font-semibold">{index === 0 ? t('newBooking.leadTraveller') : t('newBooking.traveller', { n: number(index + 1) })}</legend>
-                <div className="grid-auto-fit-200 grid gap-3">
-                  <TextInput label={t('newBooking.name')} value={traveller.name} onChange={(name) => setTraveller(index, { name })} error={fieldError(`travellers.${index}.name`)} required />
-                  <TextInput label={t('newBooking.passport')} value={traveller.passport_number} onChange={(passport_number) => setTraveller(index, { passport_number })} error={fieldError(`travellers.${index}.passport_number`)} />
-                  <TextInput label={t('newBooking.dateOfBirth')} type="date" value={traveller.date_of_birth} onChange={(date_of_birth) => setTraveller(index, { date_of_birth })} error={fieldError(`travellers.${index}.date_of_birth`)} />
-                  <TextInput label={t('newBooking.passportExpiry')} type="date" value={traveller.passport_expiry} onChange={(passport_expiry) => setTraveller(index, { passport_expiry })} error={fieldError(`travellers.${index}.passport_expiry`)} />
-                </div>
-                {index > 0 ? (
-                  <button type="button" className={buttonClass('ghost', 'sm', 'self-start')} onClick={() => setTravellers((all) => all.filter((_, i) => i !== index))}>
-                    {t('common.remove')}
-                  </button>
-                ) : null}
-              </fieldset>
-            ))}
-            <button type="button" className={buttonClass('outline', 'sm', 'self-start')} disabled={pax >= options.data.config.maxTravellers} onClick={() => setTravellers((all) => [...all, blankTraveller()])}>
-              {t('bookings.more')}
-            </button>
-          </Card>
         </div>
 
         <Card>
@@ -199,6 +167,7 @@ export function NewBookingPage() {
             <TextInput label={t('newBooking.travelDate')} type="date" min={todayInDhaka()} value={travelDate} onChange={setTravelDate} error={fieldError('travel_date')} />
           )}
           <div className="grid-auto-fit-140 grid gap-3">
+            <NumberInput label={t('bookings.travellers')} value={pax} onChange={(value) => setPax(Math.min(Math.max(value ?? 1, 1), options.data.config.maxTravellers))} error={fieldError('pax')} hint={t('newBooking.namesLater')} />
             {category ? (
               <SelectInput
                 label={t('grid.hotelCategory')}

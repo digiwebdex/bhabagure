@@ -13,7 +13,7 @@ const STATE_DIR = resolve(import.meta.dirname, '.state')
  */
 export default function globalSetup() {
   const password = randomBytes(12).toString('base64url')
-  const roles = ['super_admin', 'admin', 'tour_operator', 'sales_agent']
+  const roles = ['super_admin', 'admin', 'tour_operator', 'sales_agent', 'accountant']
   const php = [
     `$password = '${password}';`,
     ...roles.map(

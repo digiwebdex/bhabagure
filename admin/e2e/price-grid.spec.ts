@@ -40,11 +40,7 @@ test('the editor prices a package by hotel category, and a new booking in 4-star
     await page.goto('/bookings/new')
     await page.getByLabel('Full name').first().fill('Grid Customer')
     await page.getByLabel('Phone', { exact: true }).fill(`0171${String(Date.now()).slice(-7)}`)
-    await page.getByLabel('Full name').nth(1).fill('Grid Customer')
-    for (const name of ['Second Guest', 'Third Guest']) {
-      await page.getByRole('button', { name: 'One traveller more' }).click()
-      await page.getByLabel('Full name').last().fill(name)
-    }
+    await page.getByLabel('Travellers', { exact: true }).fill('3')
     await page.getByLabel('Package', { exact: true }).selectOption(NATURE)
     const travel = new Date(Date.now() + 45 * 86_400_000).toISOString().slice(0, 10)
     if (await page.getByLabel('Travel date', { exact: true }).count()) await page.getByLabel('Travel date', { exact: true }).fill(travel)

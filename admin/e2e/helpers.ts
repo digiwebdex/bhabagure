@@ -17,7 +17,7 @@ export const password = () => (JSON.parse(readFileSync(resolve(import.meta.dirna
 export const FIRST_LOAD = { timeout: 15_000 }
 
 /** Signs in through the real login form. The panel is English only. */
-export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_operator' | 'sales_agent' | 'new.hire') {
+export async function signIn(page: Page, role: 'super_admin' | 'admin' | 'tour_operator' | 'sales_agent' | 'accountant' | 'new.hire') {
   // Start signed out. A refresh cookie left by an earlier sign-in on this page, or by staffApi (it shares the browser's
   // cookies), restores that session, and the admin rightly sends a signed-in visitor from /login to the dashboard.
   // Whether the form shows first was a race that slower machines lost.

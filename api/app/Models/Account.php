@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Account extends Model
 {
@@ -62,5 +63,36 @@ class Account extends Model
      */
     public const MONEY = [self::CASH, self::BANK, self::BKASH, self::NAGAD, self::ROCKET, self::SSLCOMMERZ_CLEARING];
 
-    protected $fillable = ['code', 'name_en', 'name_bn', 'type'];
+    /** The kinds an account can be, in the order the chart of accounts lists them. */
+    public const TYPES = ['asset', 'liability', 'equity', 'income', 'expense'];
+
+    /**
+     * Where a staff-made account's number comes from: the first free number in its kind's range
+     * (docs/phase-9-accounts.md §2). Numbers below the range's start belong to the software's own accounts.
+     */
+    public const RANGES = [
+        'asset' => [1500, 1999],
+        'liability' => [2500, 2999],
+        'equity' => [3500, 3899],
+        'income' => [4500, 4999],
+        'expense' => [5500, 5999],
+    ];
+
+    protected $fillable = ['code', 'name_en', 'name_bn', 'type', 'is_system', 'description', 'archived_at', 'created_by_staff_id'];
+
+    protected function casts(): array
+    {
+        return ['is_system' => 'boolean', 'archived_at' => 'datetime'];
+    }
+
+    /** Cash, bank and the wallets: what the company balance counts. */
+    public function isMoney(): bool
+    {
+        return in_array($this->code, self::MONEY, true);
+    }
+
+    public function lines(): HasMany
+    {
+        return $this->hasMany(JournalLine::class);
+    }
 }

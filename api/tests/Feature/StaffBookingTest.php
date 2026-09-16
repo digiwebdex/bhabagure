@@ -55,6 +55,22 @@ class StaffBookingTest extends TestCase
     }
 
     #[Test]
+    public function the_office_books_a_number_of_travellers_and_the_names_follow_on_the_booking(): void
+    {
+        $agent = $this->staff('sales_agent');
+
+        // No traveller details at all: the lead is the customer, the rest wait to be named (docs/phase-5-admin-core.md §4.3).
+        $payload = $this->payload();
+        unset($payload['travellers']);
+        $travellers = $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', $payload)->assertCreated()->json('data.travellers');
+
+        // The booking's language is Bangla, so the unnamed one reads as it will on the booking.
+        $this->assertSame(['Karim Uddin', 'যাত্রী ২'], array_column($travellers, 'full_name'));
+        $this->assertSame('8801711000555', $travellers[0]['phone'], 'the lead traveller is reached at the customer’s number');
+        $this->assertSame([null, null], array_column($travellers, 'passport_number'));
+    }
+
+    #[Test]
     public function an_existing_customer_is_picked_only_from_the_staff_members_own_records_and_a_taken_number_is_refused(): void
     {
         [$agent, $colleague] = [$this->staff('sales_agent'), $this->staff('sales_agent')];

@@ -13,9 +13,8 @@ test('a sales agent books a walk-in customer at the website price; the booking i
   await page.getByLabel('Full name').first().fill('Walk In Customer')
   await page.getByLabel('Phone', { exact: true }).fill('01711-424242')
   await page.getByLabel('How they reached us').selectOption('walk_in')
-  await page.getByLabel('Full name').nth(1).fill('Walk In Customer')
-  await page.getByRole('button', { name: 'One traveller more' }).click()
-  await page.getByLabel('Full name').nth(2).fill('Second Traveller')
+  // Two travellers: the office books a count, and names are completed on the booking itself.
+  await page.getByLabel('Travellers', { exact: true }).fill('2')
 
   await page.getByLabel('Package', { exact: true }).selectOption(MUSTANG)
   const travel = new Date(Date.now() + 45 * 86_400_000).toISOString().slice(0, 10)
@@ -43,7 +42,6 @@ test('a sales agent books a walk-in customer at the website price; the booking i
   await page.goto('/bookings/new')
   await page.getByLabel('Full name').first().fill('Someone Else')
   await page.getByLabel('Phone', { exact: true }).fill('01711424242')
-  await page.getByLabel('Full name').nth(1).fill('Someone Else')
   await page.getByLabel('Package', { exact: true }).selectOption(MUSTANG)
   if (await page.getByLabel('Travel date', { exact: true }).count()) await page.getByLabel('Travel date', { exact: true }).fill(travel)
   else await page.getByLabel('Departure', { exact: true }).selectOption({ index: 1 })

@@ -32,6 +32,13 @@ Phase 8 (the client's requests of 15 Sep: visa, hotel quotes, hotel-category pri
   `api/.env`, then `deploy.sh --reload-config`, which prints whether the checkout is on). A bKash payment that includes
   the charge is recorded with *Customer also paid the ৳ X bKash charge* and the bKash transaction ID.
 
+Phase 9 (`docs/phase-9-accounts.md`) adds the Accounting menu: **Chart of accounts** (the software's own accounts are
+marked and can only be reworded; staff add their own, numbered from that kind's range), **Journal entries** (every
+posting behind the figures, plus adjustments the accountant writes — they must balance, may not touch cash or bank, and
+are corrected by reversing, never editing), and two reports, **Account transactions** and **General ledger**, both
+downloadable as CSV. `accounts.view` opens them, `accounts.manage` edits accounts and `journal.post` writes entries; the
+accountant holds all three, an admin may look.
+
 ---
 
 ## 0. At a glance

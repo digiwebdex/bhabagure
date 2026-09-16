@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\AppendOnly;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -29,5 +30,11 @@ class JournalEntry extends Model
     public function source(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /** Who posted it, for a staff journal entry (docs/phase-9-accounts.md §3). */
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'created_by_staff_id');
     }
 }

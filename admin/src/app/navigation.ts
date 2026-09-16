@@ -33,9 +33,16 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     key: 'communication',
     items: [{ key: 'support', path: '/support', icon: 'M', permissions: ['support.manage'], badge: 'support' }],
   },
+  // Money: the cash book with its invoices and deals, then the books behind them (docs/phase-9-accounts.md).
   {
     key: 'finance',
-    items: [{ key: 'payments', path: '/payments', icon: '$', permissions: ['payments.view'] }],
+    items: [
+      { key: 'payments', path: '/payments', icon: '$', permissions: ['payments.view'] },
+      { key: 'chart_of_accounts', path: '/accounts', icon: 'A', permissions: ['accounts.view'] },
+      { key: 'journal', path: '/journal', icon: 'J', permissions: ['accounts.view'] },
+      { key: 'account_transactions', path: '/reports/account-transactions', icon: 'T', permissions: ['accounts.view'] },
+      { key: 'general_ledger', path: '/reports/general-ledger', icon: 'L', permissions: ['accounts.view'] },
+    ],
   },
   {
     key: 'catalogue',

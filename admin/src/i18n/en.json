@@ -164,7 +164,8 @@
     "perPerson": "Per person ({{n}} travellers)",
     "submit": "Create booking · {{total}}",
     "submitEmpty": "Create booking",
-    "created": "Booking {{reference}} created"
+    "created": "Booking {{reference}} created",
+    "namesLater": "Names and passports can be added on the booking"
   },
   "sources": {
     "walk_in": "Walk-in",
@@ -267,7 +268,7 @@
       "sales": "Sales",
       "catalogue": "Catalogue",
       "website": "Website",
-      "finance": "Finance",
+      "finance": "Accounting",
       "services": "Services",
       "communication": "Communication",
       "hr": "HR",
@@ -300,7 +301,11 @@
       "my_attendance": "My attendance",
       "payroll": "Salary",
       "my_commission": "My commission",
-      "downloads": "Downloads"
+      "downloads": "Downloads",
+      "chart_of_accounts": "Chart of accounts",
+      "journal": "Journal entries",
+      "account_transactions": "Account transactions",
+      "general_ledger": "General ledger"
     }
   },
   "status": {
@@ -2506,5 +2511,92 @@
     "openCustomer": "Open customer",
     "followUpMessage": "Hello {{name}}, thank you for downloading “{{title}}” from Bhabaghure Holidays. Can I help you plan the trip?",
     "openList": "All downloads"
+  },
+  "accounts": {
+    "title": "Chart of accounts",
+    "subtitle": "Every account the books use, with its balance. The software posts to the marked ones; add your own for anything else you track",
+    "add": "+ New account",
+    "addTitle": "New account",
+    "editTitle": "Edit account",
+    "name": "Account name",
+    "type": "Kind",
+    "code": "Account number",
+    "codeHint": "Left blank, the next free number in this kind’s range is used",
+    "systemNote": "The software posts to this account, so its number and kind stay as they are",
+    "description": "Description",
+    "money": "Money",
+    "system": "Built in",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "typeNote_one": "{{count}} account",
+    "typeNote_other": "{{count}} accounts",
+    "emptyType": "No accounts of this kind yet",
+    "deleteConfirm": "Delete “{{name}}”? Only an account with no entries can go.",
+    "deleted": "Account deleted",
+    "types": {
+      "asset": "Assets",
+      "liability": "Liabilities",
+      "equity": "Equity",
+      "income": "Income",
+      "expense": "Expenses"
+    }
+  },
+  "journal": {
+    "title": "Journal entries",
+    "subtitle": "Every posting behind the figures — bookings, payments and invoices — and the adjustments you write yourself",
+    "add": "+ New entry",
+    "addTitle": "New journal entry",
+    "cardTitle": "Entries",
+    "count_one": "{{count}} entry",
+    "count_other": "{{count}} entries",
+    "kind": "Entries",
+    "kinds": {
+      "all": "All",
+      "manual": "Written by staff",
+      "system": "From the software"
+    },
+    "from": "From",
+    "to": "To",
+    "account": "Account",
+    "allAccounts": "All accounts",
+    "search": "Search the description",
+    "empty": "No entries yet",
+    "emptyNote": "Bookings, payments and invoices post here as they happen.",
+    "columns": {
+      "entry": "Entry",
+      "account": "Account",
+      "debit": "Debit",
+      "credit": "Credit"
+    },
+    "date": "Date",
+    "description": "Description",
+    "manual": "Staff entry",
+    "reversal": "Reverses #{{id}}",
+    "reversalShort": "Reversal",
+    "reversed": "Reversed",
+    "reverse": "Reverse",
+    "reverseTitle": "Reverse entry #{{id}}",
+    "reverseNote": "Nothing is deleted: this writes the mirror image of the entry, and both stay in the books.",
+    "reason": "Why",
+    "reversedDone": "Entry reversed",
+    "addLine": "+ Add line",
+    "balanced": "Balanced",
+    "outOfBalance": "Out of balance by {{amount}}",
+    "post": "Post entry",
+    "posted": "Entry posted"
+  },
+  "reports": {
+    "accountTransactions": "Account transactions",
+    "accountTransactionsNote": "One account’s entries in order, with the balance carried from before the period",
+    "generalLedger": "General ledger",
+    "generalLedgerNote": "Every account’s movement, with the totals that must agree",
+    "opening": "Opening",
+    "closing": "Closing",
+    "balance": "Balance",
+    "noEntries": "Nothing in this period",
+    "agrees": "Debits equal credits",
+    "disagrees": "Out of balance",
+    "csv": "Download CSV",
+    "csvFailed": "The download didn’t work — please try again."
   }
 }

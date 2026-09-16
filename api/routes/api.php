@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AccountController;
+use App\Http\Controllers\Api\V1\Admin\AccountingReportController;
 use App\Http\Controllers\Api\V1\Admin\AirInquiryController;
 use App\Http\Controllers\Api\V1\Admin\AssignableStaffController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceController;
@@ -18,6 +20,7 @@ use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\DownloadLogController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
+use App\Http\Controllers\Api\V1\Admin\JournalController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\MyAttendanceController;
@@ -473,6 +476,26 @@ Route::prefix('v1')->group(function () {
                 Route::get('deals/{id}/pdf', 'pdf')->whereNumber('id');
                 Route::post('deals/{id}/payments', 'pay')->whereNumber('id')->middleware('throttle:media-upload');
                 Route::post('deals/{id}/void', 'void')->whereNumber('id');
+            });
+        });
+
+        // Accounts (docs/phase-9-accounts.md): the chart of accounts, the journal behind every figure, and the two
+        // reports. Reading needs accounts.view; adding an account or posting an entry needs its own permission.
+        Route::middleware('permission:accounts.view,staff')->group(function () {
+            Route::controller(AccountController::class)->group(function () {
+                Route::get('accounts', 'index');
+                Route::post('accounts', 'store')->middleware('permission:accounts.manage,staff');
+                Route::put('accounts/{id}', 'update')->whereNumber('id')->middleware('permission:accounts.manage,staff');
+                Route::delete('accounts/{id}', 'destroy')->whereNumber('id')->middleware('permission:accounts.manage,staff');
+            });
+            Route::controller(JournalController::class)->group(function () {
+                Route::get('journal-entries', 'index');
+                Route::post('journal-entries', 'store')->middleware('permission:journal.post,staff');
+                Route::post('journal-entries/{id}/reverse', 'reverse')->whereNumber('id')->middleware('permission:journal.post,staff');
+            });
+            Route::controller(AccountingReportController::class)->group(function () {
+                Route::get('reports/account-transactions', 'accountTransactions');
+                Route::get('reports/general-ledger', 'generalLedger');
             });
         });
 

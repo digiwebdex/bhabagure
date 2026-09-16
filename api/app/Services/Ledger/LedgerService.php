@@ -408,8 +408,45 @@ final class LedgerService
         return self::paisa($sum ?? 0);
     }
 
+    /**
+     * A journal entry staff wrote themselves (docs/phase-9-accounts.md §3): an adjustment between accounts, with no
+     * money moving. Cash, bank and wallet accounts are refused — money only ever moves through the cash book, so the
+     * books keep matching the receipts.
+     *
+     * @param  list<array{0: string, 1: int, 2: int}>  $lines  [account code, debit paisa, credit paisa]
+     *
+     * @throws LogicException when it doesn't balance, has fewer than two sides, or touches a money account
+     */
+    public function recordJournalEntry(array $lines, string $description, ?\DateTimeInterface $on, Staff $staff): JournalEntry
+    {
+        foreach ($lines as [$code]) {
+            if (in_array($code, Account::MONEY, true)) {
+                throw new LogicException("Account {$code} holds money: record it in the cash book, not as a journal entry.");
+            }
+        }
+        if (count(array_filter($lines, fn (array $line) => $line[1] > 0 || $line[2] > 0)) < 2) {
+            throw new LogicException('A journal entry needs at least two sides.');
+        }
+
+        return $this->post(null, $description, null, $staff, $lines, on: $on);
+    }
+
+    /** Undoes a staff journal entry with its mirror image; nothing is ever deleted (§3). */
+    public function reverseJournalEntry(JournalEntry $entry, string $reason, Staff $staff): JournalEntry
+    {
+        $this->assertInTransaction();
+        if ($entry->source_type !== null) {
+            throw new LogicException('Only a journal entry staff wrote is reversed here; this one belongs to a booking or payment.');
+        }
+        if ($entry->reverses_journal_entry_id !== null || JournalEntry::query()->where('reverses_journal_entry_id', $entry->id)->exists()) {
+            throw new LogicException("Journal entry #{$entry->id} is already reversed.");
+        }
+
+        return $this->reverse($entry, "Reversal of #{$entry->id}: {$reason}", $staff);
+    }
+
     /** @param list<array{0: string, 1: int, 2: int}> $lines [account code, debit paisa, credit paisa] */
-    private function post(Model $source, string $description, ?int $bookingId, ?Staff $staff, array $lines, ?int $reverses = null, ?\DateTimeInterface $on = null): JournalEntry
+    private function post(?Model $source, string $description, ?int $bookingId, ?Staff $staff, array $lines, ?int $reverses = null, ?\DateTimeInterface $on = null): JournalEntry
     {
         $this->assertInTransaction();
         $lines = array_values(array_filter($lines, fn (array $line) => $line[1] > 0 || $line[2] > 0));
@@ -420,7 +457,7 @@ final class LedgerService
         $accounts = Account::query()->whereIn('code', array_column($lines, 0))->pluck('id', 'code');
         $entry = JournalEntry::query()->create([
             'entry_date' => Carbon::instance($on ?? now())->setTimezone('Asia/Dhaka')->toDateString(), 'description' => mb_substr($description, 0, 500),
-            'source_type' => $source->getMorphClass(), 'source_id' => $source->getKey(), 'booking_id' => $bookingId,
+            'source_type' => $source?->getMorphClass(), 'source_id' => $source?->getKey(), 'booking_id' => $bookingId,
             'reverses_journal_entry_id' => $reverses, 'created_by_staff_id' => $staff?->id,
         ]);
         foreach ($lines as [$code, $debit, $credit]) {

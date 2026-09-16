@@ -81,6 +81,8 @@ check "my commission without a token" 401 "$(get a_comm "$API/api/v1/admin/profi
 check "hotel requests without a token" 401 "$(get a_hotel "$API/api/v1/admin/hotel-inquiries" -H 'Accept: application/json')"
 check "brochure download without signing in" 401 "$(get c_brochure "$API/api/v1/portal/downloads/packages/any" -H 'Accept: application/json')"
 check "downloads screen without a token" 401 "$(get a_downloads "$API/api/v1/admin/downloads" -H 'Accept: application/json')"
+check "chart of accounts without a token" 401 "$(get a_accounts "$API/api/v1/admin/accounts" -H 'Accept: application/json')"
+check "journal entries without a token" 401 "$(get a_journal "$API/api/v1/admin/journal-entries" -H 'Accept: application/json')"
 
 echo "── CORS"
 cors() { curl -s -o /dev/null -D - -X OPTIONS --max-time 20 -H "Origin: $1" -H 'Access-Control-Request-Method: POST' "$API/api/v1/public/inquiries" | grep -i '^access-control-allow-origin:' | cut -d' ' -f2- | tr -d '\r'; }
