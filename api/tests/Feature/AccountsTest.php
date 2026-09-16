@@ -179,6 +179,57 @@ class AccountsTest extends TestCase
         return $booking->fresh();
     }
 
+    #[Test]
+    public function a_float_somebody_holds_is_an_account_of_its_own_inside_the_company_balance(): void
+    {
+        $this->seed(ContentSeeder::class);
+        $this->issueAndPayABooking();
+        $accountant = $this->accountant();
+        $admin = $this->staff('admin');
+
+        // A named float: an asset account that holds money, so the company balance counts it.
+        $float = $this->actingAsApi($accountant)->postJson('/api/v1/admin/accounts', [
+            'name' => 'Riad · cash float', 'type' => 'asset', 'is_money' => true,
+        ])->assertCreated()->json('data');
+        $this->assertSame(['1500', true], [$float['code'], $float['is_money']]);
+
+        $options = $this->actingAsApi($admin)->getJson('/api/v1/admin/payments/options')->assertOk()->json('data.money_accounts');
+        $this->assertContains('1500', array_column($options, 'code'), 'a float can take an opening balance like any other money account');
+
+        // Only an asset holds money, and once an account has entries the answer can no longer change.
+        $this->actingAsApi($accountant)->postJson('/api/v1/admin/accounts', ['name' => 'Wrong kind', 'type' => 'expense', 'is_money' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('is_money');
+        $cash = Account::query()->where('code', Account::CASH)->sole();
+        $this->actingAsApi($accountant)->putJson("/api/v1/admin/accounts/{$cash->id}", ['name' => 'Cash in hand', 'type' => 'asset', 'is_money' => false])
+            ->assertUnprocessable()->assertJsonValidationErrors('is_money');
+
+        // Money moved into the float: the company balance is the same, the two accounts are not.
+        $before = $this->actingAsApi($admin)->getJson('/api/v1/admin/payments/balance')->assertOk()->json('data.total');
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/transfers', [
+            'from' => Account::CASH, 'to' => '1500', 'amount' => 20000, 'description' => 'Float for visa fees',
+        ])->assertCreated();
+
+        $after = $this->actingAsApi($admin)->getJson('/api/v1/admin/payments/balance')->assertOk()->json('data');
+        $this->assertEquals($before, $after['total'], 'moving money between our own accounts changes no total');
+        $held = collect($after['accounts'])->keyBy('code');
+        $this->assertEquals(56500, $held[Account::CASH]['balance'], '76,500 less the 20,000 handed over');
+        $this->assertEquals(20000, $held['1500']['balance']);
+
+        // It is in the journal as one entry, and nothing can be handed over that isn't held.
+        $this->assertSame(1, JournalEntry::query()->where('description', 'like', 'Moved · %')->count());
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/transfers', [
+            'from' => '1500', 'to' => Account::BANK, 'amount' => 20001, 'description' => 'Too much',
+        ])->assertStatus(409)->assertJsonPath('code', 'transfer_refused');
+
+        // An account that holds no money is not somewhere money can be moved to.
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/transfers', [
+            'from' => Account::CASH, 'to' => Account::OFFICE_RENT, 'amount' => 100, 'description' => 'Not money',
+        ])->assertUnprocessable()->assertJsonValidationErrors('to');
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/transfers', [
+            'from' => Account::CASH, 'to' => Account::CASH, 'amount' => 100, 'description' => 'Same account',
+        ])->assertUnprocessable()->assertJsonValidationErrors('from');
+    }
+
     /** @param list<array<string, mixed>> $lines */
     private function postEntry(Staff $staff, array $lines): void
     {

@@ -12,6 +12,7 @@ use App\Models\OpeningBalance;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Support\Ledger\CashCategories;
+use App\Support\Money;
 use App\Support\Pricing\PricingService;
 use App\Support\WriteScope;
 use Illuminate\Database\Eloquent\Model;
@@ -258,7 +259,7 @@ final class LedgerService
     public function postOpeningBalance(Account $account, string|int|float $amount, string $asOf, ?string $note, Staff $staff): OpeningBalance
     {
         $this->assertInTransaction();
-        if (! in_array($account->code, Account::MONEY, true)) {
+        if (! $account->isMoney()) {
             throw new InvalidArgumentException("Account {$account->code} is not a money account.");
         }
         $paisa = self::paisa($amount);
@@ -367,16 +368,18 @@ final class LedgerService
      *
      * The old shared Mobile wallets account is included only while it still holds a balance nothing could attribute.
      *
-     * @return array<string, int> account code => paisa, in Account::MONEY order
+     * @return array<string, int> account code => paisa, by account number
      */
     public function moneyBalances(): array
     {
         $rows = DB::table('journal_lines')->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
-            ->whereIn('accounts.code', [...Account::MONEY, Account::MOBILE_WALLETS])->groupBy('accounts.code')
+            ->groupBy('accounts.code')
             ->selectRaw('accounts.code AS code, SUM(journal_lines.debit) - SUM(journal_lines.credit) AS balance')
             ->pluck('balance', 'code');
 
-        $balances = collect(Account::MONEY)->mapWithKeys(fn (string $code) => [$code => self::paisa($rows[$code] ?? 0)])->all();
+        // Every money account, whether the software posts to it or staff added it for a float somebody holds.
+        $balances = Account::query()->money()->orderBy('code')->pluck('code')
+            ->mapWithKeys(fn (string $code) => [$code => self::paisa($rows[$code] ?? 0)])->all();
         $legacy = self::paisa($rows[Account::MOBILE_WALLETS] ?? 0);
 
         return $legacy === 0 ? $balances : $balances + [Account::MOBILE_WALLETS => $legacy];
@@ -419,16 +422,49 @@ final class LedgerService
      */
     public function recordJournalEntry(array $lines, string $description, ?\DateTimeInterface $on, Staff $staff): JournalEntry
     {
-        foreach ($lines as [$code]) {
-            if (in_array($code, Account::MONEY, true)) {
-                throw new LogicException("Account {$code} holds money: record it in the cash book, not as a journal entry.");
-            }
+        $money = Account::query()->money()->whereIn('code', array_column($lines, 0))->pluck('code');
+        if ($money->isNotEmpty()) {
+            throw new LogicException("Account {$money->first()} holds money: record it in the cash book, not as a journal entry.");
         }
         if (count(array_filter($lines, fn (array $line) => $line[1] > 0 || $line[2] > 0)) < 2) {
             throw new LogicException('A journal entry needs at least two sides.');
         }
 
         return $this->post(null, $description, null, $staff, $lines, on: $on);
+    }
+
+    /**
+     * Money moved from one of the company's money accounts to another — cash banked, a float handed to a staff member,
+     * a wallet emptied into the bank (docs/phase-9-accounts.md §6). The company balance doesn't change, which is why
+     * this is a journal entry and not a cash book row: nothing came in and nothing went out, it only moved.
+     *
+     * @throws LogicException when an account doesn't hold money, or both sides are the same account
+     */
+    public function recordTransfer(Account $from, Account $to, string|int|float $amount, string $description, Staff $staff, ?\DateTimeInterface $on = null): JournalEntry
+    {
+        $this->assertInTransaction();
+        foreach ([$from, $to] as $account) {
+            if (! $account->isMoney()) {
+                throw new LogicException("{$account->name_en} doesn't hold money, so nothing can be moved to or from it.");
+            }
+        }
+        if ($from->is($to)) {
+            throw new LogicException('Money can\'t be moved to the account it came from.');
+        }
+        $paisa = self::paisa($amount);
+        if ($paisa <= 0) {
+            throw new LogicException('An amount must be positive.');
+        }
+        // An account can't hand over money it doesn't hold: a float that went negative would be a mistake, not a fact.
+        $held = $this->moneyBalances()[$from->code] ?? 0;
+        if ($paisa > $held) {
+            throw new LogicException("{$from->name_en} holds ".Money::toNumber(self::amount($held)).', which is less than this.');
+        }
+
+        return $this->post(null, "Moved · {$from->name_en} → {$to->name_en} · {$description}", null, $staff, [
+            [$to->code, $paisa, 0],
+            [$from->code, 0, $paisa],
+        ], on: $on);
     }
 
     /** Undoes a staff journal entry with its mirror image; nothing is ever deleted (§3). */

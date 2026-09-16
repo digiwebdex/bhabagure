@@ -87,15 +87,15 @@ class PaymentsController extends Controller
     /** What a manual entry can be: methods, categories by direction, business lines, and whether opening balances are still open. */
     public function options(): JsonResponse
     {
-        $accounts = Account::query()->whereIn('code', Account::MONEY)->get()->keyBy('code');
         $opened = OpeningBalance::query()->pluck('account_id')->all();
 
         return response()->json(['data' => [
             'methods' => LedgerService::STAFF_METHODS,
             'categories' => ['in' => CashCategories::forDirection('in'), 'out' => CashCategories::forDirection('out')],
             'business_lines' => CashCategories::BUSINESS_LINES,
-            'money_accounts' => collect(Account::MONEY)->map(fn (string $code) => [
-                'code' => $code, 'name_en' => $accounts[$code]->name_en, 'name_bn' => $accounts[$code]->name_bn, 'has_opening_balance' => in_array($accounts[$code]->id, $opened, true),
+            // Every account money sits in, the software's own and any float staff added (docs/phase-9-accounts.md §6).
+            'money_accounts' => Account::query()->money()->orderBy('code')->get()->map(fn (Account $account) => [
+                'code' => $account->code, 'name_en' => $account->name_en, 'name_bn' => $account->name_bn, 'has_opening_balance' => in_array($account->id, $opened, true),
             ])->values(),
         ]]);
     }
@@ -202,7 +202,7 @@ class PaymentsController extends Controller
         $staff = $request->user('staff');
         abort_unless($staff->can('ledger.view_company_balance') && $staff->can('transactions.create_manual'), 403, __('auth.forbidden'));
         $data = $request->validate([
-            'account' => ['required', Rule::in(Account::MONEY)],
+            'account' => ['required', Rule::exists('accounts', 'code')->where('is_money', true)],
             'amount' => ['required', 'numeric', 'min:0', 'max:9999999999'],
             'as_of' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'note' => ['nullable', 'string', 'max:300'],
@@ -216,6 +216,37 @@ class PaymentsController extends Controller
             });
         } catch (LogicException|InvalidArgumentException) {
             return response()->json(['message' => __('payments.opening_exists'), 'code' => 'opening_exists'], Response::HTTP_CONFLICT);
+        }
+
+        return response()->json(['data' => $this->balances($ledger)], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Money moved from one of the company's money accounts to another — cash banked, a float handed to a staff member
+     * (docs/phase-9-accounts.md §6). Nothing came in or out, so the company balance is the same afterwards.
+     */
+    public function transfer(Request $request, LedgerService $ledger, AuditLogger $audit): JsonResponse
+    {
+        $staff = $request->user('staff');
+        abort_unless($staff->can('transactions.create_manual'), 403, __('auth.forbidden'));
+        $money = Rule::exists('accounts', 'code')->where('is_money', true);
+        $data = $request->validate([
+            'from' => ['required', 'different:to', $money],
+            'to' => ['required', $money],
+            'amount' => ['required', 'numeric', 'min:1', 'max:9999999999'],
+            'description' => ['required', 'string', 'max:200'],
+            'occurred_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
+        ]);
+        $from = Account::query()->where('code', $data['from'])->firstOrFail();
+        $to = Account::query()->where('code', $data['to'])->firstOrFail();
+
+        try {
+            DB::transaction(function () use ($ledger, $audit, $from, $to, $data, $staff) {
+                $entry = $ledger->recordTransfer($from, $to, $data['amount'], trim($data['description']), $staff, isset($data['occurred_on']) ? Carbon::parse($data['occurred_on'], 'Asia/Dhaka') : null);
+                $audit->record('ledger.transfer', $staff, $entry, ['from' => $from->code, 'to' => $to->code, 'amount' => $data['amount']]);
+            });
+        } catch (LogicException $e) {
+            return response()->json(['message' => $e->getMessage(), 'code' => 'transfer_refused'], Response::HTTP_CONFLICT);
         }
 
         return response()->json(['data' => $this->balances($ledger)], Response::HTTP_CREATED);

@@ -126,6 +126,8 @@ export const paymentActions = {
   reverse: (id: number, reason: string) => api.post<Data<CashEntry>>(`admin/cash-book/${id}/reverse`, { reason }),
   review: (id: number, note: string) => api.post<null>(`admin/payment-attempts/${id}/review`, { note }),
   openingBalance: (body: { account: string; amount: number; as_of: string; note: string | null }) => api.post<Data<Balance>>('admin/opening-balances', body),
+  /** Money moved between the company's own money accounts: no total changes, so it is a journal entry, not a cash entry. */
+  transfer: (body: { from: string; to: string; amount: number; description: string; occurred_on: string }) => api.post<Data<Balance>>('admin/transfers', body),
   addPreset: (body: { label: string; direction: 'in' | 'out' | null }) => api.post<Data<ReferencePreset>>('admin/reference-presets', body),
   removePreset: (id: number) => api.delete<null>(`admin/reference-presets/${id}`),
   /** Multipart when there is an advance: its receipt goes with it. */

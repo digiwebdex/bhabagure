@@ -94,12 +94,16 @@ function SummaryCards({ summary }: { summary: PaymentsSummary | null }) {
   )
 }
 
+/** An outlined button on the blue balance card, where the usual button colours would disappear. */
+const balanceButton = 'cursor-pointer rounded-8 border border-white/40 bg-transparent px-2.5 py-1 text-12 font-semibold text-white hover:bg-white/10'
+
 /** The prototype's blue card. Only rendered when the API sent the balance — it is withheld without the permission. */
 function BalanceCard({ balance }: { balance: Balance }) {
   const { t } = useTranslation()
   const { bdt } = useFormat()
   const { can } = useAuth()
   const [openingFor, setOpeningFor] = useState(false)
+  const [moving, setMoving] = useState(false)
   const missing = balance.accounts.filter((account) => !account.opening)
 
   return (
@@ -114,12 +118,23 @@ function BalanceCard({ balance }: { balance: Balance }) {
           </li>
         ))}
       </ul>
-      {missing.length > 0 && can('transactions.create_manual') ? (
-        <button type="button" className="mt-1 cursor-pointer self-start rounded-8 border border-white/40 bg-transparent px-2.5 py-1 text-12 font-semibold text-white hover:bg-white/10" onClick={() => setOpeningFor(true)}>
-          {t('payments.setOpening')}
-        </button>
+      {can('transactions.create_manual') ? (
+        <span className="mt-1 flex flex-wrap gap-2">
+          {missing.length > 0 ? (
+            <button type="button" className={balanceButton} onClick={() => setOpeningFor(true)}>
+              {t('payments.setOpening')}
+            </button>
+          ) : null}
+          {/* Cash banked, or a float handed to somebody: it moves between our own accounts, so no total changes. */}
+          {balance.accounts.length > 1 ? (
+            <button type="button" className={balanceButton} onClick={() => setMoving(true)}>
+              {t('payments.moveMoney')}
+            </button>
+          ) : null}
+        </span>
       ) : null}
       {openingFor ? <OpeningBalanceDialog accounts={missing} onClose={() => setOpeningFor(false)} /> : null}
+      {moving ? <TransferDialog accounts={balance.accounts} onClose={() => setMoving(false)} /> : null}
     </div>
   )
 }
@@ -157,6 +172,58 @@ function OpeningBalanceDialog({ accounts, onClose }: { accounts: Balance['accoun
           }
         >
           {t('payments.openingSubmit')}
+        </button>
+      </div>
+    </Dialog>
+  )
+}
+
+/**
+ * Money moved from one of the company's own accounts to another — cash banked, a float handed to a staff member. The
+ * company balance is the same afterwards, so this is a journal entry and never a cash book row.
+ */
+function TransferDialog({ accounts, onClose }: { accounts: Balance['accounts']; onClose: () => void }) {
+  const { t } = useTranslation()
+  const { bdt } = useFormat()
+  const toast = useToast()
+  const [form, setForm] = useState({ from: accounts[0]?.code ?? '', to: accounts[1]?.code ?? '', amount: null as number | null, description: '', occurred_on: todayInDhaka() })
+  const save = usePaymentsMutation(() =>
+    paymentActions.transfer({ from: form.from, to: form.to, amount: form.amount ?? 0, description: form.description.trim(), occurred_on: form.occurred_on }),
+  )
+  const held = accounts.find((account) => account.code === form.from)?.balance ?? 0
+  const options = accounts.map((account) => ({ value: account.code, label: account.name_en || account.name_bn }))
+  const tooMuch = (form.amount ?? 0) > held
+
+  return (
+    <Dialog open onClose={onClose} title={t('payments.moveTitle')}>
+      <p className="m-0 text-13 text-app-muted">{t('payments.moveNote')}</p>
+      <div className="grid-auto-fit-200 grid gap-3">
+        <SelectInput label={t('payments.moveFrom')} value={form.from} onChange={(from) => setForm({ ...form, from })} options={options} hint={t('payments.holds', { amount: bdt(held) })} />
+        <SelectInput label={t('payments.moveTo')} value={form.to} onChange={(to) => setForm({ ...form, to })} options={options.filter((option) => option.value !== form.from)} />
+      </div>
+      <NumberInput label={t('payments.amount')} value={form.amount} onChange={(amount) => setForm({ ...form, amount })} preview={(value) => bdt(value)} />
+      <TextInput label={t('payments.moveWhy')} value={form.description} onChange={(description) => setForm({ ...form, description })} hint={t('payments.moveWhyHint')} />
+      <TextInput label={t('payments.asOf')} type="date" max={todayInDhaka()} value={form.occurred_on} onChange={(occurred_on) => setForm({ ...form, occurred_on })} />
+      {tooMuch ? <p className="m-0 text-13 text-red">{t('payments.moveTooMuch', { amount: bdt(held) })}</p> : null}
+      {save.error ? <ErrorNotice error={save.error} /> : null}
+      <div className="flex justify-end gap-2">
+        <button type="button" className={buttonClass('outline')} onClick={onClose}>
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          className={buttonClass('primary')}
+          disabled={!form.from || !form.to || form.from === form.to || !form.amount || tooMuch || form.description.trim().length < 3 || save.isPending}
+          onClick={() =>
+            save.mutate(undefined, {
+              onSuccess: () => {
+                toast(t('payments.moved'))
+                onClose()
+              },
+            })
+          }
+        >
+          {save.isPending ? t('common.saving') : t('payments.moveSubmit')}
         </button>
       </div>
     </Dialog>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { buttonClass } from '../../components/ui/button'
 import { Dialog, ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
-import { SelectInput, TextArea, TextInput } from '../../components/ui/fields'
+import { SelectInput, Switch, TextArea, TextInput } from '../../components/ui/fields'
 import { Badge, Card, CardTitle, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { useAuth } from '../../app/auth'
 import { ApiError } from '../../lib/api/client'
@@ -120,6 +120,7 @@ function AccountDialog({ account, onClose }: { account: AccountRow | null; onClo
     type: (account?.type ?? 'expense') as AccountType,
     description: account?.description ?? '',
     code: account?.code ?? '',
+    is_money: account?.is_money ?? false,
   })
   const save = useAccountAction(account ? accountActions.update(account.id) : accountActions.create)
   const fieldError = (name: string) => (save.error instanceof ApiError ? save.error.field(name) : undefined)
@@ -145,6 +146,11 @@ function AccountDialog({ account, onClose }: { account: AccountRow | null; onClo
         error={fieldError('code')}
       />
       <TextArea label={t('accounts.description')} value={form.description} onChange={(description) => setForm({ ...form, description })} rows={2} error={fieldError('description')} />
+      {/* A float somebody holds: counted inside the company balance, like the office cash and the bank. */}
+      {form.type === 'asset' && !system ? (
+        <Switch label={t('accounts.holdsMoney')} checked={form.is_money} onChange={(is_money) => setForm({ ...form, is_money })} hint={t('accounts.holdsMoneyHint')} />
+      ) : null}
+      {fieldError('is_money') ? <p className="text-13 text-red">{fieldError('is_money')}</p> : null}
       {save.error && !(save.error instanceof ApiError && save.error.status === 422) ? <ErrorNotice error={save.error} /> : null}
       <div className="flex justify-end gap-2">
         <button type="button" className={buttonClass('outline')} onClick={onClose}>
@@ -156,7 +162,7 @@ function AccountDialog({ account, onClose }: { account: AccountRow | null; onClo
           disabled={!form.name.trim() || save.isPending}
           onClick={() =>
             save.mutate(
-              { name: form.name.trim(), type: form.type, description: form.description.trim() || null, code: form.code.trim() || null },
+              { name: form.name.trim(), type: form.type, description: form.description.trim() || null, code: form.code.trim() || null, is_money: form.type === 'asset' && form.is_money },
               { onSuccess: () => { toast(t('common.saved')); onClose() } },
             )
           }

@@ -6,6 +6,8 @@ return [
     'code_range' => 'A :type account’s number runs from :first to :last.',
     'range_full' => 'Every number in this range is taken. Enter a number yourself.',
     'money_account' => 'Cash, bank and wallet accounts move only through the cash book, not a journal entry.',
+    'money_is_an_asset' => 'Only an asset account can hold money.',
+    'money_has_entries' => 'This account already has entries, so whether it holds money can no longer change. Make a new account instead.',
     'unbalanced' => 'Debits (:debit) must equal credits (:credit).',
     'two_sides' => 'A journal entry needs at least two sides.',
     'one_side_each' => 'Each line is either a debit or a credit, not both.',

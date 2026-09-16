@@ -461,6 +461,8 @@ Route::prefix('v1')->group(function () {
                 Route::post('cash-book/{id}/reverse', 'reverse')->whereNumber('id');
                 Route::post('cash-entries', 'store')->middleware('throttle:media-upload');
                 Route::post('opening-balances', 'storeOpeningBalance');
+                // Money moved between the company's own accounts — cash banked, a float handed over (§6).
+                Route::post('transfers', 'transfer');
                 Route::get('payment-attempts/review', 'reviewIndex');
                 Route::post('payment-attempts/{id}/review', 'markReviewed')->whereNumber('id');
             });

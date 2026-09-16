@@ -47,6 +47,7 @@ class AccountController extends Controller
             'type' => $data['type'],
             'description' => $data['description'] ?? null,
             'is_system' => false,
+            'is_money' => $data['is_money'] ?? false,
             'created_by_staff_id' => $request->user('staff')->id,
         ]);
         $this->audit->record('account.created', $request->user('staff'), $account, ['code' => $account->code, 'name' => $account->name_en, 'type' => $account->type]);
@@ -61,7 +62,7 @@ class AccountController extends Controller
         // A system account's number and kind are what the code posts to; only its wording is staff's to change.
         $account->fill(['name_en' => $data['name'], 'name_bn' => $data['name'], 'description' => $data['description'] ?? null]);
         if (! $account->is_system) {
-            $account->fill(['type' => $data['type'], 'code' => $data['code'] ?? $account->code]);
+            $account->fill(['type' => $data['type'], 'code' => $data['code'] ?? $account->code, 'is_money' => $data['is_money'] ?? false]);
         }
         $account->save();
         $this->audit->record('account.updated', $request->user('staff'), $account, ['code' => $account->code, 'name' => $account->name_en]);
@@ -95,7 +96,16 @@ class AccountController extends Controller
             'type' => ['required', Rule::in(Account::TYPES)],
             'description' => ['nullable', 'string', 'max:300'],
             'code' => ['nullable', 'string', 'regex:/^\d{4}$/', Rule::unique('accounts', 'code')->ignore($account?->id)],
+            // A float somebody holds, counted inside the company balance (docs/phase-9-accounts.md §6).
+            'is_money' => ['nullable', 'boolean'],
         ]);
+        if (($data['is_money'] ?? false) && $data['type'] !== 'asset') {
+            throw ValidationException::withMessages(['is_money' => __('accounts.money_is_an_asset')]);
+        }
+        // Changing this would move the company balance under everyone's feet, so it is settled before the first entry.
+        if ($account !== null && ($data['is_money'] ?? false) !== $account->isMoney() && $account->lines()->exists()) {
+            throw ValidationException::withMessages(['is_money' => __('accounts.money_has_entries')]);
+        }
         if (isset($data['code'])) {
             [$first, $last] = Account::RANGES[$data['type']];
             if ((int) $data['code'] < $first || (int) $data['code'] > $last) {

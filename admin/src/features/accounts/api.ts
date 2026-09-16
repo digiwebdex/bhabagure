@@ -108,7 +108,7 @@ export function useAccountAction<TVariables, TResult>(send: (variables: TVariabl
   })
 }
 
-export type AccountInput = { name: string; type: AccountType; description: string | null; code: string | null }
+export type AccountInput = { name: string; type: AccountType; description: string | null; code: string | null; is_money: boolean }
 export type JournalInput = { entry_date: string; description: string; lines: { account_id: number | null; debit: number | null; credit: number | null }[] }
 
 export const accountActions = {

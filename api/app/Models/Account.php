@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -78,17 +79,23 @@ class Account extends Model
         'expense' => [5500, 5999],
     ];
 
-    protected $fillable = ['code', 'name_en', 'name_bn', 'type', 'is_system', 'description', 'archived_at', 'created_by_staff_id'];
+    protected $fillable = ['code', 'name_en', 'name_bn', 'type', 'is_system', 'is_money', 'description', 'archived_at', 'created_by_staff_id'];
 
     protected function casts(): array
     {
-        return ['is_system' => 'boolean', 'archived_at' => 'datetime'];
+        return ['is_system' => 'boolean', 'is_money' => 'boolean', 'archived_at' => 'datetime'];
     }
 
-    /** Cash, bank and the wallets: what the company balance counts. */
+    /** Where money sits — the office drawer, the bank, the wallets and any float staff hold: what the company balance counts. */
     public function isMoney(): bool
     {
-        return in_array($this->code, self::MONEY, true);
+        return (bool) $this->is_money;
+    }
+
+    /** @param Builder<Account> $query */
+    public function scopeMoney(Builder $query): void
+    {
+        $query->where('is_money', true);
     }
 
     public function lines(): HasMany
