@@ -35,6 +35,7 @@ const DashboardPage = page(() => import('../features/dashboard/DashboardPage'), 
 const DocumentsPage = page(() => import('../features/documents/DocumentsPage'), 'DocumentsPage')
 const DownloadsPage = page(() => import('../features/downloads/DownloadsPage'), 'DownloadsPage')
 const InvoicesPage = page(() => import('../features/invoices/InvoicesPage'), 'InvoicesPage')
+const InvoiceFormPage = page(() => import('../features/invoices/InvoiceForm'), 'InvoiceForm')
 const ChartOfAccountsPage = page(() => import('../features/accounts/ChartOfAccountsPage'), 'ChartOfAccountsPage')
 const JournalPage = page(() => import('../features/accounts/JournalPage'), 'JournalPage')
 const AccountTransactionsPage = page(() => import('../features/accounts/ReportsPage'), 'AccountTransactionsPage')
@@ -99,6 +100,8 @@ export const router = createBrowserRouter([
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'downloads', element: <Require permissions={['downloads.view']}><DownloadsPage /></Require> },
       { path: 'invoices', element: <Require permissions={['payments.view']}><InvoicesPage /></Require> },
+      { path: 'invoices/new', element: <Require permissions={['invoices.manage']}><InvoiceFormPage /></Require> },
+      { path: 'invoices/:id/edit', element: <Require permissions={['invoices.manage']}><InvoiceFormPage /></Require> },
       { path: 'accounts', element: <Require permissions={['accounts.view']}><ChartOfAccountsPage /></Require> },
       { path: 'journal', element: <Require permissions={['accounts.view']}><JournalPage /></Require> },
       { path: 'reports/account-transactions', element: <Require permissions={['accounts.view']}><AccountTransactionsPage /></Require> },

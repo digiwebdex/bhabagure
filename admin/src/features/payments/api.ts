@@ -132,7 +132,7 @@ export const paymentActions = {
   removePreset: (id: number) => api.delete<null>(`admin/reference-presets/${id}`),
   /** Multipart when there is an advance: its receipt goes with it. */
   createDeal: (body: FormData) => api.post<Data<Deal>>('admin/deals', body),
-  payDeal: (id: number, { evidence, ...fields }: { amount: number; method: string; reference: string | null; evidence: File }) => {
+  payDeal: (id: number, { evidence, ...fields }: { amount: number; method: string; reference: string | null; evidence: File; account?: string | null; occurred_on?: string }) => {
     const body = new FormData()
     for (const [key, value] of Object.entries(fields)) if (value !== null && value !== '') body.append(key, String(value))
     body.append('evidence', evidence)

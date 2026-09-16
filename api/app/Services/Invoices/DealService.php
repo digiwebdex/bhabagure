@@ -2,6 +2,7 @@
 
 namespace App\Services\Invoices;
 
+use App\Models\Account;
 use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -71,11 +72,11 @@ final class DealService
     }
 
     /** @throws PaymentExceedsBalance */
-    public function pay(Invoice $invoice, int|float|string $amount, string $method, ?string $reference, ?\DateTimeInterface $occurredAt, ?string $evidencePath, Staff $staff): Transaction
+    public function pay(Invoice $invoice, int|float|string $amount, string $method, ?string $reference, ?\DateTimeInterface $occurredAt, ?string $evidencePath, Staff $staff, ?Account $into = null): Transaction
     {
-        return DB::transaction(function () use ($invoice, $amount, $method, $reference, $occurredAt, $evidencePath, $staff) {
-            $payment = $this->ledger->recordDealPayment($invoice, $amount, $method, 'Payment', $staff, $reference, $evidencePath, $occurredAt);
-            $this->audit->record('deal.payment_recorded', $staff, $invoice, ['amount' => $payment->amount, 'method' => $method]);
+        return DB::transaction(function () use ($invoice, $amount, $method, $reference, $occurredAt, $evidencePath, $staff, $into) {
+            $payment = $this->ledger->recordDealPayment($invoice, $amount, $method, 'Payment', $staff, $reference, $evidencePath, $occurredAt, $into);
+            $this->audit->record('deal.payment_recorded', $staff, $invoice, ['amount' => $payment->amount, 'method' => $method, 'account' => $into?->code]);
 
             return $payment;
         });

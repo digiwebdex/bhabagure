@@ -55,7 +55,7 @@ trait SendsNotifications
         // Invoice PDFs are measured in InvoicePdfTest; here any bytes will do.
         $this->app->instance(InvoicePdf::class, new class(app(InvoiceView::class)) extends InvoicePdf
         {
-            public function pdf($invoice, bool $header, string $locale = 'bn', bool $maskPassports = false): string
+            public function pdf($invoice, bool $header, string $locale = 'bn', bool $maskPassports = false, string $size = 'a4'): string
             {
                 return '%PDF-1.4 test invoice';
             }

@@ -180,10 +180,19 @@ final class LedgerService
         ?string $referenceLabel = null,
         ?string $evidencePath = null,
         ?\DateTimeInterface $occurredAt = null,
+        ?Account $into = null,
     ): Transaction {
         $this->assertInTransaction();
         $amountPaisa = self::paisa($amount);
+        // Where the money actually landed: the method's own account unless staff named one — a float somebody holds,
+        // or a second bank account (docs/phase-9-accounts.md §6).
         $account = in_array($method, self::STAFF_METHODS, true) ? self::METHOD_ACCOUNTS[$method] : throw new InvalidArgumentException("Unknown payment method {$method}");
+        if ($into !== null) {
+            if (! $into->isMoney()) {
+                throw new InvalidArgumentException("Account {$into->code} doesn't hold money.");
+            }
+            $account = $into->code;
+        }
         if ($amountPaisa <= 0) {
             throw new InvalidArgumentException('A payment amount must be positive.');
         }

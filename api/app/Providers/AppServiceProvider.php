@@ -277,5 +277,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('attendance-agent', fn (Request $request) => Limit::perMinute(300)->by('attendance-agent|'.($request->attributes->get('attendance_device')?->id ?? $request->ip())));
 
         RateLimiter::for('media-upload', fn (Request $request) => Limit::perMinute(60)->by('upload|'.($request->user('staff')?->id ?? $request->ip())));
+        // Messages a staff member sends by hand, such as an invoice reminder: a slip of the finger can't spam a customer.
+        RateLimiter::for('notifications', fn (Request $request) => [
+            Limit::perMinute(10)->by('notify|'.($request->user('staff')?->id ?? $request->ip())),
+            Limit::perDay(200)->by('notify-day|'.($request->user('staff')?->id ?? $request->ip())),
+        ]);
     }
 }

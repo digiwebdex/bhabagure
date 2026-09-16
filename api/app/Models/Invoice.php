@@ -20,7 +20,7 @@ class Invoice extends Model
     /** What was billed, to whom, for how much — never changes after the invoice leaves draft. */
     public const SNAPSHOT_COLUMNS = [
         'invoice_number', 'kind', 'booking_id', 'customer_id', 'client_id', 'issued_on', 'due_on',
-        'billed_name', 'billed_phone', 'billed_email', 'billed_address', 'title', 'note', 'footer',
+        'billed_name', 'billed_phone', 'billed_email', 'billed_address', 'title', 'note', 'footer', 'po_number', 'delivery_charge',
         'package_code', 'package_title_en', 'package_title_bn', 'travel_start', 'travel_end',
         'booking_reference', 'package_duration_days', 'package_duration_nights', 'includes_airfare', 'sales_agent_name', 'travellers',
         'pax_count', 'unit_price', 'subtotal_amount', 'discount_label', 'discount_amount',
@@ -45,7 +45,7 @@ class Invoice extends Model
         'vat_rate', 'vat_amount', 'total_amount', 'status', 'share_token', 'issued_by_staff_id',
         'booking_reference', 'package_duration_days', 'package_duration_nights', 'includes_airfare', 'sales_agent_name', 'travellers',
         // The invoice builder (docs/phase-9-accounts.md §5).
-        'footer', 'updated_by_staff_id',
+        'footer', 'updated_by_staff_id', 'po_number', 'delivery_charge',
     ];
 
     protected $hidden = ['share_token'];
@@ -130,5 +130,11 @@ class Invoice extends Model
     public function issuedBy(): BelongsTo
     {
         return $this->belongsTo(Staff::class, 'issued_by_staff_id');
+    }
+
+    /** Who last touched the draft — the invoice screen shows it under the number, as the old system did. */
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'updated_by_staff_id');
     }
 }

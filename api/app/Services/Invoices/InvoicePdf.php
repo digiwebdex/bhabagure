@@ -19,16 +19,21 @@ class InvoicePdf
 {
     public function __construct(private readonly InvoiceView $view) {}
 
-    public function html(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false, bool $forPdf = false): string
+    /** The paper it is printed on: a4 · a5 on the invoice page, slip · delivery on the 80mm roll (§5). */
+    public const SIZES = ['a4', 'a5', 'slip', 'delivery'];
+
+    public function html(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false, bool $forPdf = false, string $size = 'a4'): string
     {
-        return view('invoices.invoice', $this->view->data($invoice, $header, $locale, $maskPassports) + ['forPdf' => $forPdf])->render();
+        $view = in_array($size, ['slip', 'delivery'], true) ? 'invoices.slip' : 'invoices.invoice';
+
+        return view($view, $this->view->data($invoice, $header, $locale, $maskPassports, $size) + ['forPdf' => $forPdf])->render();
     }
 
-    public function pdf(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false): string
+    public function pdf(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false, string $size = 'a4'): string
     {
         $key = sha1(implode('|', [
             InvoiceView::TEMPLATE_VERSION, $invoice->id, $invoice->invoice_number, $invoice->status, $invoice->paid_amount,
-            $invoice->payment_status, $invoice->updated_at?->getTimestamp(), (int) $header, $locale, (int) $maskPassports, PaymentOptions::fingerprint(),
+            $invoice->payment_status, $invoice->updated_at?->getTimestamp(), (int) $header, $locale, (int) $maskPassports, $size, PaymentOptions::fingerprint(),
         ]));
         $path = "invoices/{$invoice->id}/{$key}.pdf";
         $disk = Storage::disk('local');
@@ -36,7 +41,7 @@ class InvoicePdf
             return (string) $disk->get($path);
         }
 
-        $bytes = Cache::lock('bhabaghure:invoice-pdf-render', 90)->block(75, fn () => $this->render($this->html($invoice, $header, $locale, $maskPassports, forPdf: true)));
+        $bytes = Cache::lock('bhabaghure:invoice-pdf-render', 90)->block(75, fn () => $this->render($this->html($invoice, $header, $locale, $maskPassports, forPdf: true, size: $size)));
         $disk->put($path, $bytes);
 
         return $bytes;

@@ -7,6 +7,7 @@ use App\Models\InvoiceItem;
 use App\Models\SiteSetting;
 use App\Models\Transaction;
 use App\Services\Ledger\LedgerService;
+use App\Support\AmountInWords;
 use App\Support\Barcode\Code128;
 use App\Support\Money;
 use App\Support\Numerals;
@@ -19,10 +20,14 @@ use App\Support\Payments\PaymentOptions;
  */
 final class InvoiceView
 {
-    public const TEMPLATE_VERSION = '3';
+    public const TEMPLATE_VERSION = '4';
 
-    /** @return array<string, mixed> */
-    public function data(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false): array
+    /**
+     * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on
+     *                        different paper. The delivery receipt leaves the prices off.
+     * @return array<string, mixed>
+     */
+    public function data(Invoice $invoice, bool $header, string $locale = 'bn', bool $maskPassports = false, string $size = 'a4'): array
     {
         $invoice->loadMissing('items');
         $n = fn ($value) => Numerals::number($value, $locale);
@@ -69,6 +74,15 @@ final class InvoiceView
                         : ($locale === 'bn' ? 'অনলাইন পেমেন্ট চার্জ' : 'online payment charge'))
                     : ''))
             ->values()->all();
+        // The same payments as rows under the total — "Payment on 15 September 2026 (Cash)" and the amount — which is
+        // how the client's own invoices read.
+        $paymentRows = $rows->where('category', LedgerService::CATEGORY_PAYMENT)
+            ->map(fn (Transaction $t) => [
+                ($locale === 'bn' ? 'পেমেন্ট ' : 'Payment on ').$date($t->occurred_at)
+                    // The reference is what a customer checks the payment against, so it is printed with it.
+                    .' ('.$this->methodLabel($t->method).(($t->external_ref ?? $t->reference_label) ? ' · '.($t->external_ref ?? $t->reference_label) : '').')',
+                ($t->direction->value === 'out' ? '− ' : '').$bdt($t->amount),
+            ])->values()->all();
 
         $subtotal = (float) $invoice->subtotal_amount;
 
@@ -77,6 +91,9 @@ final class InvoiceView
             'validUntil' => null,
             'locale' => $locale,
             'header' => $header,
+            'size' => $size,
+            'delivery' => $size === 'delivery',
+            'slipDate' => $invoice->issued_on ? Numerals::date($invoice->issued_on->toDateString(), 'en') : '—',
             ...$this->letterhead($locale),
             'number' => $invoice->invoice_number ?? 'DRAFT',
             'barcode' => $invoice->invoice_number ? Code128::svg($invoice->invoice_number) : null,
@@ -85,19 +102,20 @@ final class InvoiceView
                 'name' => $invoice->billed_name,
                 'lines' => array_values(array_filter([$invoice->billed_phone ? $this->phone($invoice->billed_phone) : null, $invoice->billed_email, $invoice->billed_address])),
             ],
-            'meta' => $deal ? array_values(array_filter([
-                ['ইনভয়েস তারিখ · Date', $date($invoice->issued_on)],
-                // A staff-written invoice can carry a date it is owed by (docs/phase-9-accounts.md §5).
-                $invoice->due_on ? ['পরিশোধের শেষ তারিখ · Due', $date($invoice->due_on)] : null,
+            // The two dates are printed in the band across the top, so they are not repeated here.
+            'documentDate' => $date($invoice->issued_on),
+            'dueDate' => $invoice->due_on ? $date($invoice->due_on) : $date($invoice->issued_on),
+            'meta' => $deal ? [
                 ['প্রস্তুতকারী · Issued by', $invoice->sales_agent_name ?? '—'],
-            ])) : [
-                ['ইনভয়েস তারিখ · Date', $date($invoice->issued_on)],
+            ] : [
                 ['বুকিং রেফ · Booking', $invoice->booking_reference ?? '—'],
                 ['যাত্রার তারিখ · Travel', $travel],
                 ['সেলস এজেন্ট · Agent', $invoice->sales_agent_name ?? '—'],
             ],
             'packageLabel' => $deal ? 'Service · সেবা' : 'Package · প্যাকেজ',
-            'package' => $deal ? ['title' => $invoice->title, 'code' => null, 'detail' => (string) $invoice->note] : [
+            // What staff wrote to the customer prints under Notes / Terms, where an invoice is read for it.
+            'note' => $invoice->note,
+            'package' => $deal ? ['title' => $invoice->title, 'code' => null, 'detail' => null] : [
                 'title' => $locale === 'bn' ? ($invoice->package_title_bn ?: $invoice->package_title_en) : ($invoice->package_title_en ?: $invoice->package_title_bn),
                 'code' => $invoice->package_code,
                 'detail' => implode(' · ', $packageDetail),
@@ -128,10 +146,13 @@ final class InvoiceView
                     : null,
             ])),
             'total' => $bdt($invoice->total_amount),
+            // The total written out as well as in figures: an invoice is a demand for money, so a changed digit shows.
+            'amountInWords' => AmountInWords::taka(Money::toNumber($invoice->total_amount) ?? 0),
             'paid' => $bdt($invoice->paid_amount),
             'due' => $bdt($invoice->balance_due),
             'hasDue' => (float) $invoice->balance_due > 0,
             'payments' => $payments,
+            'paymentRows' => $paymentRows,
             // Phase 8 §4.F: how to pay what is still due, while the invoice is open.
             'howToPay' => $invoice->status === Invoice::ISSUED ? PaymentOptions::lines(Money::toNumber($invoice->balance_due) ?? 0, $locale) : [],
             // Whatever staff wrote at the foot of this one invoice comes first, then the standing terms.

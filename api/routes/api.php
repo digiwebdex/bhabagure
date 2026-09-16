@@ -479,6 +479,9 @@ Route::prefix('v1')->group(function () {
                 Route::post('invoices', 'store')->middleware('permission:invoices.manage,staff');
                 Route::put('invoices/{id}', 'update')->whereNumber('id')->middleware('permission:invoices.manage,staff');
                 Route::post('invoices/{id}/issue', 'issue')->whereNumber('id')->middleware('permission:invoices.manage,staff');
+                Route::delete('invoices/{id}', 'destroy')->whereNumber('id')->middleware('permission:invoices.manage,staff');
+                // What is still owed, by SMS or email, written by the staff member (§5).
+                Route::post('invoices/{id}/reminders', 'remind')->whereNumber('id')->middleware('throttle:notifications');
             });
             Route::controller(DealController::class)->group(function () {
                 Route::get('deals', 'index');

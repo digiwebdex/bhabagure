@@ -239,6 +239,39 @@ final class NotificationPlanner
         ]);
     }
 
+    /**
+     * What is still owed on an invoice, in the staff member's own words (docs/phase-9-accounts.md §5). One row per
+     * channel asked for, so the Notifications log shows what went out, to where, and whether it arrived.
+     *
+     * @param  list<NotificationChannel>  $channels
+     * @return list<NotificationMessage>
+     */
+    public function paymentReminder(Invoice $invoice, string $text, ?string $subject, Staff $staff, array $channels, ?string $email = null): array
+    {
+        $invoice->loadMissing('customer');
+        $customer = $invoice->customer ?? throw new LogicException('An invoice reminder goes to the customer it is billed to.');
+        $locale = $customer->locale ?? 'bn';
+        $base = 'payment_reminder:'.$invoice->id.':'.now()->format('YmdHisv').':'.bin2hex(random_bytes(3));
+
+        $rows = [];
+        foreach ($channels as $channel) {
+            $to = $channel === NotificationChannel::Email ? ($email ?: $invoice->billed_email ?? $customer->email) : ($invoice->billed_phone ?? $customer->phone);
+            if (! $to) {
+                continue;
+            }
+            $rows[] = $this->create([
+                'event' => NotificationEvent::PaymentReminder, 'channel' => $channel, 'to_address' => (string) $to,
+                'recipient_type' => $customer->getMorphClass(), 'recipient_id' => $customer->id,
+                'related_type' => $invoice->getMorphClass(), 'related_id' => $invoice->id, 'locale' => $locale,
+                'title' => $channel === NotificationChannel::Email ? $subject : null,
+                'body' => $text, 'triggered_by_staff_id' => $staff->id,
+                'dedupe_key' => "{$base}:{$channel->value}", 'group_key' => $base,
+            ]);
+        }
+
+        return $rows;
+    }
+
     public function verificationCode(Staff $staff, string $number, string $code): NotificationMessage
     {
         $locale = $staff->locale ?? 'bn';

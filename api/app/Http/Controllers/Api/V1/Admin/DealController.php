@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminCashEntry;
+use App\Models\Account;
 use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -110,12 +111,15 @@ class DealController extends Controller
             'reference' => ['nullable', 'string', 'max:120'],
             'occurred_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'evidence' => EvidenceStore::rules(),
+            // Which account the money landed in, when it wasn't the one the method usually goes to (§6).
+            'account' => ['nullable', Rule::exists('accounts', 'code')->where('is_money', true)],
         ]);
+        $into = isset($data['account']) ? Account::query()->where('code', $data['account'])->first() : null;
 
         try {
             $evidence->with($request->file('evidence'), fn (?string $path) => $deals->pay($invoice, $data['amount'], $data['method'], ($data['reference'] ?? null) ?: null,
                 isset($data['occurred_on']) && $data['occurred_on'] !== now('Asia/Dhaka')->toDateString() ? Carbon::parse("{$data['occurred_on']} 12:00", 'Asia/Dhaka')->utc() : null,
-                $path, $staff));
+                $path, $staff, $into));
         } catch (PaymentExceedsBalance) {
             return response()->json(['message' => __('payments.exceeds_due'), 'code' => 'exceeds_due'], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (LogicException) {
@@ -144,12 +148,18 @@ class DealController extends Controller
     public function pdf(Request $request, int $id, InvoicePdf $pdf): Response
     {
         $invoice = $this->deal($id);
-        $options = $request->validate(['header' => ['nullable', 'boolean'], 'lang' => ['nullable', Rule::in(['bn', 'en'])]]);
+        $options = $request->validate([
+            'header' => ['nullable', 'boolean'],
+            'lang' => ['nullable', Rule::in(['bn', 'en'])],
+            // A4 and A5 on the invoice pad, the slip and the delivery receipt on the 80mm roll (§5).
+            'size' => ['nullable', Rule::in(InvoicePdf::SIZES)],
+        ]);
         $header = (bool) ($options['header'] ?? true);
+        $size = $options['size'] ?? 'a4';
 
-        return response($pdf->pdf($invoice, $header, $options['lang'] ?? 'bn'))
+        return response($pdf->pdf($invoice, $header, $options['lang'] ?? 'bn', size: $size))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', "inline; filename=\"{$invoice->invoice_number}".($header ? '' : '-pad').'.pdf"')
+            ->header('Content-Disposition', "inline; filename=\"{$invoice->invoice_number}".($size === 'a4' ? '' : "-{$size}").($header ? '' : '-pad').'.pdf"')
             ->header('Cache-Control', 'no-store');
     }
 

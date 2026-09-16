@@ -43,6 +43,12 @@ enum NotificationEvent: string
     /** A message a staff member sends from a booking or customer record. Not templated. */
     case StaffMessage = 'staff_message';
 
+    /**
+     * What is still owed on an invoice, written by the staff member on the Invoices screen and sent by SMS or email
+     * (docs/phase-9-accounts.md §5). Not templated: the wording is theirs, and it is logged like every other send.
+     */
+    case PaymentReminder = 'payment_reminder';
+
     /** System messages: a staff member's WhatsApp verification code, and the confirmation of a STOP reply. */
     case WhatsAppVerification = 'whatsapp_verification';
     case OptOutConfirmation = 'opt_out_confirmation';
@@ -88,6 +94,7 @@ enum NotificationEvent: string
         return match ($this) {
             self::DepartureToday => [NotificationChannel::WhatsApp, NotificationChannel::Sms],
             self::TripCompleted, self::StaffMessage, self::WhatsAppVerification, self::OptOutConfirmation => [NotificationChannel::WhatsApp],
+            self::PaymentReminder => [NotificationChannel::Sms, NotificationChannel::Email],
             default => [NotificationChannel::WhatsApp, NotificationChannel::Email],
         };
     }

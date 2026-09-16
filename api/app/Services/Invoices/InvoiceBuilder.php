@@ -44,7 +44,7 @@ final class InvoiceBuilder
                 'updated_by_staff_id' => $staff->id,
                 'title' => $data['title'],
                 // Zeroed here and worked out from the lines a moment later; the columns hold no nulls.
-                'subtotal_amount' => 0, 'discount_amount' => 0, 'vat_rate' => 0, 'vat_amount' => 0, 'total_amount' => 0,
+                'subtotal_amount' => 0, 'discount_amount' => 0, 'vat_rate' => 0, 'vat_amount' => 0, 'delivery_charge' => 0, 'total_amount' => 0,
             ]);
             $this->writeLines($invoice, $data, $staff);
             $this->audit->record('invoice.drafted', $staff, $invoice, ['title' => $invoice->title, 'total' => (float) $invoice->total_amount]);
@@ -136,8 +136,11 @@ final class InvoiceBuilder
         }
 
         $documentDiscount = min(LedgerService::paisa($data['discount_amount'] ?? 0), $subtotal);
+        // Sending tickets, passports or visas across is charged on top of the lines, after any discount.
+        $delivery = LedgerService::paisa($data['delivery_charge'] ?? 0);
         $invoice->fill([
             'title' => $data['title'],
+            'po_number' => $data['po_number'] ?? null,
             'note' => $data['note'] ?? null,
             'footer' => $data['footer'] ?? null,
             'due_on' => $data['due_on'] ?? null,
@@ -146,7 +149,8 @@ final class InvoiceBuilder
             'subtotal_amount' => LedgerService::amount($subtotal),
             'vat_rate' => $data['vat_rate'] ?? 0,
             'vat_amount' => LedgerService::amount($vat),
-            'total_amount' => LedgerService::amount($subtotal - $documentDiscount + $vat),
+            'delivery_charge' => LedgerService::amount($delivery),
+            'total_amount' => LedgerService::amount($subtotal - $documentDiscount + $vat + $delivery),
             'updated_by_staff_id' => $staff->id,
         ])->save();
     }

@@ -81,7 +81,7 @@ class InvoicePdfTest extends TestCase
             $this->assertEqualsWithDelta($text['xMm'], $offBelow[$i]['xMm'], 0.01, "\"{$text['str']}\" moved horizontally");
         }
 
-        $billed = $this->find($off, 'BILLED TO');
+        $billed = $this->find($off, 'Invoice To');
         $this->assertGreaterThan(self::LETTERHEAD_BOTTOM_MM, $billed['yMm'], 'content starts below the reserved space');
     }
 

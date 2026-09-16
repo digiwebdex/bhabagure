@@ -3,17 +3,23 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\LeadSource;
+use App\Enums\NotificationChannel;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\SiteSetting;
+use App\Models\Transaction;
+use App\Services\AuditLogger;
 use App\Services\Invoices\InvoiceBuilder;
 use App\Services\Ledger\LedgerService;
+use App\Services\Notifications\NotificationPlanner;
 use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use LogicException;
 
@@ -23,7 +29,7 @@ use LogicException;
  */
 class InvoiceBuilderController extends Controller
 {
-    public function __construct(private readonly InvoiceBuilder $builder) {}
+    public function __construct(private readonly InvoiceBuilder $builder, private readonly AuditLogger $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -38,7 +44,7 @@ class InvoiceBuilderController extends Controller
         $today = now('Asia/Dhaka')->toDateString();
         $state = $filters['state'] ?? 'all';
 
-        $query = Invoice::query()->with('customer:id,name,phone,email')
+        $query = Invoice::query()->with(['customer:id,name,phone,email', 'issuedBy:id,name', 'updatedBy:id,name'])
             ->when($filters['customer_id'] ?? null, fn (Builder $q, int $id) => $q->where('customer_id', $id))
             ->when($filters['from'] ?? null, fn (Builder $q, string $from) => $q->where('issued_on', '>=', $from))
             ->when($filters['to'] ?? null, fn (Builder $q, string $to) => $q->where('issued_on', '<=', $to))
@@ -80,9 +86,27 @@ class InvoiceBuilderController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $invoice = Invoice::query()->with(['items', 'customer:id,name,phone,email'])->findOrFail($id);
+        $invoice = Invoice::query()->with(['items', 'customer:id,name,phone,email', 'issuedBy:id,name', 'updatedBy:id,name'])->findOrFail($id);
 
-        return response()->json(['data' => self::detail($invoice)]);
+        return response()->json(['data' => self::detail($invoice) + [
+            // What has been paid against it, the way the invoice view lists it: date, how, how much, and the reference.
+            'payments' => $invoice->transactions()->where('category', LedgerService::CATEGORY_PAYMENT)->with('reversal:id,reverses_transaction_id')->get()
+                ->map(fn (Transaction $payment) => [
+                    'id' => $payment->id,
+                    'date' => $payment->occurred_at?->timezone('Asia/Dhaka')->toDateString(),
+                    'method' => $payment->method,
+                    'amount' => (float) $payment->amount,
+                    'note' => $payment->external_ref ?? $payment->reference_label,
+                    'reversed' => $payment->reversal !== null,
+                ])->values(),
+            // The letterhead the printed invoice carries, so the on-screen view reads the same.
+            'company' => [
+                'name' => SiteSetting::get('company', [])['name']['en'] ?? 'Bhabaghure Holidays Aviation',
+                'address' => SiteSetting::get('address', ''),
+                'email' => SiteSetting::get('contact', [])['email'] ?? null,
+                'phone' => implode(', ', array_filter([SiteSetting::get('contact', [])['phone'] ?? null, SiteSetting::get('contact', [])['phoneAlt'] ?? null])),
+            ],
+        ]]);
     }
 
     public function store(Request $request): JsonResponse
@@ -118,6 +142,60 @@ class InvoiceBuilderController extends Controller
         }
 
         return response()->json(['data' => self::detail($issued->load('items'))]);
+    }
+
+    /**
+     * A draft nobody wants, thrown away. An issued invoice is never deleted — the customer has a copy and the books
+     * have the entry — so that one is voided on its deal instead, which reverses the journal (§5).
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $invoice = Invoice::query()->findOrFail($id);
+        if ($invoice->status !== Invoice::DRAFT) {
+            return response()->json(['message' => __('invoices.issued_no_delete'), 'code' => 'invoice_issued'], 409);
+        }
+
+        $this->audit->record('invoice.draft_deleted', $request->user('staff'), $invoice, ['title' => $invoice->title]);
+        $invoice->items()->delete();
+        $invoice->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
+    /**
+     * A reminder of what is still owed, in the staff member's own words, by SMS or email (docs/phase-9-accounts.md §5).
+     * It goes through the same pipeline as every other message, so the Notifications log shows whether it arrived.
+     */
+    public function remind(Request $request, int $id, NotificationPlanner $planner): JsonResponse
+    {
+        $staff = $request->user('staff');
+        abort_unless($staff->can('notifications.send'), 403, __('auth.forbidden'));
+        $invoice = Invoice::query()->with('customer')->findOrFail($id);
+        $data = $request->validate([
+            'channels' => ['required', 'array', 'min:1'],
+            'channels.*' => [Rule::in(['sms', 'email'])],
+            'text' => ['required', 'string', 'min:5', 'max:1000'],
+            'subject' => ['nullable', 'string', 'max:160'],
+            'email' => ['nullable', 'email', 'max:190'],
+        ]);
+        if ($invoice->status !== Invoice::ISSUED) {
+            return response()->json(['message' => __('invoices.reminder_needs_issue'), 'code' => 'invoice_not_issued'], 409);
+        }
+
+        $channels = array_map(fn (string $channel) => NotificationChannel::from($channel), array_values(array_unique($data['channels'])));
+        $rows = DB::transaction(function () use ($planner, $invoice, $data, $staff, $channels) {
+            $rows = $planner->paymentReminder($invoice, trim($data['text']), $data['subject'] ?? null, $staff, $channels, $data['email'] ?? null);
+            $this->audit->record('invoice.reminder_sent', $staff, $invoice, ['channels' => array_map(fn ($row) => $row->channel->value, $rows)]);
+
+            return $rows;
+        });
+
+        // Nothing sent means we have no number or address on file for that channel — say so rather than claim success.
+        if ($rows === []) {
+            return response()->json(['message' => __('invoices.reminder_no_address'), 'code' => 'no_address'], 422);
+        }
+
+        return response()->json(['data' => ['sent' => array_map(fn ($row) => $row->channel->value, $rows)]], 201);
     }
 
     /**
@@ -158,11 +236,13 @@ class InvoiceBuilderController extends Controller
             'customer.phone' => ['required_with:customer', 'regex:/^8801[3-9]\d{8}$/'],
             'customer.email' => ['nullable', 'email', 'max:190'],
             'title' => ['required', 'string', 'max:160'],
+            'po_number' => ['nullable', 'string', 'max:60'],
             'note' => ['nullable', 'string', 'max:1000'],
             'footer' => ['nullable', 'string', 'max:500'],
             'due_on' => ['nullable', 'date_format:Y-m-d'],
             'discount_label' => ['nullable', 'string', 'max:60'],
             'discount_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'delivery_charge' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'vat_rate' => ['nullable', 'numeric', 'between:0,100'],
             'lines' => ['required', 'array', 'min:1', 'max:50'],
             'lines.*.title' => ['required', 'string', 'max:160'],
@@ -189,6 +269,9 @@ class InvoiceBuilderController extends Controller
             'billed_name' => $invoice->billed_name,
             'issued_on' => $invoice->issued_on?->toDateString(),
             'due_on' => $invoice->due_on?->toDateString(),
+            // Who wrote it and who last touched it, as the invoice screen shows under the number.
+            'created_by' => $invoice->sales_agent_name ?? $invoice->issuedBy?->name,
+            'updated_by' => $invoice->updatedBy?->name,
             // Days late, counted from the due date forward: Carbon's own difference is signed and would read negative.
             'days_overdue' => $overdue ? (int) $invoice->due_on->startOfDay()->diffInDays(Carbon::parse($today)) : 0,
             'total' => (float) $invoice->total_amount,
@@ -214,8 +297,10 @@ class InvoiceBuilderController extends Controller
         return self::row($invoice, now('Asia/Dhaka')->toDateString()) + [
             'note' => $invoice->note,
             'footer' => $invoice->footer,
+            'po_number' => $invoice->po_number,
             'discount_label' => $invoice->discount_label,
             'discount_amount' => (float) $invoice->discount_amount,
+            'delivery_charge' => (float) $invoice->delivery_charge,
             'subtotal' => (float) $invoice->subtotal_amount,
             'vat_rate' => (float) $invoice->vat_rate,
             'vat_amount' => (float) $invoice->vat_amount,

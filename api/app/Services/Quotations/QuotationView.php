@@ -5,6 +5,7 @@ namespace App\Services\Quotations;
 use App\Models\Quotation;
 use App\Models\QuotationLine;
 use App\Services\Invoices\InvoiceView;
+use App\Support\AmountInWords;
 use App\Support\Money;
 use App\Support\Numerals;
 use App\Support\Payments\PaymentOptions;
@@ -16,7 +17,7 @@ use App\Support\Payments\PaymentOptions;
  */
 final class QuotationView
 {
-    public const TEMPLATE_VERSION = '1';
+    public const TEMPLATE_VERSION = '2';
 
     public function __construct(private readonly InvoiceView $invoiceView) {}
 
@@ -76,9 +77,10 @@ final class QuotationView
                 'name' => $customer->name,
                 'lines' => array_values(array_filter([$customer->phone ? preg_replace('/^\+?88/', '', $customer->phone) : null, $customer->email, $customer->address])),
             ],
+            // The quotation date and how long it holds are printed in the band across the top, not repeated here.
+            'documentDate' => $date(($quotation->sent_at ?? $quotation->created_at)->copy()->setTimezone('Asia/Dhaka')),
+            'dueDate' => $validUntil,
             'meta' => [
-                ['কোটেশন তারিখ · Date', $date(($quotation->sent_at ?? $quotation->created_at)->copy()->setTimezone('Asia/Dhaka'))],
-                ['মেয়াদ · Valid until', $validUntil],
                 ['যাত্রার তারিখ · Travel', $travel],
                 ['প্রস্তুতকারী · Prepared by', $quotation->assignedStaff?->name ?? '—'],
             ],
@@ -101,10 +103,13 @@ final class QuotationView
                 ['সার্ভিস চার্জ ও ভ্যাট · VAT ('.Numerals::percent((float) $quotation->vat_rate, $locale).')', $bdt($quotation->vat_amount)],
             ])),
             'total' => $bdt($quotation->total_amount),
+            'amountInWords' => AmountInWords::taka(Money::toNumber($quotation->total_amount) ?? 0),
             'paid' => null,
             'due' => null,
             'hasDue' => false,
             'payments' => [],
+            'paymentRows' => [],
+            'note' => $quotation->notes,
             // Phase 8 §4.F: how the quoted total can be paid once it is booked.
             'howToPay' => PaymentOptions::lines(Money::toNumber($quotation->total_amount) ?? 0, $locale),
             'validUntil' => $locale === 'bn'

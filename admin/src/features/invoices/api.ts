@@ -20,9 +20,16 @@ export type InvoiceLine = {
   line_total: number
 }
 
+/** What an invoice can be printed on (docs/phase-9-accounts.md §5). */
+export const PRINT_SIZES = ['a4', 'a5', 'slip', 'delivery'] as const
+export type PrintSize = (typeof PRINT_SIZES)[number]
+
 export type InvoiceRow = {
   id: number
   number: string | null
+  /** Who wrote it and who last touched it, shown under the number as the old system did. */
+  created_by: string | null
+  updated_by: string | null
   kind: 'booking' | 'deal'
   title: string | null
   customer: { id: number; name: string; phone: string; email: string | null } | null
@@ -40,11 +47,15 @@ export type InvoiceRow = {
   actions: { edit: boolean; issue: boolean; pay: boolean; void: boolean; share: boolean }
 }
 
+export type InvoicePaymentRow = { id: number; date: string | null; method: string; amount: number; note: string | null; reversed: boolean }
+
 export type InvoiceDetail = InvoiceRow & {
   note: string | null
   footer: string | null
+  po_number: string | null
   discount_label: string | null
   discount_amount: number
+  delivery_charge: number
   subtotal: number
   vat_rate: number
   vat_amount: number
@@ -53,6 +64,9 @@ export type InvoiceDetail = InvoiceRow & {
   lines: InvoiceLine[]
   share_url: string | null
   pdf_url: string | null
+  /** Only on a single invoice, not in the list: what has been paid, and the letterhead the print view carries. */
+  payments?: InvoicePaymentRow[]
+  company?: { name: string; address: string; email: string | null; phone: string }
 }
 
 export type InvoiceFilters = { state: InvoiceState; customer_id: string; from: string; to: string; search: string; page: number }
@@ -102,6 +116,8 @@ export type InvoiceInput = {
   customer_id: number | null
   /** Nobody picked from the list: these make the customer record the invoice is billed to. */
   customer: { name: string; phone: string } | null
+  po_number: string | null
+  delivery_charge: number
   title: string
   note: string | null
   footer: string | null
@@ -117,7 +133,16 @@ export const invoiceActions = {
   update: (id: number) => (input: InvoiceInput) => api.put<Data<InvoiceDetail>>(`admin/invoices/${id}`, input),
   issue: (id: number) => () => api.post<Data<InvoiceDetail>>(`admin/invoices/${id}/issue`),
   void: (id: number) => ({ reason }: { reason: string }) => api.post<Data<InvoiceDetail>>(`admin/deals/${id}/void`, { reason }),
+  /** What is still owed, in the staff member's own words. The API logs every send. */
+  remind: (id: number) => (body: { channels: ('sms' | 'email')[]; text: string; subject?: string; email?: string }) =>
+    api.post<Data<{ sent: string[] }>>(`admin/invoices/${id}/reminders`, body),
 }
+
+/** The printable invoice, on whichever paper was asked for. */
+export const printPath = (id: number, size: PrintSize) => `admin/deals/${id}/pdf${size === 'a4' ? '' : `?size=${size}`}`
+
+/** The customer's own copy: the short link the portal and the messages use. */
+export const shareLink = (number: string | null) => `${window.location.origin.replace('admin.', '')}/i/${number ?? ''}`
 
 /**
  * What a line and the whole invoice come to, worked out as the API does it: quantity × price, less the line's own
@@ -130,11 +155,12 @@ export function lineTotals(line: { quantity: number; unit_price: number; discoun
   return { net, vat: Math.round((net * (line.vat_rate || 0)) / 100 * 100) / 100 }
 }
 
-export function invoiceTotals(lines: InvoiceInput['lines'], documentDiscount: number) {
+export function invoiceTotals(lines: InvoiceInput['lines'], documentDiscount: number, deliveryCharge = 0) {
   const totals = lines.reduce((sum, line) => {
     const { net, vat } = lineTotals(line)
     return { subtotal: sum.subtotal + net, vat: sum.vat + vat }
   }, { subtotal: 0, vat: 0 })
   const discount = Math.min(documentDiscount || 0, totals.subtotal)
-  return { subtotal: totals.subtotal, discount, vat: totals.vat, total: totals.subtotal - discount + totals.vat }
+  const delivery = deliveryCharge || 0
+  return { subtotal: totals.subtotal, discount, vat: totals.vat, delivery, total: totals.subtotal - discount + totals.vat + delivery }
 }

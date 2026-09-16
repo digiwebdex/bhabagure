@@ -5,12 +5,15 @@ namespace Tests\Feature;
 use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
+use App\Models\NotificationMessage;
 use App\Models\Staff;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Ledger\AccountBooks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\SendsNotifications;
 use Tests\TestCase;
 
 /**
@@ -20,6 +23,7 @@ use Tests\TestCase;
 class InvoiceBuilderTest extends TestCase
 {
     use RefreshDatabase;
+    use SendsNotifications;
 
     private function admin(): Staff
     {
@@ -146,6 +150,73 @@ class InvoiceBuilderTest extends TestCase
     }
 
     #[Test]
+    public function a_reminder_goes_out_by_sms_and_email_in_the_staff_members_own_words(): void
+    {
+        $this->sendNotifications();
+        $staff = $this->admin();
+        $customer = $this->party(['email' => 'guest@example.test']);
+        $draft = $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $customer->id, 'title' => 'Air ticket',
+            'lines' => [['title' => 'Air ticket', 'quantity' => 1, 'unit_price' => 35000]],
+        ])->assertCreated()->json('data');
+
+        // Nothing is owed until it is issued, so there is nothing to remind anyone about.
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$draft['id']}/reminders", [
+            'channels' => ['sms'], 'text' => 'Your payment is due.',
+        ])->assertStatus(409)->assertJsonPath('code', 'invoice_not_issued');
+
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$draft['id']}/issue")->assertOk();
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$draft['id']}/reminders", [
+            'channels' => ['sms', 'email'],
+            'text' => 'Your payment of BDT 35,000 is due to Bhabaghure Holidays Aviation.',
+            'subject' => 'Bhabaghure Holidays Aviation - Invoice',
+        ])->assertCreated()->assertJsonPath('data.sent', ['sms', 'email']);
+
+        $rows = NotificationMessage::query()->where('event', 'payment_reminder')->get();
+        $this->assertCount(2, $rows, 'one row per channel, so the log shows what went where');
+        $this->assertSame([$customer->phone, 'guest@example.test'], $rows->pluck('to_address')->all());
+        $this->assertStringContainsString('BDT 35,000', (string) $rows->first()->body, 'the words are the staff member\'s, not a template\'s');
+        $this->assertSame($draft['id'], $rows->first()->related_id);
+
+        // Sending messages is its own permission.
+        $agent = $this->staff('sales_agent', ['email' => 'rem.agent@example.test', 'phone' => '8801711000905']);
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/invoices/{$draft['id']}/reminders", ['channels' => ['sms'], 'text' => 'Please pay.'])->assertForbidden();
+    }
+
+    #[Test]
+    public function an_invoice_prints_on_a4_a5_a_counter_slip_and_a_delivery_receipt(): void
+    {
+        $staff = $this->admin();
+        $customer = $this->party();
+        $draft = $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $customer->id, 'title' => 'Passport delivery', 'po_number' => 'PO-99',
+            'delivery_charge' => 500,
+            'lines' => [['title' => 'Umrah visa', 'quantity' => 2, 'unit_price' => 15000]],
+        ])->assertCreated()->json('data');
+
+        // The delivery charge is on top of the lines, and the customer's own order number is kept.
+        $this->assertEquals([30000, 500, 30500], [$draft['subtotal'], $draft['delivery_charge'], $draft['total']]);
+        $this->assertSame('PO-99', $draft['po_number']);
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$draft['id']}/issue")->assertOk();
+
+        $invoice = Invoice::query()->findOrFail($draft['id']);
+        $pdf = app(InvoicePdf::class);
+        foreach (['a4' => '210mm', 'a5' => '148mm'] as $size => $width) {
+            $this->assertStringContainsString($width, $pdf->html($invoice, header: true, locale: 'en', size: $size), "{$size} is printed on {$size} paper");
+        }
+
+        $slip = $pdf->html($invoice, header: true, locale: 'en', size: 'slip');
+        $this->assertStringContainsString('80mm auto', $slip, 'the slip prints on the till roll');
+        $this->assertStringContainsString('Balance due', $slip);
+
+        // A delivery receipt travels with the documents: what is being handed over, and a line to sign it for.
+        $delivery = $pdf->html($invoice, header: true, locale: 'en', size: 'delivery');
+        $this->assertStringContainsString('Delivery Receipt', $delivery);
+        $this->assertStringContainsString('Received by', $delivery);
+        $this->assertStringNotContainsString('Balance due', $delivery, 'a delivery receipt asks for nothing');
+    }
+
+    #[Test]
     public function the_printed_invoice_says_the_line_discount_the_due_date_and_the_footer(): void
     {
         $staff = $this->admin();
@@ -195,6 +266,28 @@ class InvoiceBuilderTest extends TestCase
         $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
             'title' => 'Nobody', 'lines' => [['title' => 'Air ticket', 'quantity' => 1, 'unit_price' => 1000]],
         ])->assertUnprocessable()->assertJsonValidationErrors('customer_id');
+    }
+
+    #[Test]
+    public function a_draft_can_be_thrown_away_but_an_issued_invoice_never_is(): void
+    {
+        $staff = $this->admin();
+        $customer = $this->party();
+        $make = fn (string $title) => $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $customer->id, 'title' => $title,
+            'lines' => [['title' => $title, 'quantity' => 1, 'unit_price' => 9000]],
+        ])->assertCreated()->json('data.id');
+
+        $draft = $make('Thrown away');
+        $this->actingAsApi($staff)->deleteJson("/api/v1/admin/invoices/{$draft}")->assertOk()->assertJsonPath('data.deleted', true);
+        $this->assertNull(Invoice::query()->find($draft));
+        $this->assertSame(0, InvoiceItem::query()->where('invoice_id', $draft)->count(), 'its lines go with it');
+
+        // Once issued the customer has a copy and the books have the entry: it is voided, never deleted.
+        $issued = $make('Kept');
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$issued}/issue")->assertOk();
+        $this->actingAsApi($staff)->deleteJson("/api/v1/admin/invoices/{$issued}")->assertStatus(409)->assertJsonPath('code', 'invoice_issued');
+        $this->assertNotNull(Invoice::query()->find($issued));
     }
 
     #[Test]

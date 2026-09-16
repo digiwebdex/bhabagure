@@ -46,6 +46,16 @@ printed at the foot. It is a draft, out of the books and freely changed, until i
 it to the journal and freezes the figures, and a mistake is then voided and written again. Reading the list needs
 `payments.view`, writing needs `invoices.manage`.
 
+Each row carries the options the client already works from: **Payment** (method and account separately, receipt
+required), **Send reminder** by SMS or email — written by the staff member, sent by the system and logged, needing
+`notifications.send` — **Share invoice** (the customer's own link), **Details**, **Edit**, **Delete** for a draft, and
+the four printed copies: A4, A5, an 80mm counter slip, and a delivery receipt with no prices and a signature line.
+
+The printed invoice itself was rebuilt on 2026-09-17 to the layout the client already used: letterhead with the Civil
+Aviation number, barcode over the invoice number, the two dates in a blue band, `Sl. · Item · Qty · Price · Total`, the
+total in figures and in words, each payment with its reference, Amount Due, Total received, Notes / Terms, and customer
+and authorised signature lines. It is the shared view, so booking invoices and quotations print the same way.
+
 ---
 
 ## 0. At a glance
