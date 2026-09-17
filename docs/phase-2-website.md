@@ -84,7 +84,7 @@ features/
 ├── blog/          BlogSection, CategoryChips, PostCard, PostBody (renders server-sanitised HTML)
 ├── newsletter/    NewsletterCard
 ├── contact/       ContactSection, ContactDetails, InquiryForm
-├── footer/        SiteFooter (logo, section links, contact, legal links)
+├── footer/        SiteFooter (logo, section links, contact, legal links, payment line, build credit)
 ├── booking/       BookingModal, StepIndicator, PackageStep, TravellersStep, TravellerCard,
 │                  ReviewStep (Phase 2 stops here; payment is Phase 3)
 ├── auth/          AuthModal (sign in · register), useCustomerSession
