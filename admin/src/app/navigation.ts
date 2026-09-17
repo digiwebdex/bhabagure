@@ -39,6 +39,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     items: [
       { key: 'transactions', path: '/transactions', icon: '$', permissions: ['payments.view'] },
       { key: 'invoices', path: '/invoices', icon: 'I', permissions: ['payments.view'] },
+      // Customers as the books see them: invoiced, paid, still owed (§9). Sales → Customers & leads is the sales view.
+      { key: 'customer_accounts', path: '/accounting/customers', icon: 'C', permissions: ['payments.view'] },
       { key: 'chart_of_accounts', path: '/accounts', icon: 'A', permissions: ['accounts.view'] },
       { key: 'journal', path: '/journal', icon: 'J', permissions: ['accounts.view'] },
       { key: 'account_transactions', path: '/reports/account-transactions', icon: 'T', permissions: ['accounts.view'] },

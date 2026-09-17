@@ -12,6 +12,7 @@ import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import { useAuth } from '../../app/auth'
 import { BookingStatusBadge, PaymentBadge } from '../bookings/badges'
+import { CustomerInvoicesCard } from '../customer-accounts/CustomerInvoicesCard'
 import { sendCustomerWhatsApp, setCustomerOptOut } from '../notifications/api'
 import { QuotationStatusBadge } from '../quotations/QuotationStatusBadge'
 import { CONTACT_CHANNELS, CONTACT_OUTCOMES, customerActions, useCustomer, useCustomerAction, type CustomerDetail } from './api'
@@ -30,6 +31,7 @@ export function CustomerProfilePage() {
 
 function Profile({ customer }: { customer: CustomerDetail }) {
   const { t } = useTranslation()
+  const { can } = useAuth()
   const { digits } = useFormat()
   const toast = useToast()
   const claim = useCustomerAction(() => customerActions.claim(customer.id))
@@ -89,6 +91,8 @@ function Profile({ customer }: { customer: CustomerDetail }) {
       <div className="grid-auto-fit-360 grid items-start gap-admin-gap">
         <div className="flex flex-col gap-admin-gap">
           <DetailsCard customer={customer} />
+          {/* What they were invoiced and still owe — money, so only for staff who see payments (§9). */}
+          {can('payments.view') ? <CustomerInvoicesCard customerId={customer.id} /> : null}
           <QuotationsCard customer={customer} />
           <BookingsCard customer={customer} />
         </div>

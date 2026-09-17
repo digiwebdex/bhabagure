@@ -7,13 +7,15 @@ import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
 import { ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
-import { Badge, Card, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
+import { Card, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { api, fetchDocument } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import { INVOICE_STATES, printPath, useInvoiceAction, useInvoices, type InvoiceFilters, type InvoiceRow, type InvoiceState, type PrintSize } from './api'
+import { CustomerAvatar } from './CustomerAvatar'
 import { InvoiceDetails } from './InvoiceDetails'
 import { InvoicePayment } from './InvoicePayment'
+import { InvoiceStateBadge } from './InvoiceStateBadge'
 import { InvoiceShare } from './InvoiceShare'
 
 /** The tabs the money is read by, in the order the old system had them. Drafts are ours: it had none. */
@@ -102,7 +104,7 @@ export function InvoicesPage() {
 
       <Card>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <CustomerFilter value={filters.customer_id} onChange={(customer_id) => set({ customer_id })} />
+          <CustomerFilter value={filters.customer_id} name={list.data?.data.find((row) => String(row.customer?.id) === filters.customer_id)?.customer?.name} onChange={(customer_id) => set({ customer_id })} />
           <label className="flex flex-col gap-1 text-12 text-app-muted">
             {t('invoices.from')}
             <input type="date" value={filters.from} max={filters.to || undefined} onChange={(event) => set({ from: event.target.value })} className={controlClass()} />
@@ -169,7 +171,7 @@ export function InvoicesPage() {
                     <td className="p-3 align-top">
                       {row.customer ? (
                         <span className="flex items-center gap-2">
-                          <Avatar name={row.customer.name} />
+                          <CustomerAvatar name={row.customer.name} />
                           <span className="flex flex-col">
                             <Link to={`/customers/${row.customer.id}`} className="font-medium">
                               {row.customer.name}
@@ -190,9 +192,7 @@ export function InvoicesPage() {
                       </span>
                     </td>
                     <td className="p-3 align-top">
-                      <Badge tone={row.status === 'void' ? 'slate' : row.status === 'draft' ? 'blue' : row.payment_status === 'paid' ? 'green' : row.overdue ? 'red' : 'orange'}>
-                        {row.overdue ? t('invoices.states.overdue') : row.status === 'issued' ? t(`invoices.states.${row.payment_status}`) : t(`invoices.states.${row.status}`)}
-                      </Badge>
+                      <InvoiceStateBadge invoice={row} />
                     </td>
                     <td className="p-3 align-top">
                       <span className="flex items-start justify-end gap-2">
@@ -253,20 +253,8 @@ export function InvoicesPage() {
   )
 }
 
-/** A customer's initials where the old system had a photo: we keep no pictures of customers. */
-function Avatar({ name }: { name: string }) {
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0] ?? '')
-    .join('')
-    .toUpperCase()
-
-  return <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-pill bg-blue-tint text-11 font-bold text-blue-deep">{initials}</span>
-}
-
-/** Find a customer by name or number and keep the list to theirs. */
-function CustomerFilter({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+/** Find a customer by name or number and keep the list to theirs. `name`: theirs, when the list already shows it. */
+function CustomerFilter({ value, name, onChange }: { value: string; name?: string; onChange: (id: string) => void }) {
   const { t } = useTranslation()
   const [lookup, setLookup] = useState('')
   const hits = useQuery({
@@ -282,8 +270,9 @@ function CustomerFilter({ value, onChange }: { value: string; onChange: (id: str
       {t('invoices.columns.customer')}
       {value ? (
         <span className="flex items-center justify-between gap-2 rounded-10 border border-app-line px-3 py-2 text-13 text-app-text">
-          {chosen?.name ?? t('invoices.thisCustomer')}
-          <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-12 font-semibold text-blue" onClick={() => onChange('')}>
+          {chosen?.name ?? name ?? t('invoices.thisCustomer')}
+          {/* Inside the label, the button would otherwise be announced by the label's text, not by what it does. */}
+          <button type="button" aria-label={t('invoices.clearCustomer')} className="cursor-pointer border-0 bg-transparent p-0 text-12 font-semibold text-blue" onClick={() => onChange('')}>
             {t('invoices.clearCustomer')}
           </button>
         </span>

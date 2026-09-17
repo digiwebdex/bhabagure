@@ -89,16 +89,7 @@ class InvoiceBuilderController extends Controller
         $invoice = Invoice::query()->with(['items', 'customer:id,name,phone,email', 'issuedBy:id,name', 'updatedBy:id,name'])->findOrFail($id);
 
         return response()->json(['data' => self::detail($invoice) + [
-            // What has been paid against it, the way the invoice view lists it: date, how, how much, and the reference.
-            'payments' => $invoice->transactions()->where('category', LedgerService::CATEGORY_PAYMENT)->with('reversal:id,reverses_transaction_id')->get()
-                ->map(fn (Transaction $payment) => [
-                    'id' => $payment->id,
-                    'date' => $payment->occurred_at?->timezone('Asia/Dhaka')->toDateString(),
-                    'method' => $payment->method,
-                    'amount' => (float) $payment->amount,
-                    'note' => $payment->external_ref ?? $payment->reference_label,
-                    'reversed' => $payment->reversal !== null,
-                ])->values(),
+            'payments' => self::payments($invoice),
             // The letterhead the printed invoice carries, so the on-screen view reads the same.
             'company' => [
                 'name' => SiteSetting::get('company', [])['name']['en'] ?? 'Bhabaghure Holidays Aviation',
@@ -256,7 +247,26 @@ class InvoiceBuilderController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private static function row(Invoice $invoice, string $today): array
+    /**
+     * What has been paid against an invoice, the way the invoice view lists it: date, how, how much, and the reference.
+     *
+     * @return list<array{id: int, date: ?string, method: string, amount: float, note: ?string, reversed: bool}>
+     */
+    public static function payments(Invoice $invoice): array
+    {
+        return $invoice->transactions()->where('category', LedgerService::CATEGORY_PAYMENT)->with('reversal:id,reverses_transaction_id')->oldest('occurred_at')->get()
+            ->map(fn (Transaction $payment) => [
+                'id' => $payment->id,
+                'date' => $payment->occurred_at?->timezone('Asia/Dhaka')->toDateString(),
+                'method' => $payment->method,
+                'amount' => (float) $payment->amount,
+                'note' => $payment->external_ref ?? $payment->reference_label,
+                'reversed' => $payment->reversal !== null,
+            ])->values()->all();
+    }
+
+    /** One invoice as every money screen lists it — the Invoices screen and a customer's own account read the same. */
+    public static function row(Invoice $invoice, string $today): array
     {
         $overdue = $invoice->status === Invoice::ISSUED && $invoice->payment_status !== 'paid' && $invoice->due_on !== null && $invoice->due_on->toDateString() < $today;
 

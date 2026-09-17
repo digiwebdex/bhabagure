@@ -200,3 +200,29 @@ and customer list, which agree with each other. Their chart is not a full ledger
 categories and customers still owe. No date cut-off, author or set of invoices explains the difference. So sales is
 checked against their invoices, and the report says what their chart claims, for the client's accountant to answer
 before anything is filed from either figure.
+
+**Imported on live 2026-09-17.** Every balance matched; the CSVs were deleted from the server straight after the run.
+
+## 9. Customers, as the books see them (built)
+
+After the import the client could not find the customers: they are under Sales → Customers & leads, which opens on the
+lead board (four zeros — imported customers are customers, not leads) and lists trips and passports, not money. Their
+old service had a Customers screen beside Invoices. **Decided with the client (2026-09-17):** add it under Accounting,
+and show a customer's invoices and balance on their own page.
+
+**Accounting → Customers** (`/accounting/customers`, `payments.view`, `CustomerAccountsController`): everyone who has
+been invoiced, or was added as a customer rather than a lead — name and email, phone, number of invoices, total
+amount, balance due, and customer since — with the tab bar the Invoices screen reads by (All customers · With balance
+due), a search by name, phone or email, and a sort by name, balance due or latest invoice. "Invoices" opens the
+Invoices screen filtered to that customer. A website enquiry nobody has invoiced stays a lead and is not listed.
+
+- The figures are sums of the issued invoices' own columns (`total_amount`, `paid_amount`, `balance_due`): a draft is
+  not owed and a void invoice is not owed. The totals above the list equal the Invoices screen's for the same set.
+- **Customer since** is the earlier of the day the record was made and the customer's first invoice, so a customer
+  carried across from the old books reads from when they first bought, not from the day of the import.
+- A phone number the import had to invent (a run of zeros) shows as "No number on file", for someone to fix.
+
+**On the customer's page**, for staff with `payments.view` only: Invoiced · Paid · Balance due, then every invoice,
+newest first, with its state and the payments against it (a void invoice is listed, faded, so the history reads
+true). An invoice opens the same view as on the Invoices screen. A sales agent, who does not see payments, sees
+neither the screen nor the card.

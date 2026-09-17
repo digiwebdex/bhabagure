@@ -303,6 +303,7 @@
       "downloads": "Downloads",
       "transactions": "Transactions",
       "invoices": "Invoices",
+      "customer_accounts": "Customers",
       "chart_of_accounts": "Chart of accounts",
       "journal": "Journal entries",
       "account_transactions": "Account transactions",
@@ -2582,6 +2583,49 @@
     "approvedBy": "Checked by {{name}}",
     "viewAttachments": "View attachments",
     "openBooking": "Open booking"
+  },
+  "customerAccounts": {
+    "title": "Customers",
+    "subtitle": "Everyone who has been invoiced — how many invoices, for how much, and what each still owes",
+    "tabs": {
+      "all": "All customers",
+      "due": "With balance due"
+    },
+    "search": "Name, phone or email",
+    "searchLabel": "Find a customer",
+    "sortLabel": "Sort by",
+    "sort": {
+      "name": "Name (A–Z)",
+      "due": "Balance due (highest first)",
+      "recent": "Latest invoice"
+    },
+    "customers_one": "{{n}} customer",
+    "customers_other": "{{n}} customers",
+    "columns": {
+      "customer": "Customer",
+      "phone": "Phone",
+      "invoices": "Invoices",
+      "total": "Total amount",
+      "due": "Balance due",
+      "since": "Customer since"
+    },
+    "noPhone": "No number on file",
+    "viewInvoices": "Invoices",
+    "viewInvoicesFor": "Invoices for {{name}}",
+    "empty": "No customers here",
+    "emptyNote": "A customer appears once they have been invoiced, or when they are added as a customer rather than a lead.",
+    "emptyDue": "Nobody owes anything",
+    "card": {
+      "title": "Invoices and balance",
+      "invoiced": "Invoiced",
+      "paid": "Paid",
+      "due": "Balance due",
+      "none": "No invoices yet.",
+      "open": "Open in Invoices →",
+      "paidOn": "{{date}} · {{method}}",
+      "reversed": "reversed",
+      "noPayments": "Nothing paid yet"
+    }
   },
   "invoices": {
     "title": "Invoices",

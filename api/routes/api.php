@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\BookingTicketController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
+use App\Http\Controllers\Api\V1\Admin\CustomerAccountsController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
 use App\Http\Controllers\Api\V1\Admin\DealController;
@@ -486,6 +487,11 @@ Route::prefix('v1')->group(function () {
                 Route::delete('invoices/{id}', 'destroy')->whereNumber('id')->middleware('permission:invoices.manage,staff');
                 // What is still owed, by SMS or email, written by the staff member (§5).
                 Route::post('invoices/{id}/reminders', 'remind')->whereNumber('id')->middleware('throttle:notifications');
+            });
+            // Customers as the books see them: invoiced, paid and still owed, and one customer's invoices (§9).
+            Route::controller(CustomerAccountsController::class)->group(function () {
+                Route::get('customer-accounts', 'index');
+                Route::get('customer-accounts/{id}', 'show')->whereNumber('id');
             });
             Route::controller(DealController::class)->group(function () {
                 Route::get('deals', 'index');
