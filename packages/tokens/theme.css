@@ -102,6 +102,7 @@
   --color-whatsapp: #25D366;
   --color-whatsapp-tint: #E9FBF0;
   --color-facebook: #1877F2;
+  --color-youtube: #FF0033;
   --color-bkash: #E2136E;
   --color-nagad: #F6921E;
 
@@ -402,6 +403,8 @@
   --animate-wallet-in: bh-rise-14 .45s both;
   --animate-marquee: bh-marquee 28s linear infinite;
   --animate-float: bh-float 3.6s ease-in-out infinite;
+  /* The travel host's photo ring (docs/travel-host.md): a slow turn, used as motion-safe:animate-ring-spin. */
+  --animate-ring-spin: bh-spin 7s linear infinite;
 
   @keyframes bh-rise-26 {
     from { opacity: 0; transform: translateY(26px); }
@@ -422,6 +425,9 @@
   @keyframes bh-float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-9px); }
+  }
+  @keyframes bh-spin {
+    to { transform: rotate(1turn); }
   }
 }
 

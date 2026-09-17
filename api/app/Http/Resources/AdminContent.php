@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Addon;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
+use App\Models\CreatorVideo;
 use App\Models\Destination;
 use App\Models\GalleryItem;
 use App\Models\Media;
@@ -16,6 +17,7 @@ use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\VisaService;
+use App\Support\CreatorProfile;
 use App\Support\Money;
 
 /**
@@ -200,6 +202,46 @@ final class AdminContent
             ...$item->only(['id', 'kind', 'url', 'caption_bn', 'caption_en', 'view_count', 'media_id', 'sort_order']),
             'status' => $item->status->value,
             'thumbnail' => $item->relationLoaded('thumbnail') ? self::media($item->thumbnail) : null,
+        ];
+    }
+
+    /**
+     * The travel host as the admin form edits it: flat fields, and each photo as the full media record so the form can
+     * show it. Null profile: every field empty.
+     */
+    public static function creatorProfile(?array $value): array
+    {
+        $media = Media::query()->whereKey(CreatorProfile::mediaIds($value))->get()->keyBy('id');
+        $picked = fn (?int $id) => $id !== null && $media->has($id) ? self::media($media->get($id)) : null;
+
+        return [
+            'name_bn' => $value['name']['bn'] ?? '',
+            'name_en' => $value['name']['en'] ?? '',
+            'bio_bn' => $value['bio']['bn'] ?? null,
+            'bio_en' => $value['bio']['en'] ?? null,
+            'facebook_url' => $value['facebook']['url'] ?? null,
+            'facebook_followers' => $value['facebook']['followers'] ?? null,
+            'facebook_photo_media_id' => $value['facebook']['photoMediaId'] ?? null,
+            'facebook_photo' => $picked($value['facebook']['photoMediaId'] ?? null),
+            'facebook_cover_media_id' => $value['facebook']['coverMediaId'] ?? null,
+            'facebook_cover' => $picked($value['facebook']['coverMediaId'] ?? null),
+            'youtube_url' => $value['youtube']['url'] ?? null,
+            'youtube_subscribers' => $value['youtube']['subscribers'] ?? null,
+            'youtube_video_count' => $value['youtube']['videoCount'] ?? null,
+            'youtube_photo_media_id' => $value['youtube']['photoMediaId'] ?? null,
+            'youtube_photo' => $picked($value['youtube']['photoMediaId'] ?? null),
+            'youtube_cover_media_id' => $value['youtube']['coverMediaId'] ?? null,
+            'youtube_cover' => $picked($value['youtube']['coverMediaId'] ?? null),
+        ];
+    }
+
+    public static function creatorVideo(CreatorVideo $video): array
+    {
+        return [
+            ...$video->only(['id', 'youtube_id', 'title_bn', 'title_en', 'sort_order']),
+            'url' => $video->watchUrl(),
+            'thumbnail_url' => $video->thumbnailUrl(),
+            'status' => $video->status->value,
         ];
     }
 

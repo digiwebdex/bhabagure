@@ -58,7 +58,7 @@ check "wallet API from outside the allow-list" '403|401' "$(get wallet_api https
 check "wallet API absent on the API host" 404 "$(get wallet_on_api "$API/api/v1/wallet/auth/me" -H 'X-Wallet-Request: 1')"
 
 echo "── Public API (live CMS data)"
-for path in settings destinations packages departures posts team reviews gallery visas pricing; do
+for path in settings destinations packages departures posts team reviews gallery visas creator pricing; do
   check "GET /public/$path" 200 "$(get "p_$path" "$API/api/v1/public/$path" -H 'Accept: application/json')"
 done
 check "destinations listed" '[1-9][0-9]*' "$(json p_destinations "(d.data||d).length")"
@@ -100,6 +100,12 @@ if [[ -n $visa ]]; then
   check "home has the Visa section" yes "$(body_has home 'id="visa"')"
 else
   note "No visa services published in Admin → Visa services; the Visa section and tab are hidden."
+fi
+host=$(json p_creator "d.data&&d.data.profile?'yes':''")
+if [[ -n $host ]]; then
+  check "home has the Travel host section" yes "$(body_has home 'id="travel-host"')"
+else
+  note "No profile in Admin → Travel host; the section is hidden."
 fi
 for page in terms privacy refund-policy; do
   check "/$page (bn)" 200 "$(get "w_$page" "$APEX/$page")"

@@ -154,6 +154,10 @@
       "heading": "Our services",
       "lede": ""
     },
+    "creator": {
+      "heading": "Travel with {name}",
+      "lede": ""
+    },
     "packages": {
       "heading": "Tour packages",
       "lede": ""
@@ -375,6 +379,19 @@
       "a": "Yes. You can join a group departure on your own; a single room adds a {percent} supplement."
     }
   ],
+  "creator": {
+    "role": "The traveller behind Bhabaghure Holidays",
+    "facebook": "Facebook",
+    "youtube": "YouTube",
+    "followers": "Followers",
+    "subscribers": "Subscribers",
+    "videos": "Videos",
+    "follow": "Follow on Facebook",
+    "subscribe": "Subscribe on YouTube",
+    "videosHeading": "Watch the journeys",
+    "moreVideos": "More videos on YouTube",
+    "watch": "Watch “{title}” on YouTube"
+  },
   "gallery": {
     "views": "▶ {viewsText}K views",
     "photo": "Photo",

@@ -106,10 +106,21 @@ export interface SiteViews {
   gallery: { kind: 'reel' | 'photo'; url: string; viewsThousands: number | null; caption: string | null; thumbnail: ImageView | null }[];
   visas: VisaView[];
   visaCountries: VisaCountryView[];
+  /** Null until Admin → Travel host has a profile with a link: the section stays hidden. */
+  creator: CreatorView | null;
   pricing: ContentBundle['pricing'];
   addons: { code: string; name: string; price: number; unit: 'per_person' | 'per_booking' }[];
   settings: ContentBundle['settings'] & { brand: string; companyName: string };
   stats: { packages: number; destinations: number };
+}
+
+/** The travel host and the videos staff picked (docs/travel-host.md). */
+export interface CreatorView {
+  name: string;
+  bio: string | null;
+  facebook: { url: string; followers: number | null; photo: ImageView | null; cover: ImageView | null } | null;
+  youtube: { url: string; subscribers: number | null; videoCount: number | null; photo: ImageView | null; cover: ImageView | null } | null;
+  videos: { youtubeId: string; url: string; title: string; thumbnail: string }[];
 }
 
 const pick = (value: Localized, locale: AppLocale) => value[locale] || value.en;
@@ -122,6 +133,20 @@ const image = (img: Partial<ContentImage> & { url: string; alt: Localized; isPla
   creditUrl: img.creditUrl ?? null,
   isPlaceholder: img.isPlaceholder,
 });
+
+function creatorView(creator: ContentBundle['creator'] | undefined, locale: AppLocale): CreatorView | null {
+  const profile = creator?.profile;
+  if (!profile || (!profile.facebook && !profile.youtube)) return null;
+  const picture = (img: ContentImage | null) => (img ? image(img, locale) : null);
+
+  return {
+    name: pick(profile.name, locale),
+    bio: profile.bio ? pick(profile.bio, locale) : null,
+    facebook: profile.facebook ? { ...profile.facebook, photo: picture(profile.facebook.photo), cover: picture(profile.facebook.cover) } : null,
+    youtube: profile.youtube ? { ...profile.youtube, photo: picture(profile.youtube.photo), cover: picture(profile.youtube.cover) } : null,
+    videos: (creator?.videos ?? []).map((v) => ({ youtubeId: v.youtubeId, url: v.url, title: pick(v.title, locale), thumbnail: v.thumbnail })),
+  };
+}
 
 export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews {
   const published = bundle.packages.filter((p) => p.status === 'published');
@@ -238,6 +263,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     })),
     visas,
     visaCountries,
+    creator: creatorView(bundle.creator, locale),
     pricing: bundle.pricing,
     addons: bundle.pricing.addons.map((a) => ({ code: a.code, name: pick(a.name, locale), price: a.price, unit: a.unit })),
     settings: { ...bundle.settings, brand: pick(bundle.settings.company.brand, locale), companyName: pick(bundle.settings.company.name, locale) },

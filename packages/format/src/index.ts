@@ -92,6 +92,35 @@ export function formatBdtCompact(value: number | string, locale: Locale, options
   return prefix + tenths(croreTenths, locale) + SCALE_SUFFIX[locale].crore;
 }
 
+const AUDIENCE_SCALES: Record<Locale, readonly (readonly [number, string])[]> = {
+  bn: [
+    [CRORE, ' কোটি'],
+    [LAKH, ' লাখ'],
+    [1_000, ' হাজার'],
+  ],
+  en: [
+    [1_000_000_000, 'B'],
+    [1_000_000, 'M'],
+    [1_000, 'K'],
+  ],
+};
+
+/**
+ * Followers and subscribers the way people read them, and never more than there are — always rounded down, as the
+ * platforms themselves do: 1107339 → "1.1M" (en) / "১১ লাখ" (bn); 712000 → "712K" / "৭.১ লাখ"; 295 → "295" / "২৯৫".
+ * One decimal below ten of a unit, whole units above. Only the website prints these, so there is no PHP twin.
+ */
+export function formatAudience(value: number | string, locale: Locale): string {
+  const count = Math.floor(Math.max(0, toFiniteNumber(value)));
+  for (const [size, suffix] of AUDIENCE_SCALES[locale]) {
+    if (count < size) continue;
+    const tenthsOfUnit = Math.floor((count * 10) / size);
+    const text = tenthsOfUnit >= 100 || tenthsOfUnit % 10 === 0 ? groupIndian(String(Math.floor(tenthsOfUnit / 10))) : `${Math.floor(tenthsOfUnit / 10)}.${tenthsOfUnit % 10}`;
+    return localizeDigits(text, locale) + suffix;
+  }
+  return localizeDigits(String(count), locale);
+}
+
 /** 142 → "14.2" / "১৪.২"; the whole part keeps en-IN grouping (12345 crore tenths → "1,234.5"). */
 function tenths(count: number, locale: Locale): string {
   return localizeDigits(`${groupIndian(String(Math.floor(count / 10)))}.${count % 10}`, locale);

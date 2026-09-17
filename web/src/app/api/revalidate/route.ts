@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const TAGS = new Set(['packages', 'departures', 'posts', 'team', 'reviews', 'gallery', 'visas', 'settings']);
+const TAGS = new Set(['packages', 'departures', 'posts', 'team', 'reviews', 'gallery', 'visas', 'settings', 'creator']);
 
 /**
  * Called by the Laravel API after a CMS save: POST { "tags": ["packages"] } with

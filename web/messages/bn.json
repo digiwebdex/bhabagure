@@ -154,6 +154,10 @@
       "heading": "আমাদের সেবা",
       "lede": "Our services"
     },
+    "creator": {
+      "heading": "ভ্রমণের সঙ্গী {name}",
+      "lede": ""
+    },
     "packages": {
       "heading": "ট্যুর প্যাকেজ",
       "lede": "Tour packages · prices per person in BDT"
@@ -375,6 +379,19 @@
       "a": "হ্যাঁ। গ্রুপ ডিপার্চারে একা যোগ দিতে পারেন; সিঙ্গেল রুম নিলে {percent} সাপ্লিমেন্ট যোগ হয়।"
     }
   ],
+  "creator": {
+    "role": "ভবঘুরে হলিডেজের পেছনের ভ্রমণকারী",
+    "facebook": "ফেসবুক",
+    "youtube": "ইউটিউব",
+    "followers": "ফলোয়ার",
+    "subscribers": "সাবস্ক্রাইবার",
+    "videos": "ভিডিও",
+    "follow": "ফেসবুকে ফলো করুন",
+    "subscribe": "ইউটিউবে সাবস্ক্রাইব করুন",
+    "videosHeading": "ভ্রমণের ভিডিও দেখুন",
+    "moreVideos": "ইউটিউবে আরও ভিডিও",
+    "watch": "ইউটিউবে দেখুন: “{title}”"
+  },
   "gallery": {
     "views": "▶ {viewsText}K ভিউ",
     "photo": "ছবি",

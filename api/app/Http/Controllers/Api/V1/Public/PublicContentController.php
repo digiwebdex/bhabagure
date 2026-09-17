@@ -7,6 +7,7 @@ use App\Http\Resources\PublicContent;
 use App\Models\Addon;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
+use App\Models\CreatorVideo;
 use App\Models\Destination;
 use App\Models\GalleryItem;
 use App\Models\PackageDeparture;
@@ -16,6 +17,7 @@ use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\VisaService;
+use App\Support\CreatorProfile;
 use App\Support\Money;
 use App\Support\Payments\PaymentOptions;
 use Illuminate\Database\Eloquent\Builder;
@@ -103,6 +105,15 @@ class PublicContentController extends Controller
     public function visas(): JsonResponse
     {
         return $this->data(VisaService::query()->published()->orderBy('sort_order')->orderBy('id')->get()->map(PublicContent::visaService(...)));
+    }
+
+    /** The travel host and the videos staff picked (docs/travel-host.md). No profile yet: null, and the section stays hidden. */
+    public function creator(): JsonResponse
+    {
+        return $this->data([
+            'profile' => PublicContent::creatorProfile(SiteSetting::get(CreatorProfile::KEY)),
+            'videos' => CreatorVideo::query()->published()->orderBy('sort_order')->orderBy('id')->get()->map(PublicContent::creatorVideo(...))->values(),
+        ]);
     }
 
     public function gallery(): JsonResponse

@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { AboutSection } from '@/features/about/AboutSection';
 import { BlogSection } from '@/features/blog/BlogSection';
 import { ContactSection } from '@/features/contact/ContactSection';
+import { CreatorSection } from '@/features/creator/CreatorSection';
 import { DeparturesSection } from '@/features/departures/DeparturesSection';
 import { FaqSection } from '@/features/faq/FaqSection';
 import { GallerySection } from '@/features/gallery/GallerySection';
@@ -56,6 +57,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <SearchPanel />
       <Marquee locale={locale} />
       <ServicesSection locale={locale} />
+      <CreatorSection locale={locale} creator={views.creator} />
       <PackagesSection locale={locale} />
       <DeparturesSection locale={locale} departures={views.departures} />
       <VisaSection locale={locale} views={views} />

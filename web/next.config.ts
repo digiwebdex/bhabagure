@@ -39,6 +39,8 @@ const nextConfig: NextConfig = {
       ...(process.env.API_URL ? [remote(process.env.API_URL, '/storage/**')] : []),
       // Stock placeholders from the design until the client uploads real photos through the CMS.
       remote('https://images.pexels.com', '/photos/**'),
+      // YouTube's own stills for the travel host's picked videos (docs/travel-host.md).
+      remote('https://i.ytimg.com', '/vi/**'),
     ],
   },
 };

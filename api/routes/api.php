@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\BookingTicketController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
+use App\Http\Controllers\Api\V1\Admin\CreatorProfileController;
+use App\Http\Controllers\Api\V1\Admin\CreatorVideoController;
 use App\Http\Controllers\Api\V1\Admin\CustomerAccountsController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
@@ -152,6 +154,7 @@ Route::prefix('v1')->group(function () {
             Route::get('team', 'team');
             Route::get('reviews', 'reviews');
             Route::get('gallery', 'gallery');
+            Route::get('creator', 'creator');
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
@@ -579,7 +582,13 @@ Route::prefix('v1')->group(function () {
                 Route::delete('blog-categories/{id}', 'destroy')->whereNumber('id');
             });
 
-            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class] as $path => $controller) {
+            // The travel host on the home page, and the videos under their cards (docs/travel-host.md).
+            Route::controller(CreatorProfileController::class)->group(function () {
+                Route::get('creator', 'show');
+                Route::put('creator', 'update');
+            });
+
+            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class, 'creator-videos' => CreatorVideoController::class] as $path => $controller) {
                 Route::controller($controller)->group(function () use ($path) {
                     Route::get($path, 'index');
                     Route::post($path, 'store');

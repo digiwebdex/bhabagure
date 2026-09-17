@@ -8,6 +8,8 @@ interface CountUpProps {
   to: number;
   suffix?: string;
   className?: string;
+  /** 'audience': followers and subscribers, '1.1M' / '১১ লাখ', each frame included. */
+  format?: 'number' | 'audience';
 }
 
 const DURATION_MS = 1100;
@@ -17,8 +19,9 @@ const DURATION_MS = 1100;
  * the final number, so it is correct without JavaScript and for search engines. Every frame is
  * formatted by the shared formatter — Bengali digits in Bangla, Latin in English.
  */
-export function CountUp({ to, suffix = '', className }: CountUpProps) {
-  const { number } = useFormatters();
+export function CountUp({ to, suffix = '', className, format: style = 'number' }: CountUpProps) {
+  const formatters = useFormatters();
+  const number = style === 'audience' ? formatters.audience : formatters.number;
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {

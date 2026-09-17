@@ -245,6 +245,78 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('the travel host saved in the CMS appears right after Services, with both cards, their counts and the picked video', async ({ page, request }) => {
+    const password = 'e2e-host-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'host.editor@e2e.test'], ['employee_code' => 'E2E-HOST', 'name' => 'Host editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'host.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+
+    // No profile yet: no section.
+    await page.goto('/en');
+    await expect(page.locator('#travel-host')).toHaveCount(0);
+
+    let videoId: number | null = null;
+    try {
+      const saved = await request.put(`${E2E_API_URL}/api/v1/admin/creator`, {
+        headers,
+        data: {
+          name_bn: 'শিশির দেব', name_en: 'Shishir Deb', bio_bn: 'বাংলাদেশের একজন ট্রাভেল ভ্লগার।', bio_en: 'A travel vlogger from Bangladesh.',
+          facebook_url: 'https://www.facebook.com/shishirdeb.traveller/?mibextid=wwXIfr', facebook_followers: 1107339,
+          youtube_url: 'https://www.youtube.com/@shishirdeb', youtube_subscribers: 712000, youtube_video_count: 295,
+        },
+      });
+      expect(saved.status()).toBe(200);
+      const video = await request.post(`${E2E_API_URL}/api/v1/admin/creator-videos`, { headers, data: { url: 'https://youtu.be/lI5NMGqg6xk?si=share', title_en: 'Three countries for 1.2 lakh taka', title_bn: '১ লক্ষ ২০ হাজার টাকায় ৩ দেশ' } });
+      expect(video.status()).toBe(201);
+      videoId = (await video.json()).data.id as number;
+      expect((await request.post(`${E2E_API_URL}/api/v1/admin/creator-videos/${videoId}/publish`, { headers })).status()).toBe(200);
+
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return page.locator('#travel-host').count();
+      }, { timeout: 20_000 }).toBe(1);
+
+      // Straight after Services, before the packages.
+      const tops = await page.evaluate(() => ['services', 'travel-host', 'packages'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
+      expect(tops[0]).toBeLessThan(tops[1]);
+      expect(tops[1]).toBeLessThan(tops[2]);
+
+      const host = page.locator('#travel-host');
+      await expect(host.getByRole('heading', { level: 2 })).toHaveText('Travel with Shishir Deb');
+      await expect(host).toContainText('The traveller behind Bhabaghure Holidays · A travel vlogger from Bangladesh.');
+
+      // Each card is one link out, without the tracking the shared link carried; the counts read as the platforms show them.
+      const facebook = host.getByTestId('travel-host-facebook');
+      await expect(facebook).toHaveAttribute('href', 'https://www.facebook.com/shishirdeb.traveller/');
+      await expect(facebook).toHaveAttribute('target', '_blank');
+      await facebook.scrollIntoViewIfNeeded();
+      await expect(facebook).toContainText('1.1M');
+      await expect(facebook).toContainText('Follow on Facebook');
+      const youtube = host.getByTestId('travel-host-youtube');
+      await expect(youtube).toHaveAttribute('href', 'https://www.youtube.com/@shishirdeb');
+      await expect(youtube).toContainText('712K');
+      await expect(youtube).toContainText('295');
+
+      const videos = host.getByTestId('creator-videos').getByRole('link');
+      await expect(videos).toHaveCount(1);
+      await expect(videos.first()).toHaveAttribute('href', 'https://www.youtube.com/watch?v=lI5NMGqg6xk');
+      await expect(videos.first()).toHaveAccessibleName('Watch “Three countries for 1.2 lakh taka” on YouTube');
+      await expect(videos.first().locator('img')).toHaveAttribute('src', /_next\/image\?url=https%3A%2F%2Fi\.ytimg\.com%2Fvi%2FlI5NMGqg6xk%2Fhqdefault\.jpg/);
+
+      // Bangla at the unprefixed address, counts in lakh.
+      await page.goto('/');
+      const bn = page.locator('#travel-host');
+      await expect(bn.getByRole('heading', { level: 2 })).toHaveText('ভ্রমণের সঙ্গী শিশির দেব');
+      await bn.getByTestId('travel-host-facebook').scrollIntoViewIfNeeded();
+      await expect(bn.getByTestId('travel-host-facebook')).toContainText('১১ লাখ');
+    } finally {
+      // The profile has no delete in the CMS (a link is required), so it is cleared here; deleting the video refreshes the page.
+      artisan('tinker', `--execute=App\\Models\\SiteSetting::query()->where('key', 'creator')->delete(); echo 'ok';`);
+      if (videoId !== null) await request.delete(`${E2E_API_URL}/api/v1/admin/creator-videos/${videoId}`, { headers });
+      await request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['creator'] } });
+    }
+  });
+
   test('a package priced by hotel category: the card shows basic/3-star, the modal picks the category, and the booking is charged from its row', async ({ page, request }) => {
     const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
     const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages'] } });

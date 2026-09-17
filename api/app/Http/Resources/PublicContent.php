@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Enums\MediaVariant;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
+use App\Models\CreatorVideo;
 use App\Models\Destination;
 use App\Models\GalleryItem;
 use App\Models\Media;
@@ -15,6 +16,7 @@ use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\VisaService;
+use App\Support\CreatorProfile;
 use App\Support\Money;
 
 /**
@@ -93,6 +95,53 @@ final class PublicContent
             'height' => $media->height,
             // WebP sizes for srcset: thumb 400, card 800, detail 1600, full 2400 px wide at most.
             'variants' => (object) $media->variantUrls(),
+        ];
+    }
+
+    /**
+     * The travel host for the home page (docs/travel-host.md; web/src/lib/content/types.ts Creator). Null until a profile
+     * with at least one link is saved, which keeps the section hidden. Each language falls back to the other.
+     */
+    public static function creatorProfile(?array $value): ?array
+    {
+        if (! CreatorProfile::isShown($value)) {
+            return null;
+        }
+        $media = Media::query()->whereKey(CreatorProfile::mediaIds($value))->get()->keyBy('id');
+        $image = fn (?int $id, MediaVariant $variant) => $id === null ? null : self::image($media->get($id), $variant);
+        $pair = fn (?array $text) => $text === null || (blank($text['bn'] ?? null) && blank($text['en'] ?? null))
+            ? null
+            : ['bn' => ($text['bn'] ?? null) ?: $text['en'], 'en' => ($text['en'] ?? null) ?: $text['bn']];
+        $facebook = $value['facebook'] ?? null;
+        $youtube = $value['youtube'] ?? null;
+
+        return [
+            'name' => $pair($value['name']),
+            'bio' => $pair($value['bio'] ?? null),
+            // The photo is a small round avatar; the cover spans the card, so it gets the larger size.
+            'facebook' => $facebook === null ? null : [
+                'url' => $facebook['url'],
+                'followers' => $facebook['followers'] ?? null,
+                'photo' => $image($facebook['photoMediaId'] ?? null, MediaVariant::Thumb),
+                'cover' => $image($facebook['coverMediaId'] ?? null, MediaVariant::Detail),
+            ],
+            'youtube' => $youtube === null ? null : [
+                'url' => $youtube['url'],
+                'subscribers' => $youtube['subscribers'] ?? null,
+                'videoCount' => $youtube['videoCount'] ?? null,
+                'photo' => $image($youtube['photoMediaId'] ?? null, MediaVariant::Thumb),
+                'cover' => $image($youtube['coverMediaId'] ?? null, MediaVariant::Detail),
+            ],
+        ];
+    }
+
+    public static function creatorVideo(CreatorVideo $video): array
+    {
+        return [
+            'youtubeId' => $video->youtube_id,
+            'url' => $video->watchUrl(),
+            'title' => $video->localized('title'),
+            'thumbnail' => $video->thumbnailUrl(),
         ];
     }
 

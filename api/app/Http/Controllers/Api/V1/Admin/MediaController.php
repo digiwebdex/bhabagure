@@ -8,9 +8,11 @@ use App\Models\BlogPost;
 use App\Models\GalleryItem;
 use App\Models\Media;
 use App\Models\PackageImage;
+use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Services\AuditLogger;
 use App\Services\Media\ImageUploader;
+use App\Support\CreatorProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\File;
@@ -66,7 +68,9 @@ class MediaController extends Controller
         $inUse = PackageImage::query()->where('media_id', $media->id)->exists()
             || BlogPost::withTrashed()->where('cover_media_id', $media->id)->exists()
             || TeamMember::query()->where('photo_media_id', $media->id)->exists()
-            || GalleryItem::query()->where('media_id', $media->id)->exists();
+            || GalleryItem::query()->where('media_id', $media->id)->exists()
+            // The travel host's photos and covers live in a site setting, not a column (docs/travel-host.md).
+            || in_array($media->id, CreatorProfile::mediaIds(SiteSetting::get(CreatorProfile::KEY)), true);
 
         if ($inUse) {
             return response()->json(['message' => __('media.in_use'), 'code' => 'media_in_use'], 409);

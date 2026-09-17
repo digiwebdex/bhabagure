@@ -229,6 +229,43 @@ test.describe('website content', () => {
     expect([visa.slug, visa.countryCode, visa.price, visa.processing.bn, visa.requirements.bn]).toEqual(['malaysia-evisa', 'MY', 4200, '3–5 working days', ['৬ মাস মেয়াদি পাসপোর্ট', 'সাদা ব্যাকগ্রাউন্ডে একটি ছবি']])
   })
 
+  test('the travel host needs a link before saving, then shows on the website with the video picked for it (docs/travel-host.md)', async ({ page, request }) => {
+    await signIn(page, 'admin')
+    await page.getByRole('navigation').getByRole('link', { name: 'H Travel host' }).click()
+    await expect(page.getByRole('heading', { name: 'Travel host', level: 1 })).toBeVisible(FIRST_LOAD)
+    await expect(page.getByText('No videos yet')).toBeVisible(FIRST_LOAD)
+    await expect(page.getByLabel('Name (Bangla)')).toBeVisible(FIRST_LOAD)
+
+    await page.getByLabel('Name (Bangla)').fill('শিশির দেব')
+    await page.getByLabel('Name (English)').fill('Shishir Deb')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Add the Facebook page or the YouTube channel link: a card with neither links nowhere.').first()).toBeVisible()
+    expect((await (await request.get(`${API_URL}/api/v1/public/creator`)).json()).data.profile).toBeNull()
+
+    await page.getByLabel('YouTube channel link').fill('https://youtube.com/@shishirdeb?si=IWQwGLPek8MzQRRi')
+    await page.getByLabel('Subscribers').fill('712000')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
+    // Stored without the tracking the shared link carried.
+    await expect(page.getByLabel('YouTube channel link')).toHaveValue('https://youtube.com/@shishirdeb')
+
+    await page.getByRole('button', { name: '+ Add video' }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('YouTube video link').fill('https://youtu.be/lI5NMGqg6xk?si=share')
+    await expect(dialog.getByTestId('video-preview')).toHaveAttribute('src', 'https://i.ytimg.com/vi/lI5NMGqg6xk/hqdefault.jpg')
+    await dialog.getByLabel('Title (English)').fill('Three countries for 1.2 lakh taka')
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    const row = page.getByRole('listitem').filter({ hasText: 'Three countries for 1.2 lakh taka' })
+    await expect(row).toContainText('youtu.be/lI5NMGqg6xk')
+
+    expect((await (await request.get(`${API_URL}/api/v1/public/creator`)).json()).data.videos).toHaveLength(0)
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(row.getByText('Published')).toBeVisible()
+    const { profile, videos } = (await (await request.get(`${API_URL}/api/v1/public/creator`)).json()).data
+    expect([profile.name.en, profile.youtube.url, profile.youtube.subscribers, profile.facebook]).toEqual(['Shishir Deb', 'https://youtube.com/@shishirdeb', 712000, null])
+    expect(videos.map((video: { youtubeId: string }) => video.youtubeId)).toEqual(['lI5NMGqg6xk'])
+  })
+
   test('media library rejects an oversized upload before sending it', async ({ page }) => {
     await signIn(page, 'admin')
     await page.goto('/media')

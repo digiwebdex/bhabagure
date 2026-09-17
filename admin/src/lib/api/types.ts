@@ -216,6 +216,39 @@ export type GalleryItem = {
   thumbnail: Media | null
 }
 
+/** The travel host on the home page (docs/travel-host.md), as GET and PUT admin/creator. Photos come whole, for the form. */
+export type CreatorProfile = {
+  name_bn: string
+  name_en: string
+  bio_bn: string | null
+  bio_en: string | null
+  facebook_url: string | null
+  facebook_followers: number | null
+  facebook_photo_media_id: number | null
+  facebook_photo: Media | null
+  facebook_cover_media_id: number | null
+  facebook_cover: Media | null
+  youtube_url: string | null
+  youtube_subscribers: number | null
+  youtube_video_count: number | null
+  youtube_photo_media_id: number | null
+  youtube_photo: Media | null
+  youtube_cover_media_id: number | null
+  youtube_cover: Media | null
+}
+
+export type CreatorVideo = {
+  id: number
+  youtube_id: string
+  /** The watch link, whatever shape of link was pasted. */
+  url: string
+  thumbnail_url: string
+  title_bn: string | null
+  title_en: string | null
+  sort_order: number
+  status: ContentStatus
+}
+
 export type Slab = { min_pax: number; discount_percent: number }
 
 export type Pricing = {

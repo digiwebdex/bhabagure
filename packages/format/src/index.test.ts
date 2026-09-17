@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import fixtures from '../fixtures.json' with { type: 'json' };
 import {
+  formatAudience,
   formatBdt,
   formatBdtCompact,
   formatDate,
@@ -92,6 +93,34 @@ test('formatDate matches the shared fixtures and rejects malformed dates', () =>
   for (const bad of fixtures.invalidDates) {
     assert.throws(() => formatDate(bad, 'en'), TypeError, bad);
   }
+});
+
+test('formatAudience reads like the platforms and never overstates', () => {
+  const cases: [number, string, string][] = [
+    [1_107_339, '1.1M', '১১ লাখ'],
+    [712_000, '712K', '৭.১ লাখ'],
+    [712_999, '712K', '৭.১ লাখ'],
+    [1_199_999, '1.1M', '১১ লাখ'],
+    [1_000_000, '1M', '১০ লাখ'],
+    [295, '295', '২৯৫'],
+    [0, '0', '০'],
+    [999, '999', '৯৯৯'],
+    [1_000, '1K', '১ হাজার'],
+    [1_550, '1.5K', '১.৫ হাজার'],
+    [12_345, '12K', '১২ হাজার'],
+    [99_999, '99K', '৯৯ হাজার'],
+    [100_000, '100K', '১ লাখ'],
+    [25_000_000, '25M', '২.৫ কোটি'],
+    [123_456_789_000, '123B', '১২,৩৪৫ কোটি'],
+  ];
+  for (const [value, en, bn] of cases) {
+    assert.equal(formatAudience(value, 'en'), en, `${value} en`);
+    assert.equal(formatAudience(value, 'bn'), bn, `${value} bn`);
+  }
+  // A count can't be negative or fractional; a stray one reads as what it floors to.
+  assert.equal(formatAudience(-5, 'en'), '0');
+  assert.equal(formatAudience('1550.9', 'en'), '1.5K');
+  assert.throws(() => formatAudience('lots', 'en'), TypeError);
 });
 
 test('rejects anything that is not a finite number', () => {

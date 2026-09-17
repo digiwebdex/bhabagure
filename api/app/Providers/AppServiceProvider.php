@@ -15,6 +15,7 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Booking;
 use App\Models\Client;
+use App\Models\CreatorVideo;
 use App\Models\Customer;
 use App\Models\Destination;
 use App\Models\GalleryItem;
@@ -164,6 +165,7 @@ class AppServiceProvider extends ServiceProvider
             'review' => Review::class,
             'gallery_item' => GalleryItem::class,
             'visa_service' => VisaService::class,
+            'creator_video' => CreatorVideo::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,

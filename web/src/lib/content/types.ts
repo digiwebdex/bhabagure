@@ -119,6 +119,28 @@ export interface VisaService {
   updatedAt: string | null;
 }
 
+/** The travel host on the home page (docs/travel-host.md), from Admin → Travel host. */
+export interface CreatorProfile {
+  name: Localized;
+  bio: Localized | null;
+  facebook: { url: string; followers: number | null; photo: ContentImage | null; cover: ContentImage | null } | null;
+  youtube: { url: string; subscribers: number | null; videoCount: number | null; photo: ContentImage | null; cover: ContentImage | null } | null;
+}
+
+export interface CreatorVideo {
+  youtubeId: string;
+  url: string;
+  title: Localized;
+  /** YouTube's still, i.ytimg.com. */
+  thumbnail: string;
+}
+
+export interface Creator {
+  /** Null until a profile with a link is saved: the section stays hidden. */
+  profile: CreatorProfile | null;
+  videos: CreatorVideo[];
+}
+
 export interface PricingSettings extends PricingConfig {
   addons: (Addon & { name: Localized })[];
   /**
@@ -157,6 +179,7 @@ export interface ContentBundle {
   reviews: Review[];
   gallery: GalleryItem[];
   visas: VisaService[];
+  creator: Creator;
   pricing: PricingSettings;
   settings: SiteSettings;
 }

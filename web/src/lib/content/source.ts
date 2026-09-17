@@ -51,8 +51,9 @@ async function loadSeed(withDemo: boolean): Promise<ContentBundle> {
     departures: (demo?.[0].default ?? []) as ContentBundle['departures'],
     reviews: (demo?.[1].default ?? []) as ContentBundle['reviews'],
     gallery: (demo?.[2].default ?? []) as ContentBundle['gallery'],
-    // Visa services exist only in the CMS: nothing is invented for local previews.
+    // Visa services and the travel host exist only in the CMS: nothing is invented for local previews.
     visas: [],
+    creator: { profile: null, videos: [] },
   };
 }
 
@@ -72,7 +73,7 @@ async function loadFromApi(): Promise<ContentBundle> {
     if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
     return (await res.json()).data as T;
   };
-  const [destinations, packages, departures, blog, team, reviews, gallery, visas, pricing, settings] = await Promise.all([
+  const [destinations, packages, departures, blog, team, reviews, gallery, visas, creator, pricing, settings] = await Promise.all([
     get<ContentBundle['destinations']>('destinations', 'packages'),
     get<ContentBundle['packages']>('packages', 'packages'),
     get<ContentBundle['departures']>('departures', 'departures'),
@@ -81,8 +82,9 @@ async function loadFromApi(): Promise<ContentBundle> {
     get<ContentBundle['reviews']>('reviews', 'reviews'),
     get<ContentBundle['gallery']>('gallery', 'gallery'),
     get<ContentBundle['visas']>('visas', 'visas', { empty: [] }),
+    get<ContentBundle['creator']>('creator', 'creator', { empty: { profile: null, videos: [] } }),
     get<ContentBundle['pricing']>('pricing', 'settings'),
     get<ContentBundle['settings']>('settings', 'settings'),
   ]);
-  return { destinations, packages, departures, categories: blog.categories, posts: blog.posts, team, reviews, gallery, visas, pricing, settings };
+  return { destinations, packages, departures, categories: blog.categories, posts: blog.posts, team, reviews, gallery, visas, creator, pricing, settings };
 }
