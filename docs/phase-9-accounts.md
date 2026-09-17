@@ -158,7 +158,7 @@ An entry now records **which account** the money sat in (`transactions.money_acc
 by, so the office drawer and a staff member's float are told apart. Entries written before that keep a null and fall
 back to the account their method has always meant; they are not back-filled, because the table refuses an update.
 
-## 8. Carrying the books across (next)
+## 8. Carrying the books across (built)
 
 **Decided with the client (2026-09-16):** import everything — accounts and balances, customers, invoices and cash
 transactions — because both systems are the same company, and clear Bhabaghure's demo data first (one test customer and
@@ -166,8 +166,37 @@ its website inquiry; the accounting tables are empty). Old invoice numbers are k
 Vendors and purchases arrive as money only (no purchase or stock screens). Cash floats held by named staff count as
 company money, inside the company balance, like the office cash and the bank.
 
-**How.** An artisan command reads the exported books at a path given when it runs and writes them into Bhabaghure. The
-repository is public, so no exported data is ever committed; the file stays on the server for the run.
-
 **Limit found on 2026-09-16:** the service protects its login with a reCAPTCHA, so signing in from a script is not
-possible and nothing is scraped. The books come from an export the client provides, or from their own signed-in browser.
+possible and nothing is scraped. The books come from four CSV exports the client downloaded themselves.
+
+**How.** `php artisan books:import <directory>` reads `chart-of-accounts.csv`, `customers.csv`, `all-invoices.csv` and
+`all-transactions.csv` and says what it would do; `--write` does it, in one database transaction, and prints every
+carried balance beside the old one. The repository is public, so no export is ever committed: on the server the files
+sit in `api/storage/app/private/` (ignored, not served) for the length of the run and are deleted after it.
+
+- **Only into empty books.** The cash book is append-only, so a second run could not be told from the first or undone:
+  it is refused while any cash entry or issued invoice exists.
+- **Nothing already here is deleted.** A customer whose phone or email is already on file — a website inquiry, say —
+  keeps their record and gains their old invoices. The demo customer is removed on the Customers screen, where the
+  removal is soft and audited, rather than by an import that cannot tell a test record from a real one.
+- **Accounts** their books share with ours map onto ours (Cash on Hand and Cash become one cash account, as the client
+  chose); the rest are created in the matching section of the chart.
+- **Customers** entered twice under one name fold into one unless both carry invoices. Phone numbers typed with the
+  country code twice or a stray national zero are repaired; a foreign number is kept as it is; a customer with no number
+  gets a placeholder. Every one of those is listed in the report.
+- **Invoices** arrive issued, on their own date, under their own number, as one "Travel services" line (the export has
+  no line detail), and the numbering carries on from the highest.
+- **Cash entries** replay oldest first. An invoice payment settles its invoice; a transfer moves money between the
+  company's own accounts, without the held-balance check — the bank did run overdrawn; money owed from before the books
+  began is set against opening balances.
+
+**Checked against the real export (2026-09-17).** Every cash and bank balance replays to the figure their chart
+shows, and what each customer still owes matches their customer list, customer by customer. (The figures themselves
+stay out of this public repository; the command prints them.)
+
+**What does not agree, and why.** Their chart of accounts puts Sales about a third lower than their own invoice list
+and customer list, which agree with each other. Their chart is not a full ledger: every expense account in it reads
+"Never" and carries nothing, and so does Accounts Receivable — while the same export spends under those very
+categories and customers still owe. No date cut-off, author or set of invoices explains the difference. So sales is
+checked against their invoices, and the report says what their chart claims, for the client's accountant to answer
+before anything is filed from either figure.

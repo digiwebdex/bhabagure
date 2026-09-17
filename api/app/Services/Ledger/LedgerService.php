@@ -70,7 +70,7 @@ final class LedgerService
     }
 
     /** A deal invoice (no package): Dr Accounts receivable · Cr Deal and service sales · Cr VAT payable when it has VAT. */
-    public function postDealIssued(Invoice $invoice, ?Staff $staff = null): ?JournalEntry
+    public function postDealIssued(Invoice $invoice, ?Staff $staff = null, ?\DateTimeInterface $on = null): ?JournalEntry
     {
         $total = self::paisa($invoice->total_amount);
         $vat = self::paisa($invoice->vat_amount);
@@ -78,11 +78,12 @@ final class LedgerService
             return null;
         }
 
+        // On the invoice's own date, not today's: an invoice carried across from older books belongs where it happened.
         return $this->post($invoice, "Deal invoice {$invoice->invoice_number} issued · {$invoice->title}", null, $staff, [
             [Account::RECEIVABLE, $total, 0],
             [Account::DEAL_SALES, 0, $total - $vat],
             [Account::VAT_PAYABLE, 0, $vat],
-        ]);
+        ], on: $on ?? $invoice->issued_on);
     }
 
     public function postInvoiceVoided(Invoice $invoice, ?Staff $staff = null): ?JournalEntry
@@ -456,6 +457,46 @@ final class LedgerService
     }
 
     /**
+     * One entry from books kept elsewhere, carried across as it stood (docs/phase-9-accounts.md §8). Unlike a staff
+     * manual entry it may name any account on the other side — the old books had their own chart, and the whole point
+     * of carrying them over is that the figures come out the same.
+     *
+     * It is still an ordinary cash book row with an ordinary journal entry behind it: nothing about the import is
+     * privileged, and every entry can be read and reversed afterwards like any other.
+     */
+    public function recordImportedEntry(
+        TransactionDirection $direction,
+        string|int|float $amount,
+        Account $money,
+        Account $other,
+        string $category,
+        string $description,
+        Staff $staff,
+        \DateTimeInterface $occurredAt,
+    ): Transaction {
+        $this->assertInTransaction();
+        if (! $money->isMoney()) {
+            throw new InvalidArgumentException("Account {$money->code} doesn't hold money.");
+        }
+        $paisa = self::paisa($amount);
+        if ($paisa <= 0) {
+            throw new InvalidArgumentException('An amount must be positive.');
+        }
+
+        $entry = Transaction::query()->create([
+            'direction' => $direction, 'amount' => self::amount($paisa), 'category' => $category,
+            'method' => self::methodForAccount($money->code), 'money_account_id' => $money->id,
+            'description' => $description, 'occurred_at' => self::instant($occurredAt),
+            'recorded_by_staff_id' => $staff->id,
+        ]);
+        $this->post($entry, "Imported · {$description}", null, $staff, $direction === TransactionDirection::In
+            ? [[$money->code, $paisa, 0], [$other->code, 0, $paisa]]
+            : [[$other->code, $paisa, 0], [$money->code, 0, $paisa]], on: $occurredAt);
+
+        return $entry;
+    }
+
+    /**
      * VAT collected from customers, paid over to the government (docs/phase-9-accounts.md §7): money out of a money
      * account against VAT payable, which is the only thing that brings that balance back down.
      */
@@ -543,6 +584,28 @@ final class LedgerService
             throw new LogicException("{$from->name_en} holds ".Money::toNumber(self::amount($held)).', which is less than this.');
         }
 
+        return $this->postTransfer($from, $to, $paisa, $description, $staff, $on);
+    }
+
+    /**
+     * The same move, replayed from books kept elsewhere (docs/phase-9-accounts.md §8). It does not ask whether the
+     * account held the money: it plainly did not always — a bank account can run overdrawn, and entries can reach the
+     * books out of order. Refusing history because of a rule written to catch a typo would lose the history.
+     */
+    public function recordImportedTransfer(Account $from, Account $to, string|int|float $amount, string $description, Staff $staff, \DateTimeInterface $on): JournalEntry
+    {
+        $this->assertInTransaction();
+        foreach ([$from, $to] as $account) {
+            if (! $account->isMoney()) {
+                throw new LogicException("{$account->name_en} doesn't hold money, so nothing can be moved to or from it.");
+            }
+        }
+
+        return $this->postTransfer($from, $to, self::paisa($amount), $description, $staff, $on);
+    }
+
+    private function postTransfer(Account $from, Account $to, int $paisa, string $description, Staff $staff, ?\DateTimeInterface $on): JournalEntry
+    {
         return $this->post(null, "Moved · {$from->name_en} → {$to->name_en} · {$description}", null, $staff, [
             [$to->code, $paisa, 0],
             [$from->code, 0, $paisa],
