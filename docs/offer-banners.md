@@ -53,6 +53,10 @@ the brand's own style — orange pill, Bengali headline in Hind Siliguri, price,
 They are placeholders for the client's own artwork: the prices are the live package prices, and every banner can be
 replaced on that screen without touching the site.
 
+Artwork advice for whoever draws the next one: 1600 × 533 (the 3:1 the card crops to), and any text set large — on a
+phone the banner is about a quarter of that width, so a headline below roughly 90 px stops reading. Keep the words in
+the left two-thirds, where the darkened side of these banners sits.
+
 ## Tests
 
 - API `OfferBannersTest`: a picture is needed to publish; order and unpublishing; only a site page or an `https://`
