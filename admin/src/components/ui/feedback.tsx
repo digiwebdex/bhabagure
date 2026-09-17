@@ -80,7 +80,9 @@ export function Dialog({ open, onClose, title, children, wide = false }: { open:
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      // Only this dialog's own close: React passes a nested dialog's close event up the tree (the media picker inside an
+      // editor), and without this the editor closed too and lost what was typed.
+      onClose={(event) => event.target === ref.current && onClose()}
       onClick={(event) => event.target === ref.current && onClose()}
       aria-label={title}
       className={`m-auto max-h-dialog-h w-dialog-w overflow-hidden rounded-16 border border-app-line bg-app-surface p-0 text-app-text shadow-modal backdrop:bg-scrim/55 ${wide ? 'max-w-modal-lg' : 'max-w-form'}`}

@@ -10,6 +10,7 @@ return [
         'itinerary' => 'Add at least one itinerary day.',
         'includes' => 'List at least one inclusion.',
         'images' => 'Add at least one photo.',
+        'logo' => 'Add the airline’s logo.',
         'body' => 'Write the post body in both languages.',
         'excerpt' => 'Write the excerpt in both languages.',
         'processing' => 'Say how long processing takes.',

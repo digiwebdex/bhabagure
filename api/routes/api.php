@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Admin\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AccountingReportController;
 use App\Http\Controllers\Api\V1\Admin\AirInquiryController;
+use App\Http\Controllers\Api\V1\Admin\AirlinePartnerController;
 use App\Http\Controllers\Api\V1\Admin\AssignableStaffController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
@@ -155,6 +156,7 @@ Route::prefix('v1')->group(function () {
             Route::get('reviews', 'reviews');
             Route::get('gallery', 'gallery');
             Route::get('creator', 'creator');
+            Route::get('partners', 'partners');
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
@@ -588,7 +590,7 @@ Route::prefix('v1')->group(function () {
                 Route::put('creator', 'update');
             });
 
-            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class, 'creator-videos' => CreatorVideoController::class] as $path => $controller) {
+            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class, 'creator-videos' => CreatorVideoController::class, 'airline-partners' => AirlinePartnerController::class] as $path => $controller) {
                 Route::controller($controller)->group(function () use ($path) {
                     Route::get($path, 'index');
                     Route::post($path, 'store');

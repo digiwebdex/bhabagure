@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\MediaVariant;
+use App\Models\AirlinePartner;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\CreatorVideo;
@@ -132,6 +133,16 @@ final class PublicContent
                 'photo' => $image($youtube['photoMediaId'] ?? null, MediaVariant::Thumb),
                 'cover' => $image($youtube['coverMediaId'] ?? null, MediaVariant::Detail),
             ],
+        ];
+    }
+
+    /** An airline the agency books: its name, its logo and, when it has one, a link to it. */
+    public static function airlinePartner(AirlinePartner $partner): array
+    {
+        return [
+            'name' => $partner->localized('name'),
+            'logo' => self::image($partner->logo, MediaVariant::Thumb),
+            'websiteUrl' => $partner->website_url,
         ];
     }
 

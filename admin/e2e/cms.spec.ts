@@ -266,6 +266,38 @@ test.describe('website content', () => {
     expect(videos.map((video: { youtubeId: string }) => video.youtubeId)).toEqual(['lI5NMGqg6xk'])
   })
 
+  test('an airline partner needs its logo before it can be published (docs/partners-and-payments.md)', async ({ page, request }) => {
+    await signIn(page, 'admin')
+    await page.getByRole('navigation').getByRole('link', { name: '✈ Airline partners' }).click()
+    await expect(page.getByRole('heading', { name: 'Airline partners', level: 1 })).toBeVisible(FIRST_LOAD)
+    await expect(page.getByText('No airline partners yet')).toBeVisible(FIRST_LOAD)
+
+    await page.getByRole('button', { name: '+ Add airline' }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Airline (Bangla)').fill('স্কুট')
+    await dialog.getByLabel('Airline (English)').fill('Scoot')
+    await dialog.getByLabel('Airline website (optional)').fill('https://www.flyscoot.com')
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    const row = page.getByRole('listitem').filter({ hasText: 'Scoot' })
+    await expect(row).toContainText('flyscoot.com')
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(page.getByText('Add the airline’s logo.')).toBeVisible()
+    expect((await (await request.get(`${API_URL}/api/v1/public/partners`)).json()).data).toHaveLength(0)
+
+    await row.getByRole('button', { name: /^Scoot/ }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Choose', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Choose an image' })
+    await picker.locator('input[type=file]').setInputFiles(PHOTO)
+    await expect(picker).toBeHidden({ timeout: 30_000 })
+    await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click()
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(row.getByText('Published')).toBeVisible()
+    const [partner] = (await (await request.get(`${API_URL}/api/v1/public/partners`)).json()).data
+    expect([partner.name.en, partner.websiteUrl, partner.logo.url]).toEqual(['Scoot', 'https://www.flyscoot.com', expect.stringMatching(/\/storage\/media\/.+\.webp$/)])
+  })
+
   test('media library rejects an oversized upload before sending it', async ({ page }) => {
     await signIn(page, 'admin')
     await page.goto('/media')

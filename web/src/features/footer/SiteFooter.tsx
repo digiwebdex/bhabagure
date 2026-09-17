@@ -51,6 +51,20 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
       ) : null}
       <p className="mb-1.5">{settings.address}</p>
       <p className="mb-2">{t('footer.licence', { licence: f.digits(settings.civilAviationNo) })}</p>
+
+      {/* Every method the gateway takes, on one line, from SSLCommerz's own strip so it stays right as they add banks.
+          Wider than a phone: it scrolls sideways rather than shrinking the marks past reading. */}
+      <div className="mx-auto mb-3 max-w-4xl overflow-x-auto px-1 pb-1">
+        <Image
+          src="/payments/pay-with-sslcommerz.png"
+          alt={t('footer.payWith')}
+          width={9561}
+          height={314}
+          sizes="(min-width: 900px) 900px, 200vw"
+          className="mx-auto h-7 w-auto max-w-none rounded-4 bg-white px-1.5 py-0.5"
+        />
+      </div>
+
       <p>{t('footer.copyright', { year })}</p>
     </footer>
   );

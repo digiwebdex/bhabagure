@@ -249,6 +249,18 @@ export type CreatorVideo = {
   status: ContentStatus
 }
 
+/** An airline the agency books, shown by its logo above the footer (docs/partners-and-payments.md). */
+export type AirlinePartner = {
+  id: number
+  name_bn: string
+  name_en: string
+  media_id: number | null
+  logo: Media | null
+  website_url: string | null
+  sort_order: number
+  status: ContentStatus
+}
+
 export type Slab = { min_pax: number; discount_percent: number }
 
 export type Pricing = {

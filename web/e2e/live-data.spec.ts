@@ -317,6 +317,54 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('airlines published in the CMS close the home page as a band of logos (docs/partners-and-payments.md)', async ({ page, request }) => {
+    const password = 'e2e-partner-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'partner.editor@e2e.test'], ['employee_code' => 'E2E-PART', 'name' => 'Partner editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const logoId = String(
+      artisan('tinker', `--execute=echo App\\Models\\Media::query()->create(['disk' => 'public', 'mime' => 'image/jpeg', 'source_url' => 'https://images.pexels.com/photos/12228138/pexels-photo-12228138.jpeg', 'is_placeholder' => true, 'alt_en' => 'Scoot'])->id;`),
+    )
+      .trim()
+      .split(/\r?\n/)
+      .pop();
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'partner.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+
+    await page.goto('/en');
+    await expect(page.locator('#partners')).toHaveCount(0);
+
+    let id: number | null = null;
+    try {
+      const created = await request.post(`${E2E_API_URL}/api/v1/admin/airline-partners`, {
+        headers,
+        data: { name_bn: 'স্কুট', name_en: 'Scoot', media_id: Number(logoId), website_url: 'https://www.flyscoot.com' },
+      });
+      expect(created.status(), await created.text()).toBe(201);
+      id = (await created.json()).data.id as number;
+      expect((await request.post(`${E2E_API_URL}/api/v1/admin/airline-partners/${id}/publish`, { headers })).status()).toBe(200);
+
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return page.locator('#partners').count();
+      }, { timeout: 20_000 }).toBe(1);
+
+      const band = page.locator('#partners');
+      await expect(band.getByRole('heading', { level: 2 })).toHaveText('Our airline partners');
+      const logo = band.getByTestId('airline-partners').getByRole('link');
+      await expect(logo).toHaveAttribute('href', 'https://www.flyscoot.com');
+      await expect(logo).toHaveAttribute('target', '_blank');
+      await expect(logo.locator('img')).toHaveAttribute('alt', 'Scoot');
+
+      // The band closes the page, under the contact block and above the footer.
+      const order = await page.evaluate(() => ['contact', 'partners'].map((section) => document.getElementById(section)?.getBoundingClientRect().top ?? -1));
+      expect(order[0]).toBeLessThan(order[1]);
+
+      await page.goto('/');
+      await expect(page.locator('#partners').getByRole('heading', { level: 2 })).toHaveText('আমাদের এয়ারলাইন পার্টনার');
+    } finally {
+      if (id !== null) await request.delete(`${E2E_API_URL}/api/v1/admin/airline-partners/${id}`, { headers });
+    }
+  });
+
   test('a package priced by hotel category: the card shows basic/3-star, the modal picks the category, and the booking is charged from its row', async ({ page, request }) => {
     const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
     const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages'] } });

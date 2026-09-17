@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Addon;
+use App\Models\AirlinePartner;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\CreatorVideo;
@@ -232,6 +233,15 @@ final class AdminContent
             'youtube_photo' => $picked($value['youtube']['photoMediaId'] ?? null),
             'youtube_cover_media_id' => $value['youtube']['coverMediaId'] ?? null,
             'youtube_cover' => $picked($value['youtube']['coverMediaId'] ?? null),
+        ];
+    }
+
+    public static function airlinePartner(AirlinePartner $partner): array
+    {
+        return [
+            ...$partner->only(['id', 'name_bn', 'name_en', 'media_id', 'website_url', 'sort_order']),
+            'status' => $partner->status->value,
+            'logo' => $partner->relationLoaded('logo') ? self::media($partner->logo) : null,
         ];
     }
 

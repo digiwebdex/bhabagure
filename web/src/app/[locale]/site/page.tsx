@@ -12,6 +12,7 @@ import { HeroSection } from '@/features/hero/HeroSection';
 import { Marquee } from '@/features/hero/Marquee';
 import { StepsSection } from '@/features/how-it-works/StepsSection';
 import { PackagesSection } from '@/features/packages/PackagesSection';
+import { PartnersSection } from '@/features/partners/PartnersSection';
 import { ReviewsSection } from '@/features/reviews/ReviewsSection';
 import { SearchPanel } from '@/features/search/SearchPanel';
 import { ServicesSection } from '@/features/services/ServicesSection';
@@ -69,6 +70,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <AboutSection locale={locale} team={views.team} stats={views.stats} settings={views.settings} />
       <BlogSection locale={locale} posts={views.posts} categories={views.categories} />
       <ContactSection locale={locale} settings={views.settings} />
+      <PartnersSection locale={locale} partners={views.partners} />
     </SiteChrome>
   );
 }

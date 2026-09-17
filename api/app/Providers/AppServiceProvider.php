@@ -9,6 +9,7 @@ use App\Events\CashEntryReversed;
 use App\Listeners\PlanNotifications;
 use App\Models\Account;
 use App\Models\Addon;
+use App\Models\AirlinePartner;
 use App\Models\AttendanceDevice;
 use App\Models\AuditLog;
 use App\Models\BlogCategory;
@@ -166,6 +167,7 @@ class AppServiceProvider extends ServiceProvider
             'gallery_item' => GalleryItem::class,
             'visa_service' => VisaService::class,
             'creator_video' => CreatorVideo::class,
+            'airline_partner' => AirlinePartner::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PublicContent;
 use App\Models\Addon;
+use App\Models\AirlinePartner;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\CreatorVideo;
@@ -105,6 +106,14 @@ class PublicContentController extends Controller
     public function visas(): JsonResponse
     {
         return $this->data(VisaService::query()->published()->orderBy('sort_order')->orderBy('id')->get()->map(PublicContent::visaService(...)));
+    }
+
+    /** The airlines the agency books (docs/partners-and-payments.md); empty until one is published, and the band is hidden. */
+    public function partners(): JsonResponse
+    {
+        $partners = AirlinePartner::query()->published()->with('logo')->orderBy('sort_order')->orderBy('id')->get();
+
+        return $this->data($partners->map(PublicContent::airlinePartner(...)));
     }
 
     /** The travel host and the videos staff picked (docs/travel-host.md). No profile yet: null, and the section stays hidden. */

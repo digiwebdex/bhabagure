@@ -158,6 +158,10 @@
       "heading": "Travel with {name}",
       "lede": ""
     },
+    "partners": {
+      "heading": "Our airline partners",
+      "lede": ""
+    },
     "packages": {
       "heading": "Tour packages",
       "lede": ""
@@ -454,7 +458,8 @@
     "copyright": "© {year} Bhabaghure Holidays Aviation · Bangladesh",
     "licence": "Civil Aviation registration no. {licence}",
     "explore": "Explore",
-    "reach": "Get in touch"
+    "reach": "Get in touch",
+    "payWith": "Pay with Visa, Mastercard, American Express, bKash, Nagad, Rocket, Upay and bank cards — through SSLCommerz"
   },
   "booking": {
     "title": "Book online",

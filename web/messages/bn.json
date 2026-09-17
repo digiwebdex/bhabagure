@@ -158,6 +158,10 @@
       "heading": "ভ্রমণের সঙ্গী {name}",
       "lede": ""
     },
+    "partners": {
+      "heading": "আমাদের এয়ারলাইন পার্টনার",
+      "lede": ""
+    },
     "packages": {
       "heading": "ট্যুর প্যাকেজ",
       "lede": "Tour packages · prices per person in BDT"
@@ -454,7 +458,8 @@
     "copyright": "© {year} ভবঘুরে হলিডেজ এভিয়েশন · বাংলাদেশ",
     "licence": "সিভিল এভিয়েশন নিবন্ধন নম্বর {licence}",
     "explore": "ঘুরে দেখুন",
-    "reach": "যোগাযোগ"
+    "reach": "যোগাযোগ",
+    "payWith": "ভিসা, মাস্টারকার্ড, অ্যামেক্স, বিকাশ, নগদ, রকেট, উপায় ও ব্যাংক কার্ডে পেমেন্ট — SSLCommerz-এর মাধ্যমে"
   },
   "booking": {
     "title": "অনলাইন বুকিং",

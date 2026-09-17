@@ -141,6 +141,13 @@ export interface Creator {
   videos: CreatorVideo[];
 }
 
+/** An airline the agency books, shown as a logo above the footer (docs/partners-and-payments.md). */
+export interface AirlinePartner {
+  name: Localized;
+  logo: ContentImage | null;
+  websiteUrl: string | null;
+}
+
 export interface PricingSettings extends PricingConfig {
   addons: (Addon & { name: Localized })[];
   /**
@@ -180,6 +187,7 @@ export interface ContentBundle {
   gallery: GalleryItem[];
   visas: VisaService[];
   creator: Creator;
+  partners: AirlinePartner[];
   pricing: PricingSettings;
   settings: SiteSettings;
 }

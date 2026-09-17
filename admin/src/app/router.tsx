@@ -43,6 +43,7 @@ const AccountTransactionsPage = page(() => import('../features/accounts/ReportsP
 const GeneralLedgerPage = page(() => import('../features/accounts/ReportsPage'), 'GeneralLedgerPage')
 const GalleryPage = page(() => import('../features/cms/gallery/GalleryPage'), 'GalleryPage')
 const CreatorPage = page(() => import('../features/cms/creator/CreatorPage'), 'CreatorPage')
+const AirlinePartnersPage = page(() => import('../features/cms/partners/AirlinePartnersPage'), 'AirlinePartnersPage')
 const VisaServicesPage = page(() => import('../features/cms/visas/VisaServicesPage'), 'VisaServicesPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
@@ -128,6 +129,7 @@ export const router = createBrowserRouter([
       { path: 'reviews', element: <Require permissions={cms}><ReviewsPage /></Require> },
       { path: 'gallery', element: <Require permissions={cms}><GalleryPage /></Require> },
       { path: 'travel-host', element: <Require permissions={cms}><CreatorPage /></Require> },
+      { path: 'airline-partners', element: <Require permissions={cms}><AirlinePartnersPage /></Require> },
       { path: 'visas', element: <Require permissions={cms}><VisaServicesPage /></Require> },
       { path: 'media', element: <Require permissions={['packages.manage', 'cms.manage']}><MediaLibraryPage /></Require> },
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },

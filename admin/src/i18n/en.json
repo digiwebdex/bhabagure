@@ -305,6 +305,7 @@
       "invoices": "Invoices",
       "customer_accounts": "Customers",
       "creator": "Travel host",
+      "partners": "Airline partners",
       "chart_of_accounts": "Chart of accounts",
       "journal": "Journal entries",
       "account_transactions": "Account transactions",
@@ -683,6 +684,19 @@
     "viewCount": "Views",
     "views": "{{n}} views",
     "thumbnail": "Thumbnail (needed to publish a photo; a reel shows its own video)"
+  },
+  "partners": {
+    "title": "Airline partners",
+    "subtitle": "The airlines you book, shown as a band of logos above the footer on the home page",
+    "new": "+ Add airline",
+    "empty": "No airline partners yet",
+    "emptyNote": "The band stays hidden on the website until at least one airline is published.",
+    "nameBn": "Airline (Bangla)",
+    "nameEn": "Airline (English)",
+    "logo": "Logo (needed to publish; a wide image on a white or transparent background works best)",
+    "website": "Airline website (optional)",
+    "websiteHint": "With a link, the logo opens the airline's own site in a new tab.",
+    "noLink": "No link"
   },
   "creator": {
     "title": "Travel host",

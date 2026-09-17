@@ -118,6 +118,16 @@ test.describe('language', () => {
 });
 
 test.describe('site basics', () => {
+  test('the footer names the payment methods on one line, through the image optimizer', async ({ page }) => {
+    await page.goto('/en');
+    const strip = page.locator('footer img').filter({ hasNot: page.locator('[alt="Bhabaghure Holidays"]') }).last();
+    await expect(strip).toHaveAttribute('alt', /Visa, Mastercard/);
+    await expect(strip).toHaveAttribute('src', /_next\/image\?url=%2Fpayments%2Fpay-with-sslcommerz\.png/);
+
+    await page.goto('/');
+    await expect(page.locator('footer img').last()).toHaveAttribute('alt', /বিকাশ, নগদ/);
+  });
+
   test('an unknown address answers 404 with the site’s own page, in the visitor’s language', async ({ page }) => {
     const response = await page.goto('/en/no-such-page');
     expect(response?.status()).toBe(404);
