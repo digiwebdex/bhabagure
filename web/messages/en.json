@@ -383,6 +383,13 @@
       "a": "Yes. You can join a group departure on your own; a single room adds a {percent} supplement."
     }
   ],
+  "offers": {
+    "label": "Offers",
+    "slide": "Offer {n} of {total}",
+    "previous": "Previous offer",
+    "next": "Next offer",
+    "goTo": "Show offer {n}"
+  },
   "creator": {
     "role": "The traveller behind Bhabaghure Holidays",
     "facebook": "Facebook",

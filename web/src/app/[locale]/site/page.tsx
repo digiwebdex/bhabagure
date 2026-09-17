@@ -9,6 +9,7 @@ import { DeparturesSection } from '@/features/departures/DeparturesSection';
 import { FaqSection } from '@/features/faq/FaqSection';
 import { GallerySection } from '@/features/gallery/GallerySection';
 import { HeroSection } from '@/features/hero/HeroSection';
+import { OffersSlideshow } from '@/features/offers/OffersSlideshow';
 import { Marquee } from '@/features/hero/Marquee';
 import { StepsSection } from '@/features/how-it-works/StepsSection';
 import { PackagesSection } from '@/features/packages/PackagesSection';
@@ -55,6 +56,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
     <SiteChrome locale={locale} views={views} pathname="/">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(travelAgency(views.settings, siteUrl())) }} />
       <HeroSection locale={locale} />
+      <OffersSlideshow offers={views.offers} />
       <SearchPanel />
       <Marquee locale={locale} />
       <ServicesSection locale={locale} />

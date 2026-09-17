@@ -20,6 +20,15 @@
   }
 }
 
+/* A row that is swiped or stepped through with its own buttons (the offer slideshow): the bar would sit under the
+   picture and say nothing the dots do not. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Scroll reveals: RevealObserver hides below-the-fold [data-reveal] elements, then animates them in. */
 .reveal-pending {
   opacity: 0;

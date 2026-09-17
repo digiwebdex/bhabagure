@@ -11,6 +11,7 @@ use App\Models\BlogPost;
 use App\Models\CreatorVideo;
 use App\Models\Destination;
 use App\Models\GalleryItem;
+use App\Models\OfferBanner;
 use App\Models\PackageDeparture;
 use App\Models\PricingSlab;
 use App\Models\Review;
@@ -106,6 +107,14 @@ class PublicContentController extends Controller
     public function visas(): JsonResponse
     {
         return $this->data(VisaService::query()->published()->orderBy('sort_order')->orderBy('id')->get()->map(PublicContent::visaService(...)));
+    }
+
+    /** The offer banners under the hero (docs/offer-banners.md); empty until one is published, and the slideshow is hidden. */
+    public function offers(): JsonResponse
+    {
+        $banners = OfferBanner::query()->published()->with('image')->orderBy('sort_order')->orderBy('id')->get();
+
+        return $this->data($banners->map(PublicContent::offerBanner(...)));
     }
 
     /** The airlines the agency books (docs/partners-and-payments.md); empty until one is published, and the band is hidden. */

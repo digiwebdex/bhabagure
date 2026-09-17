@@ -249,6 +249,18 @@ export type CreatorVideo = {
   status: ContentStatus
 }
 
+/** An offer banner in the slideshow under the hero video (docs/offer-banners.md). */
+export type OfferBanner = {
+  id: number
+  title_bn: string
+  title_en: string
+  media_id: number | null
+  image: Media | null
+  link_url: string | null
+  sort_order: number
+  status: ContentStatus
+}
+
 /** An airline the agency books, shown by its logo above the footer (docs/partners-and-payments.md). */
 export type AirlinePartner = {
   id: number

@@ -141,6 +141,14 @@ export interface Creator {
   videos: CreatorVideo[];
 }
 
+/** An offer banner in the slideshow under the hero video (docs/offer-banners.md). */
+export interface OfferBanner {
+  title: Localized;
+  image: ContentImage | null;
+  /** A page on this site ("/packages/…") or a full address; null when the banner leads nowhere. */
+  linkUrl: string | null;
+}
+
 /** An airline the agency books, shown as a logo above the footer (docs/partners-and-payments.md). */
 export interface AirlinePartner {
   name: Localized;
@@ -188,6 +196,7 @@ export interface ContentBundle {
   visas: VisaService[];
   creator: Creator;
   partners: AirlinePartner[];
+  offers: OfferBanner[];
   pricing: PricingSettings;
   settings: SiteSettings;
 }

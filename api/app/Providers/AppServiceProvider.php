@@ -26,6 +26,7 @@ use App\Models\JournalEntry;
 use App\Models\Media;
 use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
+use App\Models\OfferBanner;
 use App\Models\OpeningBalance;
 use App\Models\PackageDeparture;
 use App\Models\PassportScan;
@@ -168,6 +169,7 @@ class AppServiceProvider extends ServiceProvider
             'visa_service' => VisaService::class,
             'creator_video' => CreatorVideo::class,
             'airline_partner' => AirlinePartner::class,
+            'offer_banner' => OfferBanner::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,

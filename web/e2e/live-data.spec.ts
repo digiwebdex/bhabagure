@@ -317,6 +317,67 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('offer banners published in the CMS slide under the hero, above the search (docs/offer-banners.md)', async ({ page, request }) => {
+    const password = 'e2e-offer-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'offer.editor@e2e.test'], ['employee_code' => 'E2E-OFF', 'name' => 'Offer editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const pictures = String(
+      artisan('tinker', `--execute=echo implode(',', array_map(fn ($u) => App\\Models\\Media::query()->create(['disk' => 'public', 'mime' => 'image/jpeg', 'source_url' => $u, 'is_placeholder' => true, 'alt_en' => 'Offer'])->id, ['https://images.pexels.com/photos/12228138/pexels-photo-12228138.jpeg', 'https://images.pexels.com/photos/17265131/pexels-photo-17265131.jpeg']));`),
+    )
+      .trim()
+      .split(/\r?\n/)
+      .pop()!
+      .split(',')
+      .map(Number);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'offer.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+
+    await page.goto('/en');
+    await expect(page.locator('#offers')).toHaveCount(0);
+
+    const ids: number[] = [];
+    try {
+      for (const [index, media] of pictures.entries()) {
+        const created = await request.post(`${E2E_API_URL}/api/v1/admin/offer-banners`, {
+          headers,
+          data: {
+            title_bn: `অফার ${index + 1}`,
+            title_en: `Offer ${index + 1}`,
+            media_id: media,
+            link_url: index === 0 ? '/packages/nepal-mustang-adventure-tour-8-days-7-nights' : null,
+          },
+        });
+        expect(created.status(), await created.text()).toBe(201);
+        const id = (await created.json()).data.id as number;
+        ids.push(id);
+        expect((await request.post(`${E2E_API_URL}/api/v1/admin/offer-banners/${id}/publish`, { headers })).status()).toBe(200);
+      }
+
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return page.locator('#offers').count();
+      }, { timeout: 20_000 }).toBe(1);
+
+      // Straight under the hero video, above the search panel.
+      const tops = await page.evaluate(() => ['top', 'offers', 'search'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
+      expect(tops[0]).toBeLessThan(tops[1]);
+      expect(tops[1]).toBeLessThan(tops[2]);
+
+      const slideshow = page.locator('#offers');
+      await expect(slideshow.getByTestId('offer-banners').locator('li')).toHaveCount(2);
+      // The first banner leads to its package, in the visitor's language; its picture carries the banner's words.
+      await expect(slideshow.getByRole('link').first()).toHaveAttribute('href', '/en/packages/nepal-mustang-adventure-tour-8-days-7-nights');
+      await expect(slideshow.locator('img').first()).toHaveAttribute('alt', 'Offer');
+
+      // The dots move it: the second becomes current.
+      const dots = slideshow.getByRole('button', { name: /^Show offer/ });
+      await expect(dots).toHaveCount(2);
+      await dots.nth(1).click();
+      await expect(dots.nth(1)).toHaveAttribute('aria-current', 'true');
+    } finally {
+      for (const id of ids) await request.delete(`${E2E_API_URL}/api/v1/admin/offer-banners/${id}`, { headers });
+    }
+  });
+
   test('airlines published in the CMS close the home page as a band of logos (docs/partners-and-payments.md)', async ({ page, request }) => {
     const password = 'e2e-partner-editor-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'partner.editor@e2e.test'], ['employee_code' => 'E2E-PART', 'name' => 'Partner editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

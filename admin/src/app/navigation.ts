@@ -66,6 +66,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'creator', path: '/travel-host', icon: 'H', permissions: ['cms.manage'] },
       // The airlines the agency books, above the footer (docs/partners-and-payments.md).
       { key: 'partners', path: '/airline-partners', icon: '✈', permissions: ['cms.manage'] },
+      // The slideshow under the hero video (docs/offer-banners.md).
+      { key: 'offers', path: '/offer-banners', icon: '★', permissions: ['cms.manage'] },
       { key: 'media', path: '/media', icon: 'M', permissions: ['packages.manage', 'cms.manage'] },
       { key: 'settings', path: '/settings', icon: 'S', permissions: ['cms.manage'] },
     ],

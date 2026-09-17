@@ -109,6 +109,7 @@ export interface SiteViews {
   /** Null until Admin → Travel host has a profile with a link: the section stays hidden. */
   creator: CreatorView | null;
   partners: { name: string; logo: ImageView; websiteUrl: string | null }[];
+  offers: { title: string; image: ImageView; linkUrl: string | null }[];
   pricing: ContentBundle['pricing'];
   addons: { code: string; name: string; price: number; unit: 'per_person' | 'per_booking' }[];
   settings: ContentBundle['settings'] & { brand: string; companyName: string };
@@ -267,6 +268,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     creator: creatorView(bundle.creator, locale),
     // A partner without its logo is nothing to show; the API only publishes ones that have it.
     partners: (bundle.partners ?? []).filter((p) => p.logo).map((p) => ({ name: pick(p.name, locale), logo: image(p.logo!, locale), websiteUrl: p.websiteUrl })),
+    // A banner without its picture is nothing to slide; the API only publishes ones that have it.
+    offers: (bundle.offers ?? []).filter((o) => o.image).map((o) => ({ title: pick(o.title, locale), image: image(o.image!, locale), linkUrl: o.linkUrl })),
     pricing: bundle.pricing,
     addons: bundle.pricing.addons.map((a) => ({ code: a.code, name: pick(a.name, locale), price: a.price, unit: a.unit })),
     settings: { ...bundle.settings, brand: pick(bundle.settings.company.brand, locale), companyName: pick(bundle.settings.company.name, locale) },

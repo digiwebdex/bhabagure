@@ -298,6 +298,43 @@ test.describe('website content', () => {
     expect([partner.name.en, partner.websiteUrl, partner.logo.url]).toEqual(['Scoot', 'https://www.flyscoot.com', expect.stringMatching(/\/storage\/media\/.+\.webp$/)])
   })
 
+  test('an offer banner needs its picture before it can be published (docs/offer-banners.md)', async ({ page, request }) => {
+    await signIn(page, 'admin')
+    await page.getByRole('navigation').getByRole('link', { name: '★ Offer banners' }).click()
+    await expect(page.getByRole('heading', { name: 'Offer banners', level: 1 })).toBeVisible(FIRST_LOAD)
+    await expect(page.getByText('No offer banners yet')).toBeVisible(FIRST_LOAD)
+
+    await page.getByRole('button', { name: '+ Add banner' }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('What it says (Bangla)').fill('ঈদ অফার')
+    await dialog.getByLabel('What it says (English)').fill('Eid offer')
+    await dialog.getByLabel('Where it leads (optional)').fill('not a link')
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    await expect(dialog.getByText('Give a full web address', { exact: false })).toBeVisible()
+
+    await dialog.getByLabel('Where it leads (optional)').fill('/packages/nepal-mustang-adventure-tour-8-days-7-nights')
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    const row = page.getByRole('listitem').filter({ hasText: 'Eid offer' })
+    await expect(row).toContainText('/packages/nepal-mustang')
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(page.getByText('Add the banner picture.')).toBeVisible()
+    expect((await (await request.get(`${API_URL}/api/v1/public/offers`)).json()).data).toHaveLength(0)
+
+    await row.getByRole('button', { name: /^Eid offer/ }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Choose', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Choose an image' })
+    await picker.locator('input[type=file]').setInputFiles(PHOTO)
+    await expect(picker).toBeHidden({ timeout: 30_000 })
+    await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click()
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(row.getByText('Published')).toBeVisible()
+    const [banner] = (await (await request.get(`${API_URL}/api/v1/public/offers`)).json()).data
+    expect([banner.title.bn, banner.linkUrl]).toEqual(['ঈদ অফার', '/packages/nepal-mustang-adventure-tour-8-days-7-nights'])
+    expect(banner.image.url).toMatch(/\/storage\/media\/.+\.webp$/)
+  })
+
   test('media library rejects an oversized upload before sending it', async ({ page }) => {
     await signIn(page, 'admin')
     await page.goto('/media')

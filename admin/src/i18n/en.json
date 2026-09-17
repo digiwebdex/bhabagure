@@ -306,6 +306,7 @@
       "customer_accounts": "Customers",
       "creator": "Travel host",
       "partners": "Airline partners",
+      "offers": "Offer banners",
       "chart_of_accounts": "Chart of accounts",
       "journal": "Journal entries",
       "account_transactions": "Account transactions",
@@ -684,6 +685,20 @@
     "viewCount": "Views",
     "views": "{{n}} views",
     "thumbnail": "Thumbnail (needed to publish a photo; a reel shows its own video)"
+  },
+  "offers": {
+    "title": "Offer banners",
+    "subtitle": "The pictures that slide under the video at the top of the home page, in this order",
+    "new": "+ Add banner",
+    "empty": "No offer banners yet",
+    "emptyNote": "The slideshow stays hidden on the website until at least one banner is published.",
+    "titleBn": "What it says (Bangla)",
+    "titleEn": "What it says (English)",
+    "titleHint": "Read aloud to anyone who cannot see the picture, and shown in this list.",
+    "image": "Banner picture (needed to publish; wide, about 3:1 — 1600 × 533 works well)",
+    "link": "Where it leads (optional)",
+    "linkHint": "A page on this site, e.g. /packages/nepal-mustang-adventure-tour-8-days-7-nights, or a full https:// address. Leave empty for a picture that does not click.",
+    "noLink": "Leads nowhere"
   },
   "partners": {
     "title": "Airline partners",

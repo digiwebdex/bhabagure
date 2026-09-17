@@ -8,6 +8,7 @@ use App\Models\AirlinePartner;
 use App\Models\BlogPost;
 use App\Models\GalleryItem;
 use App\Models\Media;
+use App\Models\OfferBanner;
 use App\Models\PackageImage;
 use App\Models\SiteSetting;
 use App\Models\TeamMember;
@@ -71,6 +72,7 @@ class MediaController extends Controller
             || TeamMember::query()->where('photo_media_id', $media->id)->exists()
             || GalleryItem::query()->where('media_id', $media->id)->exists()
             || AirlinePartner::query()->where('media_id', $media->id)->exists()
+            || OfferBanner::query()->where('media_id', $media->id)->exists()
             // The travel host's photos and covers live in a site setting, not a column (docs/travel-host.md).
             || in_array($media->id, CreatorProfile::mediaIds(SiteSetting::get(CreatorProfile::KEY)), true);
 

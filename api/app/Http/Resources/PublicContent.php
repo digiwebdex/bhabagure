@@ -10,6 +10,7 @@ use App\Models\CreatorVideo;
 use App\Models\Destination;
 use App\Models\GalleryItem;
 use App\Models\Media;
+use App\Models\OfferBanner;
 use App\Models\PackageDeparture;
 use App\Models\PackageInclusion;
 use App\Models\Review;
@@ -133,6 +134,16 @@ final class PublicContent
                 'photo' => $image($youtube['photoMediaId'] ?? null, MediaVariant::Thumb),
                 'cover' => $image($youtube['coverMediaId'] ?? null, MediaVariant::Detail),
             ],
+        ];
+    }
+
+    /** An offer banner for the slideshow under the hero (docs/offer-banners.md). Wide, so it comes at the full size. */
+    public static function offerBanner(OfferBanner $banner): array
+    {
+        return [
+            'title' => $banner->localized('title'),
+            'image' => self::image($banner->image, MediaVariant::Full),
+            'linkUrl' => $banner->link_url,
         ];
     }
 

@@ -10,6 +10,7 @@ use App\Models\CreatorVideo;
 use App\Models\Destination;
 use App\Models\GalleryItem;
 use App\Models\Media;
+use App\Models\OfferBanner;
 use App\Models\PackageDeparture;
 use App\Models\PackageImage;
 use App\Models\PackageInclusion;
@@ -233,6 +234,15 @@ final class AdminContent
             'youtube_photo' => $picked($value['youtube']['photoMediaId'] ?? null),
             'youtube_cover_media_id' => $value['youtube']['coverMediaId'] ?? null,
             'youtube_cover' => $picked($value['youtube']['coverMediaId'] ?? null),
+        ];
+    }
+
+    public static function offerBanner(OfferBanner $banner): array
+    {
+        return [
+            ...$banner->only(['id', 'title_bn', 'title_en', 'media_id', 'link_url', 'sort_order']),
+            'status' => $banner->status->value,
+            'image' => $banner->relationLoaded('image') ? self::media($banner->image) : null,
         ];
     }
 
