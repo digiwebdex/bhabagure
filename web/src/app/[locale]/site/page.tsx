@@ -58,7 +58,6 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <SearchPanel />
       <Marquee locale={locale} />
       <ServicesSection locale={locale} />
-      <CreatorSection locale={locale} creator={views.creator} />
       <PackagesSection locale={locale} />
       <DeparturesSection locale={locale} departures={views.departures} />
       <VisaSection locale={locale} views={views} />
@@ -68,6 +67,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <FaqSection locale={locale} singleRoomSupplementPercent={views.pricing.singleRoomSupplementPercent} />
       <GallerySection locale={locale} items={views.gallery} facebook={views.settings.contact.facebook} />
       <AboutSection locale={locale} team={views.team} stats={views.stats} settings={views.settings} />
+      <CreatorSection locale={locale} creator={views.creator} />
       <BlogSection locale={locale} posts={views.posts} categories={views.categories} />
       <ContactSection locale={locale} settings={views.settings} />
       <PartnersSection locale={locale} partners={views.partners} />

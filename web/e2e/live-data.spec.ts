@@ -245,7 +245,7 @@ test.describe('CMS to website', () => {
     }
   });
 
-  test('the travel host saved in the CMS appears right after Services, with both cards, their counts and the picked video', async ({ page, request }) => {
+  test('the travel host saved in the CMS appears between About and the news, with both cards, their counts and the picked video', async ({ page, request }) => {
     const password = 'e2e-host-editor-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'host.editor@e2e.test'], ['employee_code' => 'E2E-HOST', 'name' => 'Host editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
     const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'host.editor@e2e.test', password } });
@@ -276,8 +276,8 @@ test.describe('CMS to website', () => {
         return page.locator('#travel-host').count();
       }, { timeout: 20_000 }).toBe(1);
 
-      // Straight after Services, before the packages.
-      const tops = await page.evaluate(() => ['services', 'travel-host', 'packages'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
+      // Between the About section and the news (the client's own order, 2026-09-18).
+      const tops = await page.evaluate(() => ['about', 'travel-host', 'blog'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
       expect(tops[0]).toBeLessThan(tops[1]);
       expect(tops[1]).toBeLessThan(tops[2]);
 

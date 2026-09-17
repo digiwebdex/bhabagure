@@ -33,7 +33,7 @@ const bare = (url: string) => url.replace(/^https:\/\/(www\.|m\.)?/, '').replace
 
 /**
  * Travel with Shishir Deb (docs/travel-host.md): the traveller behind the agency, a card each for his Facebook page and
- * YouTube channel, and the videos staff picked. On navy right after Services, so it is the first thing that stands out.
+ * YouTube channel, and the videos staff picked. On navy between About and the news, where the client wants it.
  * Cards rise in as they scroll into view, lift on hover, and the photo ring turns slowly — all still under reduced motion.
  * Renders nothing until Admin → Travel host has a profile with a link.
  */

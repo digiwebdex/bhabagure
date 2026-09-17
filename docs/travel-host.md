@@ -7,17 +7,18 @@ highlighted.
 
 **Decided with the client (2026-09-17):**
 - Described as *the traveller behind Bhabaghure Holidays*, with no formal title.
-- High up on the home page, right after Services.
+- High up on the home page, right after Services. **Moved 2026-09-18 at the client's word:** between the About section
+  and the news, so the page builds up to him rather than opening with him.
 - The videos under the cards are hand-picked in the admin, not his newest uploads: several of those are sponsored
   (a telecom, a phone brand) and do not belong on the agency's page unless someone chooses them.
 - His profile photos and follower counts are shown; the counts are edited in the admin.
 
 ## Website
 
-`web/src/features/creator/CreatorSection.tsx`, between Services and Packages, `id="travel-host"`. Hidden until a
-profile with at least one link is saved.
+`web/src/features/creator/CreatorSection.tsx`, between the About section and the news, `id="travel-host"`. Hidden until
+a profile with at least one link is saved.
 
-- **On navy**, with two soft brand-colour glows, so it is the first section after the hero that stands out.
+- **On navy**, with two soft brand-colour glows, so it stands out from the pale sections either side of it.
 - **Heading:** "Travel with {name}" / "ভ্রমণের সঙ্গী {name}", then *The traveller behind Bhabaghure Holidays* and the
   short bio.
 - **Two cards, one each for Facebook and YouTube.** Each card is a single link to the profile, in a new tab. It shows a
@@ -69,6 +70,6 @@ profile with at least one link is saved.
   a numbered Facebook profile keeps its id; a shown photo cannot be deleted; every shape of video link; duplicates;
   publish and order; permissions. `CmsPermissionsTest` covers both new paths.
 - `packages/format`: `formatAudience` in both languages, rounding down at every unit.
-- Website e2e `live-data.spec.ts`: saved in the CMS → appears after Services with both cards, counts, the video and its
+- Website e2e `live-data.spec.ts`: saved in the CMS → appears between About and the news with both cards, counts, the video and its
   thumbnail through the optimizer, in English and Bangla.
 - Admin e2e `cms.spec.ts`: a link is required; the video's thumbnail previews; publishing reaches the public API.
