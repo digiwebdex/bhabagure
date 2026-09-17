@@ -15,7 +15,8 @@ type VisaForm = Omit<VisaService, 'id' | 'sort_order' | 'status'>
 export function VisaServicesPage() {
   const { t } = useTranslation()
   const { bdt } = useFormat()
-  const lines = (text: string | null) => (text ?? '').split(/\r?\n/).filter((line) => line.trim() !== '').length
+  // Requirements, not the group headings among them ("For business person:"), which list nothing to bring.
+  const lines = (text: string | null) => (text ?? '').split(/\r?\n/).filter((line) => line.trim() !== '' && !/[:：]\s*$/u.test(line)).length
 
   return (
     <PublishedList<VisaService, VisaForm>

@@ -129,6 +129,15 @@ class DownloadsTest extends TestCase
         $this->assertStringContainsString('<li>Passport valid for 6 months</li>', $this->rendered[0]);
         $this->assertStringContainsString('৳ 5,500 per person', $this->rendered[0]);
         $this->assertSame(['visa', $visa->id, 'Thailand Tourist visa'], [Download::query()->sole()->kind, Download::query()->sole()->visa_service_id, Download::query()->sole()->title]);
+
+        // Grouped: the heading prints as a heading over its own numbered list, not as a numbered requirement. Edited a minute
+        // later, as staff would — a stored PDF is keyed on when the visa was last saved, to the second.
+        $this->travel(1)->minutes();
+        $visa->forceFill(['requirements_en' => "Passport valid for 6 months\nFor business person:\nRenewed trade license"])->save();
+        $this->actingAsApi($customer)->get('/api/v1/portal/downloads/visas/thailand-tourist-visa?locale=en')->assertOk();
+        $grouped = preg_replace('/\s+/', ' ', end($this->rendered));
+        $this->assertStringContainsString('<h3 class="req-group">For business person</h3> <ol class="req"> <li>Renewed trade license</li> </ol>', $grouped);
+        $this->assertStringNotContainsString('<li>For business person:</li>', $grouped);
     }
 
     #[Test]

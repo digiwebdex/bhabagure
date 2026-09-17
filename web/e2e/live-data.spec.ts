@@ -200,7 +200,7 @@ test.describe('CMS to website', () => {
       data: {
         country_code: 'TH', country_bn: 'থাইল্যান্ড', country_en: 'Thailand', visa_type_bn: 'টুরিস্ট ভিসা', visa_type_en: 'Tourist visa', price: 5500,
         processing_bn: '৭–১০ কর্মদিবস', processing_en: '7–10 working days', stay_en: 'Single entry, up to 60 days',
-        requirements_bn: 'ছয় মাস মেয়াদি পাসপোর্ট\nদুই কপি ছবি', requirements_en: 'Passport valid for 6 months\nTwo photos, 35 × 45 mm',
+        requirements_bn: 'ছয় মাস মেয়াদি পাসপোর্ট\nদুই কপি ছবি', requirements_en: 'Passport valid for 6 months\nTwo photos, 35 × 45 mm\nFor business person:\nRenewed trade license',
         notes_en: 'Apply at least 3 weeks before travel.',
       },
     });
@@ -227,7 +227,10 @@ test.describe('CMS to website', () => {
       await card.getByRole('link', { name: 'Requirements & details →' }).click();
       await expect(page).toHaveURL(/\/en\/visa\/thailand-tourist-visa$/);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Thailand Tourist visa');
-      await expect(page.getByTestId('visa-requirements').locator('li')).toHaveText(['Passport valid for 6 months', 'Two photos, 35 × 45 mm']);
+      // A line ending in a colon heads its own group, numbered from one, rather than being a requirement itself.
+      await expect(page.getByTestId('visa-requirements').locator('li')).toHaveText(['Passport valid for 6 months', 'Two photos, 35 × 45 mm', 'Renewed trade license']);
+      await expect(page.getByTestId('visa-requirements').getByRole('heading', { level: 3 })).toHaveText(['For business person']);
+      await expect(page.getByTestId('visa-requirements').locator('ol')).toHaveCount(2);
       await expect(page.locator('main')).toContainText('Single entry, up to 60 days');
       await expect(page.locator('main')).toContainText('Apply at least 3 weeks before travel.');
       await page.goto('/visa/thailand-tourist-visa');

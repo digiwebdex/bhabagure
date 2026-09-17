@@ -12,6 +12,7 @@ import { getSiteViews, siteUrl } from '@/lib/content';
 import { loadContent } from '@/lib/content/source';
 import { formattersFor } from '@/lib/formatters';
 import { localizedPath, visaPath, whatsappUrl } from '@/lib/links';
+import { requirementGroups } from '@/lib/visa-requirements';
 
 export async function generateStaticParams() {
   const { visas } = await loadContent();
@@ -80,11 +81,18 @@ export default async function VisaPage({ params }: PageProps<'/[locale]/site/vis
           <h2 id="visa-requirements" className="text-19 font-semibold">
             {t('visa.requirements')}
           </h2>
-          <ol className={`m-0 flex flex-col gap-2 pl-5 text-15 leading-1.6 ${locale === 'bn' ? '[list-style-type:bengali]' : 'list-decimal'}`} data-testid="visa-requirements">
-            {visa.requirements.map((requirement, index) => (
-              <li key={index}>{requirement}</li>
+          <div className="flex flex-col gap-4" data-testid="visa-requirements">
+            {requirementGroups(visa.requirements).map((group, g) => (
+              <div key={g} className="flex flex-col gap-2">
+                {group.heading ? <h3 className="text-16 font-semibold">{group.heading}</h3> : null}
+                <ol className={`m-0 flex flex-col gap-2 pl-5 text-15 leading-1.6 ${locale === 'bn' ? '[list-style-type:bengali]' : 'list-decimal'}`}>
+                  {group.items.map((requirement, index) => (
+                    <li key={index}>{requirement}</li>
+                  ))}
+                </ol>
+              </div>
             ))}
-          </ol>
+          </div>
         </section>
 
         {visa.notes ? (

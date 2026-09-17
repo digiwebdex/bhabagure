@@ -28,6 +28,29 @@ class VisaService extends Model
         return array_values(array_filter(array_map('trim', preg_split('/\R/u', (string) $text) ?: []), fn (string $line) => $line !== ''));
     }
 
+    /**
+     * Requirements in groups: a line ending in a colon — "For business person:" — heads the lines under it, and any lines
+     * before the first heading form a group with none. A heading with nothing under it is dropped. The website reads the
+     * same rule from the same lines (web/src/lib/visa-requirements.ts).
+     *
+     * @param  list<string>  $lines
+     * @return list<array{heading: ?string, items: list<string>}>
+     */
+    public static function groups(array $lines): array
+    {
+        $groups = [['heading' => null, 'items' => []]];
+        foreach ($lines as $line) {
+            if (preg_match('/^(.*\S)\s*[:：]$/u', $line, $heading) === 1) {
+                $groups[] = ['heading' => $heading[1], 'items' => []];
+
+                continue;
+            }
+            $groups[array_key_last($groups)]['items'][] = $line;
+        }
+
+        return array_values(array_filter($groups, fn (array $group) => $group['items'] !== []));
+    }
+
     /** @return array{bn: list<string>, en: list<string>} each language falls back to the other when it has none */
     public function requirementLists(): array
     {

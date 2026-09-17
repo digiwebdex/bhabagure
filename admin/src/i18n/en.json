@@ -705,7 +705,7 @@
     "stayEn": "Stay (English, optional)",
     "requirementsBn": "Requirements (Bangla)",
     "requirementsEn": "Requirements (English)",
-    "requirementsHint": "One requirement per line. Needed in both languages to publish.",
+    "requirementsHint": "One requirement per line. End a line with a colon to start a group, e.g. “For business person:”. Needed in both languages to publish.",
     "requirementCount_one": "{{count}} requirement",
     "requirementCount_other": "{{count}} requirements",
     "notesBn": "Good to know (Bangla, optional)",

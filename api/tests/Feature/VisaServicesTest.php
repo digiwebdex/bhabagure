@@ -61,6 +61,38 @@ class VisaServicesTest extends TestCase
     }
 
     #[Test]
+    public function a_line_ending_in_a_colon_heads_the_requirements_under_it(): void
+    {
+        $lines = VisaService::lines("Passport, 6 months validity\nRecent photo\n\nFor business person:\nTrade license\nVisiting card\nFor student :\nব্যবসায়ীদের জন্য：\nNOC from school");
+
+        $this->assertSame([
+            ['heading' => null, 'items' => ['Passport, 6 months validity', 'Recent photo']],
+            ['heading' => 'For business person', 'items' => ['Trade license', 'Visiting card']],
+            // A heading with nothing under it says nothing and is dropped; a full-width colon counts, as Bangla keyboards type it.
+            ['heading' => 'ব্যবসায়ীদের জন্য', 'items' => ['NOC from school']],
+        ], VisaService::groups($lines));
+
+        // A colon inside a line is part of the requirement, not a heading.
+        $this->assertSame([['heading' => null, 'items' => ['Note: bring the originals']]], VisaService::groups(['Note: bring the originals']));
+        $this->assertSame([], VisaService::groups(['Only a heading:']));
+    }
+
+    #[Test]
+    public function headings_with_no_requirements_under_them_cannot_be_published(): void
+    {
+        Bus::fake([RevalidateWebsite::class]);
+        $admin = $this->staff('admin');
+        $id = $this->actingAsApi($admin)->postJson('/api/v1/admin/visas', [
+            'country_bn' => 'জাপান', 'country_en' => 'Japan', 'visa_type_bn' => 'স্টিকার ভিসা', 'visa_type_en' => 'Sticker visa',
+            'processing_bn' => '১০ কর্মদিবস', 'processing_en' => '10 working days',
+            'requirements_bn' => "ব্যবসায়ীদের জন্য:\nট্রেড লাইসেন্স", 'requirements_en' => "For business person:\nFor student:",
+        ])->assertCreated()->json('data.id');
+
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/visas/{$id}/publish")->assertUnprocessable()
+            ->assertJsonPath('problems', ['List the requirements in both languages, one per line.']);
+    }
+
+    #[Test]
     public function slugs_are_unique_addresses_codes_are_two_letters_and_price_may_be_left_for_on_request(): void
     {
         $admin = $this->staff('admin');

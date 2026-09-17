@@ -180,12 +180,13 @@ It posts to `POST /public/hotel-quotes`, which is rate-limited and has the honey
 - the country and visa type in both languages, and an optional two-letter country code;
 - the price per person including the service charge; left blank, the website shows "Price on request";
 - processing time and stay;
-- requirements, one per line;
+- requirements, one per line; a line ending in a colon ("For business person:") heads the lines under it
+  (`VisaService::groups()`, mirrored by `web/src/lib/visa-requirements.ts`), added 2026-09-17 for the client's checklist;
 - notes;
 - the page address (`/visa/<slug>`, generated from the country and visa type unless typed).
 
 Entries start as drafts and are ordered like the other CMS lists. Publishing needs a processing time and the
-requirements in both languages. Nothing is seeded: which countries, prices and requirements appear is the agency's
+requirements in both languages — at least one requirement under the headings, not headings alone. Nothing is seeded: which countries, prices and requirements appear is the agency's
 content, and the section, tab and menu links stay hidden until one is published. Saves refresh the website through the
 new `visas` cache tag.
 
@@ -196,8 +197,8 @@ language when one is empty.
 **Website.**
 - **Visa section.** On the home page after Departures: one card per country, each visa type with its price and
   processing time, a link to its page, and *Ask about this visa* on WhatsApp.
-- **`/visa/<slug>` page.** Price, processing time, stay, the requirements as a numbered list (Bengali numerals in
-  Bangla), notes, WhatsApp, and links to the country's other visa types. It is listed in the sitemap.
+- **`/visa/<slug>` page.** Price, processing time, stay, the requirements as numbered lists under their group headings
+  (Bengali numerals in Bangla; each group numbers from one), notes, WhatsApp, and links to the country's other visa types. It is listed in the sitemap.
 - **Visa tab.** In the search panel, shown once a visa is published: pick a country to see its visa types.
 - **Links.** The ☰ sheet and the footer link to the section.
 - Country codes show as a small badge, not a flag emoji, because Windows browsers draw flag emoji as bare letters.
@@ -295,8 +296,9 @@ the invoice lock). Each is A4, in the language the visitor is reading.
     - the chosen cell is highlighted;
   - the single-room and service-charge notes, and the date the prices are from;
   - the itinerary, included and not included, and the office's contact line.
-- **Visa requirements** (`brochures/visa.blade.php`): price, processing time and stay; the numbered requirements
-  (Bengali numerals in Bangla); notes; an "as of" line; contact.
+- **Visa requirements** (`brochures/visa.blade.php`): price, processing time and stay; the numbered requirements under
+  their group headings (Bengali numerals in Bangla); notes; an "as of" line; contact. Spaced so the client's full
+  five-group checklist, a note and the footer fit one A4 page in both languages (checked 2026-09-17).
 - **Storage.** A made PDF is kept on the private disk. Its key covers everything that changes the page: the template
   version, the package or visa and its last update, the category, travellers, language, the pricing settings and the
   day. Downloading the same thing again doesn't start Chrome. Bump `BrochurePdf::TEMPLATE_VERSION` when a template

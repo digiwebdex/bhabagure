@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
 class BrochurePdf
 {
     /** Bump when a template changes, so stored PDFs are made again. */
-    public const TEMPLATE_VERSION = 1;
+    public const TEMPLATE_VERSION = 2;
 
     /** Group sizes a package without a grid is priced for in the brochure. */
     private const SLAB_SIZES = [1, 2, 3, 4, 6, 10];
@@ -79,7 +79,7 @@ class BrochurePdf
             'locale' => $locale,
             'forPdf' => $forPdf,
             'visa' => $visa,
-            'requirements' => $visa->requirementLists()[$locale === 'en' ? 'en' : 'bn'],
+            'groups' => VisaService::groups($visa->requirementLists()[$locale === 'en' ? 'en' : 'bn']),
             'asOf' => now('Asia/Dhaka')->toDateString(),
         ])->render();
     }

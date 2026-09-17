@@ -82,7 +82,8 @@ class VisaServiceController extends Controller
     {
         return array_values(array_filter([
             blank($model->processing_bn) && blank($model->processing_en) ? __('cms.publish_requirements.processing') : null,
-            VisaService::lines($model->requirements_bn) === [] || VisaService::lines($model->requirements_en) === [] ? __('cms.publish_requirements.requirements') : null,
+            // Headings alone list nothing to bring: at least one requirement under them, in each language.
+            VisaService::groups(VisaService::lines($model->requirements_bn)) === [] || VisaService::groups(VisaService::lines($model->requirements_en)) === [] ? __('cms.publish_requirements.requirements') : null,
         ]));
     }
 
