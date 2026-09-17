@@ -54,14 +54,14 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
 
       {/* Every method the gateway takes, on one line, from SSLCommerz's own strip so it stays right as they add banks.
           Wider than a phone: it scrolls sideways rather than shrinking the marks past reading. */}
-      <div className="mx-auto mb-3 max-w-4xl overflow-x-auto px-1 pb-1">
+      <div className="mx-auto mb-3 max-w-6xl overflow-x-auto px-1 pb-1">
         <Image
           src="/payments/pay-with-sslcommerz.png"
           alt={t('footer.payWith')}
           width={9561}
           height={314}
-          sizes="(min-width: 900px) 900px, 200vw"
-          className="mx-auto h-7 w-auto max-w-none rounded-4 bg-white px-1.5 py-0.5"
+          sizes="(min-width: 1200px) 1150px, 300vw"
+          className="mx-auto h-9 w-auto max-w-none rounded-6 bg-white px-2 py-1"
         />
       </div>
 
