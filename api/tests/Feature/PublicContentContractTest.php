@@ -6,6 +6,7 @@ use App\Enums\ContentStatus;
 use App\Models\BlogPost;
 use App\Models\Booking;
 use App\Models\PackageDeparture;
+use App\Models\TeamMember;
 use App\Models\TourPackage;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,6 +91,29 @@ class PublicContentContractTest extends TestCase
         // onlineCheckout comes from the server's SSLCommerz configuration, not the seed (the test environment's fake gateway: on).
         $this->assertEquals($this->seedFile('pricing.json') + ['onlineCheckout' => true], $this->getJson('/api/v1/public/pricing')->json('data'));
         $this->assertEquals($this->seedFile('settings.json'), $this->getJson('/api/v1/public/settings')->json('data'));
+    }
+
+    /**
+     * A deploy re-seeds, so the starter team must not walk back in after staff have entered their own people
+     * (it did on 2026-09-18: two demo members reappeared on the live site).
+     */
+    #[Test]
+    public function seeding_again_leaves_the_team_the_staff_entered(): void
+    {
+        TeamMember::query()->delete();
+        TeamMember::query()->create([
+            'name_bn' => 'শিশির দেবনাথ',
+            'name_en' => 'Shishir Debnath',
+            'role_bn' => 'ব্যবস্থাপনা পরিচালক',
+            'role_en' => 'Managing Director',
+            'employee_code' => 'BGH001',
+            'status' => ContentStatus::Published,
+            'sort_order' => 1,
+        ]);
+
+        $this->seed(ContentSeeder::class);
+
+        $this->assertSame(['BGH001'], TeamMember::query()->pluck('employee_code')->all());
     }
 
     #[Test]

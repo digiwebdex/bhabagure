@@ -26,6 +26,8 @@ use RuntimeException;
  *
  * Safe on a live database: it only creates what is missing and never updates or deletes an existing row,
  * so re-running it cannot overwrite an edit made in the CMS. It never truncates (shared MySQL instance).
+ * The team is starter content: once the list has anybody in it, seedTeam leaves it alone, so a member deleted
+ * in the CMS does not come back at the next deploy.
  */
 class ContentSeeder extends Seeder
 {
@@ -168,6 +170,12 @@ class ContentSeeder extends Seeder
 
     private function seedTeam(): void
     {
+        // Starter content only. Once the agency has entered its own people, the seed leaves the list alone: otherwise a
+        // member deleted in the CMS would walk back in at the next deploy, which is what happened on 2026-09-18.
+        if (TeamMember::query()->exists()) {
+            return;
+        }
+
         foreach ($this->read('team.json') as $row) {
             TeamMember::query()->firstOrCreate(['employee_code' => $row['employeeCode']], [
                 'name_bn' => $row['name']['bn'],
