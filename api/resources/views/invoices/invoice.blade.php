@@ -137,7 +137,9 @@
       <div class="company">
         <strong>{{ $company['name'] }}</strong>
         <span>{{ $company['address'] }}</span>
-        <span>@if ($company['email'])Email: {{ $company['email'] }}<br>@endif @if ($company['phones'])Mobile: {{ $company['phones'] }}<br>@endif @if ($company['civilAviationNo'])Tax No: Civil Aviation No- {{ $company['civilAviationNo'] }}@endif</span>
+        {{-- email_off: Cloudflare otherwise swaps e-mail addresses for "[email protected]" on pages it serves, and the
+             script that swaps them back does not run in the invoice view (seen 2026-09-19). --}}
+        <span><!--email_off-->@if ($company['email'])Email: {{ $company['email'] }}<br>@endif<!--/email_off--> @if ($company['phones'])Mobile: {{ $company['phones'] }}<br>@endif @if ($company['civilAviationNo'])Tax No: Civil Aviation No- {{ $company['civilAviationNo'] }}@endif</span>
         @if ($company['website'])<span class="web num">{{ $company['website'] }}</span>@endif
       </div>
     </header>
@@ -164,9 +166,9 @@
 
   <section class="parties">
     <div class="billed">
-      <span class="who">{{ $kind === 'quotation' ? 'Prepared for · গ্রাহক' : 'Invoice To · গ্রাহক' }}</span>
+      <span class="who">{{ $kind === 'quotation' ? 'Prepared for' : 'Invoice To' }}</span>
       <strong>{{ $billed['name'] }}</strong>
-      <span class="lines">@foreach ($billed['lines'] as $line){{ $line }}@if (! $loop->last)<br>@endif @endforeach</span>
+      <span class="lines"><!--email_off-->@foreach ($billed['lines'] as $line){{ $line }}@if (! $loop->last)<br>@endif @endforeach<!--/email_off--></span>
     </div>
     <div class="meta">
       @foreach ($meta as [$label, $value])
@@ -177,14 +179,14 @@
 
   @if ($package['title'])
     <section class="package">
-      <span class="label">{{ $packageLabel ?? 'Package · প্যাকেজ' }}</span>
+      <span class="label">{{ $packageLabel ?? 'Package' }}</span>
       <strong>{{ $package['title'] }}@if ($package['code']) <span class="num" style="font-weight:400;color:var(--muted)">· {{ $package['code'] }}</span>@endif</strong>
       @if ($package['detail'])<span class="detail">{{ $package['detail'] }}</span>@endif
     </section>
   @endif
 
   <table>
-    <thead><tr><th>Sl.</th><th class="item">Item · বিবরণ</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+    <thead><tr><th>Sl.</th><th class="item">Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
     <tbody>
       @foreach ($items as $i => $item)
         <tr>
@@ -204,14 +206,14 @@
     @endforeach
     {{-- The figure written twice, in words and in digits, so a changed digit shows. --}}
     <div class="grand">
-      <span class="words">কথায় · In words: {{ $amountInWords }}</span>
-      <span class="sum"><span>সর্বমোট · Total</span><span class="num">{{ $total }}</span></span>
+      <span class="words">In words: {{ $amountInWords }}</span>
+      <span class="sum"><span>Total</span><span class="num">{{ $total }}</span></span>
     </div>
     @if ($kind !== 'quotation')
       @foreach ($paymentRows as [$label, $amount])
         <div class="line"><span>{{ $label }}</span><span class="num">{{ $amount }}</span></div>
       @endforeach
-      <div class="line due"><span>বকেয়া · Amount Due</span><span class="num">{{ $due }}</span></div>
+      <div class="line due"><span>Amount Due</span><span class="num">{{ $due }}</span></div>
     @endif
   </section>
 
@@ -226,15 +228,15 @@
     <div class="stack">
       @if ($travellers)
         <div>
-          <span class="label">Travellers · যাত্রী</span>
+          <span class="label">Travellers</span>
           @foreach ($travellers as $i => $traveller)
-            <span class="row">{{ \App\Support\Numerals::localizeDigits((string) ($i + 1), $locale) }}. {{ $traveller['name'] }}@if ($traveller['passport']) — <span class="num">{{ $traveller['passport'] }}@if ($traveller['expiry']) · মেয়াদ {{ $traveller['expiry'] }}@endif</span>@endif</span>
+            <span class="row">{{ \App\Support\Numerals::localizeDigits((string) ($i + 1), $locale) }}. {{ $traveller['name'] }}@if ($traveller['passport']) — <span class="num">{{ $traveller['passport'] }}@if ($traveller['expiry']) · expires {{ $traveller['expiry'] }}@endif</span>@endif</span>
           @endforeach
         </div>
       @endif
       @if ($kind === 'quotation')
         <div data-region="validity">
-          <span class="label">Validity · মেয়াদ</span>
+          <span class="label">Validity</span>
           <span class="muted">{{ $validUntil }}</span>
         </div>
       @endif
@@ -244,11 +246,11 @@
   @if (! empty($howToPay))
     {{-- Phase 8 §4.F: bank transfer, the payment link while the built-in checkout is off, bKash with its charge. --}}
     <section class="how-to-pay" data-region="how-to-pay">
-      <span class="label">How to pay · পেমেন্টের উপায়</span>
+      <span class="label">How to pay</span>
       @foreach ($howToPay as $line)
         <span class="t">· {{ $line }}</span>
       @endforeach
-      <span class="t">{{ $locale === 'bn' ? 'রেফারেন্সে বুকিং বা কোটেশন নম্বর লিখুন।' : 'Write the booking or quotation number as the reference.' }}</span>
+      <span class="t">Write the booking or quotation number as the reference; on the card payment form, after your name.</span>
     </section>
   @endif
 
@@ -271,7 +273,7 @@
     </div>
     <div class="thanks">
       Thank you for choosing {{ $company['name'] }}. We are thrilled to be part of your journey and consider it a pleasure to serve valued guests like you!
-      @if ($company['notificationsWhatsapp'])<br><span data-region="notifications-number">নোটিফিকেশন নম্বর · Notifications: {{ $company['notificationsWhatsapp'] }}</span>@endif
+      @if ($company['notificationsWhatsapp'])<br><span data-region="notifications-number">Notifications: {{ $company['notificationsWhatsapp'] }}</span>@endif
     </div>
   </footer>
 

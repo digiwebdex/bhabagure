@@ -168,7 +168,8 @@ class PaymentOptionsTest extends TestCase
         $html = app(InvoicePdf::class)->html($invoice, false, 'en');
         $this->assertStringContainsString('data-region="how-to-pay"', $html);
         $this->assertStringContainsString('routing 145260001', $html);
-        $this->assertStringContainsString('bKash payment number 01613000000: ৳ 77,495', $html);
+        // The printed invoice is English only: BDT, not ৳ (2026-09-19).
+        $this->assertStringContainsString('bKash payment number 01613000000: BDT 77,495', $html);
         // The test environment's checkout is on: the link isn't printed.
         $this->assertStringNotContainsString('invoice-form?refer=EXAMPLE', $html);
 

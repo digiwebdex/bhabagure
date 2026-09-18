@@ -319,7 +319,8 @@ test.describe('CMS to website', () => {
       // Bangla at the unprefixed address, counts in lakh.
       await page.goto('/');
       const bn = page.locator('#travel-host');
-      await expect(bn.getByRole('heading', { level: 2 })).toHaveText('ভ্রমণের সঙ্গী শিশির দেব');
+      // Banglish, not a translation that shifts the meaning (the client's rule, 2026-09-19).
+      await expect(bn.getByRole('heading', { level: 2 })).toHaveText('ট্রাভেল উইথ শিশির দেব');
       await bn.getByTestId('travel-host-facebook').scrollIntoViewIfNeeded();
       await expect(bn.getByTestId('travel-host-facebook')).toContainText('১১ লাখ');
     } finally {

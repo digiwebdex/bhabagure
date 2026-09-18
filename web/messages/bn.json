@@ -22,7 +22,7 @@
     "services": "সেবা",
     "packages": "প্যাকেজ",
     "visa": "ভিসা",
-    "departures": "যাত্রা",
+    "departures": "ডিপার্চার",
     "about": "আমাদের সম্পর্কে",
     "news": "খবর",
     "book": "বুকিং",
@@ -32,7 +32,7 @@
     "sheet": {
       "services": "সেবা",
       "packages": "প্যাকেজ",
-      "departures": "যাত্রা",
+      "departures": "ডিপার্চার",
       "visa": "ভিসা সেবা",
       "about": "আমাদের সম্পর্কে",
       "news": "খবর ও গাইড",
@@ -157,7 +157,7 @@
       "lede": "Our services"
     },
     "creator": {
-      "heading": "ভ্রমণের সঙ্গী {name}",
+      "heading": "ট্রাভেল উইথ {name}",
       "lede": ""
     },
     "partners": {
@@ -169,7 +169,7 @@
       "lede": "Tour packages · prices per person in BDT"
     },
     "departures": {
-      "heading": "আসন্ন গ্রুপ যাত্রা",
+      "heading": "আসন্ন গ্রুপ ডিপার্চার",
       "lede": "Confirmed group departures · seats fill fast"
     },
     "visa": {
@@ -251,7 +251,7 @@
     "groupTour": "গ্রুপ ট্যুর",
     "anySize": "যেকোনো সংখ্যা",
     "minPax": "ন্যূনতম {countText} জন",
-    "departure": "যাত্রা",
+    "departure": "ডিপার্চার",
     "departureRegular": "নিয়মিত ডিপার্চার",
     "departureAnyDate": "যেকোনো তারিখ",
     "departureOnRequest": "তারিখ যোগাযোগ করুন",
@@ -322,7 +322,7 @@
   "departures": {
     "seatsLeft": "{totalText}-এর মধ্যে {leftText}টি সিট বাকি",
     "almostFull": "প্রায় পূর্ণ",
-    "guaranteed": "নিশ্চিত যাত্রা",
+    "guaranteed": "গ্যারান্টিড ডিপার্চার",
     "book": "সিট বুক করুন"
   },
   "whyUs": {
@@ -408,7 +408,7 @@
     "goTo": "অফার {n} দেখুন"
   },
   "creator": {
-    "role": "ভবঘুরে হলিডেজের পেছনের ভ্রমণকারী",
+    "role": "ভবঘুরে হলিডেজের পেছনের ট্রাভেলার",
     "facebook": "ফেসবুক",
     "youtube": "ইউটিউব",
     "followers": "ফলোয়ার",
@@ -559,7 +559,7 @@
     "whatsappHelp": "আসসালামু আলাইকুম, {title} বুকিং নিয়ে আমার একটি প্রশ্ন আছে।",
     "priceChanged": "বুকিংয়ের সময় দাম পরিবর্তন হয়েছে। নতুন মোট {total}। কোনো টাকা কাটা হয়নি।",
     "refreshPrices": "নতুন দাম দেখুন",
-    "seatsUnavailable": "{count, plural, =0 {এই যাত্রার সব সিট বুক হয়ে গেছে।} other {এই যাত্রায় আর মাত্র {countText}টি সিট খালি আছে।}} কম যাত্রী বা অন্য তারিখ বেছে নিন।",
+    "seatsUnavailable": "{count, plural, =0 {এই ডিপার্চারের সব সিট বুক হয়ে গেছে।} other {এই ডিপার্চারে আর মাত্র {countText}টি সিট খালি আছে।}} কম যাত্রী বা অন্য তারিখ বেছে নিন।",
     "paymentUnavailable": "এখন অনলাইন পেমেন্ট করা যাচ্ছে না। পেমেন্টের জন্য আমাদের সাথে যোগাযোগ করুন।",
     "rateLimited": "অনেকবার চেষ্টা হয়েছে। এক মিনিট পরে আবার চেষ্টা করুন।",
     "invalidBooking": "কিছু তথ্য গ্রহণ করা যায়নি। পেছনে গিয়ে যাত্রীদের তথ্য মিলিয়ে দেখুন।",

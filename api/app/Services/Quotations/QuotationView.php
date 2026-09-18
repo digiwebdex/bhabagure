@@ -17,26 +17,30 @@ use App\Support\Payments\PaymentOptions;
  */
 final class QuotationView
 {
-    public const TEMPLATE_VERSION = '2';
+    /** 3: English only (2026-09-19). */
+    public const TEMPLATE_VERSION = '3';
 
     public function __construct(private readonly InvoiceView $invoiceView) {}
 
     /** @return array<string, mixed> */
     public function data(Quotation $quotation, bool $header, string $locale = 'bn'): array
     {
+        // Printed in English only, like the invoice (the client's decision, 2026-09-19); the parameter stays for callers.
+        $locale = 'en';
         $quotation->loadMissing(['lines', 'customer', 'assignedStaff']);
         $n = fn ($value) => Numerals::number($value, $locale);
-        $bdt = fn ($value) => Numerals::bdt($value, $locale);
+        // "BDT", not the ৳ sign: an English-only document (2026-09-19).
+        $bdt = fn ($value) => Numerals::bdt($value, $locale, 'auto', 'code');
         $date = fn ($value) => $value ? Numerals::date($value->toDateString(), $locale) : '—';
 
         $status = match ($quotation->displayStatus()) {
-            Quotation::DRAFT => ['key' => 'draft', 'label' => 'খসড়া · DRAFT'],
-            'expired' => ['key' => 'expired', 'label' => 'মেয়াদোত্তীর্ণ · EXPIRED'],
-            Quotation::ACCEPTED => ['key' => 'accepted', 'label' => 'গৃহীত · ACCEPTED'],
-            Quotation::DECLINED => ['key' => 'declined', 'label' => 'প্রত্যাখ্যাত · DECLINED'],
-            Quotation::WITHDRAWN => ['key' => 'withdrawn', 'label' => 'প্রত্যাহার · WITHDRAWN'],
-            Quotation::CONVERTED => ['key' => 'booked', 'label' => 'বুকিং হয়েছে · BOOKED'],
-            default => ['key' => 'valid', 'label' => 'বৈধ · VALID'],
+            Quotation::DRAFT => ['key' => 'draft', 'label' => 'DRAFT'],
+            'expired' => ['key' => 'expired', 'label' => 'EXPIRED'],
+            Quotation::ACCEPTED => ['key' => 'accepted', 'label' => 'ACCEPTED'],
+            Quotation::DECLINED => ['key' => 'declined', 'label' => 'DECLINED'],
+            Quotation::WITHDRAWN => ['key' => 'withdrawn', 'label' => 'WITHDRAWN'],
+            Quotation::CONVERTED => ['key' => 'booked', 'label' => 'BOOKED'],
+            default => ['key' => 'valid', 'label' => 'VALID'],
         };
 
         $travel = '—';
@@ -47,17 +51,14 @@ final class QuotationView
 
         $packageDetail = array_filter([
             $quotation->duration_nights !== null && $quotation->duration_days !== null
-                ? ($locale === 'bn'
-                    ? $n($quotation->duration_nights).' রাত '.$n($quotation->duration_days).' দিন'
-                    : $quotation->duration_nights.' nights '.$quotation->duration_days.' days')
+                ? $quotation->duration_nights.' nights '.$quotation->duration_days.' days'
                 : null,
-            $quotation->includes_airfare === null ? null
-                : ($quotation->includes_airfare ? ($locale === 'bn' ? 'এয়ার টিকেট অন্তর্ভুক্ত' : 'Air ticket included') : ($locale === 'bn' ? 'এয়ার টিকেট ছাড়া' : 'Without air ticket')),
-            $locale === 'bn' ? $n($quotation->pax_count).' জন যাত্রী' : $quotation->pax_count.' travellers',
+            $quotation->includes_airfare === null ? null : ($quotation->includes_airfare ? 'Air ticket included' : 'Without air ticket'),
+            $quotation->pax_count.' travellers',
             match ($quotation->room_type) {
-                'single' => $locale === 'bn' ? 'সিঙ্গেল রুম' : 'Single room',
-                'triple' => $locale === 'bn' ? 'ট্রিপল শেয়ারিং' : 'Triple sharing',
-                default => $locale === 'bn' ? 'টুইন শেয়ারিং' : 'Twin sharing',
+                'single' => 'Single room',
+                'triple' => 'Triple sharing',
+                default => 'Twin sharing',
             },
         ]);
 
@@ -81,26 +82,26 @@ final class QuotationView
             'documentDate' => $date(($quotation->sent_at ?? $quotation->created_at)->copy()->setTimezone('Asia/Dhaka')),
             'dueDate' => $validUntil,
             'meta' => [
-                ['যাত্রার তারিখ · Travel', $travel],
-                ['প্রস্তুতকারী · Prepared by', $quotation->assignedStaff?->name ?? '—'],
+                ['Travel', $travel],
+                ['Prepared by', $quotation->assignedStaff?->name ?? '—'],
             ],
             'package' => [
-                'title' => $locale === 'bn' ? ($quotation->package_title_bn ?: $quotation->package_title_en) : $quotation->package_title_en,
+                'title' => $quotation->package_title_en ?: $quotation->package_title_bn,
                 'code' => $quotation->package_code,
                 'detail' => implode(' · ', $packageDetail),
             ],
             'items' => $quotation->lines->map(fn (QuotationLine $line) => [
-                'title' => $locale === 'bn' ? ($line->title_bn ?: $line->title_en) : $line->title_en,
+                'title' => $line->title_en ?: $line->title_bn,
                 'note' => null,
                 'quantity' => $n($line->quantity),
-                'rate' => (float) $line->unit_price > 0 ? $bdt($line->unit_price) : ($locale === 'bn' ? 'অন্তর্ভুক্ত' : 'Included'),
+                'rate' => (float) $line->unit_price > 0 ? $bdt($line->unit_price) : 'Included',
                 'amount' => (float) $line->amount > 0 ? $bdt($line->amount) : '—',
             ])->all(),
             'travellers' => [],
             'totals' => array_values(array_filter([
-                ['সাব-টোটাল · Subtotal', $bdt($subtotal)],
-                (float) $quotation->discount_amount > 0 ? ['ডিসকাউন্ট · Discount', '− '.$bdt($quotation->discount_amount)] : null,
-                ['সার্ভিস চার্জ ও ভ্যাট · VAT ('.Numerals::percent((float) $quotation->vat_rate, $locale).')', $bdt($quotation->vat_amount)],
+                ['Subtotal', $bdt($subtotal)],
+                (float) $quotation->discount_amount > 0 ? ['Discount', '− '.$bdt($quotation->discount_amount)] : null,
+                ['Service charge & VAT ('.Numerals::percent((float) $quotation->vat_rate, $locale).')', $bdt($quotation->vat_amount)],
             ])),
             'total' => $bdt($quotation->total_amount),
             'amountInWords' => AmountInWords::taka(Money::toNumber($quotation->total_amount) ?? 0),
@@ -111,13 +112,11 @@ final class QuotationView
             'paymentRows' => [],
             'note' => $quotation->notes,
             // Phase 8 §4.F: how the quoted total can be paid once it is booked.
-            'howToPay' => PaymentOptions::lines(Money::toNumber($quotation->total_amount) ?? 0, $locale),
-            'validUntil' => $locale === 'bn'
-                ? "{$validUntil} পর্যন্ত এই মূল্য প্রযোজ্য। এরপর মূল্য পরিবর্তন হতে পারে; সিট প্রাপ্যতা বুকিংয়ের সময় নিশ্চিত করা হবে।"
-                : "This price is honoured until {$validUntil}. After that it may change; seats are confirmed when you book.",
+            'howToPay' => PaymentOptions::lines(Money::toNumber($quotation->total_amount) ?? 0, $locale, currency: 'code'),
+            'validUntil' => "This price is honoured until {$validUntil}. After that it may change; seats are confirmed when you book.",
             'terms' => [
-                'এই কোটেশন কোনো বুকিং বা সিট নিশ্চিত করে না; বুকিং ও পেমেন্টের পর সিট নিশ্চিত হয়। পাসপোর্টের মেয়াদ যাত্রার তারিখ থেকে কমপক্ষে ৬ মাস থাকতে হবে।',
-                'ভিসা প্রত্যাখ্যাত হলে প্রসেসিং ফি অফেরতযোগ্য। এই কোটেশন কম্পিউটার-জেনারেটেড; স্বাক্ষর ছাড়াও বৈধ।',
+                'This quotation does not book or hold any seat; seats are confirmed on booking and payment. Passports must be valid for at least 6 months from the travel date.',
+                'Visa processing fees are not refunded if a visa is refused. This quotation is computer-generated and valid without a signature.',
             ],
             'voidReason' => null,
         ];

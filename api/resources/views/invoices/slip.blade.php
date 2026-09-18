@@ -67,9 +67,12 @@
     <div><span>{{ $kind === 'quotation' ? 'Quotation' : 'Invoice' }}</span><span class="num">{{ $number }}</span></div>
     <div><span>Date</span><span class="num">{{ $slipDate }}</span></div>
     @if ($billed['name'])<div><span>Customer</span><span>{{ $billed['name'] }}</span></div>@endif
+    {{-- email_off: kept as written, not hidden by Cloudflare (see invoice.blade.php). --}}
+    <!--email_off-->
     @foreach ($billed['lines'] as $line)
       <div><span></span><span class="num">{{ $line }}</span></div>
     @endforeach
+    <!--/email_off-->
   </div>
   <div class="rule"></div>
 
@@ -94,9 +97,8 @@
 
   @unless ($delivery)
     <div class="totals">
-      {{-- The shared labels read "বাংলা · English"; a 80mm roll has room for one, and the counter slip is English. --}}
       @foreach ($totals as [$label, $amount])
-        <div><span>{{ trim(explode('·', $label)[1] ?? $label) }}</span><span class="num">{{ $amount }}</span></div>
+        <div><span>{{ $label }}</span><span class="num">{{ $amount }}</span></div>
       @endforeach
       <div class="grand"><span>Total</span><span class="num">{{ $total }}</span></div>
       @if ($kind !== 'quotation')

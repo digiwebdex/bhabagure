@@ -105,7 +105,11 @@ class InvoicePdfTest extends TestCase
         $after = $this->texts($this->renderPdf(true));
 
         $this->assertSame($before, $after);
-        $this->assertPdfContains('১,৭৪,৬২৪', $after, 'total in Bengali digits');
+        // English only since 2026-09-19 (the client's decision): Latin digits, whatever the customer's language.
+        $this->assertPdfContains('1,74,624', $after, 'total in English digits');
+        // Not even the ৳ sign: amounts read "BDT".
+        $this->assertDoesNotMatchRegularExpression('/[\x{0980}-\x{09FF}]/u', implode('', $after), 'no Bangla on the invoice');
+        $this->assertPdfContains('BDT 1,74,624', $after, 'total in BDT');
         $this->assertStringNotContainsString('Renamed', implode('', $after));
     }
 
@@ -115,8 +119,8 @@ class InvoicePdfTest extends TestCase
         $texts = $this->texts($this->renderPdf(true));
 
         $this->assertPdfContains('PARTIAL', $texts);
-        $this->assertPdfContains('১,০০,০০০', $texts, 'paid');
-        $this->assertPdfContains('৭৪,৬২৪', $texts, 'balance due');
+        $this->assertPdfContains('1,00,000', $texts, 'paid');
+        $this->assertPdfContains('74,624', $texts, 'balance due');
         $this->assertPdfContains('8FK2M4QX', $texts, 'payment reference');
         $this->assertPdfContains('Notifications: 01911000111', $texts, 'the notifications number beside the main line');
     }

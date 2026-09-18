@@ -106,14 +106,15 @@ final class PaymentOptions
      *
      * @return list<string>
      */
-    public static function lines(int|float $amount, string $locale, ?bool $checkout = null): array
+    public static function lines(int|float $amount, string $locale, ?bool $checkout = null, string $currency = 'symbol'): array
     {
         $options = self::forAmount($amount, $checkout);
         if ($options === null) {
             return [];
         }
         $en = $locale === 'en';
-        $money = fn (int|float $value) => Numerals::bdt($value, $locale);
+        // 'code' writes "BDT 76,500" — the printed invoice and quotation, which are English only.
+        $money = fn (int|float $value) => Numerals::bdt($value, $locale, 'auto', $currency);
         $lines = [];
         foreach ($options['banks'] as $bank) {
             $lines[] = $en

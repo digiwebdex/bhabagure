@@ -179,7 +179,7 @@ class PaymentsBooksTest extends TestCase
 
         // The printed invoice names the service, not a package or booking; payments are this invoice's own.
         $html = app(InvoicePdf::class)->html($invoice->fresh(), true, 'en');
-        $this->assertStringContainsString('Service · সেবা', $html);
+        $this->assertStringContainsString('<span class="label">Service</span>', $html);
         $this->assertStringContainsString('Sales team incentive tour', $html);
         $at = stripos($html, 'booking');
         $this->assertFalse($at, 'no booking on a deal invoice: …'.substr($html, max(0, (int) $at - 120), 240));
