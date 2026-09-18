@@ -504,6 +504,31 @@ test.describe('CMS to website', () => {
       await save(pkg.title_en);
     }
   });
+
+  test('the home page introduces two of the team; the whole team is on /ourteam', async ({ page, request }) => {
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['team'] } });
+    // A third member, so the home page has more people to choose from than it shows.
+    artisan(
+      'tinker',
+      `--execute=App\\Models\\TeamMember::query()->updateOrCreate(['employee_code' => 'E2E-TM3'], ['name_bn' => 'তৃতীয় সদস্য', 'name_en' => 'Third Member', 'role_bn' => 'গাইড', 'role_en' => 'Guide', 'status' => 'published', 'sort_order' => 90]); echo 'ok';`,
+    );
+    await refresh();
+
+    try {
+      await page.goto('/en');
+      const about = page.locator('#about');
+      await expect(about.locator('li')).toHaveCount(2);
+      await expect(about).not.toContainText('Third Member');
+
+      await about.getByRole('link', { name: 'See the whole team →' }).click();
+      const everyone = page.locator('#team li');
+      await expect(everyone).toHaveCount(3);
+      await expect(page.locator('#team')).toContainText('Third Member');
+    } finally {
+      artisan('tinker', `--execute=App\\Models\\TeamMember::query()->where('employee_code', 'E2E-TM3')->delete(); echo 'ok';`);
+      await refresh();
+    }
+  });
 });
 
 /**

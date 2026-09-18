@@ -17,26 +17,38 @@ interface AboutSectionProps {
   settings: SiteViews['settings'];
 }
 
-/** Company description, four fact cards and the CMS-managed team grid, with the way to the full team page. */
+/** The home page introduces the two who lead the agency; the rest of the team is on /ourteam. */
+const LEADS = 2;
+
+/**
+ * Company description with the four fact cards, and beside them the two people who lead the agency, with the way to
+ * the full team page.
+ */
 export async function AboutSection({ locale, team, stats, settings }: AboutSectionProps) {
   const t = await getTranslations({ locale });
   const f = formattersFor(locale);
   const licence = f.digits(settings.civilAviationNo);
   const paragraphs = (t.raw('about.paras') as string[]).map((_, i) => t(`about.paras.${i}`, { licence }));
   const facts = aboutFacts(t, f, stats, settings);
+  const leads = team.slice(0, LEADS);
 
   return (
     <section id="about" className="border-t border-hairline-soft bg-white">
       <div className="mx-auto flex max-w-site flex-col gap-8 px-section-x py-section-y">
         <SectionHeading heading={t('sections.about.heading')} lede={t('sections.about.lede')} />
-        <div className="grid-auto-fit-280 grid items-start gap-fluid-20-32">
-          <div data-reveal className="flex min-w-0 flex-col gap-3.5">
-            {paragraphs.map((text) => (
-              <p key={text} className="text-15 leading-1.75 text-muted text-pretty">
-                {text}
-              </p>
-            ))}
-            <dl className="grid-auto-fit-half-130 mt-1 grid gap-3.5">
+        {/* The story and its figures fill the wider column; the two leads stand beside them, and under them on a phone. */}
+        <div className="grid items-start gap-fluid-20-32 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-5">
+            <div data-reveal className="flex flex-col gap-3.5">
+              {paragraphs.map((text) => (
+                <p key={text} className="text-15 leading-1.75 text-muted text-pretty">
+                  {text}
+                </p>
+              ))}
+            </div>
+
+            {/* Two up on a phone, four across from a tablet on. */}
+            <dl data-reveal className="grid min-w-0 grid-cols-2 gap-3.5 md:grid-cols-4">
               {facts.map((fact) => (
                 <div key={fact.label} className="flex flex-col-reverse gap-0.5 rounded-14 border border-hairline bg-paper-alt px-4 py-3.5">
                   <dt className="text-12.5 leading-1.4 text-muted">{fact.label}</dt>
@@ -53,7 +65,7 @@ export async function AboutSection({ locale, team, stats, settings }: AboutSecti
                 {t('about.seeTeam')}
               </Link>
             </div>
-            <TeamGrid locale={locale} team={team} />
+            <TeamGrid locale={locale} team={leads} />
           </div>
         </div>
       </div>

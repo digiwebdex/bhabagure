@@ -208,9 +208,10 @@ test.describe('gallery', () => {
 });
 
 test.describe('team page', () => {
-  test('the header link opens /ourteam with every member the About section shows, in both languages', async ({ page }) => {
+  test('the header link opens /ourteam with at least everyone the About section shows, in both languages', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/en');
+    // About introduces the two who lead the agency; the team page has the whole team (live-data.spec covers the split).
     const members = await page.locator('#about li').count();
     expect(members).toBeGreaterThan(0);
 
@@ -218,7 +219,7 @@ test.describe('team page', () => {
     await nav.getByRole('link', { name: 'Team', exact: true }).click();
     await expect(page).toHaveURL(/\/en\/ourteam$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Our team' })).toBeVisible();
-    await expect(page.locator('#team li')).toHaveCount(members);
+    expect(await page.locator('#team li').count()).toBeGreaterThanOrEqual(members);
     await expect(nav.getByRole('link', { name: 'Team', exact: true })).toHaveAttribute('aria-current', 'page');
     // The contact section is on this page too, so the header's Contact stays here; About goes back home.
     await expect(nav.getByRole('link', { name: 'Contact', exact: true })).toHaveAttribute('href', '#contact');
@@ -226,7 +227,7 @@ test.describe('team page', () => {
 
     await page.goto('/ourteam');
     await expect(page.getByRole('heading', { level: 1, name: 'আমাদের টিম' })).toBeVisible();
-    await expect(page.locator('#team li')).toHaveCount(members);
+    expect(await page.locator('#team li').count()).toBeGreaterThanOrEqual(members);
   });
 
   test('the About section, the footer and the ☰ sheet lead to it', async ({ page }) => {
