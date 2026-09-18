@@ -7,6 +7,7 @@ use App\Models\Customer;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -93,6 +94,30 @@ class MinimalBookingTest extends TestCase
         $this->actingAsApi($agent)->putJson("/api/v1/admin/booking-travellers/{$second->id}", ['full_name' => 'Someone Else'])
             ->assertStatus(409)->assertJsonPath('code', 'claim_first');
         $this->assertSame('Nusrat Jahan', $second->fresh()->full_name);
+    }
+
+    /** 2026-09-19: a customer who clicked "Confirm booking" twice was booked twice. One attempt is one booking. */
+    #[Test]
+    public function the_same_booking_attempt_sent_twice_is_one_booking(): void
+    {
+        $key = (string) Str::uuid();
+        $payload = $this->payload([['name' => 'Tanvir Hasan', 'phone' => '01711000001'], []]) + ['idempotency_key' => $key];
+        $quote = $this->postJson('/api/v1/public/bookings', $payload + ['expected_total' => 0])->assertStatus(409)->json('quote.total');
+
+        $reference = $this->postJson('/api/v1/public/bookings', $payload + ['expected_total' => $quote])->assertCreated()->json('data.reference');
+        // The second click: no second booking, the first one's number, and no access token handed out again.
+        $this->postJson('/api/v1/public/bookings', $payload + ['expected_total' => $quote])
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'already_created')
+            ->assertJsonPath('reference', $reference)
+            ->assertJsonMissingPath('data.accessToken');
+        $this->assertSame(1, Booking::query()->count());
+
+        // A new attempt (a new key) is a new booking; a key must be a UUID.
+        $this->postJson('/api/v1/public/bookings', [...$payload, 'idempotency_key' => (string) Str::uuid(), 'expected_total' => $quote])->assertCreated();
+        $this->postJson('/api/v1/public/bookings', [...$payload, 'idempotency_key' => 'not-a-uuid', 'expected_total' => $quote])
+            ->assertUnprocessable()->assertJsonValidationErrors('idempotency_key');
+        $this->assertSame(2, Booking::query()->count());
     }
 
     /** @param list<array<string, string>> $travellers */

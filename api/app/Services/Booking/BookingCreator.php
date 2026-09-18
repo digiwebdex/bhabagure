@@ -178,6 +178,7 @@ final class BookingCreator
             'terms_accepted_at' => $request->termsAccepted ? now() : null,
             'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
             'access_token_hash' => Booking::hashAccessToken($accessToken),
+            'idempotency_key' => $request->idempotencyKey,
         ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
 
         foreach (array_values($lines) as $index => $line) {

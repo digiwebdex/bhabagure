@@ -16,7 +16,8 @@ class VisaServicesTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function a_draft_needs_processing_time_and_requirements_in_both_languages_before_it_is_published(): void
+    /** The processing time became optional on 2026-09-19 (the client's decision); the website then says to ask. */
+    public function a_draft_needs_requirements_in_both_languages_before_it_is_published(): void
     {
         Bus::fake([RevalidateWebsite::class]);
         $admin = $this->staff('admin');
@@ -31,7 +32,7 @@ class VisaServicesTest extends TestCase
 
         $this->actingAsApi($admin)->postJson("/api/v1/admin/visas/{$created['id']}/publish")->assertUnprocessable()
             // Staff screens are English only (docs/phase-5-admin-core.md, 2026-09-16).
-            ->assertJsonPath('problems', ['Say how long processing takes.', 'List the requirements in both languages, one per line.']);
+            ->assertJsonPath('problems', ['List the requirements in both languages, one per line.']);
         $this->getJson('/api/v1/public/visas')->assertOk()->assertExactJson(['data' => []]);
 
         $this->actingAsApi($admin)->putJson("/api/v1/admin/visas/{$created['id']}", [
@@ -58,6 +59,13 @@ class VisaServicesTest extends TestCase
             'updatedAt' => VisaService::query()->sole()->updated_at->toIso8601String(),
         ]]]);
         $this->assertSame(['cms.visa_service.created', 'cms.visa_service.updated', 'cms.visa_service.published'], AuditLog::query()->where('auditable_type', 'visa_service')->orderBy('id')->pluck('action')->all());
+
+        // Without a processing time it still publishes; the website asks the visitor to get in touch instead.
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/visas/{$created['id']}", [
+            ...$created, 'processing_bn' => '', 'processing_en' => '', 'stay_en' => 'Single entry, up to 60 days',
+            'requirements_bn' => "৬ মাস মেয়াদি পাসপোর্ট\nদুই কপি ছবি\nশেষ ৬ মাসের ব্যাংক স্টেটমেন্ট",
+        ])->assertOk();
+        $this->getJson('/api/v1/public/visas')->assertOk()->assertJsonPath('data.0.processing', null);
     }
 
     #[Test]

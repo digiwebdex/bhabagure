@@ -2,6 +2,7 @@
 
 return [
     'price_changed' => 'The price of this trip changed while you were booking. Please check the new total.',
+    'already_created' => 'This booking is already made — booking number :reference.',
     'seats_unavailable' => 'Only :count seats are left on this departure. Choose fewer travellers or another date.',
     'not_found' => 'We could not find this booking. Use the link from your booking confirmation, or contact us.',
     'passport_expiry_after_travel' => 'The passport must still be valid on the travel date.',

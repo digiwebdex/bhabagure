@@ -153,7 +153,7 @@ export function TripDetailView({ reference }: { reference: string }) {
               </button>
             </div>
           ) : null}
-          {!checking && trip.payment.canPay && trip.payment.checkout && trip.payment.manual && (trip.payment.manual.bank || trip.payment.manual.bkash) ? (
+          {!checking && trip.payment.canPay && trip.payment.checkout && trip.payment.manual && (trip.payment.manual.banks.length > 0 || trip.payment.manual.bkash) ? (
             <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal alongsideCheckout />
           ) : null}
         </Card>

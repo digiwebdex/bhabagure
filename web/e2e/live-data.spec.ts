@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { API_DIR, artisan, E2E_API_URL } from '../../scripts/e2e-api.mjs';
@@ -500,6 +500,8 @@ test.describe('CMS to website', () => {
       await expect(rows.nth(1)).toContainText('With the domestic flight (Krabi → Bangkok)');
       await expect(rows.nth(1)).toContainText('2 travellers৳ 1,48,000 in all৳ 74,000 per person');
       await expect(rows.nth(1)).toContainText('4 travellers৳ 2,80,000 in all৳ 70,000 per person');
+      // The booking adds the service charge and VAT; the table says so rather than showing a lower total.
+      await expect(table.getByTestId('price-table-service')).toHaveText('Service charge and VAT (2%) are added at booking.');
       // An estimate is not added to any price; it is listed apart.
       await expect(table).toContainText('Paid separately (estimates)');
       await expect(table).toContainText('International air ticket: About BDT 37,000–50,000 per person');
@@ -590,7 +592,11 @@ test.describe('how to pay', () => {
       expect(
         (
           await save({
-            bank: { bankName: 'Example Trust Bank', accountName: 'Example Holidays', accountNumber: '1310000000001', branch: 'Mirpur', routingNumber: '145260001', transferType: 'NPSB' },
+            // Two accounts since 2026-09-19 (a BRAC Bank one was added): each gets its own box.
+            banks: [
+              { bankName: 'Example Trust Bank', accountName: 'Example Holidays', accountNumber: '1310000000001', branch: 'Mirpur', routingNumber: '145260001', transferType: 'NPSB' },
+              { bankName: 'Example Second Bank', accountName: 'Example Holidays', accountNumber: '2020000000002', branch: 'Gulshan', routingNumber: '060260002', transferType: 'NPSB' },
+            ],
             link: 'https://invoice.sslcommerz.com/invoice-form?refer=EXAMPLE',
             bkash: { number: '+8801613000000', chargePercent: 1.3 },
           })
@@ -614,14 +620,71 @@ test.describe('how to pay', () => {
       const how = page.getByTestId('payment-instructions');
       await expect(how.getByRole('heading', { name: 'Or pay by hand' })).toBeVisible();
       await expect(how).toContainText(`Write your booking reference ${booking.reference} with the payment`);
-      await expect(how.getByTestId('pay-bank')).toContainText('1310000000001');
-      await expect(how.getByTestId('pay-bank')).toContainText('145260001');
-      // ৳ 76,500 due; bKash adds 1.3% (৳ 995), so ৳ 77,495 to send. The link is hidden while the checkout works.
-      await expect(how.getByTestId('pay-bkash')).toContainText('01613000000');
+      const banks = how.getByTestId('pay-bank');
+      await expect(banks).toHaveCount(2);
+      await expect(banks.nth(0)).toContainText('Bank transfer — Example Trust Bank (NPSB)');
+      await expect(banks.nth(0)).toContainText('1310000000001');
+      await expect(banks.nth(0)).toContainText('145260001');
+      await expect(banks.nth(1)).toContainText('Bank transfer — Example Second Bank (NPSB)');
+      await expect(banks.nth(1)).toContainText('2020000000002');
+      // ৳ 76,500 due; bKash adds 1.3% (৳ 995), so ৳ 77,495 to pay. The link is hidden while the checkout works.
+      // A bKash payment (merchant) number, not "send money" (2026-09-19).
+      await expect(how.getByTestId('pay-bkash')).toContainText('bKash payment number01613000000');
       await expect(how.getByTestId('pay-bkash')).toContainText('৳ 77,495');
       await expect(how.getByTestId('pay-link')).toHaveCount(0);
     } finally {
-      await save({ bank: null, link: null, bkash: null });
+      await save({ banks: [], link: null, bkash: null });
+    }
+  });
+});
+
+/**
+ * 2026-09-19: on live the online checkout is off, and "Confirm booking" saved the booking but left the form open on top
+ * of the booking page, its button live again — customers clicked again and were booked twice. The e2e API reads
+ * api/.env.e2e on every request, so the checkout is switched off here the way it is on live.
+ */
+test.describe('booking while the online checkout is off (as on live)', () => {
+  test('confirming closes the form and opens the booking with the congratulations; a double click books once', async ({ page, request }) => {
+    const envFile = resolve(API_DIR, '.env.e2e');
+    const original = readFileSync(envFile, 'utf8');
+    // The website caches the pricing (with onlineCheckout) under the settings tag: refreshed after, or later tests would
+    // find the checkout still off.
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['settings'] } });
+    writeFileSync(envFile, original.replace(/^SSLCOMMERZ_MODE=.*$/m, 'SSLCOMMERZ_MODE=off'));
+    try {
+      const phone = uniquePhone();
+      await page.goto('/en');
+      await page.locator('#packages article').filter({ hasText: 'NEPAL MUSTANG' }).getByRole('button', { name: 'Book now' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Book online' });
+      await dialog.getByLabel('Departure date').fill(new Date(Date.now() + 70 * 86_400_000).toISOString().slice(0, 10));
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      const lead = dialog.locator('section').nth(0);
+      await lead.getByLabel('Name (as on passport)').fill('DOUBLE CLICKER');
+      await lead.getByLabel('WhatsApp number').fill(phone);
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      await dialog.getByRole('checkbox').check();
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+
+      // The impatient customer: two clicks on the button that books.
+      await dialog.getByRole('button', { name: /^(Confirm booking|Pay) ·? ?৳/ }).dblclick();
+
+      await expect(page).toHaveURL(/\/en\/booking\/BH-[\d-]+#t=/);
+      await expect(dialog).toHaveCount(0);
+      const congrats = page.getByTestId('booking-congrats');
+      await expect(congrats).toContainText('Congratulations! Your booking is done');
+      const reference = page.url().match(/booking\/(BH-[\d-]+)/)![1];
+      await expect(congrats).toContainText(`Your booking number is ${reference}`);
+
+      const count = artisan('tinker', `--execute=echo App\\Models\\BookingTraveller::query()->where('phone', '88${phone}')->count();`).trim().split(/\r?\n/).pop();
+      expect(count).toBe('1');
+
+      // Back on the home page and booking again is a new attempt, with a fresh form.
+      await page.goto('/en');
+      await page.locator('#packages article').filter({ hasText: 'NEPAL MUSTANG' }).getByRole('button', { name: 'Book now' }).click();
+      await expect(dialog.getByRole('button', { name: 'Next step →' })).toBeVisible();
+    } finally {
+      writeFileSync(envFile, original);
+      expect((await refresh()).status()).toBe(200);
     }
   });
 });

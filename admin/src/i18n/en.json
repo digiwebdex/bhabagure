@@ -833,7 +833,7 @@
     "notificationsWhatsapp": "Notifications WhatsApp number",
     "notificationsWhatsappHint": "The dedicated number automated WhatsApp messages come from. The website, invoices and booking page show it as “Notifications” beside the main number. Customer WhatsApp messages are held until it is set.",
     "bankName": "Bank",
-    "bankHint": "Shown to customers with the exact amount. Leave every bank field blank to not offer bank transfer.",
+    "bankHint": "Shown to customers with the exact amount. Add an account for each bank you take transfers into (up to three); remove them all to not offer bank transfer.",
     "accountName": "Account name",
     "accountNumber": "Account number",
     "branch": "Branch",
@@ -844,7 +844,10 @@
     "paymentLinkHint": "Your SSLCommerz payment form. Shown until the built-in checkout takes payments (store ID and password on the server).",
     "bkashNumber": "bKash number",
     "bkashCharge": "bKash charge (%)",
-    "bkashChargeHint": "Added to the amount the customer sends, and recorded as a charge, not as payment for the tour."
+    "bkashChargeHint": "Added to the amount the customer sends, and recorded as a charge, not as payment for the tour.",
+    "bankAccount": "Bank account {{n}}",
+    "addBank": "Add bank account",
+    "removeBank": "Remove this account"
   },
   "bookings": {
     "title": "Bookings",

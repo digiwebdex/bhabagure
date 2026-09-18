@@ -22,6 +22,7 @@ use App\Support\Money;
 use App\Support\Numerals;
 use App\Support\Phone;
 use App\Support\Pricing\PricingConfig;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -63,9 +64,15 @@ class PublicBookingController extends Controller
             'expected_total' => ['required', 'numeric', 'min:0'],
             'terms_accepted' => ['accepted'],
             'locale' => ['required', Rule::in(['bn', 'en'])],
+            // The website sends one per booking attempt; see alreadyCreated().
+            'idempotency_key' => ['nullable', 'uuid'],
         ], [
             'travellers.*.passport_expiry.after' => __('booking.passport_expiry_after_travel'),
         ]);
+
+        if (($data['idempotency_key'] ?? null) !== null && ($existing = $this->alreadyCreated($data['idempotency_key'])) !== null) {
+            return $existing;
+        }
 
         try {
             $created = $creator->create(new BookingRequest(
@@ -90,7 +97,16 @@ class PublicBookingController extends Controller
                 source: LeadSource::WebsiteForm->value,
                 termsAccepted: true,
                 hotelCategory: $data['hotel_category'] ?? null,
+                idempotencyKey: $data['idempotency_key'] ?? null,
             ), $request->user('customer'));
+        } catch (UniqueConstraintViolationException $e) {
+            // Two copies of one attempt at the same moment: the index let the first in, and the second answers as a repeat.
+            $existing = ($data['idempotency_key'] ?? null) === null ? null : $this->alreadyCreated($data['idempotency_key']);
+            if ($existing === null) {
+                throw $e;
+            }
+
+            return $existing;
         } catch (PriceChanged $e) {
             return response()->json(['message' => __('booking.price_changed'), 'code' => 'price_changed', 'quote' => $e->quote], Response::HTTP_CONFLICT);
         } catch (SeatsUnavailable $e) {
@@ -143,6 +159,21 @@ class PublicBookingController extends Controller
             'charge' => Money::toNumber($attempt->online_charge),
             'total' => Money::toNumber(LedgerService::amount($attempt->expectedPaisa())),
         ]]);
+    }
+
+    /**
+     * A booking attempt that already went through: 409 `already_created` with its reference, never a second booking. The
+     * access token is not sent again — only its hash is kept, and the form that made the attempt still holds it.
+     */
+    private function alreadyCreated(string $key): ?JsonResponse
+    {
+        $booking = Booking::query()->where('idempotency_key', $key)->first(['id', 'reference']);
+
+        return $booking === null ? null : response()->json([
+            'message' => __('booking.already_created', ['reference' => $booking->reference]),
+            'code' => 'already_created',
+            'reference' => $booking->reference,
+        ], Response::HTTP_CONFLICT);
     }
 
     private function authorizedBooking(Request $request, string $reference): Booking

@@ -33,8 +33,10 @@ and Bhutan's Sustainable Development Fee are **estimates**.
 
 The price table's first row is the package price from the same pricing the booking uses (`packagePerPerson`, following
 the hotel category chosen on the page), labelled “without air ticket” or “with air ticket” from `includes_airfare`. So
-the table, the card, the stepper and the booking can never disagree. Booking itself is unchanged: an extra is chosen by
-telling the office, which adds it to the invoice.
+the table, the card, the stepper and the booking can never disagree. The booking then adds the site's service charge
+and VAT (2% today, from the Pricing screen); the table says so in a line under it, so a customer who sees ৳ 59,000 for
+two here and ৳ 60,180 at the payment step knows why. Booking itself is unchanged: an extra is chosen by telling the
+office, which adds it to the invoice.
 
 - Website: `web/src/features/packages/PriceTable.tsx`, under the price stepper on the package page and modal. One row per
   price; on a phone the label sits above the two prices.

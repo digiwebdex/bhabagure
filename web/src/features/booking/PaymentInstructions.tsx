@@ -26,19 +26,20 @@ export function PaymentInstructions({ manual, reference, portal = false, alongsi
         <span className="text-13 leading-1.55 text-muted">{t('reference', { reference })}</span>
       </div>
 
-      {manual.bank ? (
-        <div className={`flex flex-col gap-2 rounded-14 border p-3.5 ${box}`} data-testid="pay-bank">
-          <strong className="text-14">{t('bankTitle', { type: manual.bank.transferType })}</strong>
+      {manual.banks.map((bank) => (
+        // One box per account (a second bank, BRAC Bank, was asked for on 2026-09-19); the customer uses either.
+        <div key={bank.accountNumber} className={`flex flex-col gap-2 rounded-14 border p-3.5 ${box}`} data-testid="pay-bank">
+          <strong className="text-14">{t('bankTitle', { bank: bank.bankName, type: bank.transferType })}</strong>
           <dl className="m-0 grid gap-x-4 gap-y-1.5 text-13.5 sm:grid-cols-[auto_1fr]">
-            <Row label={t('bankName')} value={manual.bank.bankName} />
-            <Row label={t('accountName')} value={manual.bank.accountName} />
-            <Row label={t('accountNumber')} value={manual.bank.accountNumber} copy />
-            <Row label={t('branch')} value={manual.bank.branch} />
-            <Row label={t('routingNumber')} value={manual.bank.routingNumber} copy />
+            <Row label={t('bankName')} value={bank.bankName} />
+            <Row label={t('accountName')} value={bank.accountName} />
+            <Row label={t('accountNumber')} value={bank.accountNumber} copy />
+            <Row label={t('branch')} value={bank.branch} />
+            <Row label={t('routingNumber')} value={bank.routingNumber} copy />
             <Row label={t('amount')} value={f.bdt(manual.amount)} strong />
           </dl>
         </div>
-      ) : null}
+      ))}
 
       {manual.link ? (
         <div className={`flex flex-col gap-2 rounded-14 border p-3.5 ${box}`} data-testid="pay-link">

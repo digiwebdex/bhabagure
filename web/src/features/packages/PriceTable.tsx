@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
+import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import type { PackageView } from '@/lib/content/views';
 import { useFormatters } from '@/lib/use-formatters';
 
@@ -16,6 +17,7 @@ const GROUPS = [2, 4] as const;
 export function PriceTable({ pkg, rate }: { pkg: PackageView; rate: (travellers: number) => number }) {
   const t = useTranslations('detail.priceTable');
   const f = useFormatters();
+  const { pricing } = useSiteContent();
 
   const base = pkg.includesAirfare === false ? t('base.withoutAir') : pkg.includesAirfare ? t('base.withAir') : t('base.plain');
   const rows = [
@@ -51,6 +53,12 @@ export function PriceTable({ pkg, rate }: { pkg: PackageView; rate: (travellers:
           </li>
         ))}
       </ul>
+      {/* The flyer prices above; the booking adds the service charge and VAT on top, so the table says so. */}
+      {pricing.serviceChargePercent > 0 ? (
+        <span className="text-12.5 text-muted" data-testid="price-table-service">
+          {t('serviceNote', { percent: f.percent(pricing.serviceChargePercent) })}
+        </span>
+      ) : null}
 
       {estimates.length > 0 ? (
         <div className="flex flex-col gap-1.5 rounded-14 border border-orange-line bg-orange-panel px-4 py-3">

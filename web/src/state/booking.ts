@@ -47,6 +47,13 @@ export interface BookingState {
   method: PaymentMethod;
   /** Validation messages show once the traveller tries to move on. */
   attempted: Record<BookingStep, boolean>;
+  /**
+   * One key per booking attempt, sent with the booking: a second click or a retry is the same booking, not a new one
+   * (2026-09-19). A new attempt — opening the form again — gets a new key.
+   */
+  attemptKey: string;
+  /** The booking this attempt made, kept here so the payment step still knows it if it is drawn again. */
+  created: CreatedBooking | null;
 
   start: (options: { packageSlug: string; date?: string; pax?: number; maxPax: number; hotelCategory?: HotelCategory | null }) => void;
   close: () => void;
@@ -62,7 +69,19 @@ export interface BookingState {
   updateTraveller: (index: number, patch: Partial<TravellerDraft>) => void;
   setTerms: (terms: boolean) => void;
   setMethod: (method: PaymentMethod) => void;
+  setCreated: (created: CreatedBooking) => void;
+  /** The booking is made: close the form and let go of the travellers' details. */
+  finish: () => void;
 }
+
+export interface CreatedBooking {
+  reference: string;
+  token: string;
+  /** Whether the built-in online checkout takes the payment next, as the API said. */
+  checkout: boolean;
+}
+
+const newAttemptKey = () => crypto.randomUUID();
 
 export const emptyTraveller = (): TravellerDraft => ({
   name: '',
@@ -100,6 +119,8 @@ export const useBooking = create<BookingState>()((set) => ({
   terms: false,
   method: 'bkash',
   attempted: noAttempts(),
+  attemptKey: '',
+  created: null,
 
   start: ({ packageSlug, date, pax, maxPax, hotelCategory }) =>
     set((state) => {
@@ -113,6 +134,8 @@ export const useBooking = create<BookingState>()((set) => ({
         pax: nextPax,
         travellers: resize(state.travellers, nextPax),
         attempted: noAttempts(),
+        attemptKey: newAttemptKey(),
+        created: null,
       };
     }),
   close: () => set({ open: false }),
@@ -144,4 +167,16 @@ export const useBooking = create<BookingState>()((set) => ({
     })),
   setTerms: (terms) => set({ terms }),
   setMethod: (method) => set({ method }),
+  setCreated: (created) => set({ created }),
+  finish: () =>
+    set((state) => ({
+      open: false,
+      step: 1,
+      terms: false,
+      addons: [],
+      travellers: resize([], state.pax),
+      attempted: noAttempts(),
+      created: null,
+      attemptKey: '',
+    })),
 }));

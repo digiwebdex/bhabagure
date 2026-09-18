@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
-import { getBooking, recallBookingToken, startPayment, type PublicBooking } from '@/lib/booking-api';
+import { getBooking, isJustBooked, recallBookingToken, startPayment, type PublicBooking } from '@/lib/booking-api';
 import { displayPhone, whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
 import type { PaymentMethod } from '@/state/booking';
@@ -13,7 +13,12 @@ import type { PaymentMethod } from '@/state/booking';
 import { PaymentInstructions } from './PaymentInstructions';
 
 type View =
-  { state: 'loading' } | { state: 'no-token' } | { state: 'not-found' } | { state: 'unavailable' } | { state: 'ready'; booking: PublicBooking; token: string };
+  | { state: 'loading' }
+  | { state: 'no-token' }
+  | { state: 'not-found' }
+  | { state: 'unavailable' }
+  /** justBooked: made in this tab a moment ago — the page opens with the congratulations. */
+  | { state: 'ready'; booking: PublicBooking; token: string; justBooked: boolean };
 
 const OPEN_ATTEMPT = ['initiated', 'redirected'];
 const POLL_MS = 3000;
@@ -37,7 +42,7 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
     if (!token) return setView({ state: 'no-token' });
     const result = await getBooking(reference, token, locale);
     if (result.ok) {
-      setView({ state: 'ready', booking: result.data, token });
+      setView({ state: 'ready', booking: result.data, token, justBooked: isJustBooked(reference) });
       setLink(`${window.location.origin}${window.location.pathname}#t=${token}`);
     } else
       setView({
@@ -106,6 +111,15 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
 
   return (
     <div className={card}>
+      {view.justBooked && outcome !== 'cancelled' ? (
+        // Straight after "Confirm booking": say plainly that it worked, and that paying is the next step below.
+        <div role="status" data-testid="booking-congrats" className="flex flex-col gap-1 rounded-14 border border-green-panel-line bg-green-panel px-4 py-3.5">
+          <strong className="text-17 leading-1.35 text-green-deep">{t('congrats.title')}</strong>
+          <span className="text-14 leading-1.55 text-ink-deep">
+            {outcome === 'paid' ? t('congrats.paid', { reference: booking.reference }) : t('congrats.payNext', { reference: booking.reference })}
+          </span>
+        </div>
+      ) : null}
       <div className="flex flex-col gap-1">
         <span className="font-display text-13 text-muted">{booking.reference}</span>
         <h1 className="text-fluid-19-23 font-bold tracking-title">{t(`headline.${outcome}`)}</h1>
@@ -177,7 +191,7 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
           </button>
         </div>
       ) : null}
-      {booking.payment.canPay && outcome !== 'checking' && booking.payment.checkout && booking.payment.manual && (booking.payment.manual.bank || booking.payment.manual.bkash) ? (
+      {booking.payment.canPay && outcome !== 'checking' && booking.payment.checkout && booking.payment.manual && (booking.payment.manual.banks.length > 0 || booking.payment.manual.bkash) ? (
         <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} alongsideCheckout />
       ) : null}
 

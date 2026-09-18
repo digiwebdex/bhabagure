@@ -68,7 +68,8 @@ export type PublicBooking = {
 /** api/app/Support/Payments/PaymentOptions.php: each method with the exact amount to send. */
 export type ManualPayment = {
   amount: number;
-  bank: { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string } | null;
+  /** Every bank account the agency takes transfers into, in the order set in Admin (up to three). */
+  banks: { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string }[];
   /** The SSLCommerz payment form for card, mobile banking and EMI; only while the built-in checkout is off. */
   link: string | null;
   bkash: { number: string; chargePercent: number; charge: number; total: number } | null;
@@ -96,10 +97,13 @@ export type BookingPayload = {
   expected_total: number;
   terms_accepted: true;
   locale: 'bn' | 'en';
+  /** One per booking attempt: sent again, the API answers already_created instead of booking twice. */
+  idempotency_key: string;
 };
 
 export type ApiFailure =
   | { ok: false; reason: 'price_changed'; total: number }
+  | { ok: false; reason: 'already_created'; reference: string }
   | { ok: false; reason: 'seats_unavailable'; available: number }
   | {
       ok: false;
@@ -132,8 +136,10 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
     quote?: { total: number };
     payment?: { total: number };
     available?: number;
+    reference?: string;
   } | null;
   if (res.ok && body?.data !== undefined) return { ok: true, data: body.data };
+  if (body?.code === 'already_created' && body.reference) return { ok: false, reason: 'already_created', reference: body.reference };
   if (body?.code === 'price_changed' && (body.quote || body.payment)) return { ok: false, reason: 'price_changed', total: (body.payment ?? body.quote)!.total };
   if (body?.code === 'seats_unavailable')
     return {
@@ -187,6 +193,27 @@ export function rememberBookingToken(reference: string, token: string) {
     sessionStorage.setItem(storageKey(reference), token);
   } catch {
     // Private mode: the private link still works.
+  }
+}
+
+const justBookedKey = 'bh-booking:just-booked';
+
+/** Marks a booking as made a moment ago in this tab, so its page opens with the congratulations. */
+export function markJustBooked(reference: string) {
+  try {
+    sessionStorage.setItem(justBookedKey, JSON.stringify({ reference, at: Date.now() }));
+  } catch {
+    // Private mode: the page still shows the booking, only without the greeting.
+  }
+}
+
+/** The booking made in this tab within the last half hour — long enough to pay, short enough not to greet forever. */
+export function isJustBooked(reference: string): boolean {
+  try {
+    const mark = JSON.parse(sessionStorage.getItem(justBookedKey) ?? 'null') as { reference: string; at: number } | null;
+    return mark?.reference === reference && Date.now() - mark.at < 30 * 60_000;
+  } catch {
+    return false;
   }
 }
 

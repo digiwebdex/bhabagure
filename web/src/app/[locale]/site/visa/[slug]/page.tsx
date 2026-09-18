@@ -50,7 +50,8 @@ export default async function VisaPage({ params }: PageProps<'/[locale]/site/vis
   const others = views.visas.filter((v) => v.slug !== visa.slug && (v.countryCode ?? v.country) === (visa.countryCode ?? visa.country));
   const facts: [string, string][] = [
     [t('visa.price'), visa.price === null ? t('visa.priceOnRequest') : `${f.bdt(visa.price)} ${t('visa.perPerson')}`],
-    ...(visa.processing ? [[t('visa.processing'), visa.processing] as [string, string]] : []),
+    // Not every visa has its processing time entered yet: then the visitor is asked to get in touch.
+    [t('visa.processing'), visa.processing ?? t('visa.processingAsk')],
     ...(visa.stay ? [[t('visa.stay'), visa.stay] as [string, string]] : []),
   ];
 

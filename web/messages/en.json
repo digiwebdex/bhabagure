@@ -126,6 +126,7 @@
     "price": "Price",
     "processing": "Processing time",
     "processingIn": "Processing: {time}",
+    "processingAsk": "ask us — we’ll tell you",
     "stay": "Stay",
     "requirements": "Requirements",
     "notes": "Good to know",
@@ -313,7 +314,8 @@
       "perPerson": "{amount} per person",
       "total": "{amount} in all",
       "separately": "Paid separately (estimates)",
-      "estimateNote": "Estimates move with the day’s fares — we confirm the exact amount when you book."
+      "estimateNote": "Estimates move with the day’s fares — we confirm the exact amount when you book.",
+      "serviceNote": "Service charge and VAT ({percent}) are added at booking."
     }
   },
   "departures": {
@@ -577,7 +579,8 @@
     "perPersonShort": "per person",
     "confirmButton": "Confirm booking · {total}",
     "confirming": "Saving your booking…",
-    "confirmNote": "Your booking is saved first. The next page shows how to pay — bank transfer, card, mobile banking or EMI, or bKash — with the exact amount for each."
+    "confirmNote": "Your booking is saved first. The next page shows how to pay — bank transfer, card, mobile banking or EMI, or bKash — with the exact amount for each.",
+    "alreadyCreated": "This booking was already made — booking number {reference}. Please check your WhatsApp or email for its link, or contact us."
   },
   "auth": {
     "signInTitle": "Sign in to your account",
@@ -960,7 +963,12 @@
     "contactUs": "Contact us on WhatsApp",
     "whatsappText": "Hello, I have a question about my booking {reference}.",
     "payNowBreakdown": "Balance {balance} + online payment charge {charge} ({percent})",
-    "notificationsNote": "Automated WhatsApp messages about this booking come only from our notifications number {number}. Our main number is {main}."
+    "notificationsNote": "Automated WhatsApp messages about this booking come only from our notifications number {number}. Our main number is {main}.",
+    "congrats": {
+      "title": "Congratulations! Your booking is done",
+      "payNext": "Your booking number is {reference}. Pay below by any of the ways shown to secure your seats — we will be in touch on WhatsApp.",
+      "paid": "Your booking number is {reference}, and your payment has arrived."
+    }
   },
   "legal": {
     "draftTitle": "Draft — pending review by the company’s lawyer",
@@ -990,7 +998,7 @@
     "heading": "How to pay",
     "orHeading": "Or pay by hand",
     "reference": "Write your booking reference {reference} with the payment so we can match it.",
-    "bankTitle": "Bank transfer ({type})",
+    "bankTitle": "Bank transfer — {bank} ({type})",
     "bankName": "Bank",
     "accountName": "Account name",
     "accountNumber": "Account number",
@@ -998,14 +1006,14 @@
     "routingNumber": "Routing number",
     "amount": "Amount",
     "linkTitle": "Card, mobile banking or EMI (SSLCommerz)",
-    "linkNote": "Open the SSLCommerz payment form, enter {amount} and write {reference} in the reference.",
+    "linkNote": "Open the payment form and enter {amount}. The form has no separate reference box — so write your booking number after your name in the name box, for example: Rahim Uddin {reference}",
     "linkButton": "Open the payment form →",
-    "bkashTitle": "bKash",
-    "bkashNumber": "Send money to",
+    "bkashTitle": "bKash payment",
+    "bkashNumber": "bKash payment number",
     "balance": "Balance",
     "bkashCharge": "bKash charge ({percent})",
-    "bkashSend": "Send",
-    "bkashNote": "Write {reference} in the reference. The bKash charge covers bKash’s cash-out fee and isn’t part of the tour price.",
+    "bkashSend": "Pay",
+    "bkashNote": "In the bKash app choose “Payment”, pay this number and write {reference} as the reference. The bKash charge is bKash’s payment fee and isn’t part of the tour price.",
     "afterPaying": "After paying, send the transaction ID or receipt on WhatsApp. We confirm the booking and email your invoice.",
     "copy": "Copy {what}",
     "copyShort": "Copy",

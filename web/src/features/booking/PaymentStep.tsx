@@ -7,19 +7,17 @@ import { onlinePayment, type Quote } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
-import { createBooking, rememberBookingToken, startPayment, type ApiFailure } from '@/lib/booking-api';
+import { createBooking, markJustBooked, recallBookingToken, rememberBookingToken, startPayment, type ApiFailure } from '@/lib/booking-api';
 import type { PackageView } from '@/lib/content/views';
 import { useRouter } from '@/i18n/navigation';
 import { whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
 import { parseDayMonthYear } from '@/lib/validators';
-import { useBooking, type PaymentMethod } from '@/state/booking';
+import { useBooking, type CreatedBooking, type PaymentMethod } from '@/state/booking';
 
 import { onlineChargeLine, PriceBreakdown, quoteLines } from './ReviewStep';
 
 const METHODS: PaymentMethod[] = ['bkash', 'nagad', 'card', 'bank'];
-
-type Created = { reference: string; token: string; checkout: boolean };
 
 /**
  * Pay the full amount through SSLCommerz (decision 2); while that checkout is off (Phase 8 §4.F), save the booking and
@@ -37,16 +35,25 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
-  const [created, setCreated] = useState<Created | null>(null);
+  // Kept in the booking store, not here: if this step is drawn again, it must not book a second time.
+  const created = booking.created;
   // The same amount the review step showed; the API refuses to start a payment for any other.
   const online = onlinePayment(quote.total, pricing.onlinePaymentChargePercent);
   const checkout = pricing.onlineCheckout === true;
   const prefix = locale === 'en' ? '/en' : '';
 
+  // Made: the form closes and the booking's own page opens with the congratulations and how to pay.
+  const openBooking = (reference: string, token: string) => {
+    markJustBooked(reference);
+    booking.finish();
+    router.push(`/booking/${reference}#t=${token}`);
+  };
+
   const pay = async () => {
+    if (busy) return;
     setBusy(true);
     setFailure(null);
-    let current = created;
+    let current: CreatedBooking | null = created;
     if (!current) {
       const result = await createBooking({
         package_slug: booking.packageSlug,
@@ -69,8 +76,15 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         expected_total: quote.total,
         terms_accepted: true,
         locale,
+        idempotency_key: booking.attemptKey,
       });
       if (!result.ok) {
+        // This attempt was already booked (a second click, or a retry after a lost answer): open that booking.
+        const token = result.reason === 'already_created' ? recallBookingToken(result.reference) : null;
+        if (result.reason === 'already_created' && token) {
+          openBooking(result.reference, token);
+          return;
+        }
         setBusy(false);
         setFailure(result);
         return;
@@ -82,12 +96,12 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         checkout: result.data.payment.checkout,
       };
       rememberBookingToken(current.reference, current.token);
-      setCreated(current);
+      booking.setCreated(current);
     }
 
     // Without the built-in checkout the booking's own page shows how to pay, with the exact amounts.
     if (!current.checkout) {
-      router.push(`/booking/${current.reference}#t=${current.token}`);
+      openBooking(current.reference, current.token);
       return;
     }
     const payment = await startPayment(current.reference, current.token, booking.method, online.total, locale);
@@ -204,6 +218,8 @@ function failureMessage(failure: ApiFailure, t: ReturnType<typeof useTranslation
     case 'payment_unavailable':
     case 'gateway_unavailable':
       return failure.message ?? t('paymentUnavailable');
+    case 'already_created':
+      return t('alreadyCreated', { reference: failure.reference });
     case 'rate_limited':
       return t('rateLimited');
     case 'invalid':

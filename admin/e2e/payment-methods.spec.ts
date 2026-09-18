@@ -10,22 +10,39 @@ test('the payment methods are entered in Site settings, and a bKash payment reco
   await signIn(page, 'admin')
   await page.goto('/settings')
   const card = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Payment', exact: true }) })
-  await expect(card.getByLabel('Bank', { exact: true })).toBeVisible(FIRST_LOAD)
+  await expect(card.getByRole('button', { name: '+ Add bank account' })).toBeVisible(FIRST_LOAD)
 
+  // Two accounts (a second bank was asked for on 2026-09-19), up to three.
+  const accounts = card.getByTestId('bank-account')
+  const fill = async (index: number, bank: string, number: string, routing: string) => {
+    const account = accounts.nth(index)
+    await account.getByLabel('Bank', { exact: true }).fill(bank)
+    await account.getByLabel('Account name').fill('Example Holidays')
+    await account.getByLabel('Account number').fill(number)
+    await account.getByLabel('Branch').fill('Mirpur')
+    await account.getByLabel('Routing number').fill(routing)
+  }
+  await card.getByRole('button', { name: '+ Add bank account' }).click()
   // A routing number is 9 digits: the API says so before anything is saved.
-  await card.getByLabel('Bank', { exact: true }).fill('Example Trust Bank')
-  await card.getByLabel('Account name').fill('Example Holidays')
-  await card.getByLabel('Account number').fill('1310000000001')
-  await card.getByLabel('Branch').fill('Mirpur')
-  await card.getByLabel('Routing number').fill('14526')
-  await card.getByLabel('Transfer type').fill('NPSB')
+  await fill(0, 'Example Trust Bank', '1310000000001', '14526')
+  await card.getByRole('button', { name: '+ Add bank account' }).click()
+  await fill(1, 'Example Second Bank', '2020000000002', '060260002')
   await card.getByLabel('bKash number').fill('+8801613000000')
   await card.getByLabel('bKash charge (%)').fill('1.3')
   await card.getByRole('button', { name: 'Save' }).click()
   await expect(card.getByRole('alert').first()).toBeVisible()
-  await card.getByLabel('Routing number').fill('145260001')
+  await accounts.nth(0).getByLabel('Routing number').fill('145260001')
   await card.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText('Saved', { exact: true }).first()).toBeVisible()
+
+  // Both are kept after a reload; a third can be added, not a fourth.
+  await page.reload()
+  await expect(accounts).toHaveCount(2, FIRST_LOAD)
+  await expect(accounts.nth(1).getByLabel('Bank', { exact: true })).toHaveValue('Example Second Bank')
+  await card.getByRole('button', { name: '+ Add bank account' }).click()
+  await expect(card.getByRole('button', { name: '+ Add bank account' })).toHaveCount(0)
+  await accounts.nth(2).getByRole('button', { name: 'Remove this account' }).click()
+  await expect(accounts).toHaveCount(2)
 
   // A booking with an issued invoice, then the bKash payment the customer sent with the charge on top.
   const { reference } = await websiteBooking(page, 'Bkash Payer')

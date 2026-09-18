@@ -26,10 +26,10 @@ class Booking extends Model
         'reference', 'customer_id', 'client_id', 'tour_package_id', 'departure_id', 'quotation_id', 'package_title_en', 'package_title_bn',
         'travel_start', 'travel_end', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount',
         'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount', 'source', 'assigned_staff_id', 'created_by_staff_id',
-        'cancellation_reason', 'internal_notes', 'locale', 'terms_accepted_at', 'terms_version', 'access_token_hash',
+        'cancellation_reason', 'internal_notes', 'locale', 'terms_accepted_at', 'terms_version', 'access_token_hash', 'idempotency_key',
     ];
 
-    protected $hidden = ['access_token_hash'];
+    protected $hidden = ['access_token_hash', 'idempotency_key'];
 
     protected function casts(): array
     {

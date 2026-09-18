@@ -298,6 +298,8 @@ export type Addon = { id: number; code: string; name_bn: string; name_en: string
 
 export type Localized = { bn: string; en: string }
 
+export type BankAccount = { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string }
+
 export type SiteSettings = {
   company?: { name: Localized; brand: Localized }
   contact?: {
@@ -317,7 +319,11 @@ export type SiteSettings = {
   stats?: { topReelViewsThousands: number; banglaSupportPercent: number }
   /** How customers pay by hand (docs/phase-8-visa-quotes-pricing-downloads.md §4.F). Each method is optional. */
   payment?: {
-    bank: { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string } | null
+    /**
+     * Up to three accounts, in the order customers see them (a second, BRAC Bank, was asked for on 2026-09-19). The API
+     * answers with the list even for a setting saved when it held one `bank`.
+     */
+    banks: BankAccount[]
     /** A hosted SSLCommerz payment form, shown until the built-in checkout takes payments. */
     link: string | null
     bkash: { number: string; chargePercent: number } | null

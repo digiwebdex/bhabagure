@@ -22,5 +22,10 @@ final class BookingRequest
         public readonly bool $termsAccepted,
         /** For a package with a hotel-category price grid: '3', '4' or '5' (Phase 8 §4.D). */
         public readonly ?string $hotelCategory = null,
+        /**
+         * One per booking attempt, made by the website's form. The same key twice is the same booking — a second click
+         * or a retry — so the database's unique index refuses the copy (2026-09-19: customers were booking twice).
+         */
+        public readonly ?string $idempotencyKey = null,
     ) {}
 }

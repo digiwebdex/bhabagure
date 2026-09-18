@@ -81,7 +81,8 @@ class VisaServiceController extends Controller
     protected function publishProblems(Model $model): array
     {
         return array_values(array_filter([
-            blank($model->processing_bn) && blank($model->processing_en) ? __('cms.publish_requirements.processing') : null,
+            // The processing time is not required (the client's decision, 2026-09-19): without one the website says to
+            // ask, and it appears as soon as staff enter it.
             // Headings alone list nothing to bring: at least one requirement under them, in each language.
             VisaService::groups(VisaService::lines($model->requirements_bn)) === [] || VisaService::groups(VisaService::lines($model->requirements_en)) === [] ? __('cms.publish_requirements.requirements') : null,
         ]));

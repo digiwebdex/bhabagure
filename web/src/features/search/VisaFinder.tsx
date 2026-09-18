@@ -53,7 +53,7 @@ export function VisaFinder() {
               {visa.price === null ? t('priceOnRequest') : f.bdt(visa.price)}
               {visa.price === null ? null : <span className="ml-1 font-sans text-12 font-normal text-muted">{t('perPerson')}</span>}
             </span>
-            {visa.processing ? <span className="text-13 text-muted">{t('processingIn', { time: visa.processing })}</span> : null}
+            <span className="text-13 text-muted">{t('processingIn', { time: visa.processing ?? t('processingAsk') })}</span>
             <span className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
               <Link href={visaPath(visa.slug)} className="text-13 font-semibold">
                 {t('details')}

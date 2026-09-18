@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\RevalidateWebsite;
 use App\Models\SiteSetting;
 use App\Services\AuditLogger;
+use App\Support\Payments\PaymentOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,13 +44,14 @@ class SiteSettingController extends Controller
         // Phase 8 §4.F. Each method is optional; a method that is filled in needs all its details.
         'payment' => [
             'value' => ['present', 'array'],
-            'value.bank' => ['nullable', 'array'],
-            'value.bank.bankName' => ['required_with:value.bank', 'string', 'max:120'],
-            'value.bank.accountName' => ['required_with:value.bank', 'string', 'max:160'],
-            'value.bank.accountNumber' => ['required_with:value.bank', 'string', 'regex:/^\d{6,20}$/'],
-            'value.bank.branch' => ['required_with:value.bank', 'string', 'max:120'],
-            'value.bank.routingNumber' => ['required_with:value.bank', 'string', 'regex:/^\d{9}$/'],
-            'value.bank.transferType' => ['required_with:value.bank', 'string', 'max:20'],
+            // Up to three bank accounts (a second, BRAC Bank, was asked for on 2026-09-19); each needs all its details.
+            'value.banks' => ['nullable', 'array', 'max:'.PaymentOptions::MAX_BANKS],
+            'value.banks.*.bankName' => ['required', 'string', 'max:120'],
+            'value.banks.*.accountName' => ['required', 'string', 'max:160'],
+            'value.banks.*.accountNumber' => ['required', 'string', 'regex:/^\d{6,20}$/'],
+            'value.banks.*.branch' => ['required', 'string', 'max:120'],
+            'value.banks.*.routingNumber' => ['required', 'string', 'regex:/^\d{9}$/'],
+            'value.banks.*.transferType' => ['required', 'string', 'max:20'],
             'value.link' => ['nullable', 'url:https', 'max:500'],
             'value.bkash' => ['nullable', 'array'],
             'value.bkash.number' => ['required_with:value.bkash', 'string', 'regex:/^\+8801[3-9]\d{8}$/'],
@@ -61,7 +63,13 @@ class SiteSettingController extends Controller
 
     public function index(): JsonResponse
     {
-        return response()->json(['data' => (object) SiteSetting::query()->whereIn('key', SiteSettingKeys::STAFF_EDITABLE)->pluck('value', 'key')->all()]);
+        $settings = SiteSetting::query()->whereIn('key', SiteSettingKeys::STAFF_EDITABLE)->pluck('value', 'key')->all();
+        // A payment setting saved before 2026-09-19 holds one `bank`; the screen edits the list.
+        if (is_array($settings[SiteSettingKeys::PAYMENT] ?? null)) {
+            $settings[SiteSettingKeys::PAYMENT] = PaymentOptions::normalize($settings[SiteSettingKeys::PAYMENT]);
+        }
+
+        return response()->json(['data' => (object) $settings]);
     }
 
     public function update(Request $request, string $key): JsonResponse
@@ -82,20 +90,13 @@ class SiteSettingController extends Controller
     }
 
     /**
-     * Only the known fields, trimmed; a method left empty is saved as null.
+     * Only the known fields, trimmed; a method left empty is saved as null, and no banks as an empty list.
      *
      * @param  array<string, mixed>  $value
-     * @return array{bank: array<string, string>|null, link: string|null, bkash: array{number: string, chargePercent: float}|null}
+     * @return array{banks: list<array<string, string>>, link: string|null, bkash: array{number: string, chargePercent: float}|null}
      */
     private static function paymentValue(array $value): array
     {
-        $bank = is_array($value['bank'] ?? null) ? $value['bank'] : null;
-        $bkash = is_array($value['bkash'] ?? null) ? $value['bkash'] : null;
-
-        return [
-            'bank' => $bank ? array_map(fn ($field) => trim((string) $field), array_intersect_key($bank + array_fill_keys(['bankName', 'accountName', 'accountNumber', 'branch', 'routingNumber', 'transferType'], ''), array_flip(['bankName', 'accountName', 'accountNumber', 'branch', 'routingNumber', 'transferType']))) : null,
-            'link' => filled($value['link'] ?? null) ? trim((string) $value['link']) : null,
-            'bkash' => $bkash ? ['number' => (string) $bkash['number'], 'chargePercent' => (float) $bkash['chargePercent']] : null,
-        ];
+        return PaymentOptions::normalize(['banks' => $value['banks'] ?? []] + $value);
     }
 }

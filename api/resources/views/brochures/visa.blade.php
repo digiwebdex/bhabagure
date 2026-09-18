@@ -69,7 +69,8 @@
 
   <div class="facts">
     <div class="fact"><span>{{ $l('মূল্য', 'Price') }}</span><strong class="num">{{ $visa->price === null ? $l('জানতে যোগাযোগ করুন', 'On request') : $money($visa->price).' '.$l('জনপ্রতি', 'per person') }}</strong></div>
-    @if ($pick($visa->processing_bn, $visa->processing_en))<div class="fact"><span>{{ $l('প্রসেসিং সময়', 'Processing time') }}</span><strong>{{ $pick($visa->processing_bn, $visa->processing_en) }}</strong></div>@endif
+    {{-- The processing time is optional (2026-09-19): without one, the reader is asked to get in touch. --}}
+    <div class="fact"><span>{{ $l('প্রসেসিং সময়', 'Processing time') }}</span><strong>{{ $pick($visa->processing_bn, $visa->processing_en) ?: $l('জানতে যোগাযোগ করুন', 'Ask us') }}</strong></div>
     @if ($pick($visa->stay_bn, $visa->stay_en))<div class="fact"><span>{{ $l('থাকার মেয়াদ', 'Stay') }}</span><strong>{{ $pick($visa->stay_bn, $visa->stay_en) }}</strong></div>@endif
   </div>
 

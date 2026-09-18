@@ -41,7 +41,7 @@ export async function VisaSection({ locale, views }: { locale: AppLocale; views:
                         {visa.price === null ? null : <span className="ml-1 font-sans text-12 font-normal text-muted">{t('visa.perPerson')}</span>}
                       </span>
                     </span>
-                    {visa.processing ? <span className="text-13 text-muted">{t('visa.processingIn', { time: visa.processing })}</span> : null}
+                    <span className="text-13 text-muted">{t('visa.processingIn', { time: visa.processing ?? t('visa.processingAsk') })}</span>
                     <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
                       <Link href={visaPath(visa.slug)} className="text-13 font-semibold">
                         {t('visa.details')}

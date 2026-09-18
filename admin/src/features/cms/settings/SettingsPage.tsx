@@ -7,13 +7,15 @@ import { ErrorNotice, useToast } from '../../../components/ui/feedback'
 import { NumberInput, Pair, TextArea, TextInput } from '../../../components/ui/fields'
 import { Card, CardTitle, Loading, PageHeader } from '../../../components/ui/layout'
 import { api, ApiError } from '../../../lib/api/client'
-import type { Data, SiteSettings } from '../../../lib/api/types'
+import type { BankAccount, Data, SiteSettings } from '../../../lib/api/types'
+import { useFormat } from '../../../lib/useFormat'
 
 type Key = keyof SiteSettings
 
 /** Company details, contact channels, hours and social stats. Each card saves its own key. */
 export function SettingsPage() {
   const { t } = useTranslation()
+  const { number } = useFormat()
   const settings = useQuery({ queryKey: ['settings'], queryFn: ({ signal }) => api.get<Data<SiteSettings>>('admin/settings', signal) })
 
   if (settings.isPending) return <Loading />
@@ -96,21 +98,39 @@ export function SettingsPage() {
 
         {/* How customers pay by hand (Phase 8 §4.F): shown on the booking page, in the portal, on invoices and in the
             booking message, each with the exact amount. A method left blank is not offered. */}
-        <SettingCard settingKey="payment" title="Payment" initial={data.payment ?? { bank: null, link: null, bkash: null }}>
+        <SettingCard settingKey="payment" title="Payment" initial={data.payment ?? { banks: [], link: null, bkash: null }}>
           {(value, set, error) => (
             <>
-              <Pair>
-                <TextInput label={t('settings.bankName')} value={value.bank?.bankName ?? ''} onChange={(bankName) => set({ ...value, bank: bank(value.bank, { bankName }) })} error={error('value.bank.bankName')} hint={t('settings.bankHint')} />
-                <TextInput label={t('settings.accountName')} value={value.bank?.accountName ?? ''} onChange={(accountName) => set({ ...value, bank: bank(value.bank, { accountName }) })} error={error('value.bank.accountName')} />
-              </Pair>
-              <Pair>
-                <TextInput label={t('settings.accountNumber')} value={value.bank?.accountNumber ?? ''} onChange={(accountNumber) => set({ ...value, bank: bank(value.bank, { accountNumber }) })} error={error('value.bank.accountNumber')} />
-                <TextInput label={t('settings.branch')} value={value.bank?.branch ?? ''} onChange={(branch) => set({ ...value, bank: bank(value.bank, { branch }) })} error={error('value.bank.branch')} />
-              </Pair>
-              <Pair>
-                <TextInput label={t('settings.routingNumber')} value={value.bank?.routingNumber ?? ''} onChange={(routingNumber) => set({ ...value, bank: bank(value.bank, { routingNumber }) })} error={error('value.bank.routingNumber')} hint={t('settings.routingHint')} />
-                <TextInput label={t('settings.transferType')} value={value.bank?.transferType ?? ''} onChange={(transferType) => set({ ...value, bank: bank(value.bank, { transferType }) })} error={error('value.bank.transferType')} placeholder="NPSB" />
-              </Pair>
+              {/* One block per bank account (up to three); customers see each with the exact amount. */}
+              {value.banks.map((account, index) => {
+                const patch = (fields: Partial<BankAccount>) => set({ ...value, banks: value.banks.map((b, i) => (i === index ? { ...b, ...fields } : b)) })
+                const field = (name: keyof BankAccount) => error(`value.banks.${index}.${name}`)
+                return (
+                  <fieldset key={index} className="m-0 flex min-w-0 flex-col gap-3 rounded-12 border border-app-line p-3.5" data-testid="bank-account">
+                    <legend className="px-1 text-14 font-semibold">{t('settings.bankAccount', { n: number(index + 1) })}</legend>
+                    <Pair>
+                      <TextInput label={t('settings.bankName')} value={account.bankName} onChange={(bankName) => patch({ bankName })} error={field('bankName')} hint={index === 0 ? t('settings.bankHint') : undefined} />
+                      <TextInput label={t('settings.accountName')} value={account.accountName} onChange={(accountName) => patch({ accountName })} error={field('accountName')} />
+                    </Pair>
+                    <Pair>
+                      <TextInput label={t('settings.accountNumber')} value={account.accountNumber} onChange={(accountNumber) => patch({ accountNumber })} error={field('accountNumber')} />
+                      <TextInput label={t('settings.branch')} value={account.branch} onChange={(branch) => patch({ branch })} error={field('branch')} />
+                    </Pair>
+                    <Pair>
+                      <TextInput label={t('settings.routingNumber')} value={account.routingNumber} onChange={(routingNumber) => patch({ routingNumber })} error={field('routingNumber')} hint={t('settings.routingHint')} />
+                      <TextInput label={t('settings.transferType')} value={account.transferType} onChange={(transferType) => patch({ transferType })} error={field('transferType')} placeholder="NPSB" />
+                    </Pair>
+                    <button type="button" className={buttonClass('outline', 'sm', 'self-start')} onClick={() => set({ ...value, banks: value.banks.filter((_, i) => i !== index) })}>
+                      {t('settings.removeBank')}
+                    </button>
+                  </fieldset>
+                )
+              })}
+              {value.banks.length < MAX_BANKS ? (
+                <button type="button" className={buttonClass('outline', 'sm', 'self-start border-dashed')} onClick={() => set({ ...value, banks: [...value.banks, emptyBank()] })}>
+                  + {t('settings.addBank')}
+                </button>
+              ) : null}
               <TextInput label={t('settings.paymentLink')} type="url" value={value.link ?? ''} onChange={(link) => set({ ...value, link: link || null })} error={error('value.link')} hint={t('settings.paymentLinkHint')} />
               <Pair>
                 <TextInput label={t('settings.bkashNumber')} type="tel" value={value.bkash?.number ?? ''} onChange={(number) => set({ ...value, bkash: number ? { number, chargePercent: value.bkash?.chargePercent ?? 0 } : null })} error={error('value.bkash.number')} placeholder="+8801XXXXXXXXX" />
@@ -124,11 +144,10 @@ export function SettingsPage() {
   )
 }
 
-/** A blank field clears the whole bank block: a half-filled account helps nobody. */
-function bank(current: NonNullable<SiteSettings['payment']>['bank'], patch: Partial<NonNullable<NonNullable<SiteSettings['payment']>['bank']>>) {
-  const next = { bankName: '', accountName: '', accountNumber: '', branch: '', routingNumber: '', transferType: 'NPSB', ...current, ...patch }
-  return Object.values(next).every((field) => field.trim() === '') ? null : next
-}
+/** The API keeps up to three accounts (PaymentOptions::MAX_BANKS). */
+const MAX_BANKS = 3
+
+const emptyBank = (): BankAccount => ({ bankName: '', accountName: '', accountNumber: '', branch: '', routingNumber: '', transferType: 'NPSB' })
 
 function SettingCard<K extends Key>({ settingKey, title, initial, children }: {
   settingKey: K

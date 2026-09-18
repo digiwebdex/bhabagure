@@ -213,8 +213,9 @@ test.describe('website content', () => {
     await expect(row).toContainText('BDT 4,200 · no processing time · 2 requirements')
 
     await row.getByRole('button', { name: 'Publish' }).click()
-    await expect(page.getByText('Say how long processing takes.')).toBeVisible()
+    // The processing time is optional since 2026-09-19 (the website says "ask us" without it); the requirements are not.
     await expect(page.getByText('List the requirements in both languages, one per line.')).toBeVisible()
+    await expect(page.getByText('Say how long processing takes.')).toHaveCount(0)
     expect((await (await request.get(`${API_URL}/api/v1/public/visas`)).json()).data).toHaveLength(0)
 
     await row.getByText('BDT 4,200 · no processing time').click()
