@@ -66,12 +66,6 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
       </div>
 
       <p>{t('footer.copyright', { year })}</p>
-      <p className="mt-1 text-12 opacity-75">
-        {t('footer.credit')}{' '}
-        <a href="https://digiwebdex.com/en" target="_blank" rel="noopener noreferrer" className="font-semibold text-white hover:text-orange-light">
-          digiwebdex
-        </a>
-      </p>
     </footer>
   );
 }

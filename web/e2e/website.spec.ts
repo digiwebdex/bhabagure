@@ -128,17 +128,6 @@ test.describe('site basics', () => {
     await expect(page.locator('footer img').last()).toHaveAttribute('alt', /বিকাশ, নগদ/);
   });
 
-  test('the footer credits who built the site', async ({ page }) => {
-    await page.goto('/en');
-    const credit = page.locator('footer').getByRole('link', { name: 'digiwebdex' });
-    await expect(credit).toHaveAttribute('href', 'https://digiwebdex.com/en');
-    await expect(credit).toHaveAttribute('target', '_blank');
-    await expect(page.locator('footer')).toContainText('Design and development by digiwebdex');
-
-    await page.goto('/');
-    await expect(page.locator('footer')).toContainText('ডিজাইন ও ডেভেলপমেন্ট: digiwebdex');
-  });
-
   test('an unknown address answers 404 with the site’s own page, in the visitor’s language', async ({ page }) => {
     const response = await page.goto('/en/no-such-page');
     expect(response?.status()).toBe(404);
