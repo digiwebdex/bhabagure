@@ -2951,5 +2951,16 @@
     "disagrees": "Out of balance",
     "csv": "Download CSV",
     "csvFailed": "The download didn’t work — please try again."
+  },
+  "priceOptions": {
+    "title": "Price options",
+    "note": "Shown under the prices for two and four. An extra with an amount per person (a domestic flight, a resort day tour) is added to the package price; a cost you can only estimate (the international air ticket) is written in words. Give each one an amount or an estimate, not both.",
+    "option": "Option",
+    "labelEn": "What it is (English)",
+    "labelBn": "What it is (Bangla)",
+    "extra": "Extra per person (BDT)",
+    "estimateEn": "Estimate (English)",
+    "estimateBn": "Estimate (Bangla)",
+    "add": "Add price option"
   }
 }

@@ -147,6 +147,47 @@ class CmsPackageTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('regular_price');
     }
 
+    /** docs/package-price-options.md: an extra with an amount, or an estimate in words — and the website gets both. */
+    #[Test]
+    public function price_options_are_an_amount_or_an_estimate_and_reach_the_website(): void
+    {
+        $destination = Destination::query()->create(['slug' => 'nepal', 'name_bn' => 'নেপাল', 'name_en' => 'Nepal']);
+        $admin = $this->staff('admin');
+        $options = [
+            ['label_en' => 'With domestic flight', 'label_bn' => 'ডমেস্টিক ফ্লাইটসহ', 'extra_per_person' => 15000, 'estimate_en' => '', 'estimate_bn' => ''],
+            ['label_en' => 'International air ticket', 'label_bn' => '', 'extra_per_person' => null, 'estimate_en' => 'About BDT 37,000–50,000 per person', 'estimate_bn' => 'আনুমানিক ৩৭,০০০–৫০,০০০ টাকা জনপ্রতি'],
+        ];
+
+        // Neither, and both, are refused.
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/packages', [...$this->payload($destination->id), 'price_options' => [['label_en' => 'Visa']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('price_options.0');
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/packages', [...$this->payload($destination->id), 'price_options' => [['label_en' => 'Visa', 'extra_per_person' => 6000, 'estimate_en' => 'About 6,000']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('price_options.0');
+
+        $id = $this->actingAsApi($admin)->postJson('/api/v1/admin/packages', [...$this->payload($destination->id), 'price_options' => $options])
+            ->assertCreated()
+            // Blank text is stored as nothing.
+            ->assertJsonPath('data.price_options.0.estimate_en', null)
+            ->assertJsonPath('data.price_options.1.label_bn', null)
+            ->json('data.id');
+
+        // An empty list clears them; then they go back on.
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/packages/{$id}", [...$this->payload($destination->id), 'price_options' => []])
+            ->assertOk()->assertJsonPath('data.price_options', null);
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/packages/{$id}", [...$this->payload($destination->id), 'price_options' => $options])
+            ->assertOk();
+
+        $package = TourPackage::query()->findOrFail($id);
+        $package->forceFill(['status' => 'published', 'published_at' => now()])->save();
+
+        $this->getJson('/api/v1/public/packages/pokhara-escape')->assertOk()
+            ->assertJsonPath('data.priceOptions', [
+                ['label' => ['bn' => 'ডমেস্টিক ফ্লাইটসহ', 'en' => 'With domestic flight'], 'extraPerPerson' => 15000, 'estimate' => null],
+                // A missing Bangla label falls back to the English one.
+                ['label' => ['bn' => 'International air ticket', 'en' => 'International air ticket'], 'extraPerPerson' => null, 'estimate' => ['bn' => 'আনুমানিক ৩৭,০০০–৫০,০০০ টাকা জনপ্রতি', 'en' => 'About BDT 37,000–50,000 per person']],
+            ]);
+    }
+
     private function payload(int $destinationId): array
     {
         return [

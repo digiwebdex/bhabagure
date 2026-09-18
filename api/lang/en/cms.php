@@ -29,5 +29,6 @@ return [
     'category_in_use' => 'Posts still use this category.',
     'grid_needs_one_traveller' => 'Enter the price for 1 traveller: every other group size falls back to it.',
     'grid_price_range' => 'Grid prices are whole taka from 1 to 9,99,99,999.',
+    'price_option_amount_or_estimate' => 'Give each price option either an amount per person or an estimate in words — one of the two.',
     'hotel_category_required' => 'Choose the hotel category.',
 ];

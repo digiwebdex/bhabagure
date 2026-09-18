@@ -300,7 +300,21 @@
       "5": "৫ তারকা"
     },
     "gridNote": "{category} হোটেল · দুই বা বেশি জনের সিঙ্গেল রুমে +{percent}",
-    "gridNoteOne": "{category} হোটেল · একজনের মূল্যে সিঙ্গেল রুম ধরা আছে"
+    "gridNoteOne": "{category} হোটেল · একজনের মূল্যে সিঙ্গেল রুম ধরা আছে",
+    "priceTable": {
+      "heading": "এক নজরে দাম",
+      "caption": "{two} ও {four} জন গেলে প্যাকেজের দাম",
+      "travellers": "{paxText} জন",
+      "base": {
+        "withoutAir": "প্যাকেজ মূল্য (এয়ার টিকিট ছাড়া)",
+        "withAir": "প্যাকেজ মূল্য (এয়ার টিকিটসহ)",
+        "plain": "প্যাকেজ মূল্য"
+      },
+      "perPerson": "জনপ্রতি {amount}",
+      "total": "মোট {amount}",
+      "separately": "আলাদা খরচ (আনুমানিক)",
+      "estimateNote": "আনুমানিক খরচ দিনের ভাড়ার সঙ্গে বদলায় — বুকিংয়ের সময় সঠিক অঙ্ক জানিয়ে দেওয়া হবে।"
+    }
   },
   "departures": {
     "seatsLeft": "{totalText}-এর মধ্যে {leftText}টি সিট বাকি",

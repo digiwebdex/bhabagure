@@ -19,6 +19,7 @@ export const emptyPackage = (): PackageForm => ({
   regular_price: 0,
   sale_price: null,
   price_grid: null,
+  price_options: null,
   includes_airfare: null,
   group_mode: 'group',
   min_pax: null,

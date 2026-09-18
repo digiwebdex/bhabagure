@@ -60,6 +60,15 @@ final class PublicContent
             'salePrice' => Money::toNumber($package->sale_price),
             // {"3": {"1": 95000, "2": 75000, …}, …} or null: web/src/lib/content/types.ts TourPackage.priceGrid.
             'priceGrid' => $package->price_grid,
+            // Extras and estimates beside the package price (docs/package-price-options.md); each language falls back
+            // to the other.
+            'priceOptions' => array_map(fn (array $option) => [
+                'label' => ['bn' => ($option['label_bn'] ?? null) ?: $option['label_en'], 'en' => $option['label_en']],
+                'extraPerPerson' => isset($option['extra_per_person']) ? Money::toNumber($option['extra_per_person']) : null,
+                'estimate' => ($option['estimate_en'] ?? null) === null && ($option['estimate_bn'] ?? null) === null
+                    ? null
+                    : ['bn' => ($option['estimate_bn'] ?? null) ?: $option['estimate_en'], 'en' => ($option['estimate_en'] ?? null) ?: $option['estimate_bn']],
+            ], $package->price_options ?? []),
             'includesAirfare' => $package->includes_airfare,
             'groupMode' => $package->group_mode,
             'minPax' => $package->min_pax,

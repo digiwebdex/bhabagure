@@ -17,6 +17,7 @@ import { useTripSearch } from '@/state/trip-search';
 
 import { packageLabels } from './package-labels';
 import { PhotoGallery } from './PhotoGallery';
+import { PriceTable } from './PriceTable';
 
 /** Group-size chips shown above the stepper: 1 · 2 · 4 · 6 · 10+. */
 const SLAB_CHIPS = [1, 2, 4, 6, 10] as const;
@@ -161,6 +162,8 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
             <span className="font-display text-26 font-extrabold tracking-price text-orange-deep">{f.bdt(total)}</span>
           </span>
         </div>
+
+        <PriceTable pkg={pkg} rate={rate} />
       </div>
 
       {pkg.itinerary.length > 0 ? (

@@ -38,6 +38,11 @@ export interface TourPackage {
   salePrice: number | null;
   /** Hotel-category × traveller prices (Phase 8 §4.D); absent or null: one price and the group discounts. */
   priceGrid?: PriceGrid | null;
+  /**
+   * What the package costs on top of its own price (docs/package-price-options.md): an extra with an amount per person
+   * (a domestic flight), or a cost the agency can only estimate (the international air ticket). Absent: none.
+   */
+  priceOptions?: PackagePriceOption[];
   /** null = not stated; the card says "ask us". */
   includesAirfare: boolean | null;
   groupMode: 'group' | 'any';
@@ -49,6 +54,13 @@ export interface TourPackage {
   activities: string[];
   tripTypes: string[];
   images: (Omit<ContentImage, 'credit' | 'creditUrl'> & { credit?: string | null; creditUrl?: string | null })[];
+}
+
+/** One of extraPerPerson and estimate is set, never both. */
+export interface PackagePriceOption {
+  label: Localized;
+  extraPerPerson: number | null;
+  estimate: Localized | null;
 }
 
 export interface Departure {

@@ -15,6 +15,7 @@ import { InclusionsEditor, ItineraryEditor, SeoFields, TagInput } from './Conten
 import { DeparturesPanel } from './DeparturesPanel'
 import { PackagePhotos } from './PackagePhotos'
 import { PriceGridField } from './PriceGridField'
+import { PriceOptionsField } from './PriceOptionsField'
 
 const SITE_URL = (import.meta.env.VITE_SITE_URL ?? '').replace(/\/$/, '')
 
@@ -160,6 +161,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
               <NumberInput disabled={hasGrid} label={t('packages.salePrice')} value={hasGrid ? null : form.sale_price} onChange={(value) => set('sale_price', value)} error={error('sale_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} hint={hasGrid ? t('grid.pricesFromGrid') : form.sale_price === null ? t('packages.salePriceHint') : undefined} />
             </Pair>
             <PriceGridField value={form.price_grid} onChange={(grid) => set('price_grid', grid)} error={error} />
+            <PriceOptionsField value={form.price_options} onChange={(options) => set('price_options', options)} error={error} />
             <Pair>
               <SelectInput
                 label={t('packages.departureMode')}

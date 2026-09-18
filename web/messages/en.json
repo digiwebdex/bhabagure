@@ -300,7 +300,21 @@
       "5": "5-star"
     },
     "gridNote": "{category} hotel · a single room adds {percent} for two or more",
-    "gridNoteOne": "{category} hotel · the price for one includes a single room"
+    "gridNoteOne": "{category} hotel · the price for one includes a single room",
+    "priceTable": {
+      "heading": "Prices at a glance",
+      "caption": "Package prices for {two} and {four} travellers",
+      "travellers": "{pax, plural, one {{paxText} traveller} other {{paxText} travellers}}",
+      "base": {
+        "withoutAir": "Package price (without air ticket)",
+        "withAir": "Package price (with air ticket)",
+        "plain": "Package price"
+      },
+      "perPerson": "{amount} per person",
+      "total": "{amount} in all",
+      "separately": "Paid separately (estimates)",
+      "estimateNote": "Estimates move with the day’s fares — we confirm the exact amount when you book."
+    }
   },
   "departures": {
     "seatsLeft": "{leftText} of {totalText} seats left",

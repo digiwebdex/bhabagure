@@ -27,6 +27,15 @@ class PackageRequest extends FormRequest
             }
         }
 
+        // Price options: blank text is no text, and an empty list is no list.
+        if ($this->has('price_options')) {
+            $options = collect((array) $this->input('price_options'))
+                ->map(fn ($option) => collect((array) $option)->map(fn ($value) => is_string($value) && trim($value) === '' ? null : $value)->all())
+                ->values()
+                ->all();
+            $this->merge(['price_options' => $options === [] ? null : $options]);
+        }
+
         // A hotel-category price grid replaces the one price and the group discounts (Phase 8 §4.D). The price older
         // screens show becomes the grid's reference price, and a grid package has no sale price (decided 2026-09-16).
         if ($this->has('price_grid')) {
@@ -41,6 +50,15 @@ class PackageRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            // Each option is either an extra with an amount or an estimate in words — one of the two, not both.
+            foreach ((array) $this->input('price_options') as $index => $option) {
+                $hasAmount = ($option['extra_per_person'] ?? null) !== null;
+                $hasEstimate = ($option['estimate_en'] ?? null) !== null || ($option['estimate_bn'] ?? null) !== null;
+                if ($hasAmount === $hasEstimate) {
+                    $validator->errors()->add("price_options.{$index}", __('cms.price_option_amount_or_estimate'));
+                }
+            }
+
             $grid = $this->input('price_grid');
             if ($grid === null) {
                 return;
@@ -76,6 +94,14 @@ class PackageRequest extends FormRequest
             'regular_price' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2', 'lt:regular_price'],
             'price_grid' => ['nullable', 'array'],
+            // What the package costs on top of its own price: an extra with a fixed amount per person, or a cost the
+            // agency can only estimate (docs/package-price-options.md).
+            'price_options' => ['nullable', 'array', 'max:6'],
+            'price_options.*.label_en' => ['required', 'string', 'max:120'],
+            'price_options.*.label_bn' => ['nullable', 'string', 'max:120'],
+            'price_options.*.extra_per_person' => ['nullable', 'numeric', 'min:1', 'max:9999999', 'decimal:0,2'],
+            'price_options.*.estimate_en' => ['nullable', 'string', 'max:120'],
+            'price_options.*.estimate_bn' => ['nullable', 'string', 'max:120'],
             'includes_airfare' => ['nullable', 'boolean'],
             'group_mode' => ['required', Rule::in(['group', 'any'])],
             'min_pax' => ['nullable', 'integer', 'between:1,99'],

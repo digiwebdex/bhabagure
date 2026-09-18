@@ -35,6 +35,8 @@ export interface PackageView {
   priceGrid: PriceGrid | null;
   /** The hotel categories the grid offers, in order; empty without a grid. */
   hotelCategories: HotelCategory[];
+  /** Extras and estimates beside the package price, in the page's language (docs/package-price-options.md). */
+  priceOptions: { label: string; extraPerPerson: number | null; estimate: string | null }[];
   includesAirfare: boolean | null;
   groupMode: 'group' | 'any';
   minPax: number | null;
@@ -172,6 +174,11 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       savingPercent: savingPercent(p),
       priceGrid: p.priceGrid ?? null,
       hotelCategories: gridCategories(p.priceGrid),
+      priceOptions: (p.priceOptions ?? []).map((o) => ({
+        label: pick(o.label, locale),
+        extraPerPerson: o.extraPerPerson,
+        estimate: o.estimate ? pick(o.estimate, locale) : null,
+      })),
       includesAirfare: p.includesAirfare,
       groupMode: p.groupMode,
       minPax: p.minPax,

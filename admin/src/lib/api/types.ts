@@ -85,7 +85,17 @@ export type ItineraryDay = { day_number: number; title_bn: string | null; title_
 export type Inclusion = { text_bn: string | null; text_en: string }
 export type PackageImage = { id: number; sort_order: number; is_cover: boolean; media: Media }
 
+/** Beside the package price: an extra with an amount per person, or an estimate in words (docs/package-price-options.md). */
+export type PriceOption = {
+  label_en: string
+  label_bn: string | null
+  extra_per_person: number | null
+  estimate_en: string | null
+  estimate_bn: string | null
+}
+
 export type TourPackage = PackageSummary & {
+  price_options: PriceOption[] | null
   wp_trip_id: number | null
   destination_id: number
   summary_bn: string | null

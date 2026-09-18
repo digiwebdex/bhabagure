@@ -474,6 +474,48 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('the package page lists the prices for two and four, each extra added on, and the estimates apart (docs/package-price-options.md)', async ({ page, request }) => {
+    const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages'] } });
+    // The Amazing Thailand flyer: 59,000 for two and 55,000 for four, 15,000 more with the domestic flight.
+    const grid = JSON.stringify({ 3: { 1: 66100, 2: 59000, 4: 55000 } });
+    const options = JSON.stringify([
+      { label_en: 'With the domestic flight (Krabi → Bangkok)', label_bn: 'ডমেস্টিক ফ্লাইটসহ (ক্রাবি → ব্যাংকক)', extra_per_person: 15000, estimate_en: null, estimate_bn: null },
+      { label_en: 'International air ticket', label_bn: 'আন্তর্জাতিক এয়ার টিকিট', extra_per_person: null, estimate_en: 'About BDT 37,000–50,000 per person', estimate_bn: 'জনপ্রতি আনুমানিক ৩৭,০০০–৫০,০০০ টাকা' },
+    ]);
+    artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${thai}')->update(['price_grid' => '${grid}', 'price_options' => '${options}', 'regular_price' => 59000, 'sale_price' => null]); echo 'ok';`);
+    try {
+      expect((await refresh()).status()).toBe(200);
+      const table = page.getByTestId('price-table');
+      await expect.poll(async () => {
+        await page.goto(`/en/packages/${thai}`);
+        return table.count();
+      }, { timeout: 20_000 }).toBe(1);
+
+      const rows = table.getByRole('list', { name: 'Package prices for 2 and 4 travellers' }).getByRole('listitem');
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0)).toContainText('Package price (without air ticket)');
+      await expect(rows.nth(0)).toContainText('2 travellers৳ 1,18,000 in all৳ 59,000 per person');
+      await expect(rows.nth(0)).toContainText('4 travellers৳ 2,20,000 in all৳ 55,000 per person');
+      await expect(rows.nth(1)).toContainText('With the domestic flight (Krabi → Bangkok)');
+      await expect(rows.nth(1)).toContainText('2 travellers৳ 1,48,000 in all৳ 74,000 per person');
+      await expect(rows.nth(1)).toContainText('4 travellers৳ 2,80,000 in all৳ 70,000 per person');
+      // An estimate is not added to any price; it is listed apart.
+      await expect(table).toContainText('Paid separately (estimates)');
+      await expect(table).toContainText('International air ticket: About BDT 37,000–50,000 per person');
+
+      // Bangla at the unprefixed address.
+      await page.goto(`/packages/${thai}`);
+      const rowsBn = table.getByRole('list', { name: '২ ও ৪ জন গেলে প্যাকেজের দাম' }).getByRole('listitem');
+      await expect(rowsBn.nth(1)).toContainText('ডমেস্টিক ফ্লাইটসহ (ক্রাবি → ব্যাংকক)');
+      await expect(rowsBn.nth(1)).toContainText('মোট ৳ ১,৪৮,০০০');
+      await expect(table).toContainText('জনপ্রতি আনুমানিক ৩৭,০০০–৫০,০০০ টাকা');
+    } finally {
+      artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${thai}')->update(['price_grid' => null, 'price_options' => null, 'regular_price' => 30000, 'sale_price' => 27000]); echo 'ok';`);
+      await refresh();
+    }
+  });
+
   test('saving a package in the CMS refreshes the website', async ({ page, request }) => {
     // Nepal 04: the other website tests use the Mustang package, so this one is renamed and then restored.
     const slug = 'kathmandu-nagarkot-himalayan-tour-3-nights-4-days-without-air-ticket';
