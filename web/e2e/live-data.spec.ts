@@ -317,7 +317,7 @@ test.describe('CMS to website', () => {
     }
   });
 
-  test('offer banners published in the CMS slide under the hero, above the search (docs/offer-banners.md)', async ({ page, request }) => {
+  test('offer banners published in the CMS slide under the search panel (docs/offer-banners.md)', async ({ page, request }) => {
     const password = 'e2e-offer-editor-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'offer.editor@e2e.test'], ['employee_code' => 'E2E-OFF', 'name' => 'Offer editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
     const pictures = String(
@@ -357,8 +357,8 @@ test.describe('CMS to website', () => {
         return page.locator('#offers').count();
       }, { timeout: 20_000 }).toBe(1);
 
-      // Straight under the hero video, above the search panel.
-      const tops = await page.evaluate(() => ['top', 'offers', 'search'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
+      // Under the hero video and the search panel (moved there on 2026-09-19).
+      const tops = await page.evaluate(() => ['top', 'search', 'offers'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
       expect(tops[0]).toBeLessThan(tops[1]);
       expect(tops[1]).toBeLessThan(tops[2]);
 

@@ -1,18 +1,21 @@
-# Offer banners: the slideshow under the hero
+# Offer banners: the slideshow under the search
 
 **Asked (2026-09-18):** the client wants the offer banners shown as a slideshow, second on the home page — straight
 under the hero video and above the package and flight search.
+
+**Moved (2026-09-19):** the client asked for the search panel above the banners, so the home page now runs hero
+video → search → offer banners.
 
 **Decided with the client (2026-09-18):** it changes by itself every 6 seconds, with arrows and dots; each banner can
 lead wherever they choose; the banners sit in a page-width card about 3:1; and they upload the pictures themselves.
 
 ## Website
 
-`web/src/features/offers/OffersSlideshow.tsx`, `id="offers"`, between `HeroSection` and `SearchPanel`. Hidden until a
+`web/src/features/offers/OffersSlideshow.tsx`, `id="offers"`, after `SearchPanel`. Hidden until a
 banner is published.
 
-- One picture at a time in a rounded, page-width card, cropped 3:1. The first is loaded with priority: it is the first
-  thing under the hero.
+- One picture at a time in a rounded, page-width card, cropped 3:1. The first is loaded with priority: it sits just
+  under the search, near the top of the page.
 - **It waits rather than runs away:** the timer stops while someone is pointing at the slideshow, while anything inside
   it has keyboard focus, and while the tab is in the background. Under `prefers-reduced-motion: reduce` it never moves
   on its own, and jumps rather than glides when the visitor asks for the next one.
@@ -62,5 +65,5 @@ the left two-thirds, where the darkened side of these banners sits.
 - API `OfferBannersTest`: a picture is needed to publish; order and unpublishing; only a site page or an `https://`
   address is accepted as a link; a picture in use cannot be deleted; permissions. `CmsPermissionsTest` covers the path.
 - Admin e2e `cms.spec.ts`: publishing is refused without a picture, then the banner reaches the public API.
-- Website e2e `live-data.spec.ts`: published banners appear under the hero, above the search panel, with the picture,
+- Website e2e `live-data.spec.ts`: published banners appear under the hero and the search panel, with the picture,
   the link and working dots.

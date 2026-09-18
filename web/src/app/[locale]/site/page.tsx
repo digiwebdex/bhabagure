@@ -56,8 +56,8 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
     <SiteChrome locale={locale} views={views} pathname="/">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(travelAgency(views.settings, siteUrl())) }} />
       <HeroSection locale={locale} />
-      <OffersSlideshow offers={views.offers} />
       <SearchPanel />
+      <OffersSlideshow offers={views.offers} />
       <Marquee locale={locale} />
       <ServicesSection locale={locale} />
       <PackagesSection locale={locale} />
