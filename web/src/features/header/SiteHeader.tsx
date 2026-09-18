@@ -26,10 +26,14 @@ interface SiteHeaderProps {
 
 type NavItem = { kind: 'section'; id: string; key: string } | { kind: 'page'; href: string; key: string } | { kind: 'book'; key: string };
 
-/** README: the section links on desktop, plus the team page; visa, FAQ, gallery and "how booking works" join them in the ☰ sheet. */
+/**
+ * README: the section links on desktop, plus the team page and — once a visa is published — Visa (asked for on
+ * 2026-09-19); FAQ, gallery and "how booking works" join them in the ☰ sheet.
+ */
 const DESKTOP_NAV: NavItem[] = [
   { kind: 'section', id: 'services', key: 'services' },
   { kind: 'section', id: 'packages', key: 'packages' },
+  { kind: 'section', id: 'visa', key: 'visa' },
   { kind: 'section', id: 'departures', key: 'departures' },
   { kind: 'section', id: 'about', key: 'about' },
   { kind: 'page', href: teamPath, key: 'team' },

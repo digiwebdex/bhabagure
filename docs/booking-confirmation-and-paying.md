@@ -55,4 +55,6 @@ cash-out fee). Same wording in WhatsApp, email and invoices (`PaymentOptions::li
 It existed — menu link, the search panel's Visa tab, a page per visa, Admin → Visa services — but hid itself because
 none of the twelve visas was published, and publishing required a processing time the client had not sent. The client
 chose to go live now: the processing time is **optional**; where it is empty the website and the PDF say "জানতে যোগাযোগ
-করুন / ask us", and it shows as soon as staff fill it in. The twelve were published on live the same day.
+করুন / ask us", and it shows as soon as staff fill it in. The twelve were published on live the same day. The computer
+header now has a **Visa / ভিসা** link beside Packages as well (the ☰ sheet already had one); like the others it appears
+only while a visa is published, and the header still fits one row at 900px with every link, in both languages.

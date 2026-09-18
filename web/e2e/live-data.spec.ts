@@ -194,6 +194,7 @@ test.describe('CMS to website', () => {
     await page.goto('/en');
     await expect(page.locator('#visa')).toHaveCount(0);
     await expect(page.locator('#search').getByRole('tab', { name: 'Visa', exact: true })).toHaveCount(0);
+    await expect(page.locator('header nav').getByRole('link', { name: 'Visa', exact: true })).toHaveCount(0);
 
     const created = await request.post(`${E2E_API_URL}/api/v1/admin/visas`, {
       headers,
@@ -222,6 +223,18 @@ test.describe('CMS to website', () => {
       // The Visa tab lists the country's visas.
       await page.locator('#search').getByRole('tab', { name: 'Visa', exact: true }).click();
       await expect(page.getByTestId('visa-finder-results')).toContainText('Tourist visa');
+
+      // The header links to it on a computer too (2026-09-19), and still fits one row at 900px with every link shown
+      // (departures included) in both languages, the Bangla labels being the longer.
+      await expect(page.locator('header nav').getByRole('link', { name: 'Visa', exact: true })).toHaveAttribute('href', '#visa');
+      for (const path of ['/en', '/']) {
+        await page.setViewportSize({ width: 900, height: 800 });
+        await page.goto(path);
+        expect(await page.locator('header').first().evaluate((el) => Math.round(el.getBoundingClientRect().height)), `header on ${path}`).toBe(73);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `no sideways scroll on ${path}`).toBe(true);
+      }
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await page.goto('/en');
 
       // Its page: price, processing, stay, the requirements as a list, the note; Bangla at the unprefixed address.
       await card.getByRole('link', { name: 'Requirements & details →' }).click();
