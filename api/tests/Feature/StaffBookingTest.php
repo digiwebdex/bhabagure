@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\Invoice;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -97,6 +98,60 @@ class StaffBookingTest extends TestCase
         $this->actingAsApi($this->staff('admin'))->postJson('/api/v1/admin/bookings', ['expected_total' => 150000] + $this->payload())
             ->assertStatus(409)->assertJsonPath('code', 'price_changed')->assertJsonPath('quote.total', 153000);
         $this->assertSame(0, Booking::query()->count());
+    }
+
+    /**
+     * docs/custom-service-bookings.md (asked for 2026-09-19): instead of a package, a custom service — its name and items,
+     * each at a price per person — with the service charge and VAT on top, a date only if known, and a draft invoice
+     * that re-prices it from those same items.
+     */
+    #[Test]
+    public function the_office_books_a_custom_service_with_its_own_items_and_prices(): void
+    {
+        $agent = $this->staff('sales_agent');
+        $custom = [
+            'title' => "Cox's Bazar family trip",
+            'items' => [['title' => 'Hotel, 3 nights', 'unit_price' => 8000], ['title' => 'Air ticket Dhaka–Cox\'s Bazar', 'unit_price' => 6500]],
+        ];
+        $payload = ['custom' => $custom, 'travel_date' => null, 'room' => null, 'expected_total' => 29580] + $this->payload();
+        unset($payload['package_slug']);
+
+        // 2 travellers × (8,000 + 6,500) = 29,000; service charge and VAT 2% = 580 → 29,580.
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', ['expected_total' => 29000] + $payload)
+            ->assertStatus(409)->assertJsonPath('code', 'price_changed')->assertJsonPath('quote.total', 29580);
+        $id = $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', $payload)->assertCreated()
+            ->assertJsonPath('data.is_custom', true)
+            ->assertJsonPath('data.package_title_en', "Cox's Bazar family trip")
+            ->assertJsonPath('data.travel_start', null)
+            ->assertJsonPath('data.total_amount', 29580)
+            ->assertJsonPath('data.quote_inputs.custom_items', [['title' => 'Hotel, 3 nights', 'unitPrice' => 8000], ['title' => "Air ticket Dhaka–Cox's Bazar", 'unitPrice' => 6500]])
+            ->json('data.id');
+        $booking = Booking::query()->with('lines')->findOrFail($id);
+        $this->assertNull($booking->tour_package_id);
+        $this->assertSame([['custom', 'Hotel, 3 nights', 2, '8000.00', '16000.00'], ['custom', "Air ticket Dhaka–Cox's Bazar", 2, '6500.00', '13000.00']],
+            $booking->lines->sortBy('sort_order')->map(fn ($l) => [$l->kind, $l->title_en, $l->quantity, $l->unit_price, $l->amount])->values()->all());
+
+        // The draft invoice: 3 travellers, 1,000 off, 2% → 43,500 − 1,000 = 42,500 + 850 = 43,350. The items stay.
+        $admin = $this->staff('admin');
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/bookings/{$id}/quote", ['pax' => 3, 'room' => 'twin', 'discount' => 1000, 'vat_rate' => 2, 'expected_total' => 43350])
+            ->assertOk()->assertJsonPath('data.total_amount', 43350);
+        $this->assertSame([['Hotel, 3 nights', 3, '24000.00'], ["Air ticket Dhaka–Cox's Bazar", 3, '19500.00']],
+            $booking->lines()->orderBy('sort_order')->get()->map(fn ($l) => [$l->title_en, $l->quantity, $l->amount])->all());
+
+        // Issued, the invoice lists the same items.
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$id}/invoice")->assertOk();
+        $this->assertSame(['Hotel, 3 nights', "Air ticket Dhaka–Cox's Bazar"], Invoice::query()->where('booking_id', $id)->firstOrFail()->items()->orderBy('sort_order')->pluck('title_en')->all());
+
+        // A package or a custom service, not both; a custom service needs its items and whole, non-negative prices.
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', ['package_slug' => self::MUSTANG] + $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('package_slug');
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', ['custom' => ['title' => 'Visa help', 'items' => []]] + $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('custom.items');
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', ['custom' => ['title' => 'Visa help', 'items' => [['title' => 'Fee', 'unit_price' => -5]]]] + $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('custom.items.0.unit_price');
+        // A package still needs its date.
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/bookings', ['travel_date' => null] + $this->payload())
+            ->assertUnprocessable()->assertJsonValidationErrors('travel_date');
     }
 
     private function payload(): array

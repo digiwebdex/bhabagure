@@ -11,7 +11,8 @@ final class BookingRequest
      */
     public function __construct(
         public readonly string $packageSlug,
-        public readonly string $travelDate,
+        /** Y-m-d. Null only for a custom service booked without a date (docs/custom-service-bookings.md). */
+        public readonly ?string $travelDate,
         public readonly int $pax,
         public readonly string $room,
         public readonly array $addonCodes,

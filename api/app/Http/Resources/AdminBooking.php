@@ -37,6 +37,8 @@ final class AdminBooking
                 ? ['id' => $booking->customer->id, 'name' => $booking->customer->name, 'phone' => $booking->customer->phone, 'email' => $booking->customer->email] : null,
             'package_title_en' => $booking->package_title_en,
             'package_title_bn' => $booking->package_title_bn,
+            // A custom service rather than a package (docs/custom-service-bookings.md): the title is the service's name.
+            'is_custom' => $booking->is_custom,
             'travel_start' => $booking->travel_start?->toDateString(),
             'pax_count' => $booking->pax_count,
             'total_amount' => Money::toNumber($booking->total_amount),
@@ -165,6 +167,8 @@ final class AdminBooking
                 'grid' => $booking->price_grid,
                 'hotel_category' => $booking->hotel_category,
                 'addons' => app(BookingQuoteEditor::class)->addonInputs($booking),
+                // A custom service (docs/custom-service-bookings.md) is priced from its own items with invoiceTotals.
+                'custom_items' => $booking->is_custom ? app(BookingQuoteEditor::class)->customItems($booking) : null,
                 'config' => (fn (PricingConfig $c) => [
                     'slabs' => $c->slabs, 'singleRoomSupplementPercent' => $c->singleRoomSupplementPercent,
                     'serviceChargePercent' => $c->serviceChargePercent, 'maxTravellers' => $c->maxTravellers,

@@ -141,7 +141,7 @@
   },
   "newBooking": {
     "title": "New booking",
-    "subtitle": "A booking made at the office, on the phone or on WhatsApp — priced exactly as the website prices it",
+    "subtitle": "A booking made at the office, on the phone or on WhatsApp — a package priced exactly as the website prices it, or a custom service at your own prices",
     "customer": "Customer",
     "newLead": "New customer",
     "existing": "Existing customer",
@@ -165,7 +165,16 @@
     "submit": "Create booking · {{total}}",
     "submitEmpty": "Create booking",
     "created": "Booking {{reference}} created",
-    "namesLater": "Names and passports can be added on the booking"
+    "namesLater": "Names and passports can be added on the booking",
+    "customOption": "★ Custom service — your own items and prices",
+    "serviceName": "Service name",
+    "serviceNamePlaceholder": "e.g. Cox’s Bazar family trip",
+    "itemName": "Item {{n}}",
+    "itemPrice": "Price per person (BDT)",
+    "addItem": "Add item",
+    "removeItem": "Remove item {{n}}",
+    "travelDateOptional": "Travel date (optional)",
+    "customPerPerson": "All items, per person ({{n}} travellers)"
   },
   "sources": {
     "walk_in": "Walk-in",

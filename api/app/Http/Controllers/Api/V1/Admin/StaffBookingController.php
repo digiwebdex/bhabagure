@@ -45,6 +45,7 @@ class StaffBookingController extends Controller
         }
         $max = PricingConfig::current()->maxTravellers;
         $pax = (int) $request->input('pax');
+        $custom = $request->filled('custom');
 
         $data = $request->validate([
             'customer_id' => ['required_without:customer', 'prohibits:customer', 'nullable', 'integer'],
@@ -53,10 +54,17 @@ class StaffBookingController extends Controller
             'customer.phone' => ['required_with:customer', 'regex:/^8801[3-9]\d{8}$/'],
             'customer.email' => ['nullable', 'email', 'max:190'],
             'customer.source' => ['required_with:customer', Rule::in(array_map(fn (LeadSource $s) => $s->value, LeadSource::forCustomers()))],
-            'package_slug' => ['required', 'string', Rule::exists('tour_packages', 'slug')->where('status', 'published')],
-            'travel_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
+            // A package, or a custom service: its name and items, each at a price per person (docs/custom-service-bookings.md).
+            'package_slug' => ['required_without:custom', 'prohibits:custom', 'nullable', 'string', Rule::exists('tour_packages', 'slug')->where('status', 'published')],
+            'custom' => ['required_without:package_slug', 'nullable', 'array'],
+            'custom.title' => ['required_with:custom', 'string', 'max:160'],
+            'custom.items' => ['required_with:custom', 'array', 'min:1', 'max:20'],
+            'custom.items.*.title' => ['required', 'string', 'max:160'],
+            'custom.items.*.unit_price' => ['required', 'integer', 'min:0', 'max:9999999'],
+            // A custom service may be booked before its date is known.
+            'travel_date' => [$custom ? 'nullable' : 'required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'pax' => ['required', 'integer', 'min:1', "max:{$max}"],
-            'room' => ['required', Rule::in(['twin', 'triple', 'single'])],
+            'room' => [$custom ? 'nullable' : 'required', Rule::in(['twin', 'triple', 'single'])],
             'hotel_category' => ['nullable', Rule::in(['3', '4', '5'])],
             'addons' => ['array', 'max:20'],
             'addons.*' => ['string', 'distinct', Rule::exists(Addon::class, 'code')->where('is_active', true)],
@@ -66,7 +74,7 @@ class StaffBookingController extends Controller
             'travellers.*.name' => ['nullable', 'string', 'max:160'],
             'travellers.*.passport_number' => ['nullable', 'regex:/^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/'],
             'travellers.*.date_of_birth' => ['nullable', 'date_format:Y-m-d', 'before:today'],
-            'travellers.*.passport_expiry' => ['nullable', 'date_format:Y-m-d', 'after:travel_date'],
+            'travellers.*.passport_expiry' => ['nullable', 'date_format:Y-m-d', $request->filled('travel_date') ? 'after:travel_date' : 'after:today'],
             'travellers.*.phone' => ['nullable', 'regex:/^8801[3-9]\d{8}$/'],
             'travellers.*.email' => ['nullable', 'email', 'max:190'],
             'expected_total' => ['required', 'numeric', 'min:0'],
@@ -85,29 +93,39 @@ class StaffBookingController extends Controller
         $travellers[0]['phone'] ??= $customer?->phone ?? $data['customer']['phone'];
         $travellers[0]['email'] ??= $customer?->email ?? ($data['customer']['email'] ?? null);
 
+        $bookingRequest = new BookingRequest(
+            packageSlug: $data['package_slug'] ?? '',
+            travelDate: $data['travel_date'] ?? null,
+            pax: $data['pax'],
+            // Rooms are a package's; a custom service keeps the default.
+            room: $data['room'] ?? 'twin',
+            addonCodes: $custom ? [] : ($data['addons'] ?? []),
+            travellers: array_map(fn (array $t) => [
+                'name' => $t['name'],
+                'passportNumber' => $t['passport_number'] ?? null,
+                'dateOfBirth' => $t['date_of_birth'] ?? null,
+                'passportExpiry' => $t['passport_expiry'] ?? null,
+                'phone' => $t['phone'] ?? null,
+                'email' => $t['email'] ?? null,
+            ], $travellers),
+            expectedTotal: $data['expected_total'],
+            locale: $data['locale'],
+            source: $customer?->source ?? $data['customer']['source'],
+            termsAccepted: false,
+            hotelCategory: $custom ? null : ($data['hotel_category'] ?? null),
+        );
+        $newCustomer = $customer ? null : [
+            'name' => trim($data['customer']['name']), 'phone' => $data['customer']['phone'], 'email' => $data['customer']['email'] ?? null, 'source' => $data['customer']['source'],
+        ];
+
         try {
-            $booking = $creator->create(new BookingRequest(
-                packageSlug: $data['package_slug'],
-                travelDate: $data['travel_date'],
-                pax: $data['pax'],
-                room: $data['room'],
-                addonCodes: $data['addons'] ?? [],
-                travellers: array_map(fn (array $t) => [
-                    'name' => $t['name'],
-                    'passportNumber' => $t['passport_number'] ?? null,
-                    'dateOfBirth' => $t['date_of_birth'] ?? null,
-                    'passportExpiry' => $t['passport_expiry'] ?? null,
-                    'phone' => $t['phone'] ?? null,
-                    'email' => $t['email'] ?? null,
-                ], $travellers),
-                expectedTotal: $data['expected_total'],
-                locale: $data['locale'],
-                source: $customer?->source ?? $data['customer']['source'],
-                termsAccepted: false,
-                hotelCategory: $data['hotel_category'] ?? null,
-            ), $staff, $customer, $customer ? null : [
-                'name' => trim($data['customer']['name']), 'phone' => $data['customer']['phone'], 'email' => $data['customer']['email'] ?? null, 'source' => $data['customer']['source'],
-            ]);
+            $booking = $custom
+                ? $creator->createCustom(
+                    trim($data['custom']['title']),
+                    array_map(fn (array $item) => ['title' => trim($item['title']), 'unitPrice' => (int) $item['unit_price']], array_values($data['custom']['items'])),
+                    $bookingRequest, $staff, $customer, $newCustomer,
+                )
+                : $creator->create($bookingRequest, $staff, $customer, $newCustomer);
         } catch (CustomerExists $e) {
             // Name the record only to someone who may see it; otherwise say no more than that the number is taken.
             $visible = Customer::query()->visibleTo($staff)->whereKey($e->customer->id)->exists();

@@ -55,7 +55,11 @@ final class BookingQuoteEditor
             $before = $booking->only(['pax_count', 'room_type', 'discount_amount', 'vat_rate', 'total_amount']);
 
             $booking->lines()->delete();
-            foreach ($quote['lines'] as $index => $line) {
+            // A custom service keeps its own items, names and prices; only the travellers they are for change.
+            foreach ($booking->is_custom ? $quote['lines'] : [] as $index => $line) {
+                $booking->lines()->create($line + ['sort_order' => $index]);
+            }
+            foreach ($booking->is_custom ? [] : $quote['lines'] as $index => $line) {
                 $snapshot = $line['code'] ? $addonLines[$line['code']] : null;
                 $booking->lines()->create([
                     'kind' => $line['kind'], 'code' => $line['code'],
@@ -83,9 +87,25 @@ final class BookingQuoteEditor
     /** @return array<string, mixed> */
     public function quote(Booking $booking, int $pax, string $room, int|float $discount, int|float $vatRate): array
     {
+        if ($booking->is_custom) {
+            return BookingCreator::customQuote($this->customItems($booking), $pax, $discount, $vatRate) + ['singleSupplement' => 0, 'addons' => []];
+        }
+
         // A grid booking keeps its category and that category's prices as booked.
         return PricingService::quoteBooking((float) $booking->list_price, $pax, $room, $this->addonInputs($booking), PricingConfig::current(), $discount, $vatRate,
             grid: $booking->price_grid, hotelCategory: $booking->hotel_category);
+    }
+
+    /**
+     * A custom service's items as pricing inputs: each item's name and price per person, as booked.
+     *
+     * @return list<array{title: string, unitPrice: int|float}>
+     */
+    public function customItems(Booking $booking): array
+    {
+        return $booking->lines->where('kind', 'custom')->sortBy('sort_order')
+            ->map(fn (BookingLine $line) => ['title' => $line->title_en, 'unitPrice' => Money::toNumber($line->unit_price)])
+            ->values()->all();
     }
 
     /**

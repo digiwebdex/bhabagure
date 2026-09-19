@@ -49,3 +49,45 @@ test('a sales agent books a walk-in customer at the website price; the booking i
   await expect(page.getByRole('alert')).toContainText('already exists')
   await expect(page).toHaveURL(/\/bookings\/new$/)
 })
+
+/**
+ * docs/custom-service-bookings.md (asked for 2026-09-19): beside the fixed packages, a custom service — its name and
+ * items, each at a price per person, the service charge and VAT on top, and a date only if it is known.
+ */
+test('the office books a custom service with its own items and prices, and the draft invoice keeps them', async ({ page }) => {
+  await signIn(page, 'admin')
+  await page.goto('/bookings/new')
+  await expect(page.getByRole('heading', { name: 'New booking', level: 1 })).toBeVisible(FIRST_LOAD)
+
+  await page.getByLabel('Full name').first().fill('Custom Service Customer')
+  await page.getByLabel('Phone', { exact: true }).fill('01711-515151')
+  await page.getByLabel('Travellers', { exact: true }).fill('2')
+  await page.getByLabel('Package', { exact: true }).selectOption({ label: '★ Custom service — your own items and prices' })
+
+  // No room, hotel category or add-ons: those belong to packages.
+  await expect(page.getByLabel('Room', { exact: true })).toHaveCount(0)
+  await page.getByLabel('Service name').fill("Cox's Bazar family trip")
+  await page.getByRole('textbox', { name: 'Item 1' }).fill('Hotel, 3 nights')
+  await page.getByLabel('Price per person (BDT)').first().fill('8000')
+  await page.getByRole('button', { name: '+ Add item' }).click()
+  await page.getByRole('textbox', { name: 'Item 2' }).fill('Air ticket')
+  await page.getByLabel('Price per person (BDT)').nth(1).fill('6500')
+
+  // 2 × (8,000 + 6,500) = 29,000 + 2% = 29,580. No travel date: it is optional for a custom service.
+  await expect(page.getByTestId('new-booking-total')).toHaveText('BDT 29,580')
+  await page.getByRole('button', { name: 'Create booking · BDT 29,580' }).click()
+  await expect(page).toHaveURL(/\/bookings\/\d+$/)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/BH-\d{4}-\d{3,}/, FIRST_LOAD)
+
+  // The draft invoice lists the items by name; a third traveller re-prices from them: 3 × 14,500 = 43,500 + 870 = 44,370.
+  const quote = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Quote' }) })
+  await expect(quote).toContainText('Hotel, 3 nights')
+  await expect(quote).toContainText('Air ticket')
+  await quote.getByRole('button', { name: 'One traveller more' }).click()
+  await expect(quote).toContainText('BDT 44,370')
+  await quote.getByRole('button', { name: 'Save quote' }).click()
+  await expect(page.getByText('Quote saved')).toBeVisible()
+  await page.reload()
+  await expect(quote).toContainText('BDT 44,370', FIRST_LOAD)
+  await expect(quote).toContainText('Hotel, 3 nights')
+})

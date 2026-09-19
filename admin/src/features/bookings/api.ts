@@ -26,6 +26,8 @@ export type BookingSummary = {
   customer: { id: number; name: string; phone: string; email: string | null } | null
   package_title_en: string
   package_title_bn: string | null
+  /** A custom service rather than a package (docs/custom-service-bookings.md); the title is the service's name. */
+  is_custom: boolean
   travel_start: string | null
   pax_count: number
   total_amount: number
@@ -65,7 +67,8 @@ export type BookingDetail = BookingSummary & {
   cancellation_reason: string | null
   terms_accepted_at: string | null
   terms_version: string | null
-  lines: { kind: 'package' | 'single_supplement' | 'addon'; code: string | null; title_en: string; title_bn: string | null; quantity: number; unit_price: number; amount: number }[]
+  /** 'custom': an item of a custom service (docs/custom-service-bookings.md), named by its title. */
+  lines: { kind: 'package' | 'single_supplement' | 'addon' | 'custom'; code: string | null; title_en: string; title_bn: string | null; quantity: number; unit_price: number; amount: number }[]
   travellers: {
     id: number
     is_lead: boolean
@@ -129,7 +132,15 @@ export type BookingDetail = BookingSummary & {
     settled_at: string | null
   }[]
   actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets', boolean>
-  quote_inputs: { list_price: number; grid: PriceGrid | null; hotel_category: HotelCategory | null; addons: Addon[]; config: PricingConfig }
+  quote_inputs: {
+    list_price: number
+    grid: PriceGrid | null
+    hotel_category: HotelCategory | null
+    addons: Addon[]
+    /** A custom service's items as booked, each at a price per person; null for a package. */
+    custom_items: { title: string; unitPrice: number }[] | null
+    config: PricingConfig
+  }
   /** Phase 8 §4.D: the hotel category a grid package was booked in. */
   hotel_category: HotelCategory | null
   payment_methods: string[]

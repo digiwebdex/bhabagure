@@ -134,6 +134,69 @@ final class BookingCreator
     }
 
     /**
+     * A custom service booked at the office (docs/custom-service-bookings.md): no package, the office's own items, each
+     * at a price per person for every traveller, then the site's service charge and VAT — the same invoiceTotals rule
+     * as every invoice. `$request->expectedTotal` is the total the screen showed; a different one is PriceChanged.
+     *
+     * @param  list<array{title: string, unitPrice: int}>  $items
+     * @return array{booking: Booking, accessToken: string}
+     *
+     * @throws PriceChanged
+     */
+    public function createCustom(string $title, array $items, BookingRequest $request, Customer $customer, Staff $staff): array
+    {
+        $quote = self::customQuote($items, $request->pax, 0, PricingConfig::current()->serviceChargePercent);
+        if ((int) round($request->expectedTotal) !== $quote['total']) {
+            throw new PriceChanged($quote);
+        }
+
+        return DB::transaction(fn () => $this->persist($request, [
+            'tour_package_id' => null,
+            'is_custom' => true,
+            'package_title_en' => $title,
+            'package_title_bn' => null,
+            'duration_days' => null,
+            'list_price' => $quote['perPerson'],
+            'hotel_category' => null,
+            'price_grid' => null,
+            'unit_price' => $quote['perPerson'],
+            'subtotal_amount' => $quote['subtotal'],
+            'single_supplement_amount' => 0,
+            'addons_amount' => 0,
+            'discount_amount' => $quote['discount'],
+            'vat_rate' => $quote['chargePercent'],
+            'vat_amount' => $quote['serviceCharge'],
+            'total_amount' => $quote['total'],
+        ], $quote['lines'], $customer, $staff));
+    }
+
+    /**
+     * A custom service's quote: each item for every traveller, the discount, then service charge and VAT. The admin screen
+     * works out the same with @bhabaghure/pricing's invoiceTotals.
+     *
+     * @param  list<array{title: string, unitPrice: int|float}>  $items
+     * @return array{perPerson: int, subtotal: int, discount: int, chargePercent: int|float, serviceCharge: int, total: int, lines: list<array<string, mixed>>}
+     */
+    public static function customQuote(array $items, int $pax, int|float $discount, int|float $chargePercent): array
+    {
+        $lines = array_map(fn (array $item) => ['quantity' => $pax, 'unitPrice' => (int) round($item['unitPrice'])], $items);
+        $totals = PricingService::invoiceTotals($lines, $discount, $chargePercent);
+
+        return [
+            'perPerson' => array_sum(array_column($lines, 'unitPrice')),
+            'subtotal' => $totals['subtotal'],
+            'discount' => $totals['discount'],
+            'chargePercent' => $totals['chargePercent'],
+            'serviceCharge' => $totals['charge'],
+            'total' => $totals['total'],
+            'lines' => array_map(fn (array $item, array $line) => [
+                'kind' => 'custom', 'code' => null, 'title_en' => $item['title'], 'title_bn' => null,
+                'quantity' => $pax, 'unit_price' => $line['unitPrice'], 'amount' => $pax * $line['unitPrice'],
+            ], $items, $lines),
+        ];
+    }
+
+    /**
      * Everything after pricing, the same for the website, the office and a converted quotation: seats, customer, number,
      * snapshot, lines, travellers, seat hold, audit and the booking-received messages.
      *
@@ -154,19 +217,20 @@ final class BookingCreator
         $lead = $request->travellers[0];
         $customer ??= $this->customerFor($lead['name'], $lead['phone'], $lead['email'] ?? null, $request->locale);
         $accessToken = Str::random(48);
-        $start = Carbon::parse($request->travelDate);
+        $start = $request->travelDate === null ? null : Carbon::parse($request->travelDate);
 
         $booking = Booking::query()->create([
             'reference' => $this->numbers->bookingReference(),
             'customer_id' => $customer->id,
             'client_id' => $customer->client_id,
             'tour_package_id' => $snapshot['tour_package_id'],
+            'is_custom' => $snapshot['is_custom'] ?? false,
             'departure_id' => $departure?->id,
             'quotation_id' => $quotationId,
             'package_title_en' => $snapshot['package_title_en'],
             'package_title_bn' => $snapshot['package_title_bn'],
-            'travel_start' => $start->toDateString(),
-            'travel_end' => $snapshot['duration_days'] ? $start->copy()->addDays($snapshot['duration_days'] - 1)->toDateString() : null,
+            'travel_start' => $start?->toDateString(),
+            'travel_end' => $start && $snapshot['duration_days'] ? $start->copy()->addDays($snapshot['duration_days'] - 1)->toDateString() : null,
             'pax_count' => $request->pax,
             'room_type' => $request->room,
             'source' => $request->source,

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
-import { paymentStatus, quoteBooking, type RoomType } from '@bhabaghure/pricing'
+import { invoiceTotals, paymentStatus, quoteBooking, type RoomType } from '@bhabaghure/pricing'
 
 import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
@@ -124,6 +124,12 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
   const inputs = booking.quote_inputs
   const quote = useMemo(() => {
     try {
+      // A custom service: its own items for every traveller, the discount, then VAT — the API's customQuote exactly.
+      if (inputs.custom_items) {
+        const lines = inputs.custom_items.map((item, index) => ({ kind: 'custom', code: `item-${index}`, title: item.title, quantity: pax, unitPrice: item.unitPrice, amount: pax * item.unitPrice }))
+        const totals = invoiceTotals({ lines, discount: discount ?? 0, chargePercent: vat })
+        return { lines, discount: totals.discount, serviceCharge: totals.charge, total: totals.total }
+      }
       return quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: discount ?? 0, chargePercent: vat, grid: inputs.grid, hotelCategory: inputs.hotel_category })
     } catch {
       return null
@@ -137,9 +143,10 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
   const lineTitle = (kind: string, code: string | null) =>
     kind === 'package' ? t('bookings.line.package') : kind === 'single_supplement' ? t('bookings.line.single') : (booking.lines.find((l) => l.code === code)?.title_en ?? code ?? '')
 
+  // A custom service's lines carry their own names.
   const lines = editable && quote
-    ? quote.lines.map((line) => ({ key: `${line.kind}-${line.code}`, title: lineTitle(line.kind, line.code), quantity: line.quantity, unitPrice: line.unitPrice, amount: line.amount }))
-    : booking.lines.map((line) => ({ key: `${line.kind}-${line.code}`, title: lineTitle(line.kind, line.code), quantity: line.quantity, unitPrice: line.unit_price, amount: line.amount }))
+    ? quote.lines.map((line, index) => ({ key: `${line.kind}-${line.code ?? index}`, title: 'title' in line && typeof line.title === 'string' ? line.title : lineTitle(line.kind, line.code), quantity: line.quantity, unitPrice: line.unitPrice, amount: line.amount }))
+    : booking.lines.map((line, index) => ({ key: `${line.kind}-${line.code ?? index}`, title: line.kind === 'custom' ? line.title_en : lineTitle(line.kind, line.code), quantity: line.quantity, unitPrice: line.unit_price, amount: line.amount }))
 
   const onSave = () => {
     if (!quote) return
@@ -173,7 +180,9 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
               </button>
             </span>
           </div>
-          <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
+          {booking.is_custom ? null : (
+            <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
+          )}
           <SelectInput label={t('bookings.vat')} value={String(vat)} onChange={(value) => setVat(Number(value))} options={booking.vat_rates.map((rate) => ({ value: String(rate), label: percent(rate) }))} />
           <NumberInput label={t('bookings.discount')} value={discount} onChange={setDiscount} min={0} inputMode="numeric" />
         </div>

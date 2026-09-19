@@ -1,4 +1,4 @@
-import { defaultHotelCategory, gridCategories, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
+import { defaultHotelCategory, gridCategories, invoiceTotals, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -16,6 +16,13 @@ import type { BookingDetail, BookingFormOptions as Options } from './api'
 
 type CustomerHit = { id: number; name: string; phone: string }
 
+/** The package list's "Custom service" choice (docs/custom-service-bookings.md): no package slug is ever this. */
+const CUSTOM = '__custom__'
+
+/** One item of a custom service: its name and its price per person. */
+type CustomItem = { title: string; price: number | null }
+
+const emptyItem = (): CustomItem => ({ title: '', price: null })
 
 /**
  * "+ New booking" (docs/phase-5-admin-core.md §4.3). Priced with @bhabaghure/pricing from the options the API sends —
@@ -39,6 +46,9 @@ export function NewBookingPage() {
   const [addons, setAddons] = useState<string[]>([])
   const [pax, setPax] = useState(1)
   const [bookingLocale, setBookingLocale] = useState<'bn' | 'en'>(locale)
+  const [serviceName, setServiceName] = useState('')
+  const [items, setItems] = useState<CustomItem[]>([emptyItem()])
+  const custom = slug === CUSTOM
 
   const hits = useQuery({
     queryKey: ['search', lookup.trim()],
@@ -51,8 +61,15 @@ export function NewBookingPage() {
   const categories = gridCategories(pkg?.price_grid)
   const category = categories.length === 0 ? null : hotelCategory && categories.includes(hotelCategory) ? hotelCategory : defaultHotelCategory(pkg?.price_grid)
   const chosenAddons = (options.data?.addons ?? []).filter((addon) => addons.includes(addon.code))
+  // A custom service: every item for each traveller, then the service charge and VAT — the API's customQuote exactly.
+  const itemsReady = items.length > 0 && items.every((item) => item.title.trim() !== '' && item.price !== null && item.price >= 0)
+  const customQuote = (() => {
+    if (!custom || !options.data || !itemsReady) return null
+    const totals = invoiceTotals({ lines: items.map((item) => ({ quantity: pax, unitPrice: Math.round(item.price ?? 0) })), chargePercent: options.data.config.serviceChargePercent })
+    return { perPerson: items.reduce((sum, item) => sum + Math.round(item.price ?? 0), 0), singleSupplement: 0, serviceCharge: totals.charge, total: totals.total }
+  })()
   // Recomputed each render; the React Compiler memoises it.
-  const quote = (() => {
+  const packageQuote = (() => {
     if (!pkg || !options.data) return null
     try {
       return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category })
@@ -60,17 +77,20 @@ export function NewBookingPage() {
       return null
     }
   })()
+  const quote = custom ? customQuote : packageQuote
 
   const create = useMutation({
     mutationFn: () =>
       api.post<Data<BookingDetail>>('admin/bookings', {
         ...(mode === 'existing' && picked ? { customer_id: picked.id } : { customer: { ...customer, email: customer.email || null } }),
-        package_slug: slug,
-        travel_date: travelDate,
+        ...(custom
+          ? {
+              custom: { title: serviceName.trim(), items: items.map((item) => ({ title: item.title.trim(), unit_price: Math.round(item.price ?? 0) })) },
+              // A custom service may be booked before its date is known.
+              travel_date: travelDate || null,
+            }
+          : { package_slug: slug, travel_date: travelDate, room, hotel_category: category, addons }),
         pax,
-        room,
-        hotel_category: category,
-        addons,
         expected_total: quote?.total ?? 0,
         locale: bookingLocale,
       }),
@@ -89,7 +109,10 @@ export function NewBookingPage() {
   // The phone number already belongs to a customer: say so beside the customer fields; they can be picked instead.
   const existing = create.error instanceof ApiError && create.error.code === 'customer_exists' ? create.error : null
   const fieldError = (name: string) => (create.error instanceof ApiError ? create.error.field(name) : undefined)
-  const canSubmit = !!quote && !!travelDate && (mode === 'existing' ? !!picked : !!customer.name.trim() && !!customer.phone.trim())
+  const canSubmit =
+    !!quote &&
+    (custom ? serviceName.trim() !== '' : !!travelDate) &&
+    (mode === 'existing' ? !!picked : !!customer.name.trim() && !!customer.phone.trim())
 
   return (
     <>
@@ -152,10 +175,51 @@ export function NewBookingPage() {
               setSlug(value)
               setTravelDate('')
             }}
-            options={[{ value: '', label: t('common.choose') }, ...options.data.packages.map((p) => ({ value: p.slug, label: p.title_en || p.title_bn || p.slug }))]}
+            options={[
+              { value: '', label: t('common.choose') },
+              { value: CUSTOM, label: t('newBooking.customOption') },
+              ...options.data.packages.map((p) => ({ value: p.slug, label: p.title_en || p.title_bn || p.slug })),
+            ]}
             error={fieldError('package_slug')}
           />
-          {pkg && pkg.departures.length > 0 ? (
+          {custom ? (
+            // A custom service (docs/custom-service-bookings.md): its name, then each item at a price per person.
+            <div className="flex flex-col gap-3" data-testid="custom-service">
+              <TextInput label={t('newBooking.serviceName')} value={serviceName} onChange={setServiceName} error={fieldError('custom.title')} placeholder={t('newBooking.serviceNamePlaceholder')} required />
+              {items.map((item, index) => (
+                <div key={index} className="flex flex-wrap items-end gap-2 rounded-10 bg-app-surface-2 p-2.5" data-testid="custom-item">
+                  <div className="min-w-0 flex-[2_1_200px]">
+                    <TextInput
+                      label={t('newBooking.itemName', { n: number(index + 1) })}
+                      value={item.title}
+                      onChange={(title) => setItems((all) => all.map((it, i) => (i === index ? { ...it, title } : it)))}
+                      error={fieldError(`custom.items.${index}.title`)}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-[1_1_140px]">
+                    <NumberInput
+                      label={t('newBooking.itemPrice')}
+                      value={item.price}
+                      onChange={(price) => setItems((all) => all.map((it, i) => (i === index ? { ...it, price } : it)))}
+                      error={fieldError(`custom.items.${index}.unit_price`)}
+                    />
+                  </div>
+                  {items.length > 1 ? (
+                    <button type="button" aria-label={t('newBooking.removeItem', { n: number(index + 1) })} className={buttonClass('outline', 'sm', 'mb-0.5')} onClick={() => setItems((all) => all.filter((_, i) => i !== index))}>
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              {fieldError('custom.items') ? <p className="m-0 text-13 text-red">{fieldError('custom.items')}</p> : null}
+              <button type="button" className={buttonClass('outline', 'sm', 'self-start border-dashed')} onClick={() => setItems((all) => [...all, emptyItem()])}>
+                + {t('newBooking.addItem')}
+              </button>
+            </div>
+          ) : null}
+          {custom ? (
+            <TextInput label={t('newBooking.travelDateOptional')} type="date" min={todayInDhaka()} value={travelDate} onChange={setTravelDate} error={fieldError('travel_date')} />
+          ) : pkg && pkg.departures.length > 0 ? (
             <SelectInput
               label={t('newBooking.departure')}
               value={travelDate}
@@ -168,7 +232,7 @@ export function NewBookingPage() {
           )}
           <div className="grid-auto-fit-140 grid gap-3">
             <NumberInput label={t('bookings.travellers')} value={pax} onChange={(value) => setPax(Math.min(Math.max(value ?? 1, 1), options.data.config.maxTravellers))} error={fieldError('pax')} hint={t('newBooking.namesLater')} />
-            {category ? (
+            {category && !custom ? (
               <SelectInput
                 label={t('grid.hotelCategory')}
                 value={category}
@@ -176,10 +240,12 @@ export function NewBookingPage() {
                 options={categories.map((value) => ({ value, label: t(`grid.categories.${value}`) }))}
               />
             ) : null}
-            <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
+            {custom ? null : (
+              <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
+            )}
             <SelectInput label={t('newBooking.messagesIn')} value={bookingLocale} onChange={(value) => setBookingLocale(value as 'bn' | 'en')} options={[{ value: 'bn', label: 'Bangla' }, { value: 'en', label: 'English' }]} />
           </div>
-          {options.data.addons.length > 0 ? (
+          {options.data.addons.length > 0 && !custom ? (
             <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
               <legend className="mb-1 text-13 text-app-muted">{t('newBooking.addons')}</legend>
               {options.data.addons.map((addon) => (
@@ -197,7 +263,7 @@ export function NewBookingPage() {
           {quote ? (
             <dl className="m-0 flex flex-col gap-1.5 border-t border-app-line pt-3 text-13" data-testid="new-booking-quote">
               <div className="flex justify-between gap-3">
-                <dt className="text-app-muted">{t('newBooking.perPerson', { n: number(pax) })}</dt>
+                <dt className="text-app-muted">{custom ? t('newBooking.customPerPerson', { n: number(pax) }) : t('newBooking.perPerson', { n: number(pax) })}</dt>
                 <dd className="m-0 font-display font-semibold">{bdt(quote.perPerson)}</dd>
               </div>
               {quote.singleSupplement > 0 ? (
