@@ -37,7 +37,8 @@
        The pads are A4; an A5 copy is always printed whole, so there its letterhead takes only the room it needs. --}}
   .letterhead { height: {{ $a5 ? 'auto' : $headerHeightMm.'mm' }}; flex: none; overflow: hidden; }
   .letterhead.on { display: flex; justify-content: space-between; align-items: flex-start; gap: 7mm; border-bottom: 0.7mm solid var(--blue); padding-bottom: 3mm; }
-  .letterhead img { width: {{ $a5 ? '46mm' : '66mm' }}; max-width: 46%; height: auto; object-fit: contain; flex-shrink: 0; }
+  {{-- Smaller than the company's details beside it: the client asked for a smaller logo on 2026-09-23. --}}
+  .letterhead img { width: {{ $a5 ? '36mm' : '50mm' }}; max-width: 36%; height: auto; object-fit: contain; flex-shrink: 0; }
   .company { text-align: right; display: flex; flex-direction: column; gap: 0.4mm; max-width: 62%; font-size: {{ $a5 ? '7pt' : '8.5pt' }}; color: var(--muted); line-height: 1.5; }
   .company strong { font-size: {{ $a5 ? '10.5pt' : '13.5pt' }}; font-weight: 700; color: var(--ink); line-height: 1.2; }
   .company .web { color: var(--blue); }

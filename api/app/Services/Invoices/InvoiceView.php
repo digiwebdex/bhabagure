@@ -20,8 +20,8 @@ use App\Support\Payments\PaymentOptions;
  */
 final class InvoiceView
 {
-    /** 5: English only (2026-09-19) — a stored PDF from before is made again. */
-    public const TEMPLATE_VERSION = '5';
+    /** 5: English only (2026-09-19); 6: a smaller logo (2026-09-23). A stored PDF from before is made again. */
+    public const TEMPLATE_VERSION = '6';
 
     /**
      * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on
