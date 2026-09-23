@@ -20,6 +20,8 @@ use App\Services\Booking\BookingStateMachine;
 use App\Services\Booking\BookingTransitionRefused;
 use App\Services\Booking\PriceChanged;
 use App\Services\Booking\QuoteLocked;
+use App\Services\Coupons\CouponRefused;
+use App\Services\Coupons\CouponService;
 use App\Services\Invoices\InvoiceIssuer;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Ledger\EvidenceStore;
@@ -82,7 +84,7 @@ class BookingController extends Controller
      * Deletes a booking made by mistake — only while nothing about money exists: no issued or voided invoice, no payment,
      * no payment attempt. Anything else is cancelled through the state machine instead, so the books keep their record.
      */
-    public function destroy(Request $request, int $id, AuditLogger $audit, QuotationService $quotations): JsonResponse
+    public function destroy(Request $request, int $id, AuditLogger $audit, QuotationService $quotations, CouponService $coupons): JsonResponse
     {
         $booking = $this->find($request, $id, 'bookings.delete');
         $blocked = Invoice::query()->where('booking_id', $booking->id)->exists() ? 'has_invoice'
@@ -91,9 +93,11 @@ class BookingController extends Controller
             return $this->refused("booking.delete_{$blocked}", $blocked);
         }
 
-        DB::transaction(function () use ($booking, $request, $audit, $quotations) {
+        DB::transaction(function () use ($booking, $request, $audit, $quotations, $coupons) {
             SeatHold::query()->where('booking_id', $booking->id)->whereNull('released_at')->update(['released_at' => now()]);
             $quotations->bookingDeleted($booking, $request->user('staff'));
+            // Its coupon's use goes back (docs/coupons.md §2.4).
+            $coupons->release($booking, 'booking_deleted', $request->user('staff'));
             $booking->delete();
             $audit->record('booking.deleted', $request->user('staff'), $booking, ['reference' => $booking->reference]);
         });
@@ -106,7 +110,10 @@ class BookingController extends Controller
         return $this->detail($request, $this->find($request, $id));
     }
 
-    /** Draft-invoice controls. The admin screen sends the total it computed with @bhabaghure/pricing. */
+    /**
+     * Draft-invoice controls. The admin screen sends the total it computed with @bhabaghure/pricing. `discount` is the
+     * staff's own, on top of any coupon (docs/coupons.md §2.5).
+     */
     public function updateQuote(Request $request, int $id, BookingQuoteEditor $editor): JsonResponse
     {
         $booking = $this->find($request, $id, 'bookings.update');
@@ -118,12 +125,36 @@ class BookingController extends Controller
             'expected_total' => ['required', 'numeric', 'min:0'],
         ]);
 
+        return $this->editQuote($request, $booking, fn () => $editor->update($booking, $data['pax'], $data['room'], $data['discount'], $data['vat_rate'], $data['expected_total'], $request->user('staff')));
+    }
+
+    /** A customer's coupon, applied by staff while the quote can still change (docs/coupons.md §2.5). */
+    public function applyCoupon(Request $request, int $id, BookingQuoteEditor $editor): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'bookings.update');
+        $data = $request->validate(['code' => ['required', 'string', 'max:40']]);
+
+        return $this->editQuote($request, $booking, fn () => $editor->applyCoupon($booking, $data['code'], $request->user('staff')));
+    }
+
+    public function removeCoupon(Request $request, int $id, BookingQuoteEditor $editor): JsonResponse
+    {
+        $booking = $this->find($request, $id, 'bookings.update');
+
+        return $this->editQuote($request, $booking, fn () => $editor->removeCoupon($booking, $request->user('staff')));
+    }
+
+    /** Runs a change to the draft invoice and answers with the booking, or why it was refused. */
+    private function editQuote(Request $request, Booking $booking, callable $change): JsonResponse
+    {
         try {
-            $editor->update($booking, $data['pax'], $data['room'], $data['discount'], $data['vat_rate'], $data['expected_total'], $request->user('staff'));
+            $change();
         } catch (PriceChanged $e) {
             return response()->json(['message' => __('booking.price_changed'), 'code' => 'price_changed', 'quote' => $e->quote], 409);
         } catch (QuoteLocked) {
             return $this->refused('booking.quote_locked', 'quote_locked');
+        } catch (CouponRefused $e) {
+            return response()->json(['message' => $e->reasonText('en', 'code'), 'code' => 'coupon_invalid', 'reason' => $e->reason], 422);
         } catch (LogicException $e) {
             return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
         }

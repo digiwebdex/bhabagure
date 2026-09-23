@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
-import { invoiceTotals, paymentStatus, quoteBooking, type RoomType } from '@bhabaghure/pricing'
+import { couponDiscount, invoiceTotals, paymentStatus, quoteBooking, type RoomType } from '@bhabaghure/pricing'
 
 import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
@@ -108,8 +108,10 @@ function BookingView({ booking }: { booking: BookingDetail }) {
 }
 
 /**
- * Draft-invoice controls from the prototype (travellers, VAT, discount). Totals come from @bhabaghure/pricing with the
- * inputs the API sent, and the save is checked by the API's PHP twin — the two can't show different numbers.
+ * Draft-invoice controls from the prototype (travellers, VAT, discount), and the booking's coupon (docs/coupons.md §2.5).
+ * Totals come from @bhabaghure/pricing with the inputs the API sent, and the save is checked by the API's PHP twin — the
+ * two can't show different numbers. The coupon is worked out again on new lines from the terms its use copied; the
+ * discount field is the staff's own, on top of it.
  */
 function QuoteCard({ booking }: { booking: BookingDetail }) {
   const { t } = useTranslation()
@@ -119,26 +121,36 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
   const [pax, setPax] = useState(booking.pax_count)
   const [room, setRoom] = useState<RoomType>(booking.room_type)
   const [vat, setVat] = useState(booking.vat_rate)
-  const [discount, setDiscount] = useState<number | null>(booking.discount_amount || null)
+  const savedExtra = booking.discount_amount - booking.coupon_discount_amount
+  const [discount, setDiscount] = useState<number | null>(savedExtra || null)
 
   const inputs = booking.quote_inputs
   const quote = useMemo(() => {
     try {
+      const extra = discount ?? 0
       // A custom service: its own items for every traveller, the discount, then VAT — the API's customQuote exactly.
       if (inputs.custom_items) {
         const lines = inputs.custom_items.map((item, index) => ({ kind: 'custom', code: `item-${index}`, title: item.title, quantity: pax, unitPrice: item.unitPrice, amount: pax * item.unitPrice }))
-        const totals = invoiceTotals({ lines, discount: discount ?? 0, chargePercent: vat })
-        return { lines, discount: totals.discount, serviceCharge: totals.charge, total: totals.total }
+        const coupon = inputs.coupon ? couponDiscount(inputs.coupon, lines.reduce((sum, line) => sum + line.amount, 0)) : { eligible: true, discount: 0 }
+        const totals = invoiceTotals({ lines, discount: coupon.discount + extra, chargePercent: vat })
+        return { lines, discount: totals.discount, couponDiscount: Math.min(coupon.discount, totals.discount), couponEligible: coupon.eligible, serviceCharge: totals.charge, total: totals.total }
       }
-      return quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: discount ?? 0, chargePercent: vat, grid: inputs.grid, hotelCategory: inputs.hotel_category })
+      const priced = (off: number) => quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: off, chargePercent: vat, grid: inputs.grid, hotelCategory: inputs.hotel_category })
+      const coupon = inputs.coupon ? couponDiscount(inputs.coupon, priced(0).lines.reduce((sum, line) => sum + line.amount, 0)) : { eligible: true, discount: 0 }
+      const result = priced(coupon.discount + extra)
+      return { ...result, couponDiscount: Math.min(coupon.discount, result.discount), couponEligible: coupon.eligible }
     } catch {
       return null
     }
   }, [inputs, pax, room, vat, discount])
 
   const editable = booking.actions.edit_quote
-  const changed = pax !== booking.pax_count || room !== booking.room_type || vat !== booking.vat_rate || (discount ?? 0) !== booking.discount_amount
+  const changed = pax !== booking.pax_count || room !== booking.room_type || vat !== booking.vat_rate || (discount ?? 0) !== savedExtra
+  // Below the coupon's minimum the API refuses the save; staff remove the coupon first.
+  const belowMinimum = editable && !!quote && !quote.couponEligible
   const total = editable && quote ? quote.total : booking.total_amount
+  const couponOff = editable && quote ? quote.couponDiscount : booking.coupon_discount_amount
+  const staffOff = editable && quote ? quote.discount - quote.couponDiscount : savedExtra
   const status = paymentStatus(total, booking.paid_amount)
   const lineTitle = (kind: string, code: string | null) =>
     kind === 'package' ? t('bookings.line.package') : kind === 'single_supplement' ? t('bookings.line.single') : (booking.lines.find((l) => l.code === code)?.title_en ?? code ?? '')
@@ -184,9 +196,10 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
             <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
           )}
           <SelectInput label={t('bookings.vat')} value={String(vat)} onChange={(value) => setVat(Number(value))} options={booking.vat_rates.map((rate) => ({ value: String(rate), label: percent(rate) }))} />
-          <NumberInput label={t('bookings.discount')} value={discount} onChange={setDiscount} min={0} inputMode="numeric" />
+          <NumberInput label={booking.coupon ? t('bookings.extraDiscount') : t('bookings.discount')} value={discount} onChange={setDiscount} min={0} inputMode="numeric" />
         </div>
       ) : null}
+      <CouponRow booking={booking} />
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-13">
@@ -205,18 +218,22 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
       </div>
 
       <dl className="m-0 flex flex-col gap-1.5 text-13">
-        {(editable && quote ? quote.discount : booking.discount_amount) > 0 ? (
-          <Row label={t('bookings.discount')} value={`− ${bdt(editable && quote ? quote.discount : booking.discount_amount)}`} />
-        ) : null}
+        {couponOff > 0 && booking.coupon ? <Row label={t('bookings.couponLine', { code: booking.coupon.code })} value={`− ${bdt(couponOff)}`} /> : null}
+        {staffOff > 0 ? <Row label={t('bookings.discountLine')} value={`− ${bdt(staffOff)}`} /> : null}
         <Row label={t('bookings.vatLine', { rate: percent(editable ? vat : booking.vat_rate) })} value={bdt(editable && quote ? quote.serviceCharge : booking.vat_amount)} />
         <Row label={t('bookings.total')} value={bdt(total)} strong />
         <Row label={t('bookings.paid')} value={bdt(booking.paid_amount)} />
         <Row label={t('bookings.due')} value={bdt(total - booking.paid_amount)} />
       </dl>
+      {belowMinimum && booking.coupon?.min_booking_amount ? (
+        <p role="alert" className="m-0 rounded-10 bg-orange-tint px-3 py-2.5 text-13 text-amber" data-testid="coupon-below-minimum">
+          {t('bookings.couponBelowMinimum', { amount: bdt(booking.coupon.min_booking_amount) })}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <PaymentBadge status={status} />
         {editable ? (
-          <button type="button" className={buttonClass('primary')} disabled={!changed || !quote || save.isPending} onClick={onSave}>
+          <button type="button" className={buttonClass('primary')} disabled={!changed || !quote || belowMinimum || save.isPending} onClick={onSave}>
             {save.isPending ? t('common.saving') : t('bookings.saveQuote')}
           </button>
         ) : (
@@ -225,6 +242,63 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
       </div>
       {save.error ? <ErrorNotice error={save.error} /> : null}
     </Card>
+  )
+}
+
+/**
+ * The booking's coupon (docs/coupons.md §2.5): what it is and whose use it holds, with Remove; or, while the quote can
+ * change, a box for a code the customer has — checked by the API exactly as the website checks it.
+ */
+function CouponRow({ booking }: { booking: BookingDetail }) {
+  const { t } = useTranslation()
+  const { bdt, percent } = useFormat()
+  const toast = useToast()
+  const apply = useBookingAction(booking.id, bookingActions.applyCoupon(booking.id))
+  const remove = useBookingAction(booking.id, bookingActions.removeCoupon(booking.id))
+  const [code, setCode] = useState('')
+  const coupon = booking.coupon
+
+  if (coupon) {
+    const off = coupon.discount_type === 'percent'
+      ? coupon.max_discount_amount ? t('bookings.couponPercentUpTo', { value: percent(coupon.discount_value), max: bdt(coupon.max_discount_amount) }) : t('bookings.couponPercent', { value: percent(coupon.discount_value) })
+      : t('bookings.couponFixed', { amount: bdt(coupon.discount_value) })
+    return (
+      <div className="flex flex-col gap-2 rounded-10 border border-app-line bg-app-surface-2 px-3 py-2.5" data-testid="booking-coupon">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="flex flex-wrap items-center gap-2 text-13">
+            <Badge tone="green">{coupon.code}</Badge>
+            <span>{off}</span>
+            <span className="text-app-muted">· {t(`bookings.couponStatus.${coupon.status}`)} · {t(`bookings.couponSource.${coupon.source}`)}</span>
+          </span>
+          {booking.actions.remove_coupon ? (
+            <button type="button" className={buttonClass('danger', 'sm')} disabled={remove.isPending} onClick={() => remove.mutate(undefined, { onSuccess: () => toast(t('bookings.couponRemoved')) })}>
+              {t('bookings.removeCoupon')}
+            </button>
+          ) : null}
+        </div>
+        {remove.error ? <ErrorNotice error={remove.error} /> : null}
+      </div>
+    )
+  }
+
+  if (!booking.actions.apply_coupon) return null
+  return (
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!code.trim()) return
+        apply.mutate(code.trim(), { onSuccess: (response) => { setCode(''); toast(t('bookings.couponApplied', { code: response.data.coupon?.code ?? code })) } })
+      }}
+    >
+      <div className="flex flex-wrap items-end gap-2">
+        <TextInput label={t('bookings.couponCode')} value={code} onChange={setCode} autoCapitalize="characters" className="min-w-40 flex-1" />
+        <button type="submit" className={buttonClass('outline')} disabled={!code.trim() || apply.isPending}>
+          {apply.isPending ? t('bookings.checkingCoupon') : t('bookings.applyCoupon')}
+        </button>
+      </div>
+      {apply.error ? <ErrorNotice error={apply.error} /> : <span className="text-12 text-app-muted">{t('bookings.applyCouponHint')}</span>}
+    </form>
   )
 }
 

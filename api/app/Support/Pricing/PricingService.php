@@ -185,6 +185,33 @@ final class PricingService
         return ['amount' => $amount, 'chargePercent' => $chargePercent, 'charge' => $charge, 'total' => $amount + $charge];
     }
 
+    /**
+     * A coupon's discount on the booking amount — every line before any discount and before the service charge, which
+     * then applies to what is left (docs/coupons.md §2.2). Percent: the amount × rate in whole taka, capped at the maximum;
+     * fixed: the value. Never more than the amount, so a total can't go below zero. Below the minimum: not eligible, 0.
+     *
+     * @param  'percent'|'fixed'  $type
+     * @return array{eligible: bool, discount: int}
+     */
+    public static function couponDiscount(string $type, int|float $value, int|float|null $maxDiscount, int|float|null $minAmount, int|float $amount): array
+    {
+        self::assertAmount($amount);
+        self::assertAmount($value);
+        if (! in_array($type, ['percent', 'fixed'], true) || ($type === 'percent' && $value > 100)) {
+            throw new InvalidArgumentException("A coupon is a percentage up to 100 or a fixed amount, got {$type} {$value}");
+        }
+        if ($minAmount !== null && $amount < $minAmount) {
+            return ['eligible' => false, 'discount' => 0];
+        }
+
+        $discount = $type === 'percent' ? self::round($amount * $value / 100) : self::round($value);
+        if ($type === 'percent' && $maxDiscount !== null) {
+            $discount = min($discount, self::round($maxDiscount));
+        }
+
+        return ['eligible' => true, 'discount' => (int) min($discount, self::round($amount))];
+    }
+
     /** The PAID / PARTIAL / UNPAID pill — derived from amounts, never chosen. */
     public static function paymentStatus(int|float|string $total, int|float|string $paid): string
     {

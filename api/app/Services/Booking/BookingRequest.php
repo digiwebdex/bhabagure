@@ -28,5 +28,7 @@ final class BookingRequest
          * or a retry — so the database's unique index refuses the copy (2026-09-19: customers were booking twice).
          */
         public readonly ?string $idempotencyKey = null,
+        /** A coupon code the customer applied (docs/coupons.md). Only the code: the discount is worked out on the server. */
+        public readonly ?string $couponCode = null,
     ) {}
 }

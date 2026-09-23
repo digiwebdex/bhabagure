@@ -84,6 +84,18 @@ class PricingServiceTest extends TestCase
     }
 
     #[Test]
+    public function coupon_discounts_match_the_shared_fixtures(): void
+    {
+        foreach (self::$fixtures['couponDiscount'] as $case) {
+            $terms = $case['terms'];
+            $this->assertSame($case['expected'], PricingService::couponDiscount($terms['type'], $terms['value'], $terms['maxDiscount'], $terms['minAmount'], $case['amount']), $case['$comment']);
+        }
+
+        $this->expectException(\InvalidArgumentException::class);
+        PricingService::couponDiscount('percent', 101, null, null, 1000);
+    }
+
+    #[Test]
     public function payment_status_matches_the_shared_fixtures(): void
     {
         foreach (self::$fixtures['paymentStatus'] as $case) {

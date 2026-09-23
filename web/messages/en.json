@@ -581,7 +581,22 @@
     "confirmButton": "Confirm booking · {total}",
     "confirming": "Saving your booking…",
     "confirmNote": "Your booking is saved first. The next page shows how to pay — bank transfer, card, mobile banking or EMI, or bKash — with the exact amount for each.",
-    "alreadyCreated": "This booking was already made — booking number {reference}. Please check your WhatsApp or email for its link, or contact us."
+    "alreadyCreated": "This booking was already made — booking number {reference}. Please check your WhatsApp or email for its link, or contact us.",
+    "coupon": {
+      "label": "Have a coupon code?",
+      "placeholder": "e.g. TRAVEL10",
+      "apply": "Apply",
+      "checking": "Checking…",
+      "rechecking": "Checking your coupon…",
+      "remove": "Remove",
+      "empty": "Type your coupon code first.",
+      "unavailable": "We couldn’t check the coupon just now. Please try again in a moment.",
+      "rateLimited": "Too many tries. Please wait a minute and try again.",
+      "subtotal": "Subtotal",
+      "line": "Coupon discount ({code})",
+      "refusedAtBooking": "{message} The coupon has been removed, so the total is now {total}. Confirm again to book without it, or ask us on WhatsApp.",
+      "applied": "Coupon applied — you save <amount>{saving}</amount>."
+    }
   },
   "auth": {
     "signInTitle": "Sign in to your account",
@@ -766,7 +781,8 @@
       "itinerary": "Planned itinerary",
       "itineraryNote": "The package plan; your guide confirms the details.",
       "etickets": "E-tickets",
-      "downloadTicket": "Download e-ticket"
+      "downloadTicket": "Download e-ticket",
+      "coupon": "Coupon discount ({code})"
     },
     "quotation": {
       "back": "My trips",
@@ -969,7 +985,8 @@
       "title": "Congratulations! Your booking is done",
       "payNext": "Your booking number is {reference}. Pay below by any of the ways shown to secure your seats — we will be in touch on WhatsApp.",
       "paid": "Your booking number is {reference}, and your payment has arrived."
-    }
+    },
+    "coupon": "Coupon discount ({code})"
   },
   "legal": {
     "draftTitle": "Draft — pending review by the company’s lawyer",

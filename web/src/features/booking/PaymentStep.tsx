@@ -15,6 +15,7 @@ import { useFormatters } from '@/lib/use-formatters';
 import { parseDayMonthYear } from '@/lib/validators';
 import { useBooking, type CreatedBooking, type PaymentMethod } from '@/state/booking';
 
+import { applyCoupon, removeCoupon } from './coupon';
 import { onlineChargeLine, PriceBreakdown, quoteLines } from './ReviewStep';
 
 const METHODS: PaymentMethod[] = ['bkash', 'nagad', 'card', 'bank'];
@@ -26,7 +27,7 @@ const METHODS: PaymentMethod[] = ['bkash', 'nagad', 'card', 'bank'];
  * shown is the same quote as every earlier step; if the server's price differs, nothing is charged and the new total
  * is shown instead.
  */
-export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) {
+export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; quote: Quote; hotelCategory: string | null }) {
   const t = useTranslations('booking');
   const locale = useLocale() as 'bn' | 'en';
   const { addons, pricing, settings } = useSiteContent();
@@ -41,6 +42,10 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
   const online = onlinePayment(quote.total, pricing.onlinePaymentChargePercent);
   const checkout = pricing.onlineCheckout === true;
   const prefix = locale === 'en' ? '/en' : '';
+  // The coupon priced into `quote` (docs/coupons.md): only its code goes with the booking. While it is being checked
+  // again after a change, nothing is booked.
+  const couponCode = quote.discount > 0 ? (booking.coupon?.code ?? null) : null;
+  const couponChecking = booking.couponCheck.status === 'checking';
 
   // Made: the form closes and the booking's own page opens with the congratulations and how to pay.
   const openBooking = (reference: string, token: string) => {
@@ -50,7 +55,7 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
   };
 
   const pay = async () => {
-    if (busy) return;
+    if (busy || couponChecking) return;
     setBusy(true);
     setFailure(null);
     let current: CreatedBooking | null = created;
@@ -77,6 +82,7 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         terms_accepted: true,
         locale,
         idempotency_key: booking.attemptKey,
+        coupon_code: couponCode,
       });
       if (!result.ok) {
         // This attempt was already booked (a second click, or a retry after a lost answer): open that booking.
@@ -84,6 +90,16 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         if (result.reason === 'already_created' && token) {
           openBooking(result.reference, token);
           return;
+        }
+        // The coupon stopped working since it was applied: it comes off, the total shown goes back up, and the
+        // customer confirms again at that price (or contacts us).
+        if (result.reason === 'coupon_invalid') {
+          removeCoupon();
+          booking.setCouponCheck({ status: 'refused', message: result.message });
+        }
+        // Priced differently now, perhaps because the coupon's terms changed: check it again for the new discount.
+        if (result.reason === 'price_changed' && couponCode) {
+          void applyCoupon(couponCode, hotelCategory, locale, { unavailable: t('coupon.unavailable'), rateLimited: t('coupon.rateLimited') });
         }
         setBusy(false);
         setFailure(result);
@@ -113,13 +129,13 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
     window.location.assign(payment.data.redirectUrl);
   };
 
-  const message = failure ? failureMessage(failure, t, f) : null;
+  const message = failure ? (failure.reason === 'coupon_invalid' ? t('coupon.refusedAtBooking', { message: failure.message, total: f.bdt(checkout ? online.total : quote.total) }) : failureMessage(failure, t, f)) : null;
 
   return (
     <>
       <h3 className="text-19 font-semibold">{t('paymentHeading')}</h3>
       <PriceBreakdown
-        lines={[...quoteLines(quote, pkg.title, addons, pricing.singleRoomSupplementPercent, t, f), ...(checkout ? onlineChargeLine(online, t, f) : [])]}
+        lines={[...quoteLines(quote, pkg.title, addons, pricing.singleRoomSupplementPercent, t, f, couponCode), ...(checkout ? onlineChargeLine(online, t, f) : [])]}
         total={checkout ? online.total : quote.total}
         totalLabel={t('totalToPay')}
       />
@@ -178,11 +194,11 @@ export function PaymentStep({ pkg, quote }: { pkg: PackageView; quote: Quote }) 
         <button
           type="button"
           onClick={() => void pay()}
-          aria-disabled={busy}
-          disabled={busy}
+          aria-disabled={busy || couponChecking}
+          disabled={busy || couponChecking}
           className={buttonClass('success', 'none', 'px-6.5 py-3.25 text-15')}
         >
-          {checkout ? (busy ? t('paying') : t('payButton', { total: f.bdt(online.total) })) : busy ? t('confirming') : t('confirmButton', { total: f.bdt(quote.total) })}
+          {couponChecking ? t('coupon.rechecking') : checkout ? (busy ? t('paying') : t('payButton', { total: f.bdt(online.total) })) : busy ? t('confirming') : t('confirmButton', { total: f.bdt(quote.total) })}
         </button>
         <a
           href={whatsappUrl(settings.contact.whatsapp, t('whatsappHelp', { title: pkg.title }))}

@@ -12,6 +12,7 @@ use App\Services\Booking\BookingCreator;
 use App\Services\Booking\BookingRequest;
 use App\Services\Booking\PriceChanged;
 use App\Services\Booking\SeatsUnavailable;
+use App\Services\Coupons\CouponRefused;
 use App\Services\Ledger\LedgerService;
 use App\Services\Payments\PaymentAmountChanged;
 use App\Services\Payments\PaymentNotAllowed;
@@ -66,6 +67,8 @@ class PublicBookingController extends Controller
             'locale' => ['required', Rule::in(['bn', 'en'])],
             // The website sends one per booking attempt; see alreadyCreated().
             'idempotency_key' => ['nullable', 'uuid'],
+            // Only a code (docs/coupons.md): the discount is worked out here, never taken from the browser.
+            'coupon_code' => ['nullable', 'string', 'max:40'],
         ], [
             'travellers.*.passport_expiry.after' => __('booking.passport_expiry_after_travel'),
         ]);
@@ -98,6 +101,7 @@ class PublicBookingController extends Controller
                 termsAccepted: true,
                 hotelCategory: $data['hotel_category'] ?? null,
                 idempotencyKey: $data['idempotency_key'] ?? null,
+                couponCode: filled($data['coupon_code'] ?? null) ? $data['coupon_code'] : null,
             ), $request->user('customer'));
         } catch (UniqueConstraintViolationException $e) {
             // Two copies of one attempt at the same moment: the index let the first in, and the second answers as a repeat.
@@ -113,6 +117,10 @@ class PublicBookingController extends Controller
             return response()->json([
                 'message' => __('booking.seats_unavailable', ['count' => $e->available]), 'code' => 'seats_unavailable', 'available' => $e->available,
             ], Response::HTTP_CONFLICT);
+        } catch (CouponRefused $e) {
+            // The coupon stopped working after the customer applied it (used up, expired, switched off): nothing is booked,
+            // and the form says why and offers the price without it.
+            return response()->json(['message' => $e->reasonText($data['locale']), 'code' => 'coupon_invalid', 'reason' => $e->reason], Response::HTTP_CONFLICT);
         }
 
         return response()->json(['data' => PublicBooking::make($created['booking']) + ['accessToken' => $created['accessToken']]], Response::HTTP_CREATED);

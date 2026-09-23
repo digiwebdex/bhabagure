@@ -54,6 +54,10 @@ export interface BookingState {
   attemptKey: string;
   /** The booking this attempt made, kept here so the payment step still knows it if it is drawn again. */
   created: CreatedBooking | null;
+  /** A coupon the API accepted for this booking as it then was (docs/coupons.md); null without one. */
+  coupon: AppliedCoupon | null;
+  /** The coupon box: checking a code, or why the last one was refused. */
+  couponCheck: CouponCheckState;
 
   start: (options: { packageSlug: string; date?: string; pax?: number; maxPax: number; hotelCategory?: HotelCategory | null }) => void;
   close: () => void;
@@ -70,9 +74,26 @@ export interface BookingState {
   setTerms: (terms: boolean) => void;
   setMethod: (method: PaymentMethod) => void;
   setCreated: (created: CreatedBooking) => void;
+  setCoupon: (coupon: AppliedCoupon | null) => void;
+  setCouponCheck: (check: CouponCheckState) => void;
   /** The booking is made: close the form and let go of the travellers' details. */
   finish: () => void;
 }
+
+/**
+ * The API's answer for a code: its own discount — the form never works one out — and what it checked the code against.
+ * When the booking changes (travellers, room, add-ons, passports), the code is checked again (features/booking/coupon.ts).
+ */
+export interface AppliedCoupon {
+  code: string;
+  discount: number;
+  /** couponBasis() of the booking it was checked for. */
+  basis: string;
+}
+
+export type CouponCheckState = { status: 'idle' | 'checking' | 'refused'; message: string | null };
+
+const idleCheck = (): CouponCheckState => ({ status: 'idle', message: null });
 
 export interface CreatedBooking {
   reference: string;
@@ -121,6 +142,8 @@ export const useBooking = create<BookingState>()((set) => ({
   attempted: noAttempts(),
   attemptKey: '',
   created: null,
+  coupon: null,
+  couponCheck: idleCheck(),
 
   start: ({ packageSlug, date, pax, maxPax, hotelCategory }) =>
     set((state) => {
@@ -136,6 +159,8 @@ export const useBooking = create<BookingState>()((set) => ({
         attempted: noAttempts(),
         attemptKey: newAttemptKey(),
         created: null,
+        coupon: null,
+        couponCheck: idleCheck(),
       };
     }),
   close: () => set({ open: false }),
@@ -168,6 +193,8 @@ export const useBooking = create<BookingState>()((set) => ({
   setTerms: (terms) => set({ terms }),
   setMethod: (method) => set({ method }),
   setCreated: (created) => set({ created }),
+  setCoupon: (coupon) => set({ coupon }),
+  setCouponCheck: (couponCheck) => set({ couponCheck }),
   finish: () =>
     set((state) => ({
       open: false,
@@ -178,5 +205,7 @@ export const useBooking = create<BookingState>()((set) => ({
       attempted: noAttempts(),
       created: null,
       attemptKey: '',
+      coupon: null,
+      couponCheck: idleCheck(),
     })),
 }));

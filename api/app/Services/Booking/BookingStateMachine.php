@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\SeatHold;
 use App\Models\Staff;
 use App\Services\AuditLogger;
+use App\Services\Coupons\CouponService;
 use App\Services\Invoices\InvoiceIssuer;
 use App\Support\WriteScope;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ final class BookingStateMachine
     public function __construct(
         private readonly InvoiceIssuer $invoices,
         private readonly AuditLogger $audit,
+        private readonly CouponService $coupons,
     ) {}
 
     /** Needs money on the books: a settled online payment, or a payment staff recorded against the invoice. */
@@ -37,6 +39,8 @@ final class BookingStateMachine
                 ->update(['converted_at' => now()]);
             // A lead becomes a customer with their first confirmed booking (docs/phase-5-admin-core.md §10).
             Customer::query()->whereKey($locked->customer_id)->where('stage', 'lead')->update(['stage' => 'customer']);
+            // Its coupon counts as used from now on (docs/coupons.md §2.4).
+            $this->coupons->markUsed($locked);
         });
     }
 
@@ -49,13 +53,15 @@ final class BookingStateMachine
 
     public function cancel(Booking $booking, string $reason, ?Staff $staff = null): Booking
     {
-        return $this->transition($booking, BookingStatus::Cancelled, $staff, $reason, function (Booking $locked) use ($reason) {
+        return $this->transition($booking, BookingStatus::Cancelled, $staff, $reason, function (Booking $locked) use ($reason, $staff) {
             if (trim($reason) === '') {
                 throw new BookingTransitionRefused($locked, 'reason_required');
             }
             $locked->cancelled_at = now();
             $locked->cancellation_reason = mb_substr($reason, 0, 500);
             SeatHold::query()->where('booking_id', $locked->id)->whereNull('released_at')->update(['released_at' => now()]);
+            // An unconfirmed booking gives its coupon back; a confirmed one's stays used (decided 2026-09-24).
+            $this->coupons->release($locked, 'booking_cancelled', $staff, keepUsed: true);
         });
     }
 

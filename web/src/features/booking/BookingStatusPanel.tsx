@@ -132,6 +132,7 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
         <Item label={t('package')} value={booking.packageTitle} />
         <Item label={t('travelDate')} value={booking.travelStart ? f.date(booking.travelStart) : '—'} />
         <Item label={t('travellers')} value={booking.travellers.map((tr) => tr.name).join(', ')} />
+        {booking.coupon ? <Item label={t('coupon', { code: booking.coupon.code })} value={`− ${f.bdt(booking.coupon.discount)}`} /> : null}
         <Item label={t('total')} value={f.bdt(booking.total)} />
         <Item label={t('paid')} value={f.bdt(booking.paid)} />
         <Item label={t('due')} value={f.bdt(booking.due)} />

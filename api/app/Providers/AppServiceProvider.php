@@ -16,6 +16,7 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Booking;
 use App\Models\Client;
+use App\Models\Coupon;
 use App\Models\CreatorVideo;
 use App\Models\Customer;
 use App\Models\Destination;
@@ -197,6 +198,8 @@ class AppServiceProvider extends ServiceProvider
             'staff_document' => StaffDocument::class,
             // Attendance devices: audit rows and offline alerts (§5).
             'attendance_device' => AttendanceDevice::class,
+            // Audit rows about coupons (docs/coupons.md).
+            'coupon' => Coupon::class,
         ]);
 
         // Ledger tables are append-only on every connection, whichever way SQL is sent (LedgerTables).
@@ -235,6 +238,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('public-bookings', fn (Request $request) => [
             Limit::perMinute(10)->by('bookings-minute|'.$request->ip()),
             Limit::perDay(100)->by('bookings-day|'.$request->ip()),
+        ]);
+
+        // The booking form's coupon box: a customer tries a code or two; guessing codes needs far more (docs/coupons.md §2.8).
+        RateLimiter::for('coupon-checks', fn (Request $request) => [
+            Limit::perMinute(20)->by('coupons-minute|'.$request->ip()),
+            Limit::perDay(200)->by('coupons-day|'.$request->ip()),
         ]);
 
         RateLimiter::for('passport-scans', fn (Request $request) => [

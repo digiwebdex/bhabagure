@@ -4,6 +4,8 @@ import { test } from 'node:test';
 import fixtures from '../fixtures.json' with { type: 'json' };
 import {
   clampTravellers,
+  couponDiscount,
+  type CouponTerms,
   DEFAULT_SLABS,
   defaultHotelCategory,
   gridCategories,
@@ -125,6 +127,20 @@ test('guards', () => {
   assert.equal(clampTravellers(0, 20), 1);
   assert.equal(clampTravellers(99, 20), 20);
   assert.equal(clampTravellers(Number.NaN, 20), 1);
+});
+
+test('couponDiscount matches the shared fixtures: percent, fixed, the cap, the minimum, never below zero', () => {
+  for (const c of fixtures.couponDiscount) {
+    assert.deepEqual(couponDiscount(c.terms as CouponTerms, c.amount), c.expected, c.$comment);
+  }
+  assert.throws(() => couponDiscount({ type: 'percent', value: 101 }, 1000), RangeError);
+  assert.throws(() => couponDiscount({ type: 'fixed', value: -1 }, 1000), RangeError);
+});
+
+test('a coupon comes off before the service charge, like any discount', () => {
+  const quote = quoteBooking({ listPrice: 5000, pax: 2, room: 'twin', addons: [], config, discount: couponDiscount({ type: 'percent', value: 10 }, 10000).discount });
+  // 10,000 − 1,000 = 9,000; 2% of 9,000 = 180.
+  assert.deepEqual([quote.subtotal, quote.discount, quote.serviceCharge, quote.total], [10000, 1000, 180, 9180]);
 });
 
 test('onlinePayment matches the shared fixtures: the charge is its own whole-taka line', () => {

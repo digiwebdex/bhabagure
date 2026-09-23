@@ -91,7 +91,9 @@ export function TripDetailView({ reference }: { reference: string }) {
                 <dd className="font-display">{f.bdt(line.amount)}</dd>
               </div>
             ))}
-            {trip.discount > 0 ? row(t('discount'), `− ${f.bdt(trip.discount)}`) : null}
+            {/* A coupon is its own line (docs/coupons.md); any other discount is what is left. */}
+            {trip.coupon ? row(t('coupon', { code: trip.coupon.code }), `− ${f.bdt(trip.coupon.discount)}`) : null}
+            {trip.discount - (trip.coupon?.discount ?? 0) > 0 ? row(t('discount'), `− ${f.bdt(trip.discount - (trip.coupon?.discount ?? 0))}`) : null}
             {trip.serviceCharge > 0 ? row(t('serviceCharge', { percent: f.percent(trip.chargePercent) }), f.bdt(trip.serviceCharge)) : null}
             <div className="border-t border-portal-line pt-2">{row(t('total'), f.bdt(trip.total), true)}</div>
             {row(t('paid'), f.bdt(trip.paid))}

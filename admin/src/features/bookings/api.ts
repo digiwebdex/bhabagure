@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import type { Addon, HotelCategory, PriceGrid, PricingConfig, RoomType } from '@bhabaghure/pricing'
+import type { Addon, CouponTerms, HotelCategory, PriceGrid, PricingConfig, RoomType } from '@bhabaghure/pricing'
 
 import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
@@ -50,7 +50,25 @@ export type BookingDetail = BookingSummary & {
   subtotal_amount: number
   single_supplement_amount: number
   addons_amount: number
+  /** The whole discount: the coupon's and the staff's own. */
   discount_amount: number
+  /** The coupon's share of discount_amount (docs/coupons.md §2.5). */
+  coupon_discount_amount: number
+  /** The coupon in this booking's price, as its use copied it; null without one. */
+  coupon: {
+    id: number
+    coupon_id: number
+    code: string
+    kind: 'public' | 'passport'
+    discount_type: 'percent' | 'fixed'
+    discount_value: number
+    max_discount_amount: number | null
+    min_booking_amount: number | null
+    discount_amount: number
+    status: 'reserved' | 'used' | 'released'
+    source: 'website' | 'office'
+    applied_at: string
+  } | null
   vat_rate: number
   vat_amount: number
   locale: 'bn' | 'en'
@@ -131,7 +149,7 @@ export type BookingDetail = BookingSummary & {
     created_at: string
     settled_at: string | null
   }[]
-  actions: Record<'edit_quote' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets', boolean>
+  actions: Record<'edit_quote' | 'apply_coupon' | 'remove_coupon' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets', boolean>
   quote_inputs: {
     list_price: number
     grid: PriceGrid | null
@@ -139,6 +157,8 @@ export type BookingDetail = BookingSummary & {
     addons: Addon[]
     /** A custom service's items as booked, each at a price per person; null for a package. */
     custom_items: { title: string; unitPrice: number }[] | null
+    /** The booking's live coupon, for couponDiscount on new lines; null without one. */
+    coupon: CouponTerms | null
     config: PricingConfig
   }
   /** Phase 8 §4.D: the hotel category a grid package was booked in. */
@@ -203,8 +223,12 @@ export function useBookingAction<TVariables>(id: number, send: (variables: TVari
 }
 
 export const bookingActions = {
+  /** `discount` is the staff's own, on top of any coupon. */
   quote: (id: number) => (body: { pax: number; room: RoomType; discount: number; vat_rate: number; expected_total: number }) =>
     api.put<Data<BookingDetail>>(`admin/bookings/${id}/quote`, body),
+  /** A customer's coupon on the draft invoice (docs/coupons.md §2.5): the API checks it and works the discount out. */
+  applyCoupon: (id: number) => (code: string) => api.post<Data<BookingDetail>>(`admin/bookings/${id}/coupon`, { code }),
+  removeCoupon: (id: number) => () => api.delete<Data<BookingDetail>>(`admin/bookings/${id}/coupon`),
   issue: (id: number) => () => api.post<Data<BookingDetail>>(`admin/bookings/${id}/invoice`),
   void: () => ({ invoiceId, reason }: { invoiceId: number; reason: string }) => api.post<Data<BookingDetail>>(`admin/invoices/${invoiceId}/void`, { reason }),
   /** Multipart: the receipt goes with the payment. */

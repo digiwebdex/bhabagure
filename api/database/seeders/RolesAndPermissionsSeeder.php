@@ -63,6 +63,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'payroll.view' => ['staff', 'বেতন শিট ও মূল বেতন দেখা', 'View payroll and base salaries'],
         'payroll.manage' => ['staff', 'বেতন নির্ধারণ, চূড়ান্ত ও পরিশোধ', 'Set salaries, finalise and pay payroll'],
         'cms.manage' => ['website', 'ওয়েবসাইট কনটেন্ট ব্যবস্থাপনা', 'Manage website content'],
+        // Coupons (docs/coupons.md): admins manage them, accountants see them and the report (decided 2026-09-24).
+        'coupons.view' => ['marketing', 'কুপন ও কুপন রিপোর্ট দেখা', 'View coupons and the coupon report'],
+        'coupons.manage' => ['marketing', 'কুপন তৈরি, সম্পাদনা ও আর্কাইভ', 'Create, edit and archive coupons'],
         'reports.view' => ['reports', 'রিপোর্ট দেখা', 'View reports'],
         // No role has it by default: the Super Admin sees downloads; grant it on the Roles screen (Phase 8 §4.E).
         'downloads.view' => ['reports', 'ওয়েবসাইট থেকে ডাউনলোডের তালিকা দেখা', 'View website downloads'],
@@ -86,7 +89,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'transactions.create_manual', 'transactions.approve', 'ledger.view_company_balance', 'accounts.view', 'staff.manage', 'bonus.manage', 'commission.view_all',
             'staff_documents.view', 'staff_documents.manage', 'attendance.view_all', 'attendance.manage', 'payroll.manage',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
-            'notifications.send', 'notifications.manage', 'support.manage',
+            'notifications.send', 'notifications.manage', 'support.manage', 'coupons.view', 'coupons.manage',
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
@@ -97,7 +100,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'bookings.view_all', 'quotations.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',
             'ledger.view_company_balance', 'accounts.view', 'accounts.manage', 'journal.post',
             'commission.view_all', 'reports.view', 'reports.export', 'reports.profit_loss', 'support.manage',
-            'attendance.view_all', 'payroll.view',
+            'attendance.view_all', 'payroll.view', 'coupons.view',
         ]],
         'tour_operator' => ['ট্যুর অপারেটর', 'Tour operator', [
             'bookings.view_all', 'bookings.create', 'bookings.update', 'customers.view', 'packages.manage', 'pricing.manage',

@@ -659,7 +659,8 @@ So nobody is surprised. None of these exists in v1.0 unless a line says otherwis
   hotel sales for them to apply to. Admins and the super admin earn no commission on bookings they own.
 - **Sales and services:** hotel reservations; a visa-file service tracker (appointments, visa-only customers); the
   B2B sub-agent portal (net rates, credit); corporate accounts with credit terms and statements.
-- **Pricing:** early-bird, last-minute and seasonal price rules. Group-size discounts are built.
+- **Pricing:** early-bird, last-minute and seasonal price rules. Group-size discounts are built, and so are coupon codes
+  — public and passport-specific, percentage or fixed, with limits and a report (Admin → Marketing, docs/coupons.md).
 - **Refunds:** no refund or credit-note workflow.
   - An online payment is refunded in the SSLCommerz panel.
   - A staff-recorded payment is corrected with *Reverse* and a reason.

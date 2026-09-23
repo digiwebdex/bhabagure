@@ -810,5 +810,73 @@
         ]
       }
     }
+  ],
+  "couponDiscount": [
+    {
+      "$comment": "10% of 10,000",
+      "terms": { "type": "percent", "value": 10, "maxDiscount": null, "minAmount": null },
+      "amount": 10000,
+      "expected": { "eligible": true, "discount": 1000 }
+    },
+    {
+      "$comment": "20% capped at 2,000: 4,000 becomes 2,000",
+      "terms": { "type": "percent", "value": 20, "maxDiscount": 2000, "minAmount": null },
+      "amount": 20000,
+      "expected": { "eligible": true, "discount": 2000 }
+    },
+    {
+      "$comment": "20% under the cap",
+      "terms": { "type": "percent", "value": 20, "maxDiscount": 2000, "minAmount": null },
+      "amount": 5000,
+      "expected": { "eligible": true, "discount": 1000 }
+    },
+    {
+      "$comment": "fixed 500",
+      "terms": { "type": "fixed", "value": 500, "maxDiscount": null, "minAmount": null },
+      "amount": 10000,
+      "expected": { "eligible": true, "discount": 500 }
+    },
+    {
+      "$comment": "a fixed discount never takes the amount below zero",
+      "terms": { "type": "fixed", "value": 1500, "maxDiscount": null, "minAmount": null },
+      "amount": 1000,
+      "expected": { "eligible": true, "discount": 1000 }
+    },
+    {
+      "$comment": "100% is the whole amount",
+      "terms": { "type": "percent", "value": 100, "maxDiscount": null, "minAmount": null },
+      "amount": 7300,
+      "expected": { "eligible": true, "discount": 7300 }
+    },
+    {
+      "$comment": "one taka below the minimum",
+      "terms": { "type": "fixed", "value": 500, "maxDiscount": null, "minAmount": 20000 },
+      "amount": 19999,
+      "expected": { "eligible": false, "discount": 0 }
+    },
+    {
+      "$comment": "exactly the minimum",
+      "terms": { "type": "percent", "value": 5, "maxDiscount": null, "minAmount": 20000 },
+      "amount": 20000,
+      "expected": { "eligible": true, "discount": 1000 }
+    },
+    {
+      "$comment": "7.5% of 10,005 = 750.375, rounded to whole taka",
+      "terms": { "type": "percent", "value": 7.5, "maxDiscount": null, "minAmount": null },
+      "amount": 10005,
+      "expected": { "eligible": true, "discount": 750 }
+    },
+    {
+      "$comment": "5% of 1,010 = 50.5, rounded half up",
+      "terms": { "type": "percent", "value": 5, "maxDiscount": null, "minAmount": null },
+      "amount": 1010,
+      "expected": { "eligible": true, "discount": 51 }
+    },
+    {
+      "$comment": "nothing booked, nothing off",
+      "terms": { "type": "percent", "value": 10, "maxDiscount": null, "minAmount": null },
+      "amount": 0,
+      "expected": { "eligible": true, "discount": 0 }
+    }
   ]
 }

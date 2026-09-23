@@ -136,6 +136,9 @@ final class InvoiceIssuer
             'unit_price' => $booking->unit_price,
             'subtotal_amount' => $booking->lines->sum(fn (BookingLine $line) => (float) $line->amount),
             'discount_amount' => $booking->discount_amount,
+            // The coupon prints as its own line; its amount is part of discount_amount (docs/coupons.md §2.5).
+            'coupon_code' => (float) $booking->coupon_discount_amount > 0 ? $booking->appliedCoupon()?->code : null,
+            'coupon_discount_amount' => $booking->coupon_discount_amount,
             'vat_rate' => $booking->vat_rate,
             'vat_amount' => $booking->vat_amount,
             'total_amount' => $booking->total_amount,

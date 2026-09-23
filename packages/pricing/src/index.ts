@@ -137,7 +137,10 @@ export interface QuoteInput {
   /** Only the add-ons the traveller selected. */
   addons: readonly Addon[];
   config: PricingConfig;
-  /** Whole-taka discount a staff member applies on an invoice. The website never sends one. */
+  /**
+   * Whole-taka discount: a staff member's on an invoice, plus a coupon's (docs/coupons.md). The website passes only a
+   * coupon's discount as the API worked it out, and the API checks the total again.
+   */
   discount?: number;
   /** VAT / service-charge rate chosen on an invoice; defaults to the configured service charge. */
   chargePercent?: number;
@@ -222,6 +225,40 @@ export function onlinePayment(amount: number, chargePercent: number): OnlinePaym
   assertAmount(chargePercent);
   const charge = Math.round((amount * chargePercent) / 100);
   return { amount, chargePercent, charge, total: amount + charge };
+}
+
+export type CouponDiscountType = 'percent' | 'fixed';
+
+/** A coupon's terms as its discount needs them (docs/coupons.md §2.2). */
+export interface CouponTerms {
+  type: CouponDiscountType;
+  /** A percentage (up to 100) or whole taka. */
+  value: number;
+  /** Percent coupons: the most one booking saves. */
+  maxDiscount?: number | null;
+  /** The booking amount the coupon needs. */
+  minAmount?: number | null;
+}
+
+export interface CouponOutcome {
+  /** False when the booking amount is below the coupon's minimum; the discount is then 0. */
+  eligible: boolean;
+  discount: number;
+}
+
+/**
+ * A coupon's discount on the booking amount — every line before any discount and before the service charge, which then
+ * applies to what is left (docs/coupons.md §2.2). Percent: the amount × rate in whole taka, capped at `maxDiscount`;
+ * fixed: the value. Never more than the amount, so a total can't go below zero.
+ */
+export function couponDiscount(terms: CouponTerms, amount: number): CouponOutcome {
+  assertAmount(amount);
+  assertAmount(terms.value);
+  if (terms.type === 'percent' && terms.value > 100) throw new RangeError(`@bhabaghure/pricing: a percentage coupon is at most 100%, got ${terms.value}`);
+  if (terms.minAmount != null && amount < terms.minAmount) return { eligible: false, discount: 0 };
+  let discount = terms.type === 'percent' ? Math.round((amount * terms.value) / 100) : Math.round(terms.value);
+  if (terms.type === 'percent' && terms.maxDiscount != null) discount = Math.min(discount, Math.round(terms.maxDiscount));
+  return { eligible: true, discount: Math.min(discount, amount) };
 }
 
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid';

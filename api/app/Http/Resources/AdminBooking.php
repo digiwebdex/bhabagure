@@ -80,6 +80,15 @@ final class AdminBooking
             'single_supplement_amount' => Money::toNumber($booking->single_supplement_amount),
             'addons_amount' => Money::toNumber($booking->addons_amount),
             'discount_amount' => Money::toNumber($booking->discount_amount),
+            // The coupon's share of discount_amount; the rest is the staff's own discount (docs/coupons.md §2.5).
+            'coupon_discount_amount' => Money::toNumber($booking->coupon_discount_amount),
+            'coupon' => ($coupon = $booking->appliedCoupon()) === null ? null : [
+                'id' => $coupon->id, 'coupon_id' => $coupon->coupon_id, 'code' => $coupon->code, 'kind' => $coupon->kind,
+                'discount_type' => $coupon->discount_type, 'discount_value' => Money::toNumber($coupon->discount_value),
+                'max_discount_amount' => Money::toNumber($coupon->max_discount_amount), 'min_booking_amount' => Money::toNumber($coupon->min_booking_amount),
+                'discount_amount' => Money::toNumber($coupon->discount_amount), 'status' => $coupon->status, 'source' => $coupon->source,
+                'applied_at' => $coupon->applied_at?->toIso8601String(),
+            ],
             'vat_rate' => Money::toNumber($booking->vat_rate),
             'vat_amount' => Money::toNumber($booking->vat_amount),
             'locale' => $booking->locale,
@@ -146,6 +155,9 @@ final class AdminBooking
             // What this staff member may do now. The server checks again on every action.
             'actions' => [
                 'edit_quote' => $open && $current === null && $can('bookings.update'),
+                // A customer's coupon, while the quote can still change (docs/coupons.md §2.5).
+                'apply_coupon' => $open && $current === null && $can('bookings.update') && $booking->couponRedemption === null,
+                'remove_coupon' => $open && $current === null && $can('bookings.update') && $booking->couponRedemption !== null,
                 'issue_invoice' => $open && $current === null && $booking->status !== BookingStatus::Cancelled && $can('invoices.manage'),
                 'void_invoice' => $current !== null && $can('invoices.manage'),
                 'record_payment' => $open && $current !== null && (float) $booking->due_amount > 0 && $can('transactions.create_manual'),
@@ -169,6 +181,8 @@ final class AdminBooking
                 'addons' => app(BookingQuoteEditor::class)->addonInputs($booking),
                 // A custom service (docs/custom-service-bookings.md) is priced from its own items with invoiceTotals.
                 'custom_items' => $booking->is_custom ? app(BookingQuoteEditor::class)->customItems($booking) : null,
+                // The booking's coupon as its use copied the terms, for couponDiscount on new lines; null without one.
+                'coupon' => $booking->couponRedemption?->terms(),
                 'config' => (fn (PricingConfig $c) => [
                     'slabs' => $c->slabs, 'singleRoomSupplementPercent' => $c->singleRoomSupplementPercent,
                     'serviceChargePercent' => $c->serviceChargePercent, 'maxTravellers' => $c->maxTravellers,

@@ -37,6 +37,8 @@ const DownloadsPage = page(() => import('../features/downloads/DownloadsPage'), 
 const InvoicesPage = page(() => import('../features/invoices/InvoicesPage'), 'InvoicesPage')
 const InvoiceFormPage = page(() => import('../features/invoices/InvoiceForm'), 'InvoiceForm')
 const CustomerAccountsPage = page(() => import('../features/customer-accounts/CustomerAccountsPage'), 'CustomerAccountsPage')
+const CouponsPage = page(() => import('../features/coupons/CouponsPage'), 'CouponsPage')
+const CouponReportPage = page(() => import('../features/coupons/CouponReportPage'), 'CouponReportPage')
 const ChartOfAccountsPage = page(() => import('../features/accounts/ChartOfAccountsPage'), 'ChartOfAccountsPage')
 const JournalPage = page(() => import('../features/accounts/JournalPage'), 'JournalPage')
 const AccountTransactionsPage = page(() => import('../features/accounts/ReportsPage'), 'AccountTransactionsPage')
@@ -72,6 +74,7 @@ const packages = ['packages.manage']
 const cms = ['cms.manage']
 const bookings = ['bookings.view_all', 'bookings.view_own']
 const quotations = ['quotations.view_all', 'quotations.view_own']
+const coupons = ['coupons.view', 'coupons.manage']
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -123,6 +126,8 @@ export const router = createBrowserRouter([
       { path: 'packages/new', element: <Require permissions={packages}><PackageEditorPage /></Require> },
       { path: 'packages/:id', element: <Require permissions={packages}><PackageEditorPage /></Require> },
       { path: 'pricing', element: <Require permissions={['pricing.manage']}><PricingPage /></Require> },
+      { path: 'coupons', element: <Require permissions={coupons}><CouponsPage /></Require> },
+      { path: 'coupons/report', element: <Require permissions={coupons}><CouponReportPage /></Require> },
       { path: 'posts', element: <Require permissions={cms}><PostListPage /></Require> },
       { path: 'posts/new', element: <Require permissions={cms}><PostEditorPage /></Require> },
       { path: 'posts/:id', element: <Require permissions={cms}><PostEditorPage /></Require> },

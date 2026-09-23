@@ -7,6 +7,8 @@ use App\Events\BookingCreated;
 use App\Models\Addon;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
+use App\Models\Coupon;
+use App\Models\CouponRedemption;
 use App\Models\Customer;
 use App\Models\PackageDeparture;
 use App\Models\PassportScan;
@@ -17,6 +19,9 @@ use App\Models\Staff;
 use App\Models\TourPackage;
 use App\Models\TravellerDocument;
 use App\Services\AuditLogger;
+use App\Services\Coupons\CouponCheck;
+use App\Services\Coupons\CouponRefused;
+use App\Services\Coupons\CouponService;
 use App\Services\Documents\DocumentNumbers;
 use App\Support\Money;
 use App\Support\Pricing\PriceGrid;
@@ -37,12 +42,13 @@ final class BookingCreator
     public function __construct(
         private readonly DocumentNumbers $numbers,
         private readonly AuditLogger $audit,
+        private readonly CouponService $coupons,
     ) {}
 
     /**
      * @return array{booking: Booking, accessToken: string, quote: array<string, mixed>}
      *
-     * @throws PriceChanged|SeatsUnavailable
+     * @throws PriceChanged|SeatsUnavailable|CouponRefused
      */
     public function create(BookingRequest $request, ?Customer $customer = null, ?Staff $staff = null): array
     {
@@ -50,6 +56,21 @@ final class BookingCreator
             $package = TourPackage::query()->published()->where('slug', $request->packageSlug)->firstOrFail();
             $addons = Addon::query()->where('is_active', true)->whereIn('code', $request->addonCodes)->orderBy('sort_order')->get();
             $quote = $this->quote($package, $request, $addons->all());
+
+            // A coupon (docs/coupons.md): checked again and reserved in this transaction, its discount worked out here —
+            // the request carries only the code.
+            $coupon = null;
+            if ($request->couponCode !== null) {
+                $eligible = self::eligibleAmount($quote['lines']);
+                $offer = $this->coupons->evaluate($request->couponCode, new CouponCheck(
+                    $package->id, $eligible, $customer?->id, $request->travellers[0]['phone'] ?? null, self::passportHashes($request->travellers),
+                ), lock: true);
+                // Their record, found with a locking read after the coupon's lock: the one persist() then books under.
+                $customer ??= $offer['customerId'] === null ? null : Customer::query()->find($offer['customerId']);
+                $withoutCoupon = $quote['total'];
+                $quote = $this->quote($package, $request, $addons->all(), $offer['discount']);
+                $coupon = ['coupon' => $offer['coupon'], 'eligible' => $eligible, 'discount' => $quote['discount'], 'originalTotal' => $withoutCoupon, 'finalTotal' => $quote['total']];
+            }
 
             if ((int) round($request->expectedTotal) !== $quote['total']) {
                 throw new PriceChanged($quote);
@@ -71,13 +92,33 @@ final class BookingCreator
                 'single_supplement_amount' => $quote['singleSupplement'],
                 'addons_amount' => array_sum(array_column($quote['addons'], 'amount')),
                 'discount_amount' => $quote['discount'],
+                'coupon_discount_amount' => $coupon === null ? 0 : $quote['discount'],
                 'vat_rate' => $quote['chargePercent'],
                 'vat_amount' => $quote['serviceCharge'],
                 'total_amount' => $quote['total'],
-            ], $lines, $customer, $staff);
+            ], $lines, $customer, $staff, coupon: $coupon);
 
             return $result + ['quote' => $quote];
         });
+    }
+
+    /** What a coupon works on: every line before any discount and before the service charge (docs/coupons.md §2.2). */
+    public static function eligibleAmount(array $lines): int
+    {
+        return (int) round(array_sum(array_map(fn (array $line) => (float) $line['amount'], $lines)));
+    }
+
+    /**
+     * The HMAC of every passport number on the booking, as a passport coupon is matched (BookingTraveller::passportHash).
+     *
+     * @param  list<array{passportNumber?: ?string}>  $travellers
+     * @return list<string>
+     */
+    public static function passportHashes(array $travellers): array
+    {
+        $numbers = array_filter(array_map(fn (array $traveller) => $traveller['passportNumber'] ?? null, $travellers));
+
+        return array_values(array_unique(array_map(BookingTraveller::passportHash(...), $numbers)));
     }
 
     /**
@@ -202,11 +243,12 @@ final class BookingCreator
      *
      * @param  array<string, mixed>  $snapshot  package snapshot and amounts
      * @param  list<array<string, mixed>>  $lines
+     * @param  array{coupon: Coupon, eligible: int, discount: int, originalTotal: int|float, finalTotal: int|float}|null  $coupon  the coupon it was priced with, reserved with the booking
      * @return array{booking: Booking, accessToken: string}
      *
      * @throws SeatsUnavailable
      */
-    private function persist(BookingRequest $request, array $snapshot, array $lines, ?Customer $customer, ?Staff $staff, ?int $quotationId = null, ?int $ownerId = null): array
+    private function persist(BookingRequest $request, array $snapshot, array $lines, ?Customer $customer, ?Staff $staff, ?int $quotationId = null, ?int $ownerId = null, ?array $coupon = null): array
     {
         $departure = $snapshot['tour_package_id'] === null ? null : PackageDeparture::query()->where('tour_package_id', $snapshot['tour_package_id'])
             ->where('status', 'scheduled')->whereDate('departs_on', $request->travelDate)->lockForUpdate()->first();
@@ -243,7 +285,7 @@ final class BookingCreator
             'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
             'access_token_hash' => Booking::hashAccessToken($accessToken),
             'idempotency_key' => $request->idempotencyKey,
-        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
+        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'coupon_discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
 
         foreach (array_values($lines) as $index => $line) {
             $booking->lines()->create($line + ['sort_order' => $index]);
@@ -271,6 +313,11 @@ final class BookingCreator
             ]);
         }
 
+        // The coupon's use, reserved until the booking is confirmed (docs/coupons.md §2.4).
+        if ($coupon !== null) {
+            $this->coupons->reserve($coupon['coupon'], $booking, $coupon, $staff === null ? CouponRedemption::SOURCE_WEBSITE : CouponRedemption::SOURCE_OFFICE, $staff);
+        }
+
         $this->audit->record('booking.created', $staff ?? $customer, $booking, array_filter(['source' => $request->source, 'total' => $snapshot['total_amount'], 'quotation_id' => $quotationId]));
 
         // The private link (token in the fragment) can only be sent now: afterwards only its hash exists.
@@ -284,20 +331,31 @@ final class BookingCreator
      * The quote the website shows for the same inputs (GET /public/pricing + packages + add-ons).
      *
      * @param  list<Addon>  $addons
+     * @param  int  $discount  a coupon's discount, worked out by CouponService (docs/coupons.md)
      * @return array<string, mixed>
      */
-    public function quote(TourPackage $package, BookingRequest $request, array $addons): array
+    public function quote(TourPackage $package, BookingRequest $request, array $addons, int $discount = 0): array
     {
-        self::assertHotelCategory($package, $request->hotelCategory);
+        return $this->packageQuote($package, $request->pax, $request->room, $request->hotelCategory, $addons, $discount);
+    }
+
+    /**
+     * @param  list<Addon>  $addons
+     * @return array<string, mixed>
+     */
+    public function packageQuote(TourPackage $package, int $pax, string $room, ?string $hotelCategory, array $addons, int $discount = 0): array
+    {
+        self::assertHotelCategory($package, $hotelCategory);
 
         return PricingService::quoteBooking(
             $this->listPrice($package),
-            $request->pax,
-            $request->room,
+            $pax,
+            $room,
             array_map(fn (Addon $addon) => ['code' => $addon->code, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit], $addons),
             PricingConfig::current(),
+            $discount,
             grid: $package->price_grid,
-            hotelCategory: $request->hotelCategory,
+            hotelCategory: $hotelCategory,
         );
     }
 

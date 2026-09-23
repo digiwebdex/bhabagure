@@ -46,6 +46,11 @@ final class PublicBooking
                 'amount' => Money::toNumber($line->amount),
             ])->values()->all(),
             'discount' => Money::toNumber($booking->discount_amount),
+            // The coupon's part of `discount`, shown as its own line (docs/coupons.md §2.5); null without one.
+            'coupon' => ($coupon = $booking->appliedCoupon()) === null ? null : [
+                'code' => $coupon->code,
+                'discount' => Money::toNumber($booking->coupon_discount_amount),
+            ],
             'chargePercent' => Money::toNumber($booking->vat_rate),
             'serviceCharge' => Money::toNumber($booking->vat_amount),
             'total' => Money::toNumber($booking->total_amount),

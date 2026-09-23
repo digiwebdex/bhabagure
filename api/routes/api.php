@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\BookingTicketController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
+use App\Http\Controllers\Api\V1\Admin\CouponController;
+use App\Http\Controllers\Api\V1\Admin\CouponReportController;
 use App\Http\Controllers\Api\V1\Admin\CreatorProfileController;
 use App\Http\Controllers\Api\V1\Admin\CreatorVideoController;
 use App\Http\Controllers\Api\V1\Admin\CustomerAccountsController;
@@ -67,6 +69,7 @@ use App\Http\Controllers\Api\V1\Portal\PortalSupportController;
 use App\Http\Controllers\Api\V1\Portal\PortalTripController;
 use App\Http\Controllers\Api\V1\Public\PublicBookingController;
 use App\Http\Controllers\Api\V1\Public\PublicContentController;
+use App\Http\Controllers\Api\V1\Public\PublicCouponController;
 use App\Http\Controllers\Api\V1\Public\PublicFormController;
 use App\Http\Controllers\Api\V1\Public\PublicInvoiceController;
 use App\Http\Controllers\Api\V1\Public\PublicPassportScanController;
@@ -178,6 +181,8 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/{reference}/payments', 'pay')->middleware('throttle:public-bookings');
         });
         Route::post('passport-scans', [PublicPassportScanController::class, 'store'])->middleware('throttle:passport-scans');
+        // The booking form's coupon box (docs/coupons.md §2.6): a code checked against the booking, never a discount taken.
+        Route::post('coupons/check', [PublicCouponController::class, 'check'])->middleware('throttle:coupon-checks');
 
         Route::controller(PublicInvoiceController::class)->middleware('throttle:public-read')->group(function () {
             Route::get('invoices/{token}', 'show');
@@ -549,6 +554,9 @@ Route::prefix('v1')->group(function () {
             Route::put('booking-travellers/{travellerId}', 'updateTraveller')->whereNumber('travellerId');
             Route::delete('bookings/{id}', 'destroy')->whereNumber('id');
             Route::put('bookings/{id}/quote', 'updateQuote')->whereNumber('id');
+            // A customer's coupon on the draft invoice (docs/coupons.md §2.5).
+            Route::post('bookings/{id}/coupon', 'applyCoupon')->whereNumber('id');
+            Route::delete('bookings/{id}/coupon', 'removeCoupon')->whereNumber('id');
             Route::post('bookings/{id}/invoice', 'issueInvoice')->whereNumber('id');
             Route::get('bookings/{id}/invoice/print', 'invoiceHtml')->whereNumber('id');
             Route::get('bookings/{id}/invoice/pdf', 'invoicePdf')->whereNumber('id');
@@ -558,6 +566,25 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['confirm', 'complete', 'cancel']);
             Route::post('invoices/{invoiceId}/void', 'voidInvoice')->whereNumber('invoiceId');
             Route::post('transactions/{transactionId}/reverse', 'reversePayment')->whereNumber('transactionId');
+        });
+
+        // Coupons and the coupon report (docs/coupons.md §2.6). Reading needs coupons.view or coupons.manage; every change
+        // coupons.manage.
+        Route::middleware('permission:coupons.view|coupons.manage,staff')->group(function () {
+            Route::controller(CouponController::class)->group(function () {
+                Route::get('coupons', 'index');
+                Route::get('coupons/options', 'options');
+                Route::get('coupons/{id}', 'show')->whereNumber('id');
+                Route::middleware('permission:coupons.manage,staff')->group(function () {
+                    Route::post('coupons', 'store');
+                    Route::put('coupons/{id}', 'update')->whereNumber('id');
+                    Route::post('coupons/{id}/activate', 'activate')->whereNumber('id');
+                    Route::post('coupons/{id}/deactivate', 'deactivate')->whereNumber('id');
+                    Route::delete('coupons/{id}', 'destroy')->whereNumber('id');
+                    Route::post('coupons/{id}/restore', 'restore')->whereNumber('id');
+                });
+            });
+            Route::get('coupon-report', CouponReportController::class);
         });
 
         Route::middleware('permission:pricing.manage,staff')->controller(PricingController::class)->group(function () {

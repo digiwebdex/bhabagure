@@ -54,6 +54,14 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'pricing', path: '/pricing', icon: '%', permissions: ['pricing.manage'] },
     ],
   },
+  // Coupons and what they gave and brought in (docs/coupons.md).
+  {
+    key: 'marketing',
+    items: [
+      { key: 'coupons', path: '/coupons', icon: '✂', permissions: ['coupons.view', 'coupons.manage'] },
+      { key: 'coupon_report', path: '/coupons/report', icon: '▤', permissions: ['coupons.view', 'coupons.manage'] },
+    ],
+  },
   {
     key: 'website',
     items: [

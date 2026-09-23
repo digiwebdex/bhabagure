@@ -23,7 +23,7 @@ class Invoice extends Model
         'billed_name', 'billed_phone', 'billed_email', 'billed_address', 'title', 'note', 'footer', 'po_number', 'delivery_charge',
         'package_code', 'package_title_en', 'package_title_bn', 'travel_start', 'travel_end',
         'booking_reference', 'package_duration_days', 'package_duration_nights', 'includes_airfare', 'sales_agent_name', 'travellers',
-        'pax_count', 'unit_price', 'subtotal_amount', 'discount_label', 'discount_amount',
+        'pax_count', 'unit_price', 'subtotal_amount', 'discount_label', 'discount_amount', 'coupon_code', 'coupon_discount_amount',
         'vat_rate', 'vat_amount', 'total_amount',
     ];
 
@@ -42,6 +42,8 @@ class Invoice extends Model
         'invoice_number', 'kind', 'booking_id', 'customer_id', 'client_id', 'issued_on', 'due_on', 'title', 'note',
         'billed_name', 'billed_phone', 'billed_email', 'billed_address', 'package_code', 'package_title_en', 'package_title_bn',
         'travel_start', 'travel_end', 'pax_count', 'unit_price', 'subtotal_amount', 'discount_label', 'discount_amount',
+        // A booking's coupon, as its own line (docs/coupons.md §2.5); its amount is part of discount_amount.
+        'coupon_code', 'coupon_discount_amount',
         'vat_rate', 'vat_amount', 'total_amount', 'status', 'share_token', 'issued_by_staff_id',
         'booking_reference', 'package_duration_days', 'package_duration_nights', 'includes_airfare', 'sales_agent_name', 'travellers',
         // The invoice builder (docs/phase-9-accounts.md §5).
@@ -60,6 +62,7 @@ class Invoice extends Model
             'unit_price' => 'decimal:2',
             'subtotal_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'coupon_discount_amount' => 'decimal:2',
             'vat_rate' => 'decimal:2',
             'vat_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',

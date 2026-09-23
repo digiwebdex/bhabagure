@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { defaultHotelCategory, quoteBooking, type RoomType } from '@bhabaghure/pricing';
@@ -11,6 +11,7 @@ import { Modal, ModalClose } from '@/components/ui/Modal';
 import { useFormatters } from '@/lib/use-formatters';
 import { useBooking, type BookingStep } from '@/state/booking';
 
+import { couponDiscountFor, useCouponSync } from './coupon';
 import { PackageStep } from './PackageStep';
 import { PaymentStep } from './PaymentStep';
 import { ReviewStep } from './ReviewStep';
@@ -27,6 +28,7 @@ export function BookingModal() {
   const t = useTranslations('booking');
   const tc = useTranslations('common');
   const tv = useTranslations('validation');
+  const locale = useLocale() as 'bn' | 'en';
   const { packages, pricing, addons } = useSiteContent();
   const f = useFormatters();
   const booking = useBooking();
@@ -35,6 +37,9 @@ export function BookingModal() {
   const selectedAddons = addons.filter((a) => booking.addons.includes(a.code));
   // A grid package is quoted in the chosen hotel category, or its default until one is chosen.
   const hotelCategory = pkg && pkg.hotelCategories.length > 0 ? (booking.hotelCategory && pkg.hotelCategories.includes(booking.hotelCategory) ? booking.hotelCategory : defaultHotelCategory(pkg.priceGrid)) : null;
+  // A coupon's discount as the API worked it out, while its answer still describes this booking (docs/coupons.md).
+  const couponOff = couponDiscountFor(booking, hotelCategory);
+  useCouponSync(hotelCategory, locale, { unavailable: t('coupon.unavailable'), rateLimited: t('coupon.rateLimited') });
   const quote = useMemo(
     () =>
       pkg
@@ -46,9 +51,10 @@ export function BookingModal() {
             config: pricing,
             grid: pkg.priceGrid,
             hotelCategory,
+            discount: couponOff,
           })
         : null,
-    [pkg, booking.pax, booking.room, selectedAddons, pricing, hotelCategory],
+    [pkg, booking.pax, booking.room, selectedAddons, pricing, hotelCategory, couponOff],
   );
 
   if (!pkg || !quote) return null;
@@ -89,9 +95,9 @@ export function BookingModal() {
         {booking.step === 1 ? <PackageStep errors={booking.attempted[1] ? validatePackageStep(booking, tv).errors : {}} roomLabel={roomLabel} /> : null}
         {booking.step === 2 ? <TravellersStep errors={booking.attempted[2] ? validateTravellers(booking, tv).errors : []} /> : null}
         {booking.step === 3 ? (
-          <ReviewStep pkg={pkg} quote={quote} termsError={booking.attempted[3] && !booking.terms ? t('termsRequired') : undefined} />
+          <ReviewStep pkg={pkg} quote={quote} hotelCategory={hotelCategory} termsError={booking.attempted[3] && !booking.terms ? t('termsRequired') : undefined} />
         ) : null}
-        {booking.step === 4 ? <PaymentStep pkg={pkg} quote={quote} /> : null}
+        {booking.step === 4 ? <PaymentStep pkg={pkg} quote={quote} hotelCategory={hotelCategory} /> : null}
 
         {booking.attempted[booking.step as BookingStep] && stepInvalid && booking.step < 3 ? (
           <p role="alert" className="rounded-10 bg-orange-tint px-3 py-2.5 text-13 font-semibold text-amber">

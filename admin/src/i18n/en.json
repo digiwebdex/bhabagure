@@ -251,7 +251,8 @@
       "website": "Website",
       "reports": "Reports",
       "communication": "Communication",
-      "system": "System"
+      "system": "System",
+      "marketing": "Marketing"
     }
   },
   "nav": {
@@ -281,7 +282,8 @@
       "services": "Services",
       "communication": "Communication",
       "hr": "HR",
-      "system": "System"
+      "system": "System",
+      "marketing": "Marketing"
     },
     "items": {
       "dashboard": "Dashboard",
@@ -319,7 +321,9 @@
       "chart_of_accounts": "Chart of accounts",
       "journal": "Journal entries",
       "account_transactions": "Account transactions",
-      "general_ledger": "General ledger"
+      "general_ledger": "General ledger",
+      "coupons": "Coupons",
+      "coupon_report": "Coupon report"
     }
   },
   "status": {
@@ -1024,7 +1028,30 @@
       "dateOfBirth": "date of birth"
     },
     "bkashCharge": "Customer also paid the {{amount}} bKash charge",
-    "bkashChargeHint": "Recorded as a separate charge; the booking is paid {{amount}}."
+    "bkashChargeHint": "Recorded as a separate charge; the booking is paid {{amount}}.",
+    "extraDiscount": "Extra discount (BDT)",
+    "discountLine": "Discount",
+    "couponLine": "Coupon {{code}}",
+    "couponCode": "Coupon code",
+    "applyCoupon": "Apply coupon",
+    "checkingCoupon": "Checking…",
+    "applyCouponHint": "A code the customer has — checked as on the website: its dates, limits, package and passport.",
+    "removeCoupon": "Remove coupon",
+    "couponApplied": "Coupon {{code}} applied",
+    "couponRemoved": "Coupon removed",
+    "couponBelowMinimum": "The coupon needs at least {{amount}} before discounts. Remove the coupon first, or keep the booking at {{amount}} or more.",
+    "couponPercent": "{{value}} off",
+    "couponPercentUpTo": "{{value}} off, up to {{max}}",
+    "couponFixed": "{{amount}} off",
+    "couponStatus": {
+      "reserved": "held by this booking",
+      "used": "used",
+      "released": "given back"
+    },
+    "couponSource": {
+      "website": "applied on the website",
+      "office": "applied by staff"
+    }
   },
   "profile": {
     "title": "My profile",
@@ -2974,5 +3001,185 @@
     "estimateEn": "Estimate (English)",
     "estimateBn": "Estimate (Bangla)",
     "add": "Add price option"
+  },
+  "coupons": {
+    "title": "Coupons",
+    "subtitle": "Promotion codes for the website and the office, and what each has given",
+    "new": "+ New coupon",
+    "report": "Coupon report",
+    "search": "Search by code, campaign or holder",
+    "empty": "No coupons yet",
+    "emptyFiltered": "No coupons here",
+    "emptyNote": "A coupon takes its discount off a booking before the service charge. Customers enter the code on the booking form.",
+    "newTitle": "New coupon",
+    "editTitle": "Edit {{code}}",
+    "create": "Create coupon",
+    "save": "Save coupon",
+    "created": "Coupon {{code}} created",
+    "saved": "Coupon {{code}} saved",
+    "edit": "Edit",
+    "usage": "Usage",
+    "activate": "Switch on",
+    "deactivate": "Switch off",
+    "activated": "{{code}} switched on",
+    "deactivated": "{{code}} switched off",
+    "delete": "Delete",
+    "archive": "Archive",
+    "restore": "Restore",
+    "deleted": "{{code}} deleted",
+    "archived": "{{code}} archived",
+    "restored": "{{code}} restored",
+    "deleteConfirm": "Delete {{code}}? Nobody has used it, so it is removed and its code is free again.",
+    "archiveConfirm": "Archive {{code}}? It has been used, so it is kept for the bookings, invoices and report that name it — but nobody can use it any more. You can restore it later.",
+    "noManagePermission": "You can’t change coupons",
+    "codeHint": "Letters, digits and dashes. Customers can type it in any case.",
+    "codeLocked": "Used on a booking, so the code stays. Make a new coupon for a new code.",
+    "nameHint": "The campaign it belongs to: coupons with the same name are one campaign in the report.",
+    "passportHint": "Only a booking with this passport on it — any traveller — can use the coupon.",
+    "holderHint": "Who it was given to, for staff. Optional.",
+    "maxHint": "The most one booking saves. Optional.",
+    "minHint": "Before discounts and the service charge. Optional.",
+    "noLimitHint": "Empty: no limit.",
+    "dhakaTime": "Dhaka time. Empty: no limit.",
+    "activeHint": "Switched off, nobody can use it; bookings that have it keep it.",
+    "noChannel": "Not set",
+    "unpublished": "not on the website",
+    "offPercent": "{{value}} off",
+    "offAmount": "{{amount}} off",
+    "upTo": "up to {{amount}}",
+    "minimum": "on bookings of {{amount}} or more",
+    "onPackages_one": "{{n}} package only",
+    "onPackages_other": "{{n}} packages only",
+    "from": "From {{at}}",
+    "fromNow": "From now",
+    "until": "Until {{at}}",
+    "noEnd": "No end date",
+    "always": "Always",
+    "used": "used",
+    "pending": "pending",
+    "given": "{{amount}} given",
+    "columns": {
+      "code": "Coupon",
+      "type": "Type",
+      "discount": "Discount",
+      "validity": "Validity",
+      "usage": "Usage",
+      "status": "Status"
+    },
+    "fields": {
+      "code": "Coupon code",
+      "name": "Coupon or campaign name",
+      "kind": "Type",
+      "passport": "Passport number",
+      "holder": "Holder’s name",
+      "discountType": "Discount type",
+      "percent": "Discount (%)",
+      "amount": "Discount (BDT)",
+      "maxDiscount": "Maximum discount (BDT)",
+      "minAmount": "Minimum booking amount (BDT)",
+      "startsAt": "Starts",
+      "endsAt": "Expires",
+      "usageLimit": "Total uses",
+      "perCustomer": "Uses per customer",
+      "appliesTo": "Works on",
+      "channel": "Campaign channel",
+      "active": "Active",
+      "notes": "Notes"
+    },
+    "kinds": {
+      "public": "Public",
+      "passport": "Passport"
+    },
+    "kindNotes": {
+      "public": "Anyone with the code — a website, Facebook, SMS or email campaign.",
+      "passport": "One passport holder only: the booking must have their passport on it."
+    },
+    "discountTypes": {
+      "percent": "Percentage",
+      "fixed": "Fixed amount"
+    },
+    "appliesTo": {
+      "all": "Every booking — packages and custom services",
+      "packages": "Only these packages"
+    },
+    "channels": {
+      "website": "Website",
+      "facebook": "Facebook",
+      "sms": "SMS",
+      "email": "Email",
+      "seasonal": "Seasonal",
+      "other": "Other"
+    },
+    "statuses": {
+      "all": "All",
+      "active": "Active",
+      "scheduled": "Scheduled",
+      "expired": "Expired",
+      "used_up": "Used up",
+      "inactive": "Switched off",
+      "archived": "Archived"
+    }
+  },
+  "couponReport": {
+    "title": "Coupon report",
+    "subtitle": "What coupons gave and brought in — used on confirmed bookings, pending on open ones",
+    "allCoupons": "All coupons",
+    "allCouponsOption": "Every coupon",
+    "coupon": "Coupon",
+    "from": "Applied from",
+    "to": "Applied to",
+    "search": "Booking number, customer, phone or code",
+    "passportSearch": "Passport number (exact)",
+    "byCoupon": "By coupon",
+    "byCampaign": "Campaign performance",
+    "campaignNote": "Coupons with the same name are one campaign.",
+    "passportUses": "Passport coupon uses",
+    "passportNote": "Passport numbers are shown masked.",
+    "uses": "Every use",
+    "usesCount_one": "{{n}} use",
+    "usesCount_other": "{{n}} uses",
+    "campaign": "Campaign",
+    "channels": "Channels",
+    "couponsCount": "Coupons",
+    "applied": "Applied",
+    "booking": "Booking",
+    "customer": "Customer",
+    "passport": "Passport",
+    "discount": "Discount",
+    "bookingTotal": "Booking total",
+    "noCoupons": "No coupons yet",
+    "noUses": "No coupon used yet",
+    "noUsesNote": "Uses appear here when a booking is made with a coupon, or staff apply one.",
+    "totals": {
+      "coupons": "Coupons",
+      "active": "Active now",
+      "expired": "Expired",
+      "used": "Uses (confirmed)",
+      "pendingNote": "+ {{n}} pending on open bookings",
+      "discount": "Discount given",
+      "revenue": "Revenue from coupon bookings"
+    },
+    "columns": {
+      "used": "Used",
+      "pending": "Pending",
+      "released": "Given back",
+      "discount": "Discount given",
+      "revenue": "Revenue"
+    },
+    "useStatuses": {
+      "all": "Every use",
+      "used": "Used",
+      "reserved": "Pending",
+      "released": "Given back"
+    },
+    "releaseReasons": {
+      "booking_cancelled": "booking cancelled",
+      "booking_deleted": "booking deleted",
+      "removed_by_staff": "removed by staff"
+    },
+    "sources": {
+      "website": "Website",
+      "office": "Office"
+    }
   }
 }

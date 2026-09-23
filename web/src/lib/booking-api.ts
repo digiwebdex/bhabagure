@@ -40,7 +40,10 @@ export type PublicBooking = {
     unitPrice: number;
     amount: number;
   }[];
+  /** The whole discount; a coupon's part of it is `coupon.discount`. */
   discount: number;
+  /** The coupon in this booking's price (docs/coupons.md), as its own line; null without one. */
+  coupon: { code: string; discount: number } | null;
   chargePercent: number;
   serviceCharge: number;
   total: number;
@@ -99,12 +102,16 @@ export type BookingPayload = {
   locale: 'bn' | 'en';
   /** One per booking attempt: sent again, the API answers already_created instead of booking twice. */
   idempotency_key: string;
+  /** Only the code (docs/coupons.md): the API works the discount out, and refuses a total it didn't. */
+  coupon_code: string | null;
 };
 
 export type ApiFailure =
   | { ok: false; reason: 'price_changed'; total: number }
   | { ok: false; reason: 'already_created'; reference: string }
   | { ok: false; reason: 'seats_unavailable'; available: number }
+  /** The coupon stopped working between Apply and booking (used up, expired, switched off): nothing was booked. */
+  | { ok: false; reason: 'coupon_invalid'; message: string }
   | {
       ok: false;
       reason: 'payment_unavailable' | 'gateway_unavailable' | 'not_found' | 'rate_limited' | 'invalid' | 'unavailable' | 'failed';
@@ -140,6 +147,7 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
   } | null;
   if (res.ok && body?.data !== undefined) return { ok: true, data: body.data };
   if (body?.code === 'already_created' && body.reference) return { ok: false, reason: 'already_created', reference: body.reference };
+  if (body?.code === 'coupon_invalid' && body.message) return { ok: false, reason: 'coupon_invalid', message: body.message };
   if (body?.code === 'price_changed' && (body.quote || body.payment)) return { ok: false, reason: 'price_changed', total: (body.payment ?? body.quote)!.total };
   if (body?.code === 'seats_unavailable')
     return {
@@ -156,6 +164,44 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
 
 export const createBooking = (payload: BookingPayload) =>
   call<PublicBooking & { accessToken: string }>('bookings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    locale: payload.locale,
+  });
+
+/** What the booking form's Apply button sends: the booking's choices, the lead's number and the passports typed so far. */
+export type CouponCheckPayload = {
+  code: string;
+  package_slug: string;
+  pax: number;
+  room: string;
+  hotel_category: string | null;
+  addons: string[];
+  phone: string | null;
+  passport_numbers: string[];
+  locale: 'bn' | 'en';
+};
+
+/** The API's answer (api/app/Http/Controllers/Api/V1/Public/PublicCouponController.php): its own discount, never ours. */
+export type CouponCheck =
+  | {
+      valid: true;
+      code: string;
+      kind: 'public' | 'passport';
+      discountType: 'percent' | 'fixed';
+      discountValue: number;
+      maxDiscount: number | null;
+      minAmount: number | null;
+      discount: number;
+      subtotal: number;
+      originalTotal: number;
+      total: number;
+      message: string;
+    }
+  | { valid: false; code: string; reason: string; message: string; subtotal: number; total: number };
+
+export const checkCoupon = (payload: CouponCheckPayload) =>
+  call<CouponCheck>('coupons/check', {
     method: 'POST',
     body: JSON.stringify(payload),
     locale: payload.locale,

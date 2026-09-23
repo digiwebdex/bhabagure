@@ -27,7 +27,7 @@ class Booking extends Model
         'travel_start', 'travel_end', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount',
         'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount', 'source', 'assigned_staff_id', 'created_by_staff_id',
         'cancellation_reason', 'internal_notes', 'locale', 'terms_accepted_at', 'terms_version', 'access_token_hash', 'idempotency_key',
-        'is_custom',
+        'is_custom', 'coupon_discount_amount',
     ];
 
     protected $hidden = ['access_token_hash', 'idempotency_key'];
@@ -47,6 +47,8 @@ class Booking extends Model
             'single_supplement_amount' => 'decimal:2',
             'addons_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            // The coupon's share of discount_amount (docs/coupons.md); the rest is the staff's own discount.
+            'coupon_discount_amount' => 'decimal:2',
             'vat_rate' => 'decimal:2',
             'vat_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
@@ -156,6 +158,27 @@ class Booking extends Model
     public function seatHolds(): HasMany
     {
         return $this->hasMany(SeatHold::class);
+    }
+
+    /** The coupon this booking carries now (reserved or used) — one at a time, which the database enforces. */
+    public function couponRedemption(): HasOne
+    {
+        return $this->hasOne(CouponRedemption::class)->whereIn('status', CouponRedemption::LIVE);
+    }
+
+    /** Every coupon ever applied to it, released ones too. */
+    public function couponRedemptions(): HasMany
+    {
+        return $this->hasMany(CouponRedemption::class)->latest('id');
+    }
+
+    /**
+     * The coupon whose discount is in this booking's price: its live use or, for a booking cancelled before it was
+     * confirmed (whose use went back), the one it was priced with. Null when the price has no coupon in it.
+     */
+    public function appliedCoupon(): ?CouponRedemption
+    {
+        return $this->couponRedemption ?? ((float) $this->coupon_discount_amount > 0 ? $this->couponRedemptions()->first() : null);
     }
 
     public function npsResponse(): HasOne

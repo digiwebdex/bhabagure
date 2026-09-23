@@ -139,7 +139,10 @@ final class InvoiceView
             ], $invoice->travellers ?? []),
             'totals' => array_values(array_filter([
                 ['Subtotal', $bdt($subtotal)],
-                (float) $invoice->discount_amount > 0 ? ['Discount'.($invoice->discount_label ? " ({$invoice->discount_label})" : ''), '− '.$bdt($invoice->discount_amount)] : null,
+                // A coupon is its own line (docs/coupons.md §2.5); any other discount is what is left of discount_amount.
+                (float) $invoice->coupon_discount_amount > 0 ? ['Coupon discount'.($invoice->coupon_code ? " ({$invoice->coupon_code})" : ''), '− '.$bdt($invoice->coupon_discount_amount)] : null,
+                ($otherDiscount = (float) $invoice->discount_amount - (float) $invoice->coupon_discount_amount) > 0
+                    ? ['Discount'.($invoice->discount_label ? " ({$invoice->discount_label})" : ''), '− '.$bdt($otherDiscount)] : null,
                 // One rate on the whole invoice is named; VAT that came from the lines is only totalled here.
                 (float) $invoice->vat_rate > 0 || (float) $invoice->vat_amount > 0
                     ? ['Service charge & VAT'.((float) $invoice->vat_rate > 0 ? ' ('.Numerals::percent((float) $invoice->vat_rate, $locale).')' : ''), $bdt($invoice->vat_amount)]

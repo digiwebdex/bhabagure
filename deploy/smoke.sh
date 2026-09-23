@@ -83,6 +83,10 @@ check "brochure download without signing in" 401 "$(get c_brochure "$API/api/v1/
 check "downloads screen without a token" 401 "$(get a_downloads "$API/api/v1/admin/downloads" -H 'Accept: application/json')"
 check "chart of accounts without a token" 401 "$(get a_accounts "$API/api/v1/admin/accounts" -H 'Accept: application/json')"
 check "journal entries without a token" 401 "$(get a_journal "$API/api/v1/admin/journal-entries" -H 'Accept: application/json')"
+check "coupons without a token" 401 "$(get a_coupons "$API/api/v1/admin/coupons" -H 'Accept: application/json')"
+check "coupon report without a token" 401 "$(get a_coupon_report "$API/api/v1/admin/coupon-report" -H 'Accept: application/json')"
+# The booking form's coupon check exists (POST only; a GET is refused, not missing) — nothing is sent to it here.
+check "coupon check route (POST only)" 405 "$(get p_coupon_check "$API/api/v1/public/coupons/check" -H 'Accept: application/json')"
 
 echo "── CORS"
 cors() { curl -s -o /dev/null -D - -X OPTIONS --max-time 20 -H "Origin: $1" -H 'Access-Control-Request-Method: POST' "$API/api/v1/public/inquiries" | grep -i '^access-control-allow-origin:' | cut -d' ' -f2- | tr -d '\r'; }
