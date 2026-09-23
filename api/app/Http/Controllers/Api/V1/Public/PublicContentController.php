@@ -19,6 +19,7 @@ use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\VisaService;
+use App\Services\Booking\PhoneCheck;
 use App\Support\CreatorProfile;
 use App\Support\Money;
 use App\Support\Payments\PaymentOptions;
@@ -154,6 +155,8 @@ class PublicContentController extends Controller
             'onlinePaymentChargePercent' => $settings['onlinePaymentChargePercent'] ?? 0,
             // Phase 8 §4.F: off, the booking form saves the booking and its page shows how to pay by hand.
             'onlineCheckout' => PaymentOptions::checkoutAvailable(),
+            // On, the form sends a code to the lead's mobile before the booking is saved (docs/booking-phone-verification.md).
+            'verifyPhone' => PhoneCheck::required(),
             'addons' => Addon::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()
                 ->map(fn (Addon $addon) => [
                     'code' => $addon->code,

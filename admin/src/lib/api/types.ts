@@ -328,4 +328,9 @@ export type SiteSettings = {
     link: string | null
     bkash: { number: string; chargePercent: number } | null
   }
+  /** The website booking form's checks (docs/booking-phone-verification.md). */
+  booking?: { verifyPhone: boolean }
 }
+
+/** Beside the booking check's switch: when a one-time code last reached a customer, and when one last couldn't be sent. */
+export type CodeDelivery = { lastSentAt: string | null; lastFailedAt: string | null }

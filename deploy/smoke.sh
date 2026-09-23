@@ -87,6 +87,8 @@ check "coupons without a token" 401 "$(get a_coupons "$API/api/v1/admin/coupons"
 check "coupon report without a token" 401 "$(get a_coupon_report "$API/api/v1/admin/coupon-report" -H 'Accept: application/json')"
 # The booking form's coupon check exists (POST only; a GET is refused, not missing) — nothing is sent to it here.
 check "coupon check route (POST only)" 405 "$(get p_coupon_check "$API/api/v1/public/coupons/check" -H 'Accept: application/json')"
+# The booking code route exists too (docs/booking-phone-verification.md); a POST would send an SMS, so none is made.
+check "booking code route (POST only)" 405 "$(get p_booking_code "$API/api/v1/public/booking-codes" -H 'Accept: application/json')"
 
 echo "── CORS"
 cors() { curl -s -o /dev/null -D - -X OPTIONS --max-time 20 -H "Origin: $1" -H 'Access-Control-Request-Method: POST' "$API/api/v1/public/inquiries" | grep -i '^access-control-allow-origin:' | cut -d' ' -f2- | tr -d '\r'; }

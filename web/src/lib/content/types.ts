@@ -175,6 +175,11 @@ export interface PricingSettings extends PricingConfig {
    * shows how to pay by hand. Absent (an API from before §4.F, or the seed): off.
    */
   onlineCheckout?: boolean;
+  /**
+   * A code to the lead traveller's mobile before the booking is saved (docs/booking-phone-verification.md). Absent (an
+   * older API, or the seed): off.
+   */
+  verifyPhone?: boolean;
 }
 
 export interface SiteSettings {

@@ -39,6 +39,8 @@ export type BookingSummary = {
   claimable: boolean
   has_invoice: boolean
   has_payments: boolean
+  /** The lead's mobile proved itself with a code before the website saved the booking (docs/booking-phone-verification.md). */
+  phone_verified_at: string | null
   created_at: string
 }
 

@@ -1,21 +1,22 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { onlinePayment, type Quote } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
-import { createBooking, markJustBooked, recallBookingToken, rememberBookingToken, startPayment, type ApiFailure } from '@/lib/booking-api';
+import { createBooking, markJustBooked, recallBookingToken, rememberBookingToken, sendBookingCode, startPayment, type ApiFailure } from '@/lib/booking-api';
 import type { PackageView } from '@/lib/content/views';
 import { useRouter } from '@/i18n/navigation';
 import { whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
-import { parseDayMonthYear } from '@/lib/validators';
+import { normalizeBdMobile, normalizeDigits, parseDayMonthYear } from '@/lib/validators';
 import { useBooking, type CreatedBooking, type PaymentMethod } from '@/state/booking';
 
 import { applyCoupon, removeCoupon } from './coupon';
+import { PhoneCodeBox, type CodeNote } from './PhoneCodeBox';
 import { onlineChargeLine, PriceBreakdown, quoteLines } from './ReviewStep';
 
 const METHODS: PaymentMethod[] = ['bkash', 'nagad', 'card', 'bank'];
@@ -47,6 +48,54 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
   const couponCode = quote.discount > 0 ? (booking.coupon?.code ?? null) : null;
   const couponChecking = booking.couponCheck.status === 'checking';
 
+  // docs/booking-phone-verification.md: while the check is on, a code goes to the lead's mobile first and the booking is
+  // saved only with it. The API asks too (for a page cached before the switch went on), and this step then follows it.
+  const [verify, setVerify] = useState(pricing.verifyPhone === true);
+  const leadPhone = normalizeBdMobile(booking.travellers[0]?.phone ?? '');
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [codeNote, setCodeNote] = useState<CodeNote>(null);
+  const [waitSeconds, setWaitSeconds] = useState(0);
+  const [sending, setSending] = useState(false);
+  const typedCode = normalizeDigits(code).replace(/\s/g, '');
+
+  // The wait before another code: ticks only while it runs.
+  useEffect(() => {
+    if (waitSeconds <= 0) return;
+    const timer = setTimeout(() => setWaitSeconds((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [waitSeconds]);
+
+  /** Sends the code. 'sent' (or one went a moment ago), 'off' (nothing asks for one any more), 'failed' (the reason shows). */
+  const requestCode = async (): Promise<'sent' | 'off' | 'failed'> => {
+    if (!leadPhone) return 'failed';
+    setSending(true);
+    setCodeNote(null);
+    setFailure(null);
+    const result = await sendBookingCode(leadPhone, locale);
+    setSending(false);
+    if (result.ok) {
+      setSentTo(leadPhone);
+      setCode('');
+      setWaitSeconds(result.data.retry_after);
+      return 'sent';
+    }
+    if (result.reason === 'throttled') {
+      // A code went to this number a moment ago: the customer types that one.
+      setSentTo(leadPhone);
+      setWaitSeconds(result.retryAfter);
+      setCodeNote({ tone: 'info', text: t('verify.throttled', { secondsText: f.number(result.retryAfter) }) });
+      return 'sent';
+    }
+    if (result.reason === 'not_found') {
+      // Switched off since this page was made: there is nothing to check.
+      setVerify(false);
+      return 'off';
+    }
+    setFailure(result);
+    return 'failed';
+  };
+
   // Made: the form closes and the booking's own page opens with the congratulations and how to pay.
   const openBooking = (reference: string, token: string) => {
     markJustBooked(reference);
@@ -55,9 +104,20 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
   };
 
   const pay = async () => {
-    if (busy || couponChecking) return;
+    if (busy || couponChecking || sending) return;
+    // First "Confirm": the code goes out and its box opens. Then: the booking, with the code.
+    let checking = verify && !created;
+    if (checking && sentTo !== leadPhone) {
+      if ((await requestCode()) !== 'off') return;
+      checking = false;
+    }
+    if (checking && !/^\d{6}$/.test(typedCode)) {
+      setCodeNote({ tone: 'error', text: t('verify.enterCode') });
+      return;
+    }
     setBusy(true);
     setFailure(null);
+    setCodeNote(null);
     let current: CreatedBooking | null = created;
     if (!current) {
       const result = await createBooking({
@@ -83,12 +143,26 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
         locale,
         idempotency_key: booking.attemptKey,
         coupon_code: couponCode,
+        verification_code: checking ? typedCode : null,
       });
       if (!result.ok) {
         // This attempt was already booked (a second click, or a retry after a lost answer): open that booking.
         const token = result.reason === 'already_created' ? recallBookingToken(result.reference) : null;
         if (result.reason === 'already_created' && token) {
           openBooking(result.reference, token);
+          return;
+        }
+        // The API asks for the code although this page didn't know yet: send it, and open the box.
+        if (result.reason === 'verification_required') {
+          setBusy(false);
+          setVerify(true);
+          await requestCode();
+          return;
+        }
+        // Wrong, expired or out of tries: nothing was saved; the customer types it again or asks for a new one.
+        if (result.reason === 'verification_invalid') {
+          setBusy(false);
+          setCodeNote({ tone: 'error', text: result.message ?? t('verify.invalid') });
           return;
         }
         // The coupon stopped working since it was applied: it comes off, the total shown goes back up, and the
@@ -167,6 +241,22 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
         <p className="rounded-12 bg-paper-alt px-3.5 py-3 text-13.5 leading-1.55 text-ink-deep" data-testid="confirm-note">{t('confirmNote')}</p>
       )}
 
+      {verify && !created && sentTo ? (
+        <PhoneCodeBox
+          phone={sentTo}
+          code={code}
+          onCode={(value) => {
+            setCode(value);
+            setCodeNote(null);
+          }}
+          note={codeNote}
+          waitSeconds={waitSeconds}
+          sending={sending}
+          onResend={() => void requestCode()}
+          onChangeNumber={() => booking.goTo(2)}
+        />
+      ) : null}
+
       {message ? (
         <div role="alert" className="flex flex-col gap-2 rounded-12 bg-orange-tint px-3.5 py-3 text-13.5 leading-1.55 text-amber">
           <span>{message}</span>
@@ -194,11 +284,21 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
         <button
           type="button"
           onClick={() => void pay()}
-          aria-disabled={busy || couponChecking}
-          disabled={busy || couponChecking}
+          aria-disabled={busy || couponChecking || sending}
+          disabled={busy || couponChecking || sending}
           className={buttonClass('success', 'none', 'px-6.5 py-3.25 text-15')}
         >
-          {couponChecking ? t('coupon.rechecking') : checkout ? (busy ? t('paying') : t('payButton', { total: f.bdt(online.total) })) : busy ? t('confirming') : t('confirmButton', { total: f.bdt(quote.total) })}
+          {couponChecking
+            ? t('coupon.rechecking')
+            : sending
+              ? t('verify.sending')
+              : checkout
+                ? busy
+                  ? t('paying')
+                  : t('payButton', { total: f.bdt(online.total) })
+                : busy
+                  ? t('confirming')
+                  : t('confirmButton', { total: f.bdt(quote.total) })}
         </button>
         <a
           href={whatsappUrl(settings.contact.whatsapp, t('whatsappHelp', { title: pkg.title }))}
@@ -240,6 +340,9 @@ function failureMessage(failure: ApiFailure, t: ReturnType<typeof useTranslation
       return t('rateLimited');
     case 'invalid':
       return failure.message ?? t('invalidBooking');
+    // docs/booking-phone-verification.md: no code could be sent to the lead's mobile.
+    case 'code_undeliverable':
+      return failure.message ?? t('verify.undeliverable');
     default:
       return t('bookingFailed');
   }

@@ -122,6 +122,11 @@ Built and deployed, but switched off until the account or decision exists:
 - [ ] **WhatsApp:** configure and check it as §13 describes.
 - [ ] **SMS:** the operator-approved sender ID and the rotated API key → `BULKSMSBD_MODE=live` (`docs/deployment.md` §4a).
       Until then SMS is skipped with its reason in the message log; sign-in codes go by WhatsApp once §13 is done.
+      *2026-09-24:* set up on the server, but bulksmsbd refuses every message with code 1032 until 187.77.144.38 is on
+      the account's IP whitelist (bulksmsbd panel) — no SMS has reached a customer yet.
+- [ ] **Booking code** (stops fake website bookings): built and **off** — Admin → Site settings → *Website booking*. Once
+      a portal sign-in code arrives by SMS, switch it on (`docs/booking-phone-verification.md` §5). On while SMS fails,
+      nobody can book on the website; the card beside the switch says whether codes are arriving.
 - [ ] **Unanswered website booking** from 2026-09-14 19:15 UTC: unpaid, unassigned, and the customer was told nothing
       (no channel was on). Claim it in Admin → Bookings and call the customer.
 - [ ] **Passport OCR** (optional): an AWS IAM user limited to `textract:DetectDocumentText` →

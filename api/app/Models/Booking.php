@@ -27,7 +27,7 @@ class Booking extends Model
         'travel_start', 'travel_end', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount',
         'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount', 'source', 'assigned_staff_id', 'created_by_staff_id',
         'cancellation_reason', 'internal_notes', 'locale', 'terms_accepted_at', 'terms_version', 'access_token_hash', 'idempotency_key',
-        'is_custom', 'coupon_discount_amount',
+        'is_custom', 'coupon_discount_amount', 'phone_verified_at',
     ];
 
     protected $hidden = ['access_token_hash', 'idempotency_key'];
@@ -58,6 +58,8 @@ class Booking extends Model
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
+            // The lead's mobile proved itself with a code before the booking was saved (docs/booking-phone-verification.md).
+            'phone_verified_at' => 'datetime',
         ];
     }
 

@@ -10,9 +10,12 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Services\Booking\BookingCreator;
 use App\Services\Booking\BookingRequest;
+use App\Services\Booking\PhoneCheck;
 use App\Services\Booking\PriceChanged;
 use App\Services\Booking\SeatsUnavailable;
+use App\Services\Booking\VerificationInvalid;
 use App\Services\Coupons\CouponRefused;
+use App\Services\Customers\LoginCodes;
 use App\Services\Ledger\LedgerService;
 use App\Services\Payments\PaymentAmountChanged;
 use App\Services\Payments\PaymentNotAllowed;
@@ -35,7 +38,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PublicBookingController extends Controller
 {
-    public function store(Request $request, BookingCreator $creator): JsonResponse
+    public function store(Request $request, BookingCreator $creator, LoginCodes $codes): JsonResponse
     {
         $this->normalize($request);
         $max = PricingConfig::current()->maxTravellers;
@@ -69,12 +72,27 @@ class PublicBookingController extends Controller
             'idempotency_key' => ['nullable', 'uuid'],
             // Only a code (docs/coupons.md): the discount is worked out here, never taken from the browser.
             'coupon_code' => ['nullable', 'string', 'max:40'],
+            // The code sent to the lead's mobile, while the check is on (docs/booking-phone-verification.md).
+            'verification_code' => ['nullable', 'digits:6'],
         ], [
             'travellers.*.passport_expiry.after' => __('booking.passport_expiry_after_travel'),
         ]);
 
         if (($data['idempotency_key'] ?? null) !== null && ($existing = $this->alreadyCreated($data['idempotency_key'])) !== null) {
             return $existing;
+        }
+
+        // A code to the lead's mobile first, while Site settings asks for one: without the right code nothing is saved. A
+        // wrong code uses up a try; the right one is used up only with the booking, so a changed price can be retried.
+        $verification = null;
+        if (PhoneCheck::required()) {
+            if (blank($data['verification_code'] ?? null)) {
+                return response()->json(['message' => __('booking.verification_required'), 'code' => 'verification_required'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $verification = $codes->match($data['travellers'][0]['phone'], $data['verification_code'], LoginCodes::BOOKING);
+            if ($verification === null) {
+                return $this->verificationInvalid();
+            }
         }
 
         try {
@@ -102,6 +120,7 @@ class PublicBookingController extends Controller
                 hotelCategory: $data['hotel_category'] ?? null,
                 idempotencyKey: $data['idempotency_key'] ?? null,
                 couponCode: filled($data['coupon_code'] ?? null) ? $data['coupon_code'] : null,
+                verificationCodeId: $verification?->id,
             ), $request->user('customer'));
         } catch (UniqueConstraintViolationException $e) {
             // Two copies of one attempt at the same moment: the index let the first in, and the second answers as a repeat.
@@ -121,9 +140,35 @@ class PublicBookingController extends Controller
             // The coupon stopped working after the customer applied it (used up, expired, switched off): nothing is booked,
             // and the form says why and offers the price without it.
             return response()->json(['message' => $e->reasonText($data['locale']), 'code' => 'coupon_invalid', 'reason' => $e->reason], Response::HTTP_CONFLICT);
+        } catch (VerificationInvalid) {
+            return $this->verificationInvalid();
         }
 
         return response()->json(['data' => PublicBooking::make($created['booking']) + ['accessToken' => $created['accessToken']]], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Sends the code that confirms a website booking to the lead traveller's mobile (docs/booking-phone-verification.md):
+     * the portal's one-time codes, for their own purpose. Only while the check is on — otherwise there is nothing to
+     * confirm, and no SMS to pay for.
+     */
+    public function code(Request $request, LoginCodes $codes): JsonResponse
+    {
+        abort_unless(PhoneCheck::required(), Response::HTTP_NOT_FOUND);
+        $phone = trim((string) $request->input('phone'));
+        $request->merge(['phone' => Phone::normalizeBdMobile($phone) ?? $phone]);
+        $data = $request->validate([
+            'phone' => ['required', 'regex:/^8801[3-9]\d{8}$/'],
+            'locale' => ['required', Rule::in(['bn', 'en'])],
+        ]);
+
+        $result = $codes->send($data['phone'], $data['locale'], $request->ip(), LoginCodes::BOOKING);
+
+        return match ($result['outcome']) {
+            'throttled' => response()->json(['message' => __('auth.code_throttled', ['seconds' => $result['retry_after']]), 'code' => 'throttled', 'retry_after' => $result['retry_after']], Response::HTTP_TOO_MANY_REQUESTS),
+            'undeliverable' => response()->json(['message' => __('booking.code_undeliverable'), 'code' => 'code_undeliverable'], Response::HTTP_SERVICE_UNAVAILABLE),
+            default => response()->json(['data' => ['status' => 'sent', 'expires_in' => LoginCodes::MINUTES * 60, 'retry_after' => $result['retry_after']]], Response::HTTP_ACCEPTED),
+        };
     }
 
     public function show(Request $request, string $reference): JsonResponse
@@ -182,6 +227,12 @@ class PublicBookingController extends Controller
             'code' => 'already_created',
             'reference' => $booking->reference,
         ], Response::HTTP_CONFLICT);
+    }
+
+    /** Wrong, expired, out of tries, or already used for another booking: the customer asks for a new code. */
+    private function verificationInvalid(): JsonResponse
+    {
+        return response()->json(['message' => __('booking.verification_invalid'), 'code' => 'verification_invalid'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     private function authorizedBooking(Request $request, string $reference): Booking

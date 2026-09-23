@@ -30,5 +30,10 @@ final class BookingRequest
         public readonly ?string $idempotencyKey = null,
         /** A coupon code the customer applied (docs/coupons.md). Only the code: the discount is worked out on the server. */
         public readonly ?string $couponCode = null,
+        /**
+         * The code that proved the lead's mobile (a CustomerLoginCode, purpose booking), already matched; the booking uses
+         * it up in its own transaction (docs/booking-phone-verification.md).
+         */
+        public readonly ?int $verificationCodeId = null,
     ) {}
 }

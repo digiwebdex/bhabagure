@@ -14,8 +14,14 @@ final class SiteSettingKeys
      */
     public const PAYMENT = 'payment';
 
+    /**
+     * The website booking form's checks (docs/booking-phone-verification.md): `{ verifyPhone }`. Served to the website
+     * with the pricing (GET /public/pricing), not as a setting.
+     */
+    public const BOOKING = 'booking';
+
     /** The keys Admin → Site settings edits. */
-    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT];
+    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING];
 
     /** Edited on the Pricing screen, served by GET /public/pricing. */
     public const PRICING = 'pricing';

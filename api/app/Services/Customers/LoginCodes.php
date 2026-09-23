@@ -10,6 +10,7 @@ use App\Services\Notifications\NotificationSettings;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
 use App\Support\Numerals;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -32,6 +33,9 @@ final class LoginCodes
     public const SIGN_IN = 'sign_in';
 
     public const CHANGE_PHONE = 'change_phone';
+
+    /** A website booking: the lead traveller's mobile proves itself before the booking is saved (docs/booking-phone-verification.md). */
+    public const BOOKING = 'booking';
 
     private const PER_HOUR = 5;
 
@@ -56,6 +60,8 @@ final class LoginCodes
         $text = match (true) {
             $purpose === self::CHANGE_PHONE && $locale === 'en' => "Bhabaghure Holidays code to add this number to your account: {$code}. Valid for ".self::MINUTES.' minutes. Never share it with anyone.',
             $purpose === self::CHANGE_PHONE => "ভবঘুরে হলিডেজ অ্যাকাউন্টে এই নম্বর যোগ করার কোড: {$code}। ".Numerals::number(self::MINUTES, 'bn').' মিনিট বৈধ। কাউকে জানাবেন না।',
+            $purpose === self::BOOKING && $locale === 'en' => "Bhabaghure Holidays booking code: {$code}. Valid for ".self::MINUTES.' minutes. Never share it with anyone.',
+            $purpose === self::BOOKING => "ভবঘুরে হলিডেজ বুকিং কোড: {$code}। ".Numerals::number(self::MINUTES, 'bn').' মিনিট বৈধ। কাউকে জানাবেন না।',
             $locale === 'en' => "Bhabaghure Holidays sign-in code: {$code}. Valid for ".self::MINUTES.' minutes. Never share it with anyone.',
             default => "ভবঘুরে হলিডেজ লগইন কোড: {$code}। ".Numerals::number(self::MINUTES, 'bn').' মিনিট বৈধ। কাউকে জানাবেন না।',
         };
@@ -71,7 +77,9 @@ final class LoginCodes
         });
 
         if ($channel === 'none') {
-            AdminAlerts::once('customer-login-codes', 'A customer asked for a portal sign-in code, but neither SMS nor WhatsApp could send it. Customers can\'t sign in until one of them is switched on (deployment.md §3–§4).');
+            $purpose === self::BOOKING
+                ? AdminAlerts::once('booking-codes', 'A customer tried to book on the website, but neither SMS nor WhatsApp could send the booking code. While "Check the customer\'s mobile" is on (Site settings → Website booking), website bookings can\'t be completed: switch it off, or get SMS working (deployment.md §3–§4).')
+                : AdminAlerts::once('customer-login-codes', 'A customer asked for a portal sign-in code, but neither SMS nor WhatsApp could send it. Customers can\'t sign in until one of them is switched on (deployment.md §3–§4).');
 
             return ['outcome' => 'undeliverable', 'retry_after' => 60];
         }
@@ -104,6 +112,20 @@ final class LoginCodes
     public function consume(CustomerLoginCode $row): void
     {
         $row->forceFill(['consumed_at' => now()])->save();
+    }
+
+    /**
+     * When a code last reached a customer and when one last couldn't be sent, whatever it was for — shown beside the
+     * booking check's switch in Site settings, so nobody switches it on while no code can arrive.
+     *
+     * @return array{lastSentAt: ?string, lastFailedAt: ?string}
+     */
+    public static function deliveryStatus(): array
+    {
+        $last = fn (bool $sent) => CustomerLoginCode::query()->where('channel', $sent ? '!=' : '=', 'none')->max('created_at');
+        $iso = fn (?string $at) => $at === null ? null : Carbon::parse($at, 'UTC')->toIso8601String();
+
+        return ['lastSentAt' => $iso($last(true)), 'lastFailedAt' => $iso($last(false))];
     }
 
     /** SMS first; WhatsApp only when SMS can't and the Phase 4 rules allow a WhatsApp message to this number. */

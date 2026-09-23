@@ -596,6 +596,18 @@
       "line": "Coupon discount ({code})",
       "refusedAtBooking": "{message} The coupon has been removed, so the total is now {total}. Confirm again to book without it, or ask us on WhatsApp.",
       "applied": "Coupon applied — you save <amount>{saving}</amount>."
+    },
+    "verify": {
+      "sent": "We sent a 6-digit code to {phone} by SMS. Enter it to confirm your booking — it works for {minutesText} minutes.",
+      "code": "Booking code",
+      "enterCode": "Enter the 6-digit code we sent to your mobile.",
+      "resend": "Send a new code",
+      "resendIn": "New code in {secondsText}s",
+      "changeNumber": "Change number",
+      "sending": "Sending the code…",
+      "throttled": "A code was sent a moment ago — enter that one, or ask for another in {secondsText} seconds.",
+      "invalid": "That code is wrong or has expired. Ask for a new one.",
+      "undeliverable": "We can’t send the code right now. Please call or WhatsApp us to book."
     }
   },
   "auth": {

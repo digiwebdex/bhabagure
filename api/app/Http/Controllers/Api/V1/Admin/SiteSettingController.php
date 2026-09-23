@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\RevalidateWebsite;
 use App\Models\SiteSetting;
 use App\Services\AuditLogger;
+use App\Services\Customers\LoginCodes;
 use App\Support\Payments\PaymentOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,11 @@ class SiteSettingController extends Controller
             'value.bkash.number' => ['required_with:value.bkash', 'string', 'regex:/^\+8801[3-9]\d{8}$/'],
             'value.bkash.chargePercent' => ['required_with:value.bkash', 'numeric', 'between:0,10', 'decimal:0,2'],
         ],
+        // A code to the customer's mobile before a website booking is saved (docs/booking-phone-verification.md).
+        'booking' => [
+            'value' => ['required', 'array'],
+            'value.verifyPhone' => ['required', 'boolean'],
+        ],
     ];
 
     public function __construct(private readonly AuditLogger $audit) {}
@@ -69,7 +75,8 @@ class SiteSettingController extends Controller
             $settings[SiteSettingKeys::PAYMENT] = PaymentOptions::normalize($settings[SiteSettingKeys::PAYMENT]);
         }
 
-        return response()->json(['data' => (object) $settings]);
+        // Beside the booking check's switch: whether a code has ever reached a customer (docs/booking-phone-verification.md).
+        return response()->json(['data' => (object) $settings, 'meta' => ['codes' => LoginCodes::deliveryStatus()]]);
     }
 
     public function update(Request $request, string $key): JsonResponse
@@ -78,7 +85,12 @@ class SiteSettingController extends Controller
 
         $validated = $request->validate(self::RULES[$key]);
         $setting = SiteSetting::query()->updateOrCreate(['key' => $key], [
-            'value' => $key === SiteSettingKeys::PAYMENT ? self::paymentValue($validated['value']) : $validated['value'],
+            'value' => match ($key) {
+                SiteSettingKeys::PAYMENT => self::paymentValue($validated['value']),
+                // Only the known field, as a true boolean (a form may send "1").
+                SiteSettingKeys::BOOKING => ['verifyPhone' => filter_var($validated['value']['verifyPhone'], FILTER_VALIDATE_BOOLEAN)],
+                default => $validated['value'],
+            },
             'updated_by_staff_id' => $request->user('staff')->id,
         ]);
 

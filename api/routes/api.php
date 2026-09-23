@@ -176,6 +176,8 @@ Route::prefix('v1')->group(function () {
 
         // Booking (docs/phase-3-booking.md). Guests pass the booking's private token in X-Booking-Token.
         Route::controller(PublicBookingController::class)->group(function () {
+            // The code to the lead's mobile before a booking is saved (docs/booking-phone-verification.md).
+            Route::post('booking-codes', 'code')->middleware('throttle:customer-codes');
             Route::post('bookings', 'store')->middleware('throttle:public-bookings');
             Route::get('bookings/{reference}', 'show')->middleware('throttle:public-read');
             Route::post('bookings/{reference}/payments', 'pay')->middleware('throttle:public-bookings');

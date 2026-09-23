@@ -860,7 +860,12 @@
     "bkashChargeHint": "Added to the amount the customer sends, and recorded as a charge, not as payment for the tour.",
     "bankAccount": "Bank account {{n}}",
     "addBank": "Add bank account",
-    "removeBank": "Remove this account"
+    "removeBank": "Remove this account",
+    "verifyPhone": "Check the customer’s mobile with a code before a website booking is saved",
+    "verifyPhoneHint": "The code goes by SMS to the lead traveller’s number; a booking is saved only with the right code. Office bookings never need one.",
+    "codesNeverSent": "No code has reached a customer yet — SMS isn’t working from the server. While this is on, nobody can book on the website: leave it off until a code arrives.",
+    "codesLastFailed": "The last code couldn’t be sent ({{failed}}); one reached a customer on {{sent}}. While this is on and codes fail, customers can’t book on the website.",
+    "codesOk": "Codes are reaching customers — the last one on {{sent}}."
   },
   "bookings": {
     "title": "Bookings",
@@ -1051,7 +1056,9 @@
     "couponSource": {
       "website": "applied on the website",
       "office": "applied by staff"
-    }
+    },
+    "phoneVerified": "Mobile verified",
+    "phoneVerifiedAt": "The customer confirmed this number with a code on {{at}}, before the booking was saved."
   },
   "profile": {
     "title": "My profile",

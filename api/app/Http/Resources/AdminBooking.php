@@ -52,6 +52,8 @@ final class AdminBooking
             // For the list's row actions: PDF needs an issued invoice; delete needs neither an invoice nor money.
             'has_invoice' => (bool) ($booking->has_invoice ?? Invoice::query()->where('booking_id', $booking->id)->where('status', Invoice::ISSUED)->exists()),
             'has_payments' => (bool) ($booking->has_payments ?? Transaction::query()->where('booking_id', $booking->id)->exists()),
+            // The lead's mobile proved itself with a code before a website booking was saved (docs/booking-phone-verification.md).
+            'phone_verified_at' => $booking->phone_verified_at?->toIso8601String(),
             'created_at' => $booking->created_at?->toIso8601String(),
         ];
     }

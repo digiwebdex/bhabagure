@@ -88,8 +88,9 @@ class PublicContentContractTest extends TestCase
             }
         }
 
-        // onlineCheckout comes from the server's SSLCommerz configuration, not the seed (the test environment's fake gateway: on).
-        $this->assertEquals($this->seedFile('pricing.json') + ['onlineCheckout' => true], $this->getJson('/api/v1/public/pricing')->json('data'));
+        // onlineCheckout comes from the server's SSLCommerz configuration, not the seed (the test environment's fake gateway: on);
+        // verifyPhone from Site settings → Website booking, off until staff switch it on (docs/booking-phone-verification.md).
+        $this->assertEquals($this->seedFile('pricing.json') + ['onlineCheckout' => true, 'verifyPhone' => false], $this->getJson('/api/v1/public/pricing')->json('data'));
         $this->assertEquals($this->seedFile('settings.json'), $this->getJson('/api/v1/public/settings')->json('data'));
     }
 

@@ -104,6 +104,8 @@ export type BookingPayload = {
   idempotency_key: string;
   /** Only the code (docs/coupons.md): the API works the discount out, and refuses a total it didn't. */
   coupon_code: string | null;
+  /** The code sent to the lead's mobile, while the check is on (docs/booking-phone-verification.md). */
+  verification_code: string | null;
 };
 
 export type ApiFailure =
@@ -112,6 +114,10 @@ export type ApiFailure =
   | { ok: false; reason: 'seats_unavailable'; available: number }
   /** The coupon stopped working between Apply and booking (used up, expired, switched off): nothing was booked. */
   | { ok: false; reason: 'coupon_invalid'; message: string }
+  /** docs/booking-phone-verification.md: a code is needed, the one given is wrong, or none could be sent. */
+  | { ok: false; reason: 'verification_required' | 'verification_invalid' | 'code_undeliverable'; message?: string }
+  /** A code went to this number a moment ago: the customer types that one, or waits. */
+  | { ok: false; reason: 'throttled'; retryAfter: number }
   | {
       ok: false;
       reason: 'payment_unavailable' | 'gateway_unavailable' | 'not_found' | 'rate_limited' | 'invalid' | 'unavailable' | 'failed';
@@ -144,10 +150,13 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
     payment?: { total: number };
     available?: number;
     reference?: string;
+    retry_after?: number;
   } | null;
   if (res.ok && body?.data !== undefined) return { ok: true, data: body.data };
   if (body?.code === 'already_created' && body.reference) return { ok: false, reason: 'already_created', reference: body.reference };
   if (body?.code === 'coupon_invalid' && body.message) return { ok: false, reason: 'coupon_invalid', message: body.message };
+  if (body?.code === 'verification_required' || body?.code === 'verification_invalid' || body?.code === 'code_undeliverable') return { ok: false, reason: body.code, message: body.message };
+  if (body?.code === 'throttled') return { ok: false, reason: 'throttled', retryAfter: body.retry_after ?? 60 };
   if (body?.code === 'price_changed' && (body.quote || body.payment)) return { ok: false, reason: 'price_changed', total: (body.payment ?? body.quote)!.total };
   if (body?.code === 'seats_unavailable')
     return {
@@ -205,6 +214,14 @@ export const checkCoupon = (payload: CouponCheckPayload) =>
     method: 'POST',
     body: JSON.stringify(payload),
     locale: payload.locale,
+  });
+
+/** A code to the lead's mobile, before the booking is saved (docs/booking-phone-verification.md). `phone`: 8801XXXXXXXXX. */
+export const sendBookingCode = (phone: string, locale: 'bn' | 'en') =>
+  call<{ status: 'sent'; expires_in: number; retry_after: number }>('booking-codes', {
+    method: 'POST',
+    body: JSON.stringify({ phone, locale }),
+    locale,
   });
 
 export const getBooking = (reference: string, token: string, locale: string) =>

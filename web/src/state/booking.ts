@@ -63,6 +63,8 @@ export interface BookingState {
   close: () => void;
   goBack: () => void;
   goNext: () => void;
+  /** Straight to an earlier step: "Change number" goes back to the travellers. */
+  goTo: (step: BookingStep) => void;
   markAttempted: (step: BookingStep) => void;
   setPackage: (slug: string) => void;
   setDate: (date: string) => void;
@@ -172,6 +174,7 @@ export const useBooking = create<BookingState>()((set) => ({
     set((state) => ({
       step: state.step < 4 ? ((state.step + 1) as BookingStep) : state.step,
     })),
+  goTo: (step) => set((state) => ({ step: step < state.step ? step : state.step })),
   markAttempted: (step) => set((state) => ({ attempted: { ...state.attempted, [step]: true } })),
   setPackage: (packageSlug) => set({ packageSlug, hotelCategory: null }),
   setDate: (date) => set({ date }),

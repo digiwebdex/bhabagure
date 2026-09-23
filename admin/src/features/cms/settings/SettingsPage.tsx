@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next'
 
 import { buttonClass } from '../../../components/ui/button'
 import { ErrorNotice, useToast } from '../../../components/ui/feedback'
-import { NumberInput, Pair, TextArea, TextInput } from '../../../components/ui/fields'
+import { NumberInput, Pair, Switch, TextArea, TextInput } from '../../../components/ui/fields'
 import { Card, CardTitle, Loading, PageHeader } from '../../../components/ui/layout'
 import { api, ApiError } from '../../../lib/api/client'
-import type { BankAccount, Data, SiteSettings } from '../../../lib/api/types'
+import type { BankAccount, CodeDelivery, Data, SiteSettings } from '../../../lib/api/types'
 import { useFormat } from '../../../lib/useFormat'
 
 type Key = keyof SiteSettings
@@ -16,7 +16,7 @@ type Key = keyof SiteSettings
 export function SettingsPage() {
   const { t } = useTranslation()
   const { number } = useFormat()
-  const settings = useQuery({ queryKey: ['settings'], queryFn: ({ signal }) => api.get<Data<SiteSettings>>('admin/settings', signal) })
+  const settings = useQuery({ queryKey: ['settings'], queryFn: ({ signal }) => api.get<Data<SiteSettings> & { meta: { codes: CodeDelivery } }>('admin/settings', signal) })
 
   if (settings.isPending) return <Loading />
   if (settings.isError) return <ErrorNotice error={settings.error} />
@@ -139,8 +139,36 @@ export function SettingsPage() {
             </>
           )}
         </SettingCard>
+
+        {/* A code to the customer's mobile before a website booking is saved (docs/booking-phone-verification.md). Left off
+            until SMS reaches customers: switched on without it, nobody could book on the website. */}
+        <SettingCard settingKey="booking" title="Website booking" initial={data.booking ?? { verifyPhone: false }}>
+          {(value, set) => (
+            <>
+              <Switch label={t('settings.verifyPhone')} checked={value.verifyPhone} onChange={(verifyPhone) => set({ ...value, verifyPhone })} hint={t('settings.verifyPhoneHint')} />
+              <CodeDeliveryNote codes={settings.data.meta.codes} />
+            </>
+          )}
+        </SettingCard>
       </div>
     </>
+  )
+}
+
+/** Whether one-time codes reach customers — what the booking check depends on. */
+function CodeDeliveryNote({ codes }: { codes: CodeDelivery }) {
+  const { t } = useTranslation()
+  const { dateTime } = useFormat()
+  const failing = codes.lastSentAt === null || (codes.lastFailedAt !== null && codes.lastFailedAt > codes.lastSentAt)
+
+  return failing ? (
+    <p role="note" className="m-0 rounded-10 bg-orange-tint px-3 py-2.5 text-13 leading-1.5 text-amber" data-testid="code-delivery">
+      {codes.lastSentAt === null ? t('settings.codesNeverSent') : t('settings.codesLastFailed', { failed: dateTime(codes.lastFailedAt!), sent: dateTime(codes.lastSentAt) })}
+    </p>
+  ) : (
+    <p className="m-0 text-12 text-app-muted" data-testid="code-delivery">
+      {t('settings.codesOk', { sent: dateTime(codes.lastSentAt!) })}
+    </p>
   )
 }
 

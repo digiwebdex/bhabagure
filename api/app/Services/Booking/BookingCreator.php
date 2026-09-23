@@ -10,6 +10,7 @@ use App\Models\BookingTraveller;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\Customer;
+use App\Models\CustomerLoginCode;
 use App\Models\PackageDeparture;
 use App\Models\PassportScan;
 use App\Models\Quotation;
@@ -48,7 +49,7 @@ final class BookingCreator
     /**
      * @return array{booking: Booking, accessToken: string, quote: array<string, mixed>}
      *
-     * @throws PriceChanged|SeatsUnavailable|CouponRefused
+     * @throws PriceChanged|SeatsUnavailable|CouponRefused|VerificationInvalid
      */
     public function create(BookingRequest $request, ?Customer $customer = null, ?Staff $staff = null): array
     {
@@ -250,6 +251,15 @@ final class BookingCreator
      */
     private function persist(BookingRequest $request, array $snapshot, array $lines, ?Customer $customer, ?Staff $staff, ?int $quotationId = null, ?int $ownerId = null, ?array $coupon = null): array
     {
+        // The code that proved the lead's mobile (docs/booking-phone-verification.md) is used up with this booking, in its
+        // transaction: the same code sent with two bookings at once saves one of them.
+        $verification = null;
+        if ($request->verificationCodeId !== null) {
+            $verification = CustomerLoginCode::query()->whereKey($request->verificationCodeId)->whereNull('consumed_at')
+                ->where('expires_at', '>', now())->lockForUpdate()->first() ?? throw new VerificationInvalid;
+            $verification->forceFill(['consumed_at' => now()])->save();
+        }
+
         $departure = $snapshot['tour_package_id'] === null ? null : PackageDeparture::query()->where('tour_package_id', $snapshot['tour_package_id'])
             ->where('status', 'scheduled')->whereDate('departs_on', $request->travelDate)->lockForUpdate()->first();
         if ($departure && $departure->seats_total !== null && DepartureSeats::available($departure) < $request->pax) {
@@ -258,6 +268,10 @@ final class BookingCreator
 
         $lead = $request->travellers[0];
         $customer ??= $this->customerFor($lead['name'], $lead['phone'], $lead['email'] ?? null, $request->locale);
+        // The code went to this customer's own number: it is proven, as a portal sign-in would prove it.
+        if ($verification !== null && $customer->phone === $verification->phone && $customer->phone_verified_at === null) {
+            $customer->forceFill(['phone_verified_at' => now()])->save();
+        }
         $accessToken = Str::random(48);
         $start = $request->travelDate === null ? null : Carbon::parse($request->travelDate);
 
@@ -285,6 +299,7 @@ final class BookingCreator
             'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
             'access_token_hash' => Booking::hashAccessToken($accessToken),
             'idempotency_key' => $request->idempotencyKey,
+            'phone_verified_at' => $verification === null ? null : now(),
         ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'coupon_discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
 
         foreach (array_values($lines) as $index => $line) {

@@ -714,7 +714,7 @@ function TravellerDocuments({ booking, traveller }: { booking: BookingDetail; tr
 
 function TravellersCard({ booking }: { booking: BookingDetail }) {
   const { t } = useTranslation()
-  const { date, digits, number } = useFormat()
+  const { date, dateTime, digits, number } = useFormat()
   const { can } = useAuth()
   const [editing, setEditing] = useState<BookingDetail['travellers'][number] | null>(null)
   const missing = (traveller: BookingDetail['travellers'][number]) =>
@@ -726,7 +726,15 @@ function TravellersCard({ booking }: { booking: BookingDetail }) {
       {booking.customer ? (
         <div className="flex flex-col gap-0.5 text-13">
           <strong className="text-14">{booking.customer.name}</strong>
-          <span className="font-display text-app-muted">{digits(booking.customer.phone.replace(/^88/, ''))}</span>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className="font-display text-app-muted">{digits(booking.customer.phone.replace(/^88/, ''))}</span>
+            {/* The number proved itself with a code before the website saved the booking (docs/booking-phone-verification.md). */}
+            {booking.phone_verified_at ? (
+              <span title={t('bookings.phoneVerifiedAt', { at: dateTime(booking.phone_verified_at) })} data-testid="phone-verified">
+                <Badge tone="green">✓ {t('bookings.phoneVerified')}</Badge>
+              </span>
+            ) : null}
+          </span>
           {booking.customer.email ? <span className="text-app-muted">{booking.customer.email}</span> : null}
         </div>
       ) : null}
