@@ -87,6 +87,28 @@ website with the pricing settings; the API enforces it either way. Office bookin
   SSLCommerz stand-in; then, with the site refreshed, the first click sends the code, "Change number" goes back to the
   travellers, and coming back the code sent a moment ago still books.
 
+## 6. Every channel at once (2026-09-25)
+
+**Asked:** the client reported that after the code step the booking didn't go through, and asked for codes by email,
+WhatsApp and SMS. On live the check was simply off (their choice while SMS was down) and no channel could deliver: SMS
+refused (bulksmsbd 1032), WhatsApp off, email to the log (no SendGrid yet). The right-code → saved → payment flow was
+working and tested.
+
+**Decided with the client:** every channel at once; for all codes; the lead's email required on the booking form while
+the check is on; SendGrid set up first.
+
+- `LoginCodes::send()` tries SMS, WhatsApp (Phase 4 rules) and email (`LoginCodeMail`, only when the mailer really sends —
+  not `log`/`array`) together; `customer_login_codes.channel` lists what took it ("sms,whatsapp,email", widened to 40).
+- Booking: `POST /public/booking-codes` takes `email` (required) and answers with `channels`; the booking needs
+  `travellers.0.email` while the check is on. The form asks for it, and the code box names each channel used.
+- Portal sign-in: a copy to the account's email; the answer never lists channels, so it reveals no account.
+- A phone-change code never goes by email — it must prove the new number.
+- A code that also went by email proves the booking, not the number: `LoginCodes::provedPhone()` decides whether the
+  customer's `phone_verified_at` is set (booking and sign-in). The admin badge now reads "Verified by code".
+
+**To switch it on:** SendGrid key + domain → `MAIL_MAILER=smtp` (docs/deployment.md §4), a test code arrives, then Admin →
+Site settings → Website booking.
+
 ## 5. Switching it on
 
 1. The client adds 187.77.144.38 to the IP whitelist in the bulksmsbd panel.

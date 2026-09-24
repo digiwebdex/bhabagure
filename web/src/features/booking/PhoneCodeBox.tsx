@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 
 import { controlClass, Field } from '@/components/ui/Field';
+import type { CodeChannel } from '@/lib/booking-api';
 import { useFormatters } from '@/lib/use-formatters';
 
 /** Matches LoginCodes::MINUTES in the API. */
@@ -16,6 +17,8 @@ export type CodeNote = { tone: 'error' | 'info'; text: string } | null;
  */
 export function PhoneCodeBox({
   phone,
+  email,
+  channels,
   code,
   onCode,
   note,
@@ -26,6 +29,10 @@ export function PhoneCodeBox({
 }: {
   /** 8801XXXXXXXXX: the number the code went to. */
   phone: string;
+  /** The lead's email, where the code went too. */
+  email: string;
+  /** Where it actually went; null when a code sent a moment ago is reused. */
+  channels: CodeChannel[] | null;
   code: string;
   onCode: (code: string) => void;
   note: CodeNote;
@@ -36,10 +43,16 @@ export function PhoneCodeBox({
 }) {
   const t = useTranslations('booking.verify');
   const f = useFormatters();
+  const local = f.digits(`0${phone.slice(3)}`);
+  // "by SMS to 01711…, on WhatsApp to 01711… and by email to a@b.com" — only the channels that took it.
+  const parts = channels
+    ? channels.map((channel) => (channel === 'sms' ? t('viaSms', { phone: local }) : channel === 'whatsapp' ? t('viaWhatsApp', { phone: local }) : t('viaEmail', { email })))
+    : [t('toBoth', { phone: local, email })];
+  const where = parts.length > 1 ? `${parts.slice(0, -1).join(', ')}${t('and')}${parts.at(-1)}` : parts[0];
 
   return (
     <div data-testid="booking-verify" className="flex flex-col gap-3 rounded-14 border border-hairline bg-paper-alt p-4">
-      <p className="text-13.5 leading-1.55 text-ink">{t('sent', { phone: f.digits(`0${phone.slice(3)}`), minutesText: f.number(CODE_MINUTES) })}</p>
+      <p className="text-13.5 leading-1.55 text-ink">{t('sent', { where, minutesText: f.number(CODE_MINUTES) })}</p>
       <Field label={t('code')} error={note?.tone === 'error' ? note.text : null} variant="form">
         <input
           value={code}

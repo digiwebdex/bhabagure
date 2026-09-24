@@ -23,6 +23,7 @@ use App\Services\AuditLogger;
 use App\Services\Coupons\CouponCheck;
 use App\Services\Coupons\CouponRefused;
 use App\Services\Coupons\CouponService;
+use App\Services\Customers\LoginCodes;
 use App\Services\Documents\DocumentNumbers;
 use App\Support\Money;
 use App\Support\Pricing\PriceGrid;
@@ -268,8 +269,9 @@ final class BookingCreator
 
         $lead = $request->travellers[0];
         $customer ??= $this->customerFor($lead['name'], $lead['phone'], $lead['email'] ?? null, $request->locale);
-        // The code went to this customer's own number: it is proven, as a portal sign-in would prove it.
-        if ($verification !== null && $customer->phone === $verification->phone && $customer->phone_verified_at === null) {
+        // The code went only to this customer's own number: it is proven, as a portal sign-in would prove it. A code that
+        // also went by email proves the booking is real, not the number.
+        if ($verification !== null && LoginCodes::provedPhone($verification) && $customer->phone === $verification->phone && $customer->phone_verified_at === null) {
             $customer->forceFill(['phone_verified_at' => now()])->save();
         }
         $accessToken = Str::random(48);

@@ -26,7 +26,8 @@ return [
     'delete_has_payment_attempts' => 'এই বুকিংয়ে অনলাইন পেমেন্ট শুরু হয়েছিল। মুছে না ফেলে বাতিল করুন।',
     'scan_unreadable' => 'ফাইলটি পড়া যায়নি। ৫ MB পর্যন্ত JPEG, PNG বা PDF আপলোড করুন।',
     // docs/booking-phone-verification.md
-    'verification_required' => 'বুকিং নিশ্চিত করতে আপনার মোবাইলে পাঠানো কোডটি দিন।',
+    'verification_required' => 'বুকিং নিশ্চিত করতে আপনার মোবাইল ও ইমেইলে পাঠানো কোডটি দিন।',
     'verification_invalid' => 'কোডটি ভুল অথবা মেয়াদ শেষ। নতুন কোড চান।',
+    'email_for_code' => 'প্রধান যাত্রীর ইমেইল দিন: বুকিং কোড সেখানেও পাঠানো হবে।',
     'code_undeliverable' => 'এই মুহূর্তে বুকিং কোড পাঠানো যাচ্ছে না। বুকিং করতে অনুগ্রহ করে আমাদের অফিসে ফোন বা WhatsApp করুন।',
 ];

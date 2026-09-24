@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 
+import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { controlClass, Field } from '@/components/ui/Field';
 import { isoToDayMonthYear, uploadPassportScan } from '@/lib/booking-api';
 import { useFormatters } from '@/lib/use-formatters';
@@ -46,8 +47,16 @@ function TravellerCard({ index, traveller, errors, travelDate }: { index: number
   const f = useFormatters();
   const update = useBooking((state) => state.updateTraveller);
   const lead = index === 0;
+  // docs/booking-phone-verification.md §6: while the booking code check is on, the code goes to the lead's email too.
+  const codeByEmail = useSiteContent().pricing.verifyPhone === true;
   // The lead needs a name and WhatsApp number; everything else can follow later.
-  const status = lead ? (traveller.name.trim() && traveller.phone.trim() ? 'filled' : 'missing') : traveller.name.trim() ? 'filled' : 'later';
+  const status = lead
+    ? traveller.name.trim() && traveller.phone.trim() && (!codeByEmail || traveller.email.trim())
+      ? 'filled'
+      : 'missing'
+    : traveller.name.trim()
+      ? 'filled'
+      : 'later';
   const optional = (label: string) => t('optionalField', { label });
   const id = `traveller-${index}`;
 
@@ -184,11 +193,18 @@ function TravellerCard({ index, traveller, errors, travelDate }: { index: number
           placeholder: t('datePh'),
           inputMode: 'numeric',
         })}
-        {text('email', optional(t('email')), {
+        {/* While the booking code check is on, the lead's email is needed: the code goes there too. */}
+        {text('email', lead && codeByEmail ? t('email') : optional(t('email')), {
           placeholder: 'name@email.com',
           type: 'email',
           autoComplete: 'email',
+          ...(lead && codeByEmail ? { 'aria-describedby': `${id}-email-hint` } : {}),
         })}
+        {lead && codeByEmail ? (
+          <p id={`${id}-email-hint`} className="-mt-1 text-12 text-muted sm:col-span-full">
+            {t('emailCodeHint')}
+          </p>
+        ) : null}
       </div>
       {expiresTooSoon(traveller.expiry, travelDate) ? (
         <div role="alert" className="rounded-10 bg-orange-tint px-3 py-2.5 text-13 text-amber">

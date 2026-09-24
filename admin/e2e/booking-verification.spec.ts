@@ -7,7 +7,7 @@ import { API_URL, FIRST_LOAD, signIn } from './helpers'
 
 /**
  * docs/booking-phone-verification.md: Admin → Site settings → Website booking switches the code to the customer's mobile
- * on and off, beside whether codes reach customers; a booking saved with the code shows "Mobile verified".
+ * on and off, beside whether codes reach customers; a booking saved with the code shows "Verified by code".
  */
 
 /** The newest code the SMS stand-in "sent" to this number (0171XXXXXXX). */
@@ -37,11 +37,11 @@ test('the check is switched in Site settings, and a booking saved with the code 
     // A customer books on the website with the code sent to their mobile.
     const phone = `0171${String(Date.now()).slice(-7)}`
     const headers = { Accept: 'application/json' }
-    expect((await page.request.post(`${API_URL}/api/v1/public/booking-codes`, { headers, data: { phone, locale: 'en' } })).status()).toBe(202)
+    expect((await page.request.post(`${API_URL}/api/v1/public/booking-codes`, { headers, data: { phone, email: 'verified@example.test', locale: 'en' } })).status()).toBe(202)
     const booking = {
       package_slug: 'nepal-mustang-adventure-tour-8-days-7-nights',
       travel_date: new Date(Date.now() + 70 * 86_400_000).toISOString().slice(0, 10),
-      pax: 2, room: 'twin', addons: [], travellers: [{ name: 'Verified Customer', phone }, {}],
+      pax: 2, room: 'twin', addons: [], travellers: [{ name: 'Verified Customer', phone, email: 'verified@example.test' }, {}],
       expected_total: 153000, terms_accepted: true, locale: 'en',
     }
     expect((await page.request.post(`${API_URL}/api/v1/public/bookings`, { headers, data: booking })).status()).toBe(422)
@@ -63,7 +63,7 @@ test('the check is switched in Site settings, and a booking saved with the code 
 
     await page.goto('/bookings')
     await page.getByRole('link', { name: reference, exact: true }).click()
-    await expect(page.getByTestId('phone-verified')).toContainText('Mobile verified', FIRST_LOAD)
+    await expect(page.getByTestId('phone-verified')).toContainText('Verified by code', FIRST_LOAD)
   } finally {
     // Whatever happened above: later tests book on the website without a code.
     artisan('tinker', `--execute=App\\Models\\SiteSetting::query()->updateOrCreate(['key' => 'booking'], ['value' => ['verifyPhone' => false]]); echo 'ok';`)

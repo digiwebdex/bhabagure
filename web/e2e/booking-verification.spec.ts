@@ -40,6 +40,8 @@ async function toPayment(page: Page, phone: string) {
   const lead = dialog.locator('section').nth(0);
   await lead.getByLabel('Name (as on passport)').fill('CODE CUSTOMER');
   await lead.getByLabel('WhatsApp number').fill(phone);
+  // While the check is on the code goes by email too, so the lead's email is needed (docs/booking-phone-verification.md §6).
+  await lead.getByLabel(/^Email/).fill(`${phone}@example.test`);
   await dialog.getByRole('button', { name: 'Next step →' }).click();
   await dialog.getByRole('checkbox').check();
   await dialog.getByRole('button', { name: 'Next step →' }).click();
@@ -57,12 +59,15 @@ test('with the check on, the booking is saved only with the code sent to the lea
     const pay = dialog.getByRole('button', { name: 'Pay ৳ 1,53,000 with SSLCommerz →' });
     await pay.click();
     const box = dialog.getByTestId('booking-verify');
-    await expect(box).toContainText(`We sent a 6-digit code to ${phone} by SMS.`);
+    // Every channel that took it is named (the e2e mailer doesn't really send, so no email here).
+    // The first requests after the build queue on the one-at-a-time e2e API (booking refused, then the code on every
+    // channel): allow them what the admin tests allow a first load.
+    await expect(box).toContainText(`We sent a 6-digit code by SMS to ${phone}`, { timeout: 15_000 });
     await expect(box).toContainText(/New code in \d+s/);
     expect(saved(phone).count).toBe(0);
 
     await pay.click();
-    await expect(box.getByRole('alert')).toHaveText('Enter the 6-digit code we sent to your mobile.');
+    await expect(box.getByRole('alert')).toHaveText('Enter the 6-digit code we sent to your mobile and email.');
     const code = lastCode(phone);
     await box.getByLabel('Booking code').fill(code === '123456' ? '654321' : '123456');
     await pay.click();
@@ -82,7 +87,7 @@ test('with the check on, the booking is saved only with the code sent to the lea
     const again = await toPayment(page, phone2);
     const pay2 = again.getByRole('button', { name: 'Pay ৳ 1,53,000 with SSLCommerz →' });
     await pay2.click();
-    await expect(again.getByTestId('booking-verify')).toContainText(`We sent a 6-digit code to ${phone2} by SMS.`);
+    await expect(again.getByTestId('booking-verify')).toContainText(`We sent a 6-digit code by SMS to ${phone2}`);
     await again.getByRole('button', { name: 'Change number' }).click();
     await expect(again.getByRole('heading', { name: 'Traveller details' })).toBeVisible();
     await again.getByRole('button', { name: 'Next step →' }).click();

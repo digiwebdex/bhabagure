@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Mail\AdminAlertMail;
+use App\Mail\LoginCodeMail;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\CustomerLoginCode;
 use App\Models\NotificationMessage;
 use App\Models\SiteSetting;
 use App\Services\Booking\PhoneCheck;
+use App\Services\Customers\LoginCodes;
 use App\Services\Notifications\SendResult;
 use App\Services\Notifications\Sms\FakeSmsGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,7 +58,7 @@ class BookingPhoneVerificationTest extends TestCase
         $this->getJson('/api/v1/public/pricing')->assertJsonPath('data.verifyPhone', true);
 
         $this->postJson('/api/v1/public/bookings', $this->payload())->assertUnprocessable()
-            ->assertJsonPath('code', 'verification_required')->assertJsonPath('message', 'Enter the code we sent to your mobile to confirm the booking.');
+            ->assertJsonPath('code', 'verification_required')->assertJsonPath('message', 'Enter the code we sent to your mobile and email to confirm the booking.');
 
         $this->sendCode()->assertAccepted()->assertJsonPath('data.status', 'sent')->assertJsonPath('data.expires_in', 600)->assertJsonPath('data.retry_after', 60);
         $sms = end(FakeSmsGateway::$sent);
@@ -66,7 +68,8 @@ class BookingPhoneVerificationTest extends TestCase
 
         // Stored only as an HMAC, for this purpose, and never in the message log staff read.
         $row = CustomerLoginCode::query()->sole();
-        $this->assertSame(['booking', 'sms'], [$row->purpose, $row->channel]);
+        // Every channel at once (the tests' mailer doesn't really send, so no email here).
+        $this->assertSame(['booking', 'sms,whatsapp'], [$row->purpose, $row->channel]);
         $this->assertStringNotContainsString($code, $row->code_hash);
         $this->assertSame(0, NotificationMessage::query()->where('body', 'like', "%{$code}%")->count());
 
@@ -160,6 +163,68 @@ class BookingPhoneVerificationTest extends TestCase
     }
 
     #[Test]
+    public function while_the_check_is_on_the_lead_gives_an_email_and_the_code_goes_there_too(): void
+    {
+        $this->checkOn();
+        $this->emailWorks();
+
+        // No email: refused, saying why, before any code is sent.
+        $noEmail = $this->payload();
+        unset($noEmail['travellers'][0]['email']);
+        $this->postJson('/api/v1/public/bookings', $noEmail)->assertUnprocessable()
+            ->assertJsonValidationErrors(['travellers.0.email' => 'Add the lead traveller’s email: the booking code goes there too.']);
+        $this->sendCode(email: null)->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->assertSame([], FakeSmsGateway::$sent);
+
+        // Every channel at once, and the form is told which took it.
+        $this->sendCode()->assertAccepted()->assertJsonPath('data.channels', fn (array $channels) => in_array('sms', $channels, true) && in_array('email', $channels, true));
+        Mail::assertSent(LoginCodeMail::class, fn (LoginCodeMail $mail) => $mail->hasTo('tanvir@example.test') && $mail->code === $this->lastCode() && $mail->purpose === 'booking');
+        $this->assertStringContainsString('email', CustomerLoginCode::query()->sole()->channel);
+    }
+
+    #[Test]
+    public function a_code_that_only_email_could_send_still_saves_the_booking_but_proves_no_number(): void
+    {
+        $this->checkOn();
+        $this->emailWorks();
+        // SMS and WhatsApp both down, as on live today.
+        $this->sendNotifications(null);
+        FakeSmsGateway::$next = SendResult::skipped('sms_off');
+
+        $this->sendCode()->assertAccepted()->assertJsonPath('data.channels', ['email']);
+        $code = null;
+        Mail::assertSent(LoginCodeMail::class, function (LoginCodeMail $mail) use (&$code) {
+            $code = $mail->code;
+
+            return true;
+        });
+
+        // The right code from the email: saved, marked verified by code, and on to payment as before.
+        $reference = $this->postJson('/api/v1/public/bookings', $this->payload(['verification_code' => $code]))->assertCreated()
+            ->assertJsonPath('data.payment.checkout', fn ($checkout) => $checkout !== null)->json('data.reference');
+        $this->assertNotNull(Booking::query()->where('reference', $reference)->sole()->phone_verified_at);
+        // But the code never went to the phone, so the number itself isn't proven.
+        $this->assertNull(Customer::query()->where('phone', '8801711000321')->sole()->phone_verified_at);
+    }
+
+    #[Test]
+    public function portal_sign_in_codes_go_by_email_too_and_phone_change_codes_never_do(): void
+    {
+        $this->emailWorks();
+        Customer::query()->create(['name' => 'Tanvir Hasan', 'phone' => '8801711000321', 'email' => 'tanvir@example.test', 'stage' => 'lead', 'source' => 'walk_in', 'locale' => 'en']);
+
+        // Sign-in: a copy to the account's address; the answer doesn't say where the code went, so it reveals no account.
+        $this->postJson('/api/v1/customer/auth/code', ['phone' => '01711000321', 'locale' => 'en'])->assertAccepted()->assertJsonMissingPath('data.channels');
+        Mail::assertSent(LoginCodeMail::class, fn (LoginCodeMail $mail) => $mail->hasTo('tanvir@example.test') && $mail->purpose === 'sign_in');
+
+        // A phone-change code must prove the new number itself: never by email, even with an address given.
+        Mail::fake();
+        $this->travel(2)->minutes();
+        app(LoginCodes::class)->send('8801811000444', 'en', null, LoginCodes::CHANGE_PHONE, 'tanvir@example.test');
+        Mail::assertNotSent(LoginCodeMail::class);
+    }
+
+    #[Test]
     public function office_bookings_never_need_a_code(): void
     {
         $this->checkOn();
@@ -216,7 +281,7 @@ class BookingPhoneVerificationTest extends TestCase
             'pax' => 2,
             'room' => 'twin',
             'addons' => [],
-            'travellers' => [['name' => 'Tanvir Hasan', 'phone' => '01711-000321'], []],
+            'travellers' => [['name' => 'Tanvir Hasan', 'phone' => '01711-000321', 'email' => 'tanvir@example.test'], []],
             'expected_total' => 153000,
             'terms_accepted' => true,
             'locale' => 'en',
@@ -225,9 +290,15 @@ class BookingPhoneVerificationTest extends TestCase
         ];
     }
 
-    private function sendCode(string $phone = '01711000321', string $locale = 'en'): TestResponse
+    private function sendCode(string $phone = '01711000321', string $locale = 'en', ?string $email = 'tanvir@example.test'): TestResponse
     {
-        return $this->postJson('/api/v1/public/booking-codes', ['phone' => $phone, 'locale' => $locale]);
+        return $this->postJson('/api/v1/public/booking-codes', ['phone' => $phone, 'locale' => $locale, 'email' => $email]);
+    }
+
+    /** A mailer that really sends (the tests' own is "array", which LoginCodes rightly treats as not sending). */
+    private function emailWorks(): void
+    {
+        config(['mail.default' => 'smtp']);
     }
 
     /** The newest six digits the SMS stand-in "sent". */

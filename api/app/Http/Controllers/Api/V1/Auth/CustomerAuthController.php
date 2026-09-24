@@ -40,7 +40,10 @@ class CustomerAuthController extends Controller
     public function sendCode(Request $request, LoginCodes $codes): JsonResponse
     {
         $data = $this->validatePhone($request, ['locale' => ['nullable', Rule::in(['bn', 'en'])]]);
-        $result = $codes->send($data['phone'], $data['locale'] ?? $request->header('X-Locale', 'bn'), $request->ip());
+        // A copy by email to the account's address too, when it has one (client, 2026-09-25). The answer never says which
+        // channels were used, so it doesn't reveal whether a number has an account.
+        $email = Customer::query()->where('phone', $data['phone'])->value('email');
+        $result = $codes->send($data['phone'], $data['locale'] ?? $request->header('X-Locale', 'bn'), $request->ip(), LoginCodes::SIGN_IN, $email);
 
         return match ($result['outcome']) {
             'throttled' => response()->json(['message' => __('auth.code_throttled', ['seconds' => $result['retry_after']]), 'code' => 'throttled', 'retry_after' => $result['retry_after']], Response::HTTP_TOO_MANY_REQUESTS),
@@ -84,7 +87,8 @@ class CustomerAuthController extends Controller
                 ]);
                 $claimed = $customer->portal_claimed_at === null;
                 $customer->forceFill([
-                    'phone_verified_at' => $customer->phone_verified_at ?? now(),
+                    // A code that also went by email doesn't prove the number itself.
+                    'phone_verified_at' => $customer->phone_verified_at ?? (LoginCodes::provedPhone($match) ? now() : null),
                     'portal_claimed_at' => $customer->portal_claimed_at ?? now(),
                     'last_login_at' => now(),
                 ])->save();

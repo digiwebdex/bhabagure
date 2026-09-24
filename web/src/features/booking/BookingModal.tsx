@@ -59,7 +59,10 @@ export function BookingModal() {
 
   if (!pkg || !quote) return null;
 
-  const stepErrors = booking.step === 1 ? validatePackageStep(booking, tv) : booking.step === 2 ? validateTravellers(booking, tv) : null;
+  // While the booking code check is on, the code goes by email too, so the lead's email is needed.
+  const travellerRules = { leadEmail: pricing.verifyPhone === true };
+
+  const stepErrors = booking.step === 1 ? validatePackageStep(booking, tv) : booking.step === 2 ? validateTravellers(booking, tv, travellerRules) : null;
   const stepInvalid = stepErrors ? stepErrors.invalid : booking.step === 3 ? !booking.terms : false;
 
   const next = () => {
@@ -93,7 +96,7 @@ export function BookingModal() {
         <StepIndicator current={booking.step} />
 
         {booking.step === 1 ? <PackageStep errors={booking.attempted[1] ? validatePackageStep(booking, tv).errors : {}} roomLabel={roomLabel} /> : null}
-        {booking.step === 2 ? <TravellersStep errors={booking.attempted[2] ? validateTravellers(booking, tv).errors : []} /> : null}
+        {booking.step === 2 ? <TravellersStep errors={booking.attempted[2] ? validateTravellers(booking, tv, travellerRules).errors : []} /> : null}
         {booking.step === 3 ? (
           <ReviewStep pkg={pkg} quote={quote} hotelCategory={hotelCategory} termsError={booking.attempted[3] && !booking.terms ? t('termsRequired') : undefined} />
         ) : null}

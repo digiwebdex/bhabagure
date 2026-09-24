@@ -26,7 +26,8 @@ return [
     'delete_has_payment_attempts' => 'An online payment was started for this booking. Cancel it instead.',
     'scan_unreadable' => 'We could not read this file. Upload a JPEG, PNG or PDF of up to 5 MB.',
     // docs/booking-phone-verification.md
-    'verification_required' => 'Enter the code we sent to your mobile to confirm the booking.',
+    'verification_required' => 'Enter the code we sent to your mobile and email to confirm the booking.',
     'verification_invalid' => 'That code is wrong or has expired. Ask for a new one.',
+    'email_for_code' => 'Add the lead traveller’s email: the booking code goes there too.',
     'code_undeliverable' => 'We can’t send the booking code right now. Please call or WhatsApp our office to book.',
 ];

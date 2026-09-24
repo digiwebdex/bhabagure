@@ -217,10 +217,13 @@ export const checkCoupon = (payload: CouponCheckPayload) =>
   });
 
 /** A code to the lead's mobile, before the booking is saved (docs/booking-phone-verification.md). `phone`: 8801XXXXXXXXX. */
-export const sendBookingCode = (phone: string, locale: 'bn' | 'en') =>
-  call<{ status: 'sent'; expires_in: number; retry_after: number }>('booking-codes', {
+export type CodeChannel = 'sms' | 'whatsapp' | 'email';
+
+/** `channels`: where the code actually went (SMS, WhatsApp and the lead's email are all tried at once). */
+export const sendBookingCode = (phone: string, email: string, locale: 'bn' | 'en') =>
+  call<{ status: 'sent'; expires_in: number; retry_after: number; channels: CodeChannel[] }>('booking-codes', {
     method: 'POST',
-    body: JSON.stringify({ phone, locale }),
+    body: JSON.stringify({ phone, email, locale }),
     locale,
   });
 

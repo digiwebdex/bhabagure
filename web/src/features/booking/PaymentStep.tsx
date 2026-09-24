@@ -7,7 +7,7 @@ import { onlinePayment, type Quote } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
-import { createBooking, markJustBooked, recallBookingToken, rememberBookingToken, sendBookingCode, startPayment, type ApiFailure } from '@/lib/booking-api';
+import { createBooking, markJustBooked, recallBookingToken, rememberBookingToken, sendBookingCode, startPayment, type ApiFailure, type CodeChannel } from '@/lib/booking-api';
 import type { PackageView } from '@/lib/content/views';
 import { useRouter } from '@/i18n/navigation';
 import { whatsappUrl } from '@/lib/links';
@@ -52,7 +52,11 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
   // saved only with it. The API asks too (for a page cached before the switch went on), and this step then follows it.
   const [verify, setVerify] = useState(pricing.verifyPhone === true);
   const leadPhone = normalizeBdMobile(booking.travellers[0]?.phone ?? '');
+  // The code goes by SMS, WhatsApp and to this email at once (docs/booking-phone-verification.md §6).
+  const leadEmail = booking.travellers[0]?.email.trim() ?? '';
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // Where it went; null while a code sent a moment ago is reused and the channels aren't known.
+  const [sentBy, setSentBy] = useState<CodeChannel[] | null>(null);
   const [code, setCode] = useState('');
   const [codeNote, setCodeNote] = useState<CodeNote>(null);
   const [waitSeconds, setWaitSeconds] = useState(0);
@@ -72,10 +76,11 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
     setSending(true);
     setCodeNote(null);
     setFailure(null);
-    const result = await sendBookingCode(leadPhone, locale);
+    const result = await sendBookingCode(leadPhone, leadEmail, locale);
     setSending(false);
     if (result.ok) {
       setSentTo(leadPhone);
+      setSentBy(result.data.channels);
       setCode('');
       setWaitSeconds(result.data.retry_after);
       return 'sent';
@@ -83,6 +88,7 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
     if (result.reason === 'throttled') {
       // A code went to this number a moment ago: the customer types that one.
       setSentTo(leadPhone);
+      setSentBy(null);
       setWaitSeconds(result.retryAfter);
       setCodeNote({ tone: 'info', text: t('verify.throttled', { secondsText: f.number(result.retryAfter) }) });
       return 'sent';
@@ -244,6 +250,8 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
       {verify && !created && sentTo ? (
         <PhoneCodeBox
           phone={sentTo}
+          email={leadEmail}
+          channels={sentBy}
           code={code}
           onCode={(value) => {
             setCode(value);

@@ -611,24 +611,30 @@
       "applied": "Coupon applied — you save <amount>{saving}</amount>."
     },
     "verify": {
-      "sent": "We sent a 6-digit code to {phone} by SMS. Enter it to confirm your booking — it works for {minutesText} minutes.",
+      "sent": "We sent a 6-digit code {where}. Enter it to confirm your booking — it works for {minutesText} minutes.",
       "code": "Booking code",
-      "enterCode": "Enter the 6-digit code we sent to your mobile.",
+      "enterCode": "Enter the 6-digit code we sent to your mobile and email.",
       "resend": "Send a new code",
       "resendIn": "New code in {secondsText}s",
       "changeNumber": "Change number",
       "sending": "Sending the code…",
       "throttled": "A code was sent a moment ago — enter that one, or ask for another in {secondsText} seconds.",
       "invalid": "That code is wrong or has expired. Ask for a new one.",
-      "undeliverable": "We can’t send the code right now. Please call or WhatsApp us to book."
-    }
+      "undeliverable": "We can’t send the code right now. Please call or WhatsApp us to book.",
+      "viaSms": "by SMS to {phone}",
+      "viaWhatsApp": "on WhatsApp to {phone}",
+      "viaEmail": "by email to {email}",
+      "toBoth": "to {phone} and {email}",
+      "and": " and "
+    },
+    "emailCodeHint": "The booking code goes here too."
   },
   "auth": {
     "signInTitle": "Sign in to your account",
     "signInSubtitle": "See your trips, documents and payments. We send a one-time code to your mobile — no password needed.",
     "mobile": "Mobile number",
     "sendCode": "Send code",
-    "codeSent": "We sent a 6-digit code to {phone} by SMS or WhatsApp. It works for {minutesText} minutes.",
+    "codeSent": "We sent a 6-digit code to {phone} by SMS or WhatsApp, and to your email if your account has one. It works for {minutesText} minutes.",
     "code": "Code",
     "verifyCta": "Sign in",
     "changeNumber": "Change number",
@@ -688,7 +694,8 @@
     "minLength": "Use at least {minText} characters.",
     "travellers": "Enter between 1 and {maxText} travellers.",
     "confirmScan": "Please check this against your passport, then press “It’s correct” or fix it.",
-    "code": "Enter the 6-digit code."
+    "code": "Enter the 6-digit code.",
+    "emailForCode": "Add your email: the booking code goes there too."
   },
   "errors": {
     "sendFailed": "We could not send that — please try again shortly or call {phone}.",

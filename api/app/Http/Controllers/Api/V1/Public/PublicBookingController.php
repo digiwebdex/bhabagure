@@ -63,6 +63,9 @@ class PublicBookingController extends Controller
             'travellers.*.phone' => ['nullable', 'regex:/^8801[3-9]\d{8}$/'],
             'travellers.0.phone' => ['required'],
             'travellers.*.email' => ['nullable', 'email', 'max:190'],
+            // While the booking code check is on, the code goes by email too (client, 2026-09-25), so the lead's email is needed.
+            // (A rule for index 0 replaces the wildcard's for it, so the format checks are repeated here.)
+            'travellers.0.email' => [Rule::requiredIf(fn () => PhoneCheck::required()), 'nullable', 'email', 'max:190'],
             'travellers.*.passport_scan_token' => ['nullable', 'string', 'size:48'],
             'travellers.*.ocr_filled' => ['boolean'],
             'expected_total' => ['required', 'numeric', 'min:0'],
@@ -76,6 +79,7 @@ class PublicBookingController extends Controller
             'verification_code' => ['nullable', 'digits:6'],
         ], [
             'travellers.*.passport_expiry.after' => __('booking.passport_expiry_after_travel'),
+            'travellers.0.email.required' => __('booking.email_for_code'),
         ]);
 
         if (($data['idempotency_key'] ?? null) !== null && ($existing = $this->alreadyCreated($data['idempotency_key'])) !== null) {
@@ -159,15 +163,18 @@ class PublicBookingController extends Controller
         $request->merge(['phone' => Phone::normalizeBdMobile($phone) ?? $phone]);
         $data = $request->validate([
             'phone' => ['required', 'regex:/^8801[3-9]\d{8}$/'],
+            // The lead's email: the code goes there too (client, 2026-09-25).
+            'email' => ['required', 'email', 'max:190'],
             'locale' => ['required', Rule::in(['bn', 'en'])],
-        ]);
+        ], ['email.required' => __('booking.email_for_code')]);
 
-        $result = $codes->send($data['phone'], $data['locale'], $request->ip(), LoginCodes::BOOKING);
+        $result = $codes->send($data['phone'], $data['locale'], $request->ip(), LoginCodes::BOOKING, trim($data['email']));
 
         return match ($result['outcome']) {
             'throttled' => response()->json(['message' => __('auth.code_throttled', ['seconds' => $result['retry_after']]), 'code' => 'throttled', 'retry_after' => $result['retry_after']], Response::HTTP_TOO_MANY_REQUESTS),
             'undeliverable' => response()->json(['message' => __('booking.code_undeliverable'), 'code' => 'code_undeliverable'], Response::HTTP_SERVICE_UNAVAILABLE),
-            default => response()->json(['data' => ['status' => 'sent', 'expires_in' => LoginCodes::MINUTES * 60, 'retry_after' => $result['retry_after']]], Response::HTTP_ACCEPTED),
+            // Which channels took it, so the form can say where to look; the customer typed both the number and the address.
+            default => response()->json(['data' => ['status' => 'sent', 'expires_in' => LoginCodes::MINUTES * 60, 'retry_after' => $result['retry_after'], 'channels' => $result['channels']]], Response::HTTP_ACCEPTED),
         };
     }
 
