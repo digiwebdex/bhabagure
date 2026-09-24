@@ -113,7 +113,17 @@ export interface SiteViews {
   partners: { name: string; logo: ImageView; websiteUrl: string | null }[];
   offers: { title: string; image: ImageView; linkUrl: string | null }[];
   /** docs/group-tour-gallery.md; `month` is "2026-09" or null, `packageSlug` null when the photo links to no tour. */
-  tourPhotos: { caption: string; month: string | null; image: ImageView; packageSlug: string | null; packageTitle: string | null }[];
+  tourPhotos: {
+    caption: string;
+    month: string | null;
+    image: ImageView;
+    /** The API's own WebP sizes, so the browser picks one and the website's image optimiser isn't needed; null for stock URLs. */
+    srcSet: string | null;
+    /** The smallest size, for the blurred fill behind the photo. */
+    blurUrl: string;
+    packageSlug: string | null;
+    packageTitle: string | null;
+  }[];
   pricing: ContentBundle['pricing'];
   addons: { code: string; name: string; price: number; unit: 'per_person' | 'per_booking' }[];
   settings: ContentBundle['settings'] & { brand: string; companyName: string };
@@ -139,6 +149,16 @@ const image = (img: Partial<ContentImage> & { url: string; alt: Localized; isPla
   creditUrl: img.creditUrl ?? null,
   isPlaceholder: img.isPlaceholder,
 });
+
+/**
+ * "…-thumb.webp 400w, …-card.webp 800w, …" from the sizes the API stored at upload. The gallery's large photos went
+ * through the website's image optimiser at first, which held the site's process over its memory limit until it stopped
+ * answering (2026-09-24); the files are already WebP at the right widths.
+ */
+function tourPhotoSrcSet(img: ContentImage): string | null {
+  const sizes = (['thumb', 'card', 'detail', 'full'] as const).map((name) => img.variants?.[name]).filter((v) => v !== undefined);
+  return sizes.length > 0 ? sizes.map((v) => `${v.url} ${v.width}w`).join(', ') : null;
+}
 
 function creatorView(creator: ContentBundle['creator'] | undefined, locale: AppLocale): CreatorView | null {
   const profile = creator?.profile;
@@ -284,6 +304,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       caption: pick(p.caption, locale),
       month: p.month,
       image: image(p.image!, locale),
+      srcSet: tourPhotoSrcSet(p.image!),
+      blurUrl: p.image!.variants?.thumb?.url ?? p.image!.url,
       packageSlug: p.package?.slug ?? null,
       packageTitle: p.package ? pick(p.package.title, locale) : null,
     })),

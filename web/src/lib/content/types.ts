@@ -22,6 +22,8 @@ export interface ContentImage {
   creditUrl: string | null;
   /** Stock placeholder the client still has to replace. */
   isPlaceholder: boolean;
+  /** The WebP sizes the API made at upload (thumb 400, card 800, detail 1600, full 2400 px wide at most); empty for stock URLs. */
+  variants?: Partial<Record<'thumb' | 'card' | 'detail' | 'full', { url: string; width: number; height: number }>>;
 }
 
 export interface TourPackage {

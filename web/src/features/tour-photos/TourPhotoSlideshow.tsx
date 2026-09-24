@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
 import { SlideArrow, useSlideshow } from '@/components/ui/Slideshow';
@@ -33,9 +32,21 @@ export function TourPhotoSlideshow({ photos }: { photos: SiteViews['tourPhotos']
             aria-label={t('slide', { n: f.number(index + 1), total: f.number(photos.length) })}
           >
             <figure className="relative m-0 aspect-4/3 overflow-hidden rounded-fluid bg-ink-deep sm:aspect-16/9">
-              {/* The same photo, blurred and dimmed, fills whatever the photo itself doesn't. */}
-              <Image src={photo.image.url} alt="" aria-hidden="true" fill sizes="96px" className="scale-110 object-cover opacity-60 blur-2xl" />
-              <Image src={photo.image.url} alt={t('alt', { caption: photo.caption })} fill sizes="(min-width: 1200px) 1140px, 100vw" className="object-contain" />
+              {/* Plain images from the sizes the API already made, not next/image: optimising these large photos on the
+                  website's server held it over its memory limit until it stopped answering (2026-09-24). The same photo,
+                  blurred and dimmed, fills whatever the photo itself doesn't. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo.blurUrl} alt="" aria-hidden="true" loading="lazy" decoding="async" className="absolute inset-0 size-full scale-110 object-cover opacity-60 blur-2xl" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo.image.url}
+                srcSet={photo.srcSet ?? undefined}
+                sizes="(min-width: 1200px) 1140px, 100vw"
+                alt={t('alt', { caption: photo.caption })}
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 size-full object-contain"
+              />
               <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 bg-linear-to-t from-black/75 via-black/35 to-transparent px-4 pt-12 pb-3.5 text-white sm:px-6 sm:pb-5">
                 <span className="text-15 font-semibold sm:text-18">
                   {photo.caption}
