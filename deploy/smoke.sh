@@ -58,7 +58,7 @@ check "wallet API from outside the allow-list" '403|401' "$(get wallet_api https
 check "wallet API absent on the API host" 404 "$(get wallet_on_api "$API/api/v1/wallet/auth/me" -H 'X-Wallet-Request: 1')"
 
 echo "── Public API (live CMS data)"
-for path in settings destinations packages departures posts team reviews gallery visas creator partners offers pricing; do
+for path in settings destinations packages departures posts team reviews gallery visas creator partners offers tour-photos pricing; do
   check "GET /public/$path" 200 "$(get "p_$path" "$API/api/v1/public/$path" -H 'Accept: application/json')"
 done
 check "destinations listed" '[1-9][0-9]*' "$(json p_destinations "(d.data||d).length")"
@@ -112,6 +112,12 @@ if [[ $banners -gt 0 ]]; then
   check "home slides the $banners offer banners" yes "$(body_has home 'id="offers"')"
 else
   note "No banners published in Admin → Offer banners; the slideshow is hidden."
+fi
+photos=$(json p_tour-photos "(d.data||[]).length")
+if [[ $photos -gt 0 ]]; then
+  check "home shows the $photos group tour photos" yes "$(body_has home 'id="tour-photos"')"
+else
+  note "No photos published in Admin → Group tour photos; the gallery is hidden."
 fi
 partners=$(json p_partners "(d.data||[]).length")
 if [[ $partners -gt 0 ]]; then

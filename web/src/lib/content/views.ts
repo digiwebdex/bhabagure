@@ -112,6 +112,8 @@ export interface SiteViews {
   creator: CreatorView | null;
   partners: { name: string; logo: ImageView; websiteUrl: string | null }[];
   offers: { title: string; image: ImageView; linkUrl: string | null }[];
+  /** docs/group-tour-gallery.md; `month` is "2026-09" or null, `packageSlug` null when the photo links to no tour. */
+  tourPhotos: { caption: string; month: string | null; image: ImageView; packageSlug: string | null; packageTitle: string | null }[];
   pricing: ContentBundle['pricing'];
   addons: { code: string; name: string; price: number; unit: 'per_person' | 'per_booking' }[];
   settings: ContentBundle['settings'] & { brand: string; companyName: string };
@@ -277,6 +279,14 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     partners: (bundle.partners ?? []).filter((p) => p.logo).map((p) => ({ name: pick(p.name, locale), logo: image(p.logo!, locale), websiteUrl: p.websiteUrl })),
     // A banner without its picture is nothing to slide; the API only publishes ones that have it.
     offers: (bundle.offers ?? []).filter((o) => o.image).map((o) => ({ title: pick(o.title, locale), image: image(o.image!, locale), linkUrl: o.linkUrl })),
+    // Likewise a photo without its picture; the API only publishes ones that have it.
+    tourPhotos: (bundle.tourPhotos ?? []).filter((p) => p.image).map((p) => ({
+      caption: pick(p.caption, locale),
+      month: p.month,
+      image: image(p.image!, locale),
+      packageSlug: p.package?.slug ?? null,
+      packageTitle: p.package ? pick(p.package.title, locale) : null,
+    })),
     pricing: bundle.pricing,
     addons: bundle.pricing.addons.map((a) => ({ code: a.code, name: pick(a.name, locale), price: a.price, unit: a.unit })),
     settings: { ...bundle.settings, brand: pick(bundle.settings.company.brand, locale), companyName: pick(bundle.settings.company.name, locale) },

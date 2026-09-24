@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\MediaVariant;
+use App\Enums\PackageStatus;
 use App\Models\AirlinePartner;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
@@ -17,6 +18,7 @@ use App\Models\Review;
 use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\TourPhoto;
 use App\Models\VisaService;
 use App\Support\CreatorProfile;
 use App\Support\Money;
@@ -153,6 +155,24 @@ final class PublicContent
             'title' => $banner->localized('title'),
             'image' => self::image($banner->image, MediaVariant::Full),
             'linkUrl' => $banner->link_url,
+        ];
+    }
+
+    /**
+     * A photo for the group tour gallery (docs/group-tour-gallery.md), shown whole in a page-wide frame, so at the full size.
+     * "See this tour" only while the package is on the website.
+     */
+    public static function tourPhoto(TourPhoto $photo): array
+    {
+        $package = $photo->tourPackage;
+
+        return [
+            'caption' => $photo->localized('caption'),
+            'month' => $photo->tripMonthValue(),
+            'image' => self::image($photo->image, MediaVariant::Full),
+            'package' => $package !== null && $package->status === PackageStatus::Published
+                ? ['slug' => $package->slug, 'title' => $package->localized('title')]
+                : null,
         ];
     }
 

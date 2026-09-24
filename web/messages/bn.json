@@ -188,6 +188,10 @@
       "heading": "যাত্রীদের কথা",
       "lede": "What travellers say"
     },
+    "tourPhotos": {
+      "heading": "গ্রুপ ট্যুর গ্যালারি",
+      "lede": "Group tour gallery"
+    },
     "faq": {
       "heading": "সাধারণ জিজ্ঞাসা",
       "lede": "Frequently asked questions"
@@ -406,6 +410,15 @@
     "previous": "আগের অফার",
     "next": "পরের অফার",
     "goTo": "অফার {n} দেখুন"
+  },
+  "tourPhotos": {
+    "label": "গ্রুপ ট্যুরের ছবি",
+    "slide": "ছবি {n}/{total}",
+    "previous": "আগের ছবি",
+    "next": "পরের ছবি",
+    "seeTour": "ট্যুরটি দেখুন",
+    "seeTourLabel": "ট্যুরটি দেখুন: {title}",
+    "alt": "আমাদের যাত্রীরা — {caption}"
   },
   "creator": {
     "role": "ভবঘুরে হলিডেজের পেছনের ট্রাভেলার",

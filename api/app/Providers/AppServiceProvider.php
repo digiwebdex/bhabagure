@@ -41,6 +41,7 @@ use App\Models\StaffDocument;
 use App\Models\SupportTicket;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\TourPhoto;
 use App\Models\Transaction;
 use App\Models\TravellerDocument;
 use App\Models\VisaService;
@@ -171,6 +172,7 @@ class AppServiceProvider extends ServiceProvider
             'creator_video' => CreatorVideo::class,
             'airline_partner' => AirlinePartner::class,
             'offer_banner' => OfferBanner::class,
+            'tour_photo' => TourPhoto::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,

@@ -271,6 +271,22 @@ export type OfferBanner = {
   status: ContentStatus
 }
 
+/** A photo in the group tour gallery on the home page (docs/group-tour-gallery.md). */
+export type TourPhoto = {
+  id: number
+  caption_bn: string
+  caption_en: string
+  media_id: number | null
+  image: Media | null
+  /** "2026-09", or null when the month isn't known. */
+  trip_month: string | null
+  tour_package_id: number | null
+  /** The linked tour's name, for the list. */
+  package_title: string | null
+  sort_order: number
+  status: ContentStatus
+}
+
 /** An airline the agency books, shown by its logo above the footer (docs/partners-and-payments.md). */
 export type AirlinePartner = {
   id: number

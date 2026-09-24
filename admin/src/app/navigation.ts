@@ -76,6 +76,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'partners', path: '/airline-partners', icon: '✈', permissions: ['cms.manage'] },
       // The slideshow under the hero video (docs/offer-banners.md).
       { key: 'offers', path: '/offer-banners', icon: '★', permissions: ['cms.manage'] },
+      // Travellers on their trips, in a slideshow on the home page (docs/group-tour-gallery.md).
+      { key: 'tourPhotos', path: '/tour-photos', icon: '▣', permissions: ['cms.manage'] },
       { key: 'media', path: '/media', icon: 'M', permissions: ['packages.manage', 'cms.manage'] },
       { key: 'settings', path: '/settings', icon: 'S', permissions: ['cms.manage'] },
     ],

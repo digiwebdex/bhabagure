@@ -12,6 +12,7 @@ return [
         'images' => 'Add at least one photo.',
         'logo' => 'Add the airline’s logo.',
         'banner' => 'Add the banner picture.',
+        'photo' => 'Add the photo.',
         'body' => 'Write the post body in both languages.',
         'excerpt' => 'Write the excerpt in both languages.',
         'processing' => 'Say how long processing takes.',

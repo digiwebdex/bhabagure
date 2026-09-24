@@ -336,6 +336,42 @@ test.describe('website content', () => {
     expect(banner.image.url).toMatch(/\/storage\/media\/.+\.webp$/)
   })
 
+  test('a group tour photo needs its picture before it is published, and can link to its tour (docs/group-tour-gallery.md)', async ({ page, request }) => {
+    await signIn(page, 'admin')
+    await page.getByRole('navigation').getByRole('link', { name: '▣ Group tour photos' }).click()
+    await expect(page.getByRole('heading', { name: 'Group tour photos', level: 1 })).toBeVisible(FIRST_LOAD)
+    await expect(page.getByText('No group tour photos yet')).toBeVisible(FIRST_LOAD)
+
+    await page.getByRole('button', { name: '+ Add photo' }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Trip (Bangla)').fill('মুস্তাং, নেপাল')
+    await dialog.getByLabel('Trip (English)').fill('Mustang, Nepal')
+    await dialog.getByLabel('Month of the trip (optional)').fill('2026-09')
+    const tour = dialog.getByLabel('Tour (optional)')
+    await expect(tour.locator('option', { hasText: 'NEPAL MUSTANG' })).toHaveCount(1, FIRST_LOAD)
+    await tour.selectOption((await tour.locator('option', { hasText: 'NEPAL MUSTANG' }).getAttribute('value'))!)
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    const row = page.getByRole('listitem').filter({ hasText: 'Mustang, Nepal' })
+    await expect(row).toContainText('September 2026 · NEPAL MUSTANG')
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(page.getByText('Add the photo.')).toBeVisible()
+    expect((await (await request.get(`${API_URL}/api/v1/public/tour-photos`)).json()).data).toHaveLength(0)
+
+    await row.getByRole('button', { name: /^Mustang, Nepal/ }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Choose', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Choose an image' })
+    await picker.locator('input[type=file]').setInputFiles(PHOTO)
+    await expect(picker).toBeHidden({ timeout: 30_000 })
+    await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click()
+
+    await row.getByRole('button', { name: 'Publish' }).click()
+    await expect(row.getByText('Published')).toBeVisible()
+    const [photo] = (await (await request.get(`${API_URL}/api/v1/public/tour-photos`)).json()).data
+    expect([photo.caption.bn, photo.month, photo.package.slug]).toEqual(['মুস্তাং, নেপাল', '2026-09', 'nepal-mustang-adventure-tour-8-days-7-nights'])
+    expect(photo.image.url).toMatch(/\/storage\/media\/.+\.webp$/)
+  })
+
   test('media library rejects an oversized upload before sending it', async ({ page }) => {
     await signIn(page, 'admin')
     await page.goto('/media')

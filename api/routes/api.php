@@ -53,6 +53,7 @@ use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
+use App\Http\Controllers\Api\V1\Admin\TourPhotoController;
 use App\Http\Controllers\Api\V1\Admin\VisaServiceController;
 use App\Http\Controllers\Api\V1\Agent\AttendanceAgentController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
@@ -162,6 +163,7 @@ Route::prefix('v1')->group(function () {
             Route::get('creator', 'creator');
             Route::get('partners', 'partners');
             Route::get('offers', 'offers');
+            Route::get('tour-photos', 'tourPhotos');
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
@@ -621,7 +623,7 @@ Route::prefix('v1')->group(function () {
                 Route::put('creator', 'update');
             });
 
-            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class, 'creator-videos' => CreatorVideoController::class, 'airline-partners' => AirlinePartnerController::class, 'offer-banners' => OfferBannerController::class] as $path => $controller) {
+            foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class, 'creator-videos' => CreatorVideoController::class, 'airline-partners' => AirlinePartnerController::class, 'offer-banners' => OfferBannerController::class, 'tour-photos' => TourPhotoController::class] as $path => $controller) {
                 Route::controller($controller)->group(function () use ($path) {
                     Route::get($path, 'index');
                     Route::post($path, 'store');

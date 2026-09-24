@@ -318,6 +318,7 @@
       "creator": "Travel host",
       "partners": "Airline partners",
       "offers": "Offer banners",
+      "tourPhotos": "Group tour photos",
       "chart_of_accounts": "Chart of accounts",
       "journal": "Journal entries",
       "account_transactions": "Account transactions",
@@ -712,6 +713,24 @@
     "link": "Where it leads (optional)",
     "linkHint": "A page on this site, e.g. /packages/nepal-mustang-adventure-tour-8-days-7-nights, or a full https:// address. Leave empty for a picture that does not click.",
     "noLink": "Leads nowhere"
+  },
+  "tourPhotos": {
+    "title": "Group tour photos",
+    "subtitle": "Travellers on their trips, in the slideshow on the home page after the reviews, in this order",
+    "new": "+ Add photo",
+    "empty": "No group tour photos yet",
+    "emptyNote": "The gallery stays hidden on the website until at least one photo is published.",
+    "note": "Only photos your travellers are happy to see on the website. Uploading removes the phone’s location data from the file.",
+    "captionBn": "Trip (Bangla)",
+    "captionEn": "Trip (English)",
+    "captionHint": "Shown on the photo, and read aloud to anyone who cannot see it.",
+    "month": "Month of the trip (optional)",
+    "monthHint": "Shown beside the trip, e.g. September 2026.",
+    "package": "Tour (optional)",
+    "packageHint": "Adds “See this tour” to the photo while the package is on the website.",
+    "noPackage": "No tour link",
+    "notOnWebsite": "{{title}} — not on the website",
+    "photo": "Photo (needed to publish; any shape — it is shown whole)"
   },
   "partners": {
     "title": "Airline partners",

@@ -188,6 +188,10 @@
       "heading": "What travellers say",
       "lede": ""
     },
+    "tourPhotos": {
+      "heading": "Group tour gallery",
+      "lede": ""
+    },
     "faq": {
       "heading": "Frequently asked questions",
       "lede": ""
@@ -406,6 +410,15 @@
     "previous": "Previous offer",
     "next": "Next offer",
     "goTo": "Show offer {n}"
+  },
+  "tourPhotos": {
+    "label": "Group tour photos",
+    "slide": "Photo {n} of {total}",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "seeTour": "See this tour",
+    "seeTourLabel": "See this tour: {title}",
+    "alt": "Our travellers — {caption}"
   },
   "creator": {
     "role": "The traveller behind Bhabaghure Holidays",

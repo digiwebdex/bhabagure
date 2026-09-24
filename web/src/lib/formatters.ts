@@ -14,6 +14,8 @@ export function formattersFor(locale: AppLocale) {
     audience: (value: number | string) => formatAudience(value, locale),
     percent: (value: number) => formatPercent(value, locale),
     date: (isoDate: string) => formatDate(isoDate, locale),
+    /** "2026-09" → 'September 2026' / 'সেপ্টেম্বর ২০২৬' (the admin's month, too). */
+    month: (yearMonth: string) => formatDate(`${yearMonth}-01`, locale).replace(/^\S+\s/u, ''),
     /** Identifiers shown with localized digits but no grouping: phone, licence number. */
     digits: (value: string) => localizeDigits(value, locale),
   };

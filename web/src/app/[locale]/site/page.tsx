@@ -17,6 +17,7 @@ import { PartnersSection } from '@/features/partners/PartnersSection';
 import { ReviewsSection } from '@/features/reviews/ReviewsSection';
 import { SearchPanel } from '@/features/search/SearchPanel';
 import { ServicesSection } from '@/features/services/ServicesSection';
+import { TourPhotosSection } from '@/features/tour-photos/TourPhotosSection';
 import { SiteChrome } from '@/features/SiteChrome';
 import { VisaSection } from '@/features/visa/VisaSection';
 import { WhyUsSection } from '@/features/why-us/WhyUsSection';
@@ -66,6 +67,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <WhyUsSection locale={locale} stats={views.stats} settings={views.settings} />
       <StepsSection locale={locale} />
       <ReviewsSection locale={locale} reviews={views.reviews} />
+      <TourPhotosSection locale={locale} photos={views.tourPhotos} />
       <FaqSection locale={locale} singleRoomSupplementPercent={views.pricing.singleRoomSupplementPercent} />
       <GallerySection locale={locale} items={views.gallery} facebook={views.settings.contact.facebook} />
       <AboutSection locale={locale} team={views.team} stats={views.stats} settings={views.settings} />

@@ -14,13 +14,13 @@ class CmsPermissionsTest extends TestCase
 
     public static function matrix(): array
     {
-        //                         role              packages  pricing  posts  team  reviews  gallery  visas  settings  media  creator  creator-videos  airline-partners  offer-banners
+        //                         role              packages  pricing  posts  team  reviews  gallery  visas  settings  media  creator  creator-videos  airline-partners  offer-banners  tour-photos
         return [
-            'super admin' => ['super_admin',   [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]],
-            'admin' => ['admin',               [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]],
-            'tour operator' => ['tour_operator', [200, 200, 403, 403, 403, 403, 403, 403, 200, 403, 403, 403, 403]],
-            'sales agent' => ['sales_agent',   [403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403]],
-            'accountant' => ['accountant',     [403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403]],
+            'super admin' => ['super_admin',   [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]],
+            'admin' => ['admin',               [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]],
+            'tour operator' => ['tour_operator', [200, 200, 403, 403, 403, 403, 403, 403, 200, 403, 403, 403, 403, 403]],
+            'sales agent' => ['sales_agent',   [403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403]],
+            'accountant' => ['accountant',     [403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403, 403]],
         ];
     }
 
@@ -29,7 +29,7 @@ class CmsPermissionsTest extends TestCase
     public function each_role_reaches_exactly_the_cms_screens_it_should(string $role, array $expected): void
     {
         $staff = $this->staff($role);
-        $paths = ['packages', 'pricing', 'posts', 'team', 'reviews', 'gallery', 'visas', 'settings', 'media', 'creator', 'creator-videos', 'airline-partners', 'offer-banners'];
+        $paths = ['packages', 'pricing', 'posts', 'team', 'reviews', 'gallery', 'visas', 'settings', 'media', 'creator', 'creator-videos', 'airline-partners', 'offer-banners', 'tour-photos'];
 
         $actual = array_map(fn (string $path) => $this->actingAsApi($staff)->getJson("/api/v1/admin/{$path}")->status(), $paths);
 

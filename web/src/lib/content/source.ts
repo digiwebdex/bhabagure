@@ -56,6 +56,8 @@ async function loadSeed(withDemo: boolean): Promise<ContentBundle> {
     creator: { profile: null, videos: [] },
     partners: [],
     offers: [],
+    // Travellers' own photos (docs/group-tour-gallery.md): only ever from the CMS.
+    tourPhotos: [],
   };
 }
 
@@ -75,7 +77,7 @@ async function loadFromApi(): Promise<ContentBundle> {
     if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
     return (await res.json()).data as T;
   };
-  const [destinations, packages, departures, blog, team, reviews, gallery, visas, creator, partners, offers, pricing, settings] = await Promise.all([
+  const [destinations, packages, departures, blog, team, reviews, gallery, visas, creator, partners, offers, tourPhotos, pricing, settings] = await Promise.all([
     get<ContentBundle['destinations']>('destinations', 'packages'),
     get<ContentBundle['packages']>('packages', 'packages'),
     get<ContentBundle['departures']>('departures', 'departures'),
@@ -87,8 +89,9 @@ async function loadFromApi(): Promise<ContentBundle> {
     get<ContentBundle['creator']>('creator', 'creator', { empty: { profile: null, videos: [] } }),
     get<ContentBundle['partners']>('partners', 'partners', { empty: [] }),
     get<ContentBundle['offers']>('offers', 'offers', { empty: [] }),
+    get<ContentBundle['tourPhotos']>('tour-photos', 'tour-photos', { empty: [] }),
     get<ContentBundle['pricing']>('pricing', 'settings'),
     get<ContentBundle['settings']>('settings', 'settings'),
   ]);
-  return { destinations, packages, departures, categories: blog.categories, posts: blog.posts, team, reviews, gallery, visas, creator, partners, offers, pricing, settings };
+  return { destinations, packages, departures, categories: blog.categories, posts: blog.posts, team, reviews, gallery, visas, creator, partners, offers, tourPhotos, pricing, settings };
 }

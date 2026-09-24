@@ -18,6 +18,7 @@ use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\TourPhoto;
 use App\Models\VisaService;
 use App\Services\Booking\PhoneCheck;
 use App\Support\CreatorProfile;
@@ -116,6 +117,14 @@ class PublicContentController extends Controller
         $banners = OfferBanner::query()->published()->with('image')->orderBy('sort_order')->orderBy('id')->get();
 
         return $this->data($banners->map(PublicContent::offerBanner(...)));
+    }
+
+    /** The group tour gallery (docs/group-tour-gallery.md); empty until a photo is published, and the section is hidden. */
+    public function tourPhotos(): JsonResponse
+    {
+        $photos = TourPhoto::query()->published()->whereNotNull('media_id')->with(['image', 'tourPackage'])->orderBy('sort_order')->orderBy('id')->get();
+
+        return $this->data($photos->map(PublicContent::tourPhoto(...)));
     }
 
     /** The airlines the agency books (docs/partners-and-payments.md); empty until one is published, and the band is hidden. */

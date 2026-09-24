@@ -18,6 +18,7 @@ use App\Models\Review;
 use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\TourPhoto;
 use App\Models\VisaService;
 use App\Support\CreatorProfile;
 use App\Support\Money;
@@ -244,6 +245,18 @@ final class AdminContent
             ...$banner->only(['id', 'title_bn', 'title_en', 'media_id', 'link_url', 'sort_order']),
             'status' => $banner->status->value,
             'image' => $banner->relationLoaded('image') ? self::media($banner->image) : null,
+        ];
+    }
+
+    public static function tourPhoto(TourPhoto $photo): array
+    {
+        return [
+            ...$photo->only(['id', 'caption_bn', 'caption_en', 'media_id', 'tour_package_id', 'sort_order']),
+            'trip_month' => $photo->tripMonthValue(),
+            'status' => $photo->status->value,
+            'image' => $photo->relationLoaded('image') ? self::media($photo->image) : null,
+            // The linked tour's name, for the list.
+            'package_title' => $photo->relationLoaded('tourPackage') ? $photo->tourPackage?->title_en : null,
         ];
     }
 

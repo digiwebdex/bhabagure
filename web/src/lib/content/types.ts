@@ -161,6 +161,17 @@ export interface OfferBanner {
   linkUrl: string | null;
 }
 
+/** A photo in the group tour gallery (docs/group-tour-gallery.md). */
+export interface TourPhoto {
+  /** The trip it shows: "Mustang, Nepal". */
+  caption: Localized;
+  /** "2026-09", or null when the month isn't known. */
+  month: string | null;
+  image: ContentImage | null;
+  /** The tour, while its package is on the website ("See this tour"). */
+  package: { slug: string; title: Localized } | null;
+}
+
 /** An airline the agency books, shown as a logo above the footer (docs/partners-and-payments.md). */
 export interface AirlinePartner {
   name: Localized;
@@ -214,6 +225,7 @@ export interface ContentBundle {
   creator: Creator;
   partners: AirlinePartner[];
   offers: OfferBanner[];
+  tourPhotos: TourPhoto[];
   pricing: PricingSettings;
   settings: SiteSettings;
 }

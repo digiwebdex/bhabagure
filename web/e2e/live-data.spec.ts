@@ -387,8 +387,105 @@ test.describe('CMS to website', () => {
       await expect(dots).toHaveCount(2);
       await dots.nth(1).click();
       await expect(dots.nth(1)).toHaveAttribute('aria-current', 'true');
+
+      // The Bangla site reads the numbers in Bangla digits.
+      await page.goto('/');
+      await expect(page.locator('#offers').getByRole('button', { name: 'অফার ২ দেখুন' })).toBeVisible();
     } finally {
       for (const id of ids) await request.delete(`${E2E_API_URL}/api/v1/admin/offer-banners/${id}`, { headers });
+    }
+  });
+
+  test('group tour photos published in the CMS slide by themselves, whole, with their trip and next/previous (docs/group-tour-gallery.md)', async ({ page, request }) => {
+    const password = 'e2e-photo-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'photo.editor@e2e.test'], ['employee_code' => 'E2E-PHO', 'name' => 'Photo editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    // Stock placeholders: customers' own photos never go into the repository or its tests.
+    const pictures = String(
+      artisan('tinker', `--execute=echo implode(',', array_map(fn ($u) => App\\Models\\Media::query()->create(['disk' => 'public', 'mime' => 'image/jpeg', 'source_url' => $u, 'is_placeholder' => true, 'alt_en' => 'Trip'])->id, ['https://images.pexels.com/photos/5291526/pexels-photo-5291526.jpeg', 'https://images.pexels.com/photos/37710833/pexels-photo-37710833.jpeg', 'https://images.pexels.com/photos/14020725/pexels-photo-14020725.jpeg']));`),
+    )
+      .trim()
+      .split(/\r?\n/)
+      .pop()!
+      .split(',')
+      .map(Number);
+    const mustang = Number(String(artisan('tinker', `--execute=echo App\\Models\\TourPackage::query()->where('slug', 'nepal-mustang-adventure-tour-8-days-7-nights')->value('id');`)).trim().split(/\r?\n/).pop());
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'photo.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+
+    await page.goto('/en');
+    await expect(page.locator('#tour-photos')).toHaveCount(0);
+
+    const ids: number[] = [];
+    try {
+      const trips = [
+        { caption_bn: 'মুস্তাং, নেপাল', caption_en: 'Mustang, Nepal', trip_month: '2026-09', tour_package_id: mustang },
+        { caption_bn: 'ফি ফি আইল্যান্ড, থাইল্যান্ড', caption_en: 'Phi Phi Islands, Thailand', trip_month: null, tour_package_id: null },
+        { caption_bn: 'কাঠমান্ডু, নেপাল', caption_en: 'Kathmandu, Nepal', trip_month: null, tour_package_id: null },
+      ];
+      for (const [index, trip] of trips.entries()) {
+        const created = await request.post(`${E2E_API_URL}/api/v1/admin/tour-photos`, { headers, data: { ...trip, media_id: pictures[index] } });
+        expect(created.status(), await created.text()).toBe(201);
+        const id = (await created.json()).data.id as number;
+        ids.push(id);
+        expect((await request.post(`${E2E_API_URL}/api/v1/admin/tour-photos/${id}/publish`, { headers })).status()).toBe(200);
+      }
+
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return page.locator('#tour-photos').count();
+      }, { timeout: 20_000 }).toBe(1);
+
+      // After the reviews (not seeded here, so after "How it works") and before the FAQ.
+      const tops = await page.evaluate(() => ['how', 'tour-photos', 'faq'].map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1));
+      expect(tops[0]).toBeLessThan(tops[1]);
+      expect(tops[1]).toBeLessThan(tops[2]);
+
+      const gallery = page.locator('#tour-photos');
+      await expect(gallery.getByRole('heading', { name: 'Group tour gallery' })).toBeVisible();
+      await expect(gallery.getByTestId('tour-photos').locator('li')).toHaveCount(3);
+      const first = gallery.getByLabel('Photo 1 of 3');
+      await expect(first).toContainText('Mustang, Nepal · September 2026');
+      await expect(first.getByRole('link', { name: /^See this tour: NEPAL MUSTANG/ })).toHaveAttribute('href', '/en/packages/nepal-mustang-adventure-tour-8-days-7-nights');
+      await expect(gallery.getByLabel('Photo 2 of 3').getByRole('link')).toHaveCount(0);
+      // Shown whole: nobody in a group photo is cropped out.
+      const photo = first.getByRole('img', { name: 'Our travellers — Mustang, Nepal' });
+      expect(await photo.evaluate((img) => getComputedStyle(img).objectFit)).toBe('contain');
+
+      // It moves on by itself...
+      const count = gallery.getByTestId('tour-photos-count');
+      await expect(count).toHaveText('1 / 3');
+      await expect(count).toHaveText('2 / 3', { timeout: 12_000 });
+
+      // ...and holds still under the pointer (once a move already under way has finished), where the arrows go either
+      // way, round the ends.
+      await gallery.hover();
+      await expect
+        .poll(async () => {
+          const before = await count.textContent();
+          await page.waitForTimeout(700);
+          return before === (await count.textContent());
+        })
+        .toBe(true);
+      const at = Number((await count.textContent())!.split(' / ')[0]);
+      const before = at === 1 ? 3 : at - 1;
+      const after = at === 3 ? 1 : at + 1;
+      const previous = gallery.getByRole('button', { name: 'Previous photo' });
+      const next = gallery.getByRole('button', { name: 'Next photo' });
+      await previous.click();
+      await expect(count).toHaveText(`${before} / 3`);
+      await next.click();
+      await expect(count).toHaveText(`${at} / 3`);
+      await next.click();
+      await expect(count).toHaveText(`${after} / 3`);
+
+      // Bangla: the client's heading, the month and the count in Bangla digits.
+      await page.goto('/');
+      const bn = page.locator('#tour-photos');
+      await expect(bn.getByRole('heading', { name: 'গ্রুপ ট্যুর গ্যালারি' })).toBeVisible();
+      await expect(bn.getByLabel('ছবি ১/৩')).toContainText('মুস্তাং, নেপাল · সেপ্টেম্বর ২০২৬');
+      await expect(bn.getByTestId('tour-photos-count')).toHaveText(/^[১২৩] \/ ৩$/);
+    } finally {
+      for (const id of ids) await request.delete(`${E2E_API_URL}/api/v1/admin/tour-photos/${id}`, { headers });
     }
   });
 
