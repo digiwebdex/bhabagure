@@ -261,8 +261,8 @@ with the package), `/admin/packages/{id}/images`, `/admin/posts`, `/admin/team`,
   (21 days).
 - Terms, privacy and refund policy text.
 - Thai 02 itinerary and inclusions.
-- Old WordPress URLs (`bhabaghureholidays.com/trip/…`) → 301 redirects to the new package pages,
-  set on the old domain's host.
+- ~~Old WordPress URLs → 301 redirects~~ dropped (client, 2026-09-25): the old domain isn't used by the
+  project at all. The only domain is https://bhabaghure.com.bd/.
 
 ---
 
