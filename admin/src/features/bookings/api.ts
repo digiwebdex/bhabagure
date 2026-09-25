@@ -6,6 +6,7 @@ import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
 import type { DocumentSlot } from '../documents/api'
 import type { NotificationGroup } from '../notifications/api'
+import type { Voucher } from '../vouchers/api'
 
 /** api/app/Services/Booking/BookingFormOptions.php — what the staff booking form and the quotation editor price with. */
 export type BookingFormOptions = {
@@ -107,6 +108,8 @@ export type BookingDetail = BookingSummary & {
   /** The trip's destination gives the visa on arrival: visa and insurance default to not required. */
   visa_on_arrival: boolean
   /** E-tickets per traveller, voided ones included. */
+  /** Suppliers' confirmation vouchers for this booking (docs/booking-vouchers.md); null without vouchers.view. */
+  vouchers: Voucher[] | null
   tickets: { id: number; travellerId: number; airline: string; pnr: string; ticketNumber: string; route: string | null; departsOn: string | null; hasFile: boolean; issuedAt: string; issuedBy: string | null; voidedAt: string | null; voidedBy: string | null; voidReason: string | null }[]
   /** The customer's rating after the trip, from the portal. */
   nps: { score: number; comment: string | null; created_at: string } | null
@@ -151,7 +154,7 @@ export type BookingDetail = BookingSummary & {
     created_at: string
     settled_at: string | null
   }[]
-  actions: Record<'edit_quote' | 'apply_coupon' | 'remove_coupon' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets', boolean>
+  actions: Record<'edit_quote' | 'apply_coupon' | 'remove_coupon' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets' | 'upload_voucher', boolean>
   quote_inputs: {
     list_price: number
     grid: PriceGrid | null

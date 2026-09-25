@@ -28,6 +28,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'bookings.update' => ['bookings', 'বুকিং সম্পাদনা', 'Edit bookings'],
         'bookings.delete' => ['bookings', 'বুকিং মুছে ফেলা', 'Delete bookings'],
         'records.assign' => ['bookings', 'বুকিং, গ্রাহক ও ইনকোয়্যারির দায়িত্ব বদল', 'Reassign bookings, customers and enquiries'],
+        // Suppliers' confirmation vouchers and contracts (docs/booking-vouchers.md): operations upload them, sales and
+        // accounts read them (decided 2026-09-25).
+        'vouchers.view' => ['bookings', 'কনফার্মেশন ভাউচার দেখা ও ডাউনলোড', 'View and download confirmation vouchers'],
+        'vouchers.manage' => ['bookings', 'কনফার্মেশন ভাউচার আপলোড ও আর্কাইভ', 'Upload and archive confirmation vouchers'],
         'quotations.view_all' => ['quotations', 'সব কোটেশন দেখা', 'View all quotations'],
         'quotations.view_own' => ['quotations', 'নিজের কোটেশন দেখা', 'View own quotations'],
         'quotations.manage' => ['quotations', 'কোটেশন তৈরি ও পাঠানো', 'Create and send quotations'],
@@ -90,21 +94,24 @@ class RolesAndPermissionsSeeder extends Seeder
             'staff_documents.view', 'staff_documents.manage', 'attendance.view_all', 'attendance.manage', 'payroll.manage',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
             'notifications.send', 'notifications.manage', 'support.manage', 'coupons.view', 'coupons.manage',
+            'vouchers.view', 'vouchers.manage',
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
             'quotations.view_own', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage', 'hotel_inquiries.view', 'hotel_inquiries.manage',
             'commission.view_own', 'reports.view', 'reports.export', 'notifications.send', 'support.manage',
+            'vouchers.view',
         ]],
         'accountant' => ['হিসাবরক্ষক', 'Accountant', [
             'bookings.view_all', 'quotations.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',
             'ledger.view_company_balance', 'accounts.view', 'accounts.manage', 'journal.post',
             'commission.view_all', 'reports.view', 'reports.export', 'reports.profit_loss', 'support.manage',
-            'attendance.view_all', 'payroll.view', 'coupons.view',
+            'attendance.view_all', 'payroll.view', 'coupons.view', 'vouchers.view',
         ]],
         'tour_operator' => ['ট্যুর অপারেটর', 'Tour operator', [
             'bookings.view_all', 'bookings.create', 'bookings.update', 'customers.view', 'packages.manage', 'pricing.manage',
             'commission.view_own', 'reports.view', 'reports.export', 'support.manage',
+            'vouchers.view', 'vouchers.manage',
         ]],
     ];
 

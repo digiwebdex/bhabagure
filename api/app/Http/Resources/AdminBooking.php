@@ -3,10 +3,12 @@
 namespace App\Http\Resources;
 
 use App\Enums\BookingStatus;
+use App\Http\Controllers\Api\V1\Admin\BookingVoucherController;
 use App\Models\Booking;
 use App\Models\BookingLine;
 use App\Models\BookingTicket;
 use App\Models\BookingTraveller;
+use App\Models\BookingVoucher;
 use App\Models\Invoice;
 use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
@@ -130,6 +132,13 @@ final class AdminBooking
                 'issuedBy' => $ticket->issuedBy?->name, 'voidedAt' => $ticket->voided_at?->toIso8601String(),
                 'voidedBy' => $ticket->voidedBy?->name, 'voidReason' => $ticket->void_reason,
             ])->values(),
+            // Suppliers' confirmation vouchers for this booking, not archived, soonest first (docs/booking-vouchers.md);
+            // null for staff who may not see vouchers.
+            'vouchers' => $viewer->canAny(['vouchers.view', 'vouchers.manage'])
+                ? BookingVoucher::query()->where('booking_id', $booking->id)->whereNull('archived_at')->with(['booking', 'uploadedBy'])
+                    ->orderByRaw('service_date IS NULL')->orderBy('service_date')->orderBy('id')->get()
+                    ->map(BookingVoucherController::row(...))->values()
+                : null,
             'invoices' => $invoices->map(fn (Invoice $invoice) => [
                 'id' => $invoice->id, 'invoice_number' => $invoice->invoice_number, 'status' => $invoice->status,
                 'issued_on' => $invoice->issued_on?->toDateString(), 'total_amount' => Money::toNumber($invoice->total_amount),
@@ -174,6 +183,7 @@ final class AdminBooking
                 // Verify or reject portal uploads, and set visa and insurance (DocumentReviewController, same rule).
                 'review_documents' => $can('bookings.update'),
                 'manage_tickets' => $can('bookings.update'),
+                'upload_voucher' => $viewer->can('vouchers.manage'),
             ],
             // Inputs for @bhabaghure/pricing on the draft-invoice controls — the same the server recomputes with.
             'quote_inputs' => [

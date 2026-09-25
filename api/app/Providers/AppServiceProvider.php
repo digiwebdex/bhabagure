@@ -15,6 +15,7 @@ use App\Models\AuditLog;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Booking;
+use App\Models\BookingVoucher;
 use App\Models\Client;
 use App\Models\Coupon;
 use App\Models\CreatorVideo;
@@ -173,6 +174,7 @@ class AppServiceProvider extends ServiceProvider
             'airline_partner' => AirlinePartner::class,
             'offer_banner' => OfferBanner::class,
             'tour_photo' => TourPhoto::class,
+            'booking_voucher' => BookingVoucher::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,

@@ -15,6 +15,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'bookings', path: '/bookings', icon: 'B', permissions: ['bookings.view_all', 'bookings.view_own'], badge: 'bookings' },
       { key: 'quotations', path: '/quotations', icon: 'Q', permissions: ['quotations.view_all', 'quotations.view_own'], badge: 'quotations' },
       { key: 'customers', path: '/customers', icon: 'C', permissions: ['customers.view'] },
+      // Suppliers' confirmation vouchers and contracts for upcoming bookings (docs/booking-vouchers.md).
+      { key: 'vouchers', path: '/vouchers', icon: '🗎', permissions: ['vouchers.view', 'vouchers.manage'] },
       // Brochure and visa PDFs downloaded from the website, to follow up (Phase 8 §4.E).
       { key: 'downloads', path: '/downloads', icon: '↓', permissions: ['downloads.view'] },
       { key: 'notifications', path: '/notifications', icon: 'N', permissions: ['notifications.manage'] },

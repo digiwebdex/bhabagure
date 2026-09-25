@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Admin\BlogPostController;
 use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\BookingController;
 use App\Http\Controllers\Api\V1\Admin\BookingTicketController;
+use App\Http\Controllers\Api\V1\Admin\BookingVoucherController;
 use App\Http\Controllers\Api\V1\Admin\CatalogueController;
 use App\Http\Controllers\Api\V1\Admin\CouponController;
 use App\Http\Controllers\Api\V1\Admin\CouponReportController;
@@ -570,6 +571,17 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['confirm', 'complete', 'cancel']);
             Route::post('invoices/{invoiceId}/void', 'voidInvoice')->whereNumber('invoiceId');
             Route::post('transactions/{transactionId}/reverse', 'reversePayment')->whereNumber('transactionId');
+        });
+
+        // Suppliers' confirmation vouchers (docs/booking-vouchers.md). Reading and opening need vouchers.view or
+        // vouchers.manage; uploading and archiving vouchers.manage.
+        Route::middleware('permission:vouchers.view|vouchers.manage,staff')->controller(BookingVoucherController::class)->group(function () {
+            Route::get('vouchers', 'index');
+            Route::get('vouchers/{id}/file', 'file')->whereNumber('id');
+            Route::middleware('permission:vouchers.manage,staff')->group(function () {
+                Route::post('vouchers', 'store');
+                Route::post('vouchers/{id}/archive', 'archive')->whereNumber('id');
+            });
         });
 
         // Coupons and the coupon report (docs/coupons.md §2.6). Reading needs coupons.view or coupons.manage; every change

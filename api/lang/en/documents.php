@@ -5,4 +5,6 @@ return [
     'not_waiting' => 'Only an upload waiting for review can be verified or rejected.',
     'passport_on_file' => 'A passport number is already on file for this traveller. Contact us if it needs changing.',
     'ticket_voided' => 'This e-ticket is already void.',
+    'voucher_archived' => 'This voucher is already archived.',
+    'voucher_booking_unknown' => 'No booking has that number.',
 ];

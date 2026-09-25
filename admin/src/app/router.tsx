@@ -48,6 +48,7 @@ const CreatorPage = page(() => import('../features/cms/creator/CreatorPage'), 'C
 const AirlinePartnersPage = page(() => import('../features/cms/partners/AirlinePartnersPage'), 'AirlinePartnersPage')
 const OfferBannersPage = page(() => import('../features/cms/offers/OfferBannersPage'), 'OfferBannersPage')
 const TourPhotosPage = page(() => import('../features/cms/tour-photos/TourPhotosPage'), 'TourPhotosPage')
+const VouchersPage = page(() => import('../features/vouchers/VouchersPage'), 'VouchersPage')
 const VisaServicesPage = page(() => import('../features/cms/visas/VisaServicesPage'), 'VisaServicesPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
@@ -105,6 +106,7 @@ export const router = createBrowserRouter([
       { path: 'quotations', element: <Require permissions={quotations}><QuotationsPage /></Require> },
       { path: 'quotations/:id', element: <Require permissions={quotations}><QuotationDetailPage /></Require> },
       { path: 'customers', element: <Require permissions={['customers.view']}><CustomersPage /></Require> },
+      { path: 'vouchers', element: <Require permissions={['vouchers.view', 'vouchers.manage']}><VouchersPage /></Require> },
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'downloads', element: <Require permissions={['downloads.view']}><DownloadsPage /></Require> },
       { path: 'invoices', element: <Require permissions={['payments.view']}><InvoicesPage /></Require> },

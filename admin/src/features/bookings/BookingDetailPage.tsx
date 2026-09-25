@@ -21,6 +21,7 @@ import { ChannelGroups } from '../notifications/MessageList'
 import { bookingActions, useBooking, useBookingAction, type BookingDetail } from './api'
 import { BookingStatusBadge, PaymentBadge } from './badges'
 import { TicketsCard } from './TicketsCard'
+import { VouchersCard } from './VouchersCard'
 import { TravellerEditDialog } from './TravellerEditDialog'
 
 export function BookingDetailPage() {
@@ -88,6 +89,7 @@ function BookingView({ booking }: { booking: BookingDetail }) {
           <PaymentsCard booking={booking} />
           <TravellersCard booking={booking} />
           <TicketsCard booking={booking} />
+          <VouchersCard booking={booking} />
           <MessagesCard booking={booking} />
           <AttemptsCard booking={booking} />
         </div>

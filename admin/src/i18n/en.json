@@ -289,6 +289,7 @@
       "dashboard": "Dashboard",
       "bookings": "Bookings",
       "customers": "Customers & leads",
+      "vouchers": "Vouchers",
       "packages": "Packages",
       "pricing": "Pricing & add-ons",
       "posts": "Blog",
@@ -3145,6 +3146,60 @@
       "inactive": "Switched off",
       "archived": "Archived"
     }
+  },
+  "vouchers": {
+    "title": "Confirmation vouchers",
+    "subtitle": "Suppliers’ confirmation vouchers and contracts for upcoming bookings",
+    "new": "+ Upload voucher",
+    "add": "+ Upload",
+    "cardTitle": "Confirmation vouchers",
+    "none": "No voucher uploaded for this booking yet.",
+    "allForBooking": "All vouchers for this booking →",
+    "view": "Show",
+    "views": {
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "archived": "Archived"
+    },
+    "search": "Search by title, company, file name or booking number",
+    "columns": {
+      "title": "Voucher",
+      "booking": "Booking",
+      "date": "Service date",
+      "uploaded": "Uploaded",
+      "archived": "Archived"
+    },
+    "noDate": "No date",
+    "empty": {
+      "upcoming": "No upcoming vouchers",
+      "past": "No past vouchers",
+      "archived": "Nothing archived"
+    },
+    "emptyFiltered": "No voucher matches",
+    "emptyNote": "Upload a hotel, transport or tour supplier’s confirmation voucher or contract as a PDF or JPG; it lists here by its service date.",
+    "open": "Open",
+    "openNamed": "Open {{title}}",
+    "download": "Download",
+    "downloadNamed": "Download {{title}}",
+    "openFailed": "The file couldn’t be opened. Try again.",
+    "archive": "Archive",
+    "noManagePermission": "Only admins and tour operators can archive vouchers",
+    "uploadTitle": "Upload a confirmation voucher",
+    "titleField": "Title",
+    "titleHint": "What it confirms, or the company: e.g. “Hotel Himalaya — Kathmandu, 3 rooms, 12–15 Oct”.",
+    "booking": "Booking number (optional)",
+    "bookingHint": "Links it to the booking, where it shows too.",
+    "serviceDate": "Service date (optional)",
+    "serviceDateHint": "Check-in or travel date: upcoming vouchers sort by it.",
+    "file": "File",
+    "fileHint": "PDF or JPG, up to 10 MB.",
+    "tooBig": "This file is larger than 10 MB.",
+    "upload": "Upload",
+    "uploaded": "Voucher uploaded",
+    "archiveTitle": "Archive “{{title}}”",
+    "archiveNote": "It leaves the list but is kept, with who archived it and why; it stays under Archived and can still be opened.",
+    "archiveReason": "Reason",
+    "archived": "Voucher archived"
   },
   "couponReport": {
     "title": "Coupon report",
