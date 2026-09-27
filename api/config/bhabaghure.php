@@ -119,6 +119,16 @@ return [
         'email' => [
             'enabled' => (bool) env('NOTIFICATIONS_EMAIL', true),
         ],
+        // The admin inbox (docs/admin-inbox.md): the WaSender session's chats read and answered by staff. Its own
+        // switch, apart from `whatsapp.mode`: staff can reply while the automated messages stay off.
+        'inbox' => [
+            'whatsapp' => (bool) env('INBOX_WHATSAPP', false),
+            // Messenger Platform (Graph API). The Page token and App secret are entered in Admin → Inbox → Settings and
+            // kept encrypted; only the API version is configuration.
+            'graph_url' => env('META_GRAPH_URL', 'https://graph.facebook.com/v21.0'),
+            // Photos, PDFs and voice notes staff attach or customers send, in kilobytes.
+            'max_attachment_kb' => 16384,
+        ],
         // SMS through bulksmsbd.net (docs/phase-4-whatsapp.md §10): a fallback for money-critical messages WhatsApp
         // couldn't deliver, and the departure-day message. Never the review request, invoice PDFs or staff alerts.
         'sms' => [

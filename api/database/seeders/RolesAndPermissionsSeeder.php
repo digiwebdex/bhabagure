@@ -78,6 +78,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'notifications.send' => ['communication', 'গ্রাহককে WhatsApp বার্তা পাঠানো', 'Send WhatsApp messages to customers'],
         'notifications.manage' => ['communication', 'নোটিফিকেশন ও টেমপ্লেট ব্যবস্থাপনা', 'Manage notifications and templates'],
         'support.manage' => ['communication', 'গ্রাহকের সাপোর্ট টিকেটের উত্তর', 'Answer customer support tickets'],
+        'inbox.view' => ['communication', 'ইনবক্সে গ্রাহকের WhatsApp ও Messenger বার্তা দেখা', 'Read customers’ WhatsApp and Messenger messages in the inbox'],
+        'inbox.reply' => ['communication', 'ইনবক্স থেকে উত্তর দেওয়া', 'Reply from the inbox'],
+        'inbox.manage' => ['communication', 'ইনবক্সের সেটিংস ও তৈরি উত্তর ব্যবস্থাপনা', 'Manage inbox settings and canned replies'],
         'system.audit_view' => ['system', 'অডিট লগ দেখা', 'View audit log'],
         'system.roles_manage' => ['system', 'রোল ও অনুমতি ব্যবস্থাপনা', 'Manage roles and permissions'],
     ];
@@ -94,13 +97,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'staff_documents.view', 'staff_documents.manage', 'attendance.view_all', 'attendance.manage', 'payroll.manage',
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
             'notifications.send', 'notifications.manage', 'support.manage', 'coupons.view', 'coupons.manage',
-            'vouchers.view', 'vouchers.manage',
+            'vouchers.view', 'vouchers.manage', 'inbox.view', 'inbox.reply', 'inbox.manage',
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
             'quotations.view_own', 'quotations.manage', 'quotations.convert', 'air_inquiries.view', 'air_inquiries.manage', 'hotel_inquiries.view', 'hotel_inquiries.manage',
             'commission.view_own', 'reports.view', 'reports.export', 'notifications.send', 'support.manage',
-            'vouchers.view',
+            'vouchers.view', 'inbox.view', 'inbox.reply',
         ]],
         'accountant' => ['হিসাবরক্ষক', 'Accountant', [
             'bookings.view_all', 'quotations.view_all', 'customers.view', 'payments.view', 'invoices.manage', 'transactions.create_manual',

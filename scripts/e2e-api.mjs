@@ -16,6 +16,7 @@ export const API_DIR = findApiDir(process.cwd())
 export const E2E_API_PORT = 8001
 export const E2E_API_URL = `http://localhost:${E2E_API_PORT}`
 export const E2E_REVALIDATE_SECRET = 'e2e-revalidate-secret'
+export const E2E_WASENDER_SECRET = 'e2e-wasender-secret'
 
 /** Runs artisan against bhabaghure_e2e (APP_ENV=e2e loads api/.env.e2e). */
 export function artisan(...args) {
@@ -61,6 +62,13 @@ export function writeE2eEnv({ origins, webUrl = '', portalUrl = '', adminUrl = '
     MAIL_MAILER: 'log',
     // SMS through its stand-in too (api/storage/logs/sms-fake.log).
     BULKSMSBD_MODE: 'fake',
+    // The admin inbox (docs/admin-inbox.md): tests post WaSender's webhooks themselves. WaSender and Meta point at a
+    // closed local port, so a reply stays "sending" and a Page token is refused — nothing leaves the machine.
+    INBOX_WHATSAPP: 'true',
+    WASENDER_API_KEY: 'e2e-session-key',
+    WASENDER_WEBHOOK_SECRET: E2E_WASENDER_SECRET,
+    WASENDER_BASE_URL: 'http://127.0.0.1:9/api',
+    META_GRAPH_URL: 'http://127.0.0.1:9',
   }
   const lines = base
     .split(/\r?\n/)

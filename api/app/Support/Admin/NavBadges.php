@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\InquiryType;
 use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
+use App\Http\Controllers\Api\V1\Admin\InboxController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
@@ -97,6 +98,13 @@ final class NavBadges
                 'path' => '/api/v1/admin/reviews/pending',
                 'filter' => [],
                 'query' => fn (Staff $staff) => Review::query()->pending(),
+            ],
+            // Customers' WhatsApp and Messenger chats with messages nobody has read (docs/admin-inbox.md). One shared inbox.
+            'inbox' => [
+                'permission' => ['inbox.view'],
+                'path' => '/api/v1/admin/inbox/conversations',
+                'filter' => ['view' => 'unread'],
+                'query' => fn (Staff $staff) => InboxController::filtered(['view' => 'unread'], $staff),
             ],
             // Staff documents expired or expiring within 30 days, for staff who aren't suspended (Phase 7 §4.2).
             'staff_documents' => [

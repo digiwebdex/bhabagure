@@ -38,6 +38,68 @@ final class WaSenderGateway implements WhatsAppGateway
         return $this->send(['to' => self::e164($to), 'text' => $caption, 'documentUrl' => $documentUrl, 'fileName' => $fileName]);
     }
 
+    /**
+     * A photo, video, voice note or document from the admin inbox (docs/admin-inbox.md): WaSender fetches it from `url`.
+     * `to` is a number or a WhatsApp address (…@s.whatsapp.net / …@lid).
+     */
+    public function sendMedia(string $to, string $kind, string $url, ?string $fileName, string $caption): SendResult
+    {
+        $field = match ($kind) {
+            'image' => 'imageUrl',
+            'video' => 'videoUrl',
+            'audio' => 'audioUrl',
+            default => 'documentUrl',
+        };
+
+        return $this->send(array_filter(['to' => self::address($to), 'text' => $caption, $field => $url, 'fileName' => $field === 'documentUrl' ? $fileName : null], fn ($v) => $v !== null && $v !== ''));
+    }
+
+    /** A text reply from the admin inbox, to a number or a WhatsApp address. */
+    public function sendTo(string $to, string $text): SendResult
+    {
+        return $this->send(['to' => self::address($to), 'text' => $text]);
+    }
+
+    /**
+     * A one-hour link to an incoming photo, video, voice note or document, from the webhook's own message object.
+     *
+     * @param  array<string, mixed>  $message  {key: {id}, message: {imageMessage: {...}}}
+     */
+    public function decryptMedia(array $message): ?string
+    {
+        try {
+            $response = $this->client()->post('/decrypt-media', ['data' => ['messages' => $message]]);
+        } catch (ConnectionException) {
+            return null;
+        }
+        $url = $response->json('publicUrl') ?? $response->json('data.publicUrl');
+
+        return $response->successful() && is_string($url) ? $url : null;
+    }
+
+    /** Blue ticks on the customer's phone for a message staff have read. */
+    public function markRead(string $messageId, string $remoteJid): bool
+    {
+        try {
+            return $this->client()->post('/messages/read', ['key' => ['id' => $messageId, 'remoteJid' => $remoteJid, 'fromMe' => false]])->successful();
+        } catch (ConnectionException) {
+            return false;
+        }
+    }
+
+    /** The phone number behind WhatsApp's privacy id (…@lid), as digits; null when WhatsApp won't say. */
+    public function phoneFromLid(string $lid): ?string
+    {
+        try {
+            $response = $this->client()->get('/pn-from-lid/'.rawurlencode($lid));
+        } catch (ConnectionException) {
+            return null;
+        }
+        $pn = (string) $response->json('data.pn', '');
+
+        return $response->successful() && preg_match('/^(\d{8,15})@/', $pn, $m) === 1 ? $m[1] : null;
+    }
+
     public function sessionStatus(): string
     {
         try {
@@ -131,6 +193,12 @@ final class WaSenderGateway implements WhatsAppGateway
     public static function meansNotOnWhatsApp(string $message): bool
     {
         return preg_match('/not (on|registered (on|with)) whatsapp|invalid (whatsapp )?number|number jid|does not exist on whatsapp/i', $message) === 1;
+    }
+
+    /** A number in E.164, or a WhatsApp address (…@s.whatsapp.net, …@lid) as it is. */
+    public static function address(string $to): string
+    {
+        return str_contains($to, '@') ? $to : self::e164($to);
     }
 
     /** 8801711223344 → +8801711223344 (WaSender takes E.164). */

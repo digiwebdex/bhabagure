@@ -49,6 +49,8 @@ const AirlinePartnersPage = page(() => import('../features/cms/partners/AirlineP
 const OfferBannersPage = page(() => import('../features/cms/offers/OfferBannersPage'), 'OfferBannersPage')
 const TourPhotosPage = page(() => import('../features/cms/tour-photos/TourPhotosPage'), 'TourPhotosPage')
 const VouchersPage = page(() => import('../features/vouchers/VouchersPage'), 'VouchersPage')
+const InboxPage = page(() => import('../features/inbox/InboxPage'), 'InboxPage')
+const InboxSettingsPage = page(() => import('../features/inbox/InboxSettingsPage'), 'InboxSettingsPage')
 const VisaServicesPage = page(() => import('../features/cms/visas/VisaServicesPage'), 'VisaServicesPage')
 const MediaLibraryPage = page(() => import('../features/cms/media/MediaLibraryPage'), 'MediaLibraryPage')
 const NotificationsPage = page(() => import('../features/notifications/NotificationsPage'), 'NotificationsPage')
@@ -120,6 +122,10 @@ export const router = createBrowserRouter([
       { path: 'air-ticketing', element: <Require permissions={['air_inquiries.view']}><AirTicketingPage /></Require> },
       { path: 'hotel-requests', element: <Require permissions={['hotel_inquiries.view']}><HotelRequestsPage /></Require> },
       { path: 'documents', element: <Require permissions={bookings}><DocumentsPage /></Require> },
+      // Customers' WhatsApp and Messenger chats (docs/admin-inbox.md).
+      { path: 'inbox', element: <Require permissions={['inbox.view']}><InboxPage /></Require> },
+      { path: 'inbox/settings', element: <Require permissions={['inbox.manage']}><InboxSettingsPage /></Require> },
+      { path: 'inbox/:id', element: <Require permissions={['inbox.view']}><InboxPage /></Require> },
       { path: 'support', element: <Require permissions={['support.manage']}><SupportPage /></Require> },
       { path: 'support/:id', element: <Require permissions={['support.manage']}><SupportTicketPage /></Require> },
       { path: 'transactions', element: <Require permissions={['payments.view']}><TransactionsPage /></Require> },

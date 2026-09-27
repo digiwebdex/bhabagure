@@ -33,7 +33,11 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
   // Portal support tickets (docs/phase-6-customer-portal.md §3.5); the design's Communication group.
   {
     key: 'communication',
-    items: [{ key: 'support', path: '/support', icon: 'M', permissions: ['support.manage'], badge: 'support' }],
+    items: [
+      // Customers' WhatsApp and Messenger chats, read and answered here (docs/admin-inbox.md).
+      { key: 'inbox', path: '/inbox', icon: '✉', permissions: ['inbox.view'], badge: 'inbox' },
+      { key: 'support', path: '/support', icon: 'M', permissions: ['support.manage'], badge: 'support' },
+    ],
   },
   // Money: the cash book with its invoices and deals, then the books behind them (docs/phase-9-accounts.md).
   {

@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * WaSenderAPI webhook events (docs/phase-4-whatsapp.md §6): delivery ticks, the session's connection status, and STOP /
- * START replies. Message text is read only to detect those words and is never stored or logged.
+ * START replies. Here the text is read only to detect those words; with the inbox on, WhatsAppInbox stores the chat
+ * (docs/admin-inbox.md).
  */
 final class WaSenderWebhook
 {
@@ -168,12 +169,14 @@ final class WaSenderWebhook
             }
             $text = mb_strtolower(trim((string) (Arr::get($message, 'message.conversation') ?? Arr::get($message, 'messageBody') ?? Arr::get($message, 'message.extendedTextMessage.text') ?? '')));
             $word = in_array($text, self::STOP, true) ? 'stop' : (in_array($text, self::START, true) ? 'start' : null);
+            // remoteJid may be WhatsApp's privacy id (…@lid); the number is then in key.cleanedSenderPn.
             $jid = (string) (Arr::get($message, 'key.remoteJid') ?? Arr::get($message, 'remoteJid') ?? '');
-            if ($word === null || ! preg_match('/^(\d{10,15})@/', $jid, $m)) {
+            $cleaned = (string) Arr::get($message, 'key.cleanedSenderPn', '');
+            $phone = preg_match('/^\d{10,15}$/', $cleaned) === 1 ? $cleaned : (preg_match('/^(\d{10,15})@s\.whatsapp\.net$/', $jid, $m) === 1 ? $m[1] : null);
+            if ($word === null || $phone === null) {
                 continue;
             }
 
-            $phone = $m[1];
             $customers = Customer::query()->where('phone', $phone)->get();
             foreach ($customers as $customer) {
                 $optedOut = $word === 'stop';

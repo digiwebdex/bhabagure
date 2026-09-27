@@ -6,6 +6,7 @@ use App\Enums\InquiryType;
 use App\Enums\StaffStatus;
 use App\Models\Booking;
 use App\Models\BookingTraveller;
+use App\Models\Conversation;
 use App\Models\Customer;
 use App\Models\Inquiry;
 use App\Models\Quotation;
@@ -118,13 +119,22 @@ class NavCountsContractTest extends TestCase
         $review()->forceFill(['reviewed_at' => now(), 'rejected_at' => now()])->save();
         $review(['source' => Review::STAFF]);
 
+        // The inbox (docs/admin-inbox.md): two chats with unread messages; a read one and a closed one don't count.
+        $chat = fn (string $id, int $unread, string $status = Conversation::OPEN) => Conversation::query()->create([
+            'channel' => Conversation::WHATSAPP, 'external_id' => $id, 'phone' => $id, 'status' => $status, 'unread_count' => $unread, 'last_message_at' => now(),
+        ]);
+        $unreadChat = $chat('8801711000901', 2);
+        $chat('8801711000902', 1);
+        $chat('8801711000903', 0);
+        $chat('8801711000904', 3, Conversation::CLOSED);
+
         $this->assertContract([
-            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'staff_documents' => 2],
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'staff_documents' => 2],
+            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'inbox' => 2, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'inbox' => 2, 'staff_documents' => 2],
             'accountant' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'support' => 1],
             'tour_operator' => ['bookings' => 4, 'documents' => 2, 'support' => 1],
-            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1],
-            'agent_b' => ['bookings' => 3, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 1],
+            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1, 'inbox' => 2],
+            'agent_b' => ['bookings' => 3, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 1, 'inbox' => 2],
             'cms_only' => [],
         ]);
 
@@ -132,9 +142,9 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/bookings/{$pool1->id}/claim")->assertOk();
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/air-inquiries/{$stalePool->id}/claim")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'staff_documents' => 2],
-            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1],
-            'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'hotel_inquiries' => 1, 'support' => 1],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'inbox' => 2, 'staff_documents' => 2],
+            'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1, 'inbox' => 2],
+            'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'hotel_inquiries' => 1, 'support' => 1, 'inbox' => 2],
         ]);
 
         // B quotes their stale enquiry and withdraws their expiring quotation; a pool booking is cancelled; an admin
@@ -151,10 +161,11 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bonus-withdrawals/{$pendingBonus->id}/reject", ['note' => 'Next month'])->assertOk();
         $this->assertSame('approved', $approvedBonus->fresh()->status);
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/reviews/{$waitingReview->id}/approve")->assertOk();
+        $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/inbox/conversations/{$unreadChat->id}/read")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'reviews' => 1, 'staff_documents' => 1],
-            'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 0],
-            'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'hotel_inquiries' => 1, 'support' => 0],
+            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'reviews' => 1, 'inbox' => 1, 'staff_documents' => 1],
+            'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 0, 'inbox' => 1],
+            'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'hotel_inquiries' => 1, 'support' => 0, 'inbox' => 1],
             'tour_operator' => ['bookings' => 3, 'documents' => 2, 'support' => 0],
         ]);
     }

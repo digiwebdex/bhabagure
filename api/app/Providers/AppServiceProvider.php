@@ -16,7 +16,9 @@ use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Booking;
 use App\Models\BookingVoucher;
+use App\Models\CannedReply;
 use App\Models\Client;
+use App\Models\Conversation;
 use App\Models\Coupon;
 use App\Models\CreatorVideo;
 use App\Models\Customer;
@@ -175,6 +177,8 @@ class AppServiceProvider extends ServiceProvider
             'offer_banner' => OfferBanner::class,
             'tour_photo' => TourPhoto::class,
             'booking_voucher' => BookingVoucher::class,
+            'conversation' => Conversation::class,
+            'canned_reply' => CannedReply::class,
             'media' => Media::class,
             'site_setting' => SiteSetting::class,
             'audit_log' => AuditLog::class,
@@ -256,6 +260,9 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('webhooks', fn (Request $request) => Limit::perMinute(600)->by('webhooks|'.$request->ip()));
+
+        // Inbox replies per staff member: a person typing, never a bulk sender on the WhatsApp number (docs/admin-inbox.md).
+        RateLimiter::for('inbox-replies', fn (Request $request) => Limit::perMinute(20)->by('inbox|'.($request->user('staff')?->id ?? $request->ip())));
 
         // Short invoice links from SMS: a customer opens one a few times; guessing codes needs millions of tries.
         RateLimiter::for('short-links', fn (Request $request) => [

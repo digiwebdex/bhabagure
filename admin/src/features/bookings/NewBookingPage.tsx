@@ -2,7 +2,7 @@ import { defaultHotelCategory, gridCategories, groupTourRoomPrices, invoiceTotal
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 
 import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
@@ -35,9 +35,11 @@ export function NewBookingPage() {
   const toast = useToast()
   const options = useQuery({ queryKey: ['booking-options'], queryFn: ({ signal }) => api.get<Data<Options>>('admin/bookings/options', signal).then((r) => r.data) })
 
-  const [mode, setMode] = useState<'new' | 'existing'>('new')
+  // "Start booking" from an inbox chat (docs/admin-inbox.md) arrives with its customer already picked.
+  const arrived = (useLocation().state as { customer?: CustomerHit } | null)?.customer ?? null
+  const [mode, setMode] = useState<'new' | 'existing'>(arrived ? 'existing' : 'new')
   const [customer, setCustomer] = useState({ name: '', phone: '', email: '', source: 'walk_in' })
-  const [picked, setPicked] = useState<CustomerHit | null>(null)
+  const [picked, setPicked] = useState<CustomerHit | null>(arrived)
   const [lookup, setLookup] = useState('')
   const [slug, setSlug] = useState('')
   const [travelDate, setTravelDate] = useState('')

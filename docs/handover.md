@@ -675,7 +675,8 @@ So nobody is surprised. None of these exists in v1.0 unless a line says otherwis
 - **Operations:** no departure calendar, itinerary builder, manifest or rooming list, on-tour expenses, or departure
   checklist.
 - **Messaging and marketing:**
-  - no unified inbox: customers' WhatsApp, Facebook and SMS replies aren't collected in the admin;
+  - the inbox (docs/admin-inbox.md) has WhatsApp and Facebook Messenger; SMS replies can't be received with
+    bulksmsbd.net, and older WhatsApp chats (before 2026-09-27) stay on the phone;
   - no broadcasts or campaigns;
   - newsletter sign-ups are stored, but nothing sends a newsletter and the admin has no subscriber list;
   - Facebook leads without a phone number can't be entered.

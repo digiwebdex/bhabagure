@@ -33,9 +33,9 @@ use Throwable;
  */
 final class NotificationDelivery
 {
-    private const LAST_SEND_KEY = 'bhabaghure:whatsapp:next-send-at';
+    public const LAST_SEND_KEY = 'bhabaghure:whatsapp:next-send-at';
 
-    private const LOCK_KEY = 'bhabaghure:whatsapp:send';
+    public const LOCK_KEY = 'bhabaghure:whatsapp:send';
 
     /** WhatsApp can't reach anyone right now: a money-critical message goes by SMS instead of waiting (§10). */
     private const WHATSAPP_UNAVAILABLE = ['whatsapp_off', 'whatsapp_not_configured', 'notifications_number_not_published', 'session_disconnected', 'invalid_api_key', 'subscription_required'];
