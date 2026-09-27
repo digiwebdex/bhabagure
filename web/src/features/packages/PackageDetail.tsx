@@ -15,12 +15,10 @@ import { useBooking } from '@/state/booking';
 import { useSiteUi } from '@/state/site-ui';
 import { useTripSearch } from '@/state/trip-search';
 
+import { activeSize, groupSizes } from './group-sizes';
 import { packageLabels } from './package-labels';
 import { PhotoGallery } from './PhotoGallery';
 import { PriceTable } from './PriceTable';
-
-/** Group-size chips shown above the stepper: 1 · 2 · 4 · 6 · 10+. */
-const SLAB_CHIPS = [1, 2, 4, 6, 10] as const;
 
 /** Eyebrow and title — the modal puts these in its header, the package page above the body. */
 export function PackageDetailHeading({ pkg, as: Heading = 'h2', id }: { pkg: PackageView; as?: 'h1' | 'h2'; id?: string }) {
@@ -73,8 +71,9 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
         ? t('slabNoteTwo')
         : t('slabNoteGroup', { paxText });
 
-  // A chip is "current" when the stepper sits inside its tier's range.
-  const activeChip = [...SLAB_CHIPS].reverse().find((min) => pax >= min && (min !== 2 || pax === 2) && (min !== 1 || pax === 1));
+  // Group-size chips above the stepper: the price table's sizes, else the discount steps (docs/customized-trip-group-sizes.md).
+  const chips = groupSizes(pkg);
+  const activeChip = activeSize(pkg, chips, pax);
 
   return (
     <div className="flex flex-col gap-6.5">
@@ -125,9 +124,9 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
           <GroupTourPrices pkg={pkg} groupTour={pkg.groupTour} />
         ) : (
         <div className="flex flex-wrap gap-1.75">
-          {SLAB_CHIPS.map((min, i) => {
+          {chips.map((min, i) => {
             const active = activeChip === min;
-            const label = i === SLAB_CHIPS.length - 1 ? t('slabChipPlus', { paxText: f.number(min) }) : t('slabChip', { pax: min, paxText: f.number(min) });
+            const label = i === chips.length - 1 ? t('slabChipPlus', { paxText: f.number(min) }) : t('slabChip', { pax: min, paxText: f.number(min) });
             return (
               <button
                 key={min}

@@ -640,6 +640,53 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('a customized trip: the booking form asks how many travel, each size with its price per person (docs/customized-trip-group-sizes.md)', async ({ page, request }) => {
+    const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages'] } });
+    const grid = JSON.stringify({ 3: { 1: 44700, 2: 39900, 4: 33000, 6: 29000, 8: 27500, 10: 26000, 12: 24500 } });
+    artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${thai}')->update(['price_grid' => '${grid}', 'regular_price' => 39900, 'sale_price' => null]); echo 'ok';`);
+    try {
+      expect((await refresh()).status()).toBe(200);
+      const card = page.locator('#packages article').filter({ hasText: 'THAILAND BUDGET ESCAPE' });
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return card.innerText();
+      }, { timeout: 20_000 }).toContain('Customized Trip');
+
+      // The package page: 1 · 2 · 4 · 6 · 8 · 10 · 12+.
+      await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
+      const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
+      await expect(detail.getByRole('button', { name: /^8 people/ })).toContainText('৳ 27,500');
+      await expect(detail.getByRole('button', { name: /^12\+ people/ })).toContainText('৳ 24,500');
+      await detail.getByRole('button', { name: 'Close' }).first().click();
+
+      // Book now from the card: the sizes come first, each with its price per person.
+      await card.getByRole('button', { name: 'Book now' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Book online' });
+      const sizes = dialog.getByTestId('group-sizes');
+      await expect(sizes).toContainText('How many are travelling?');
+      await expect(sizes.getByRole('button')).toHaveText(['1 person৳ 44,700', '2 people৳ 39,900', '4 people৳ 33,000', '6 people৳ 29,000', '8 people৳ 27,500', '10 people৳ 26,000', '12+ people৳ 24,500']);
+      await sizes.getByRole('button', { name: /^8 people/ }).click();
+      await expect(sizes.getByRole('button', { name: /^8 people/ })).toHaveAttribute('aria-pressed', 'true');
+      await expect(dialog.getByLabel('Travellers')).toHaveValue('8');
+      // Nine pay the 8-person price: the 8 chip stays chosen.
+      await dialog.getByLabel('Travellers').fill('9');
+      await expect(sizes.getByRole('button', { name: /^8 people/ })).toHaveAttribute('aria-pressed', 'true');
+      await dialog.getByLabel('Travellers').fill('8');
+      await dialog.getByLabel('Departure date').fill(new Date(Date.now() + 63 * 86_400_000).toISOString().slice(0, 10));
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      const lead = dialog.locator('section').nth(0);
+      await lead.getByLabel('Name (as on passport)').fill('KARIM HOSSAIN');
+      await lead.getByLabel('WhatsApp number').fill(uniquePhone());
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      // 27,500 × 8 = 2,20,000 + 2% = 2,24,400.
+      await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 2,24,400');
+    } finally {
+      artisan('tinker', `--execute=App\\Models\\TourPackage::query()->where('slug', '${thai}')->update(['price_grid' => null, 'regular_price' => 30000, 'sale_price' => 27000]); echo 'ok';`);
+      await refresh();
+    }
+  });
+
   test('a group tour: a fixed price, the room changes it, and it is booked on its departures only — no calendar (docs/fixed-departure-group-tours.md)', async ({ page, request }) => {
     const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
     const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages', 'departures'] } });

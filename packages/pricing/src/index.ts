@@ -41,12 +41,14 @@ export type RoomType = 'twin' | 'triple' | 'single';
 /**
  * Hotel-category price grid (docs/phase-8-visa-quotes-pricing-downloads.md §2.1, §4.D): a package can price each hotel
  * category (basic/3-star, 4-star, 5-star) by group size instead of one price and the site-wide group discounts. Staff
- * enter a per-person price for 1, 2, 4, 6 and 10 travellers; a group between tiers pays the tier below (3 → the 2-person
- * price), 10 or more the 10-person price. A category is offered when it has at least the 1-traveller price.
+ * enter a per-person price for 1, 2, 4, 6, 8, 10 and 12 travellers (8 and 12 added 2026-09-27,
+ * docs/customized-trip-group-sizes.md); a group between tiers pays the tier below (3 → the 2-person price, 5 → the
+ * 4-person price), 12 or more the 12-person price. A size left empty falls back to the one below. A category is offered
+ * when it has at least the 1-traveller price.
  */
 export type HotelCategory = '3' | '4' | '5';
 export const HOTEL_CATEGORIES: readonly HotelCategory[] = ['3', '4', '5'];
-export const GRID_TIERS = [1, 2, 4, 6, 10] as const;
+export const GRID_TIERS = [1, 2, 4, 6, 8, 10, 12] as const;
 export type GridTier = (typeof GRID_TIERS)[number];
 export type PriceGridRow = Partial<Record<`${GridTier}`, number>>;
 export type PriceGrid = Partial<Record<HotelCategory, PriceGridRow>>;

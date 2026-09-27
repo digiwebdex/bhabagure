@@ -530,8 +530,8 @@
     "visaOnArrivalHint": "Travellers’ visa and insurance start as “not needed” on this destination’s bookings. Staff can still set either for one traveller."
   },
   "grid": {
-    "title": "Price by hotel category",
-    "note": "Per-person prices for each hotel category and group size. A group between two sizes pays the smaller size’s price (3 travellers → the 2-traveller price); 10 or more pay the 10-traveller price. A category is sold once it has the 1-traveller price. Filled in, this replaces the price above and the group discounts for this package; a single room still adds the supplement for two or more.",
+    "title": "Price by group size and hotel category",
+    "note": "Per-person prices for each group size, as in the tour brochure (2 travellers, 4, 6…). Fill only Basic / 3-star if the tour has one hotel level. A size left empty uses the smaller size’s price, and so does a group between two sizes (5 travellers → the 4-traveller price); 12 or more pay the 12-traveller price. A category is sold once it has the 1-traveller price. Filled in, this replaces the price above and the group discounts for this package; a single room still adds the supplement for two or more.",
     "hotelCategory": "Hotel category",
     "categories": {
       "3": "Basic / 3-star",

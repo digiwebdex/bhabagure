@@ -582,7 +582,9 @@
       "2": 90000,
       "4": 85000,
       "6": 80000,
-      "10": 76000
+      "8": 78000,
+      "10": 76000,
+      "12": 72000
     },
     "5": {
       "1": 150000,
@@ -590,6 +592,12 @@
     }
   },
   "gridRate": [
+    { "$comment": "8 and 12 are sizes too (docs/customized-trip-group-sizes.md)", "category": "4", "pax": 8, "expected": { "tier": 8, "perPerson": 78000 } },
+    { "category": "4", "pax": 9, "expected": { "tier": 8, "perPerson": 78000 } },
+    { "category": "4", "pax": 11, "expected": { "tier": 10, "perPerson": 76000 } },
+    { "category": "4", "pax": 12, "expected": { "tier": 12, "perPerson": 72000 } },
+    { "category": "4", "pax": 20, "expected": { "tier": 12, "perPerson": 72000 } },
+    { "category": "3", "pax": 8, "expected": { "tier": 6, "perPerson": 66000 } },
     {
       "category": "3",
       "pax": 1,

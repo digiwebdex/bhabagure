@@ -515,6 +515,8 @@
       "Payment"
     ],
     "packageHeading": "Package and travel date",
+    "sizesHeading": "How many are travelling?",
+    "sizesNote": "Price per person by group size — the more travel together, the less each pays. Another number? Type it under Travellers: it pays the smaller size’s price.",
     "package": "Package",
     "date": "Departure date",
     "travellers": "Travellers",

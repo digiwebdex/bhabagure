@@ -80,6 +80,23 @@ class PriceGridTest extends TestCase
     }
 
     #[Test]
+    public function eight_and_twelve_are_group_sizes_too_and_a_group_between_sizes_pays_the_smaller_ones_price(): void
+    {
+        // docs/customized-trip-group-sizes.md: the brochure's 2 · 4 · 6 · 8 · 10 · 12.
+        $package = TourPackage::query()->where('slug', self::MUSTANG)->sole();
+        $grid = ['3' => ['1' => 44700, '2' => 39900, '4' => 33000, '6' => 29000, '8' => 27500, '10' => 26000, '12' => 24500]];
+        $operator = $this->staff('tour_operator');
+        $detail = $this->actingAsApi($operator)->getJson("/api/v1/admin/packages/{$package->id}")->json('data');
+        $this->actingAsApi($operator)->putJson("/api/v1/admin/packages/{$package->id}", ['price_grid' => $grid] + collect($detail)->except(['price_grid'])->all())
+            ->assertOk()->assertJsonPath('data.price_grid', $grid);
+
+        // 8 travellers pay 27,500 each, 9 the same (the 8-person price), 12 or more 24,500; + 2%.
+        foreach ([8 => 224400, 9 => 252450, 14 => 349860] as $pax => $total) {
+            $this->postJson('/api/v1/public/bookings', $this->booking($pax, '3'))->assertStatus(409)->assertJsonPath('quote.total', $total);
+        }
+    }
+
+    #[Test]
     public function a_solo_traveller_in_a_single_room_pays_the_one_traveller_price_and_a_group_pays_the_supplement(): void
     {
         TourPackage::query()->where('slug', self::MUSTANG)->update(['price_grid' => json_encode(self::GRID)]);

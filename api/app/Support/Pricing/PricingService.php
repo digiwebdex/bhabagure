@@ -40,7 +40,7 @@ final class PricingService
     }
 
     /** Group sizes a hotel-category price grid is entered for (docs/phase-8-visa-quotes-pricing-downloads.md §4.D). */
-    public const GRID_TIERS = [1, 2, 4, 6, 10];
+    public const GRID_TIERS = [1, 2, 4, 6, 8, 10, 12];
 
     public const HOTEL_CATEGORIES = ['3', '4', '5'];
 

@@ -6,6 +6,7 @@ import { defaultHotelCategory, packagePerPerson, type HotelCategory, type RoomTy
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { controlClass, Field } from '@/components/ui/Field';
+import { activeSize, groupSizes } from '@/features/packages/group-sizes';
 import type { PackageDepartureView, PackageView } from '@/lib/content/views';
 import { useFormatters } from '@/lib/use-formatters';
 import { normalizeDigits, todayIso } from '@/lib/validators';
@@ -77,6 +78,45 @@ function GroupTourDate({ pkg, error }: { pkg: PackageView; error?: string }) {
   );
 }
 
+/**
+ * A customized trip is priced by how many travel (docs/customized-trip-group-sizes.md): each group size with its price
+ * per person, picked before anything else. Other counts go in the travellers box and pay the smaller size's price.
+ */
+function GroupSizePicker({ pkg }: { pkg: PackageView }) {
+  const t = useTranslations('booking');
+  const td = useTranslations('detail');
+  const f = useFormatters();
+  const { pricing } = useSiteContent();
+  const booking = useBooking();
+  const category = pkg.hotelCategories.length > 0 ? (booking.hotelCategory && pkg.hotelCategories.includes(booking.hotelCategory) ? booking.hotelCategory : defaultHotelCategory(pkg.priceGrid)) : null;
+  const sizes = groupSizes(pkg).filter((size) => size <= pricing.maxTravellers);
+  const current = activeSize(pkg, sizes, booking.pax);
+
+  return (
+    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0" data-testid="group-sizes">
+      <legend className="mb-1 text-14 font-semibold text-ink">{t('sizesHeading')}</legend>
+      <div className="flex flex-wrap gap-1.75">
+        {sizes.map((size, i) => {
+          const active = size === current;
+          return (
+            <button
+              key={size}
+              type="button"
+              aria-pressed={active}
+              onClick={() => booking.setPax(size, pricing.maxTravellers)}
+              className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-12 border-chip px-3.5 py-2 text-left ${active ? 'border-blue bg-blue-tint text-blue-deep' : 'border-hairline bg-white text-ink'}`}
+            >
+              <span className="text-12 opacity-75">{i === sizes.length - 1 ? td('slabChipPlus', { paxText: f.number(size) }) : td('slabChip', { pax: size, paxText: f.number(size) })}</span>
+              <span className="font-display text-15 font-extrabold tracking-heading">{f.bdt(packagePerPerson(pkg, size, pricing.slabs, category))}</span>
+            </button>
+          );
+        })}
+      </div>
+      <span className="text-12 text-muted">{t('sizesNote')}</span>
+    </fieldset>
+  );
+}
+
 export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; roomLabel: (room: RoomType) => string }) {
   const t = useTranslations('booking');
   const { packages, pricing, addons } = useSiteContent();
@@ -88,6 +128,7 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
     <>
       <h3 className="text-19 font-semibold">{t('packageHeading')}</h3>
       {pkg?.groupTour ? <p className="-mt-2 text-13 font-semibold text-blue-deep">{t('groupTourNote')}</p> : null}
+      {pkg && !pkg.groupTour ? <GroupSizePicker pkg={pkg} /> : null}
       <div className="grid-auto-fit-240 grid gap-3.5">
         <Field variant="form" label={t('package')}>
           <select value={booking.packageSlug} onChange={(e) => booking.setPackage(e.target.value)} className={controlClass(false, 'form')}>

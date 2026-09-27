@@ -7,7 +7,7 @@ import { useFormat } from '../../../lib/useFormat'
 
 /**
  * Hotel-category × traveller prices (docs/phase-8-visa-quotes-pricing-downloads.md §4.D). A per-person price for 1, 2, 4,
- * 6 and 10 travellers in each category the package is sold in; a group between two sizes pays the smaller size's price.
+ * 6, 8, 10 and 12 travellers in each category the package is sold in; a group between two sizes pays the smaller size's price.
  * A category is offered once it has the 1-traveller price. Filled in, the grid replaces the one price and the site-wide
  * group discounts for this package.
  */
