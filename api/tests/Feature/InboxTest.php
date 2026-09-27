@@ -71,6 +71,14 @@ class InboxTest extends TestCase
     }
 
     #[Test]
+    public function wasenders_url_check_is_answered_and_nothing_else_gets_in_without_the_secret(): void
+    {
+        $this->getJson('/api/v1/webhooks/wasender')->assertOk()->assertExactJson(['status' => 'ok']);
+        $this->postJson('/api/v1/webhooks/wasender', ['event' => 'messages.received', 'data' => ['messages' => $this->incoming('X1', 'Hi')]])->assertUnauthorized();
+        $this->assertSame(0, Conversation::query()->count());
+    }
+
+    #[Test]
     public function nothing_is_stored_while_the_inbox_is_off(): void
     {
         config(['bhabaghure.notifications.inbox.whatsapp' => false]);

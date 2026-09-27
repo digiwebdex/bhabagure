@@ -225,6 +225,8 @@ Route::prefix('v1')->group(function () {
     // ── Provider webhooks ─────────────────────────────────────────────────────────────────────────────
     // WaSenderAPI delivery status, session status and STOP replies. Refused without the shared secret.
     Route::post('webhooks/wasender', WaSenderWebhookController::class)->middleware('throttle:webhooks');
+    // WaSender's dashboard checks the URL with a plain GET before saving it; nothing is read or returned.
+    Route::get('webhooks/wasender', fn () => response()->json(['status' => 'ok']))->middleware('throttle:webhooks');
     // The Facebook Page's Messenger events for the admin inbox (docs/admin-inbox.md): GET is Meta's subscription check,
     // POST is signed with the App secret.
     Route::get('webhooks/messenger', [MessengerWebhookController::class, 'verify'])->middleware('throttle:webhooks');
