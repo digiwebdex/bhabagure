@@ -1,4 +1,4 @@
-import { defaultHotelCategory, gridCategories, invoiceTotals, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
+import { defaultHotelCategory, gridCategories, groupTourRoomPrices, invoiceTotals, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -57,8 +57,10 @@ export function NewBookingPage() {
   })
 
   const pkg = options.data?.packages.find((p) => p.slug === slug)
+  // A group tour has one fixed price and is booked on its departures only (docs/fixed-departure-group-tours.md).
+  const groupTour = pkg?.group_tour ?? null
   // A package priced by hotel category is booked in one of its categories; basic/3-star until another is picked.
-  const categories = gridCategories(pkg?.price_grid)
+  const categories = groupTour ? [] : gridCategories(pkg?.price_grid)
   const category = categories.length === 0 ? null : hotelCategory && categories.includes(hotelCategory) ? hotelCategory : defaultHotelCategory(pkg?.price_grid)
   const chosenAddons = (options.data?.addons ?? []).filter((addon) => addons.includes(addon.code))
   // A custom service: every item for each traveller, then the service charge and VAT — the API's customQuote exactly.
@@ -72,7 +74,7 @@ export function NewBookingPage() {
   const packageQuote = (() => {
     if (!pkg || !options.data) return null
     try {
-      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category })
+      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category, groupTour })
     } catch {
       return null
     }
@@ -227,6 +229,10 @@ export function NewBookingPage() {
               options={[{ value: '', label: t('common.choose') }, ...pkg.departures.map((d) => ({ value: d.date, label: d.seats_left === null ? date(d.date) : t('newBooking.departureSeats', { date: date(d.date), seats: number(d.seats_left) }) }))]}
               error={fieldError('travel_date')}
             />
+          ) : groupTour ? (
+            <p role="alert" className="m-0 text-13 text-red" data-testid="no-departures">
+              {t('newBooking.noDepartures')}
+            </p>
           ) : (
             <TextInput label={t('newBooking.travelDate')} type="date" min={todayInDhaka()} value={travelDate} onChange={setTravelDate} error={fieldError('travel_date')} />
           )}
@@ -241,7 +247,16 @@ export function NewBookingPage() {
               />
             ) : null}
             {custom ? null : (
-              <SelectInput label={t('bookings.room')} value={room} onChange={(value) => setRoom(value as RoomType)} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
+              <SelectInput
+                label={t('bookings.room')}
+                value={room}
+                onChange={(value) => setRoom(value as RoomType)}
+                // A group tour's rooms each have their own price per person.
+                options={(['twin', 'triple', 'single'] as const).map((value) => ({
+                  value,
+                  label: pkg && groupTour ? `${t(`bookings.rooms.${value}`)} · ${bdt(groupTourRoomPrices(pkg.list_price, groupTour)[value])}` : t(`bookings.rooms.${value}`),
+                }))}
+              />
             )}
             <SelectInput label={t('newBooking.messagesIn')} value={bookingLocale} onChange={(value) => setBookingLocale(value as 'bn' | 'en')} options={[{ value: 'bn', label: 'Bangla' }, { value: 'en', label: 'English' }]} />
           </div>

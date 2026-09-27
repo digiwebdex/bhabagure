@@ -19,7 +19,7 @@ class TourPackage extends Model
     protected $fillable = [
         'code', 'wp_trip_id', 'slug', 'destination_id', 'title_en', 'title_bn', 'summary_en', 'summary_bn',
         'duration_days', 'duration_nights', 'regular_price', 'sale_price', 'price_grid', 'price_options', 'includes_airfare', 'group_mode',
-        'min_pax', 'departure_mode', 'difficulty', 'source_image_url', 'seo_title_bn', 'seo_title_en',
+        'min_pax', 'departure_mode', 'trip_type', 'single_supplement_percent', 'triple_discount_percent', 'difficulty', 'source_image_url', 'seo_title_bn', 'seo_title_en',
         'seo_description_bn', 'seo_description_en', 'status', 'published_at', 'is_featured', 'sort_order',
     ];
 
@@ -40,7 +40,31 @@ class TourPackage extends Model
             'min_pax' => 'integer',
             'wp_trip_id' => 'integer',
             'sort_order' => 'integer',
+            'single_supplement_percent' => 'integer',
+            'triple_discount_percent' => 'integer',
         ];
+    }
+
+    /** A fixed-departure group tour (docs/fixed-departure-group-tours.md); anything else is a customized trip. */
+    public const GROUP_FIXED = 'group_fixed';
+
+    public const CUSTOMIZED = 'customized';
+
+    public function isGroupTour(): bool
+    {
+        return $this->trip_type === self::GROUP_FIXED;
+    }
+
+    /**
+     * The room prices @bhabaghure/pricing's quoteBooking takes as `groupTour`, or null for a customized trip.
+     *
+     * @return array{singleSupplementPercent: int, tripleDiscountPercent: int}|null
+     */
+    public function groupTourRooms(): ?array
+    {
+        return $this->isGroupTour()
+            ? ['singleSupplementPercent' => (int) $this->single_supplement_percent, 'tripleDiscountPercent' => (int) $this->triple_discount_percent]
+            : null;
     }
 
     public function scopePublished(Builder $query): Builder

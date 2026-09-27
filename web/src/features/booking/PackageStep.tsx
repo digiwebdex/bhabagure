@@ -6,13 +6,76 @@ import { defaultHotelCategory, packagePerPerson, type HotelCategory, type RoomTy
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { controlClass, Field } from '@/components/ui/Field';
+import type { PackageDepartureView, PackageView } from '@/lib/content/views';
 import { useFormatters } from '@/lib/use-formatters';
 import { normalizeDigits, todayIso } from '@/lib/validators';
 import { useBooking } from '@/state/booking';
 
+import { bookingDate, hasRoom } from './departures';
 import type { PackageStepErrors } from './validation';
 
 const ROOMS: RoomType[] = ['twin', 'single', 'triple'];
+
+/**
+ * A fixed-departure group tour's date (docs/fixed-departure-group-tours.md): never a calendar. One departure is shown
+ * as fixed text; several are a short list, where a departure without room for everyone can't be picked.
+ */
+function GroupTourDate({ pkg, error }: { pkg: PackageView; error?: string }) {
+  const t = useTranslations('booking');
+  const f = useFormatters();
+  const booking = useBooking();
+  const chosen = bookingDate(pkg, booking.date, booking.pax);
+  const seats = (d: PackageDepartureView) =>
+    d.seatsLeft === 0
+      ? t('soldOut')
+      : hasRoom(d, booking.pax)
+        ? t('seatsLeft', { seats: d.seatsLeft, seatsText: f.number(d.seatsLeft) })
+        : t('fewSeats', { seatsText: f.number(d.seatsLeft) });
+
+  if (pkg.departures.length === 0) {
+    return (
+      <div className="flex flex-col gap-1.5 text-14 text-muted" data-testid="group-tour-date">
+        {t('departureFixed')}
+        <p role="alert" className="rounded-10 bg-orange-tint px-3 py-2.5 text-13 font-semibold text-amber">
+          {t('noDeparturesYet')}
+        </p>
+      </div>
+    );
+  }
+
+  if (pkg.departures.length === 1) {
+    const only = pkg.departures[0];
+    return (
+      <div className="flex flex-col gap-1.5 text-14 text-muted" data-testid="group-tour-date">
+        {t('departureFixed')}
+        <p className="flex flex-col rounded-10 border border-input bg-paper-alt p-3 text-15 text-ink">
+          <strong className="font-semibold">{f.date(only.departsOn)}</strong>
+          <span className="text-12 text-muted">{seats(only)}</span>
+        </p>
+        {error ? (
+          <span role="alert" className="text-12 font-semibold text-red">
+            {error}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <Field variant="form" label={t('departurePick')} error={error}>
+      <select value={chosen} onChange={(e) => booking.setDate(e.target.value)} className={controlClass(!!error, 'form')} data-testid="group-tour-date">
+        <option value="" disabled>
+          {t('departurePick')}
+        </option>
+        {pkg.departures.map((d) => (
+          <option key={d.departsOn} value={d.departsOn} disabled={!hasRoom(d, booking.pax)}>
+            {f.date(d.departsOn)} · {seats(d)}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
 
 export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; roomLabel: (room: RoomType) => string }) {
   const t = useTranslations('booking');
@@ -24,6 +87,7 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
   return (
     <>
       <h3 className="text-19 font-semibold">{t('packageHeading')}</h3>
+      {pkg?.groupTour ? <p className="-mt-2 text-13 font-semibold text-blue-deep">{t('groupTourNote')}</p> : null}
       <div className="grid-auto-fit-240 grid gap-3.5">
         <Field variant="form" label={t('package')}>
           <select value={booking.packageSlug} onChange={(e) => booking.setPackage(e.target.value)} className={controlClass(false, 'form')}>
@@ -34,16 +98,20 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
             ))}
           </select>
         </Field>
-        <Field variant="form" label={t('date')} error={errors.date}>
-          <input
-            type="date"
-            min={todayIso()}
-            value={booking.date}
-            onChange={(e) => booking.setDate(e.target.value)}
-            className={controlClass(!!errors.date, 'form')}
-            suppressHydrationWarning
-          />
-        </Field>
+        {pkg?.groupTour ? (
+          <GroupTourDate pkg={pkg} error={errors.date} />
+        ) : (
+          <Field variant="form" label={t('date')} error={errors.date}>
+            <input
+              type="date"
+              min={todayIso()}
+              value={booking.date}
+              onChange={(e) => booking.setDate(e.target.value)}
+              className={controlClass(!!errors.date, 'form')}
+              suppressHydrationWarning
+            />
+          </Field>
+        )}
         <Field variant="form" label={t('travellers')}>
           <input
             type="number"

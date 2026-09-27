@@ -139,9 +139,9 @@ final class BookingQuoteEditor
             return BookingCreator::customQuote($this->customItems($booking), $pax, $discount, $vatRate) + ['singleSupplement' => 0, 'addons' => []];
         }
 
-        // A grid booking keeps its category and that category's prices as booked.
+        // A grid booking keeps its category and that category's prices as booked; a group tour its room prices.
         return PricingService::quoteBooking((float) $booking->list_price, $pax, $room, $this->addonInputs($booking), PricingConfig::current(), $discount, $vatRate,
-            grid: $booking->price_grid, hotelCategory: $booking->hotel_category);
+            grid: $booking->price_grid, hotelCategory: $booking->hotel_category, groupTour: $booking->group_tour);
     }
 
     /**

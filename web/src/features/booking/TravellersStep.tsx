@@ -8,6 +8,7 @@ import { isoToDayMonthYear, uploadPassportScan } from '@/lib/booking-api';
 import { useFormatters } from '@/lib/use-formatters';
 import { useBooking, type ScannableField, type TravellerDraft } from '@/state/booking';
 
+import { bookingDate } from './departures';
 import { expiresTooSoon, type TravellerErrors } from './validation';
 
 const MAX_SCAN_BYTES = 5 * 1024 * 1024;
@@ -21,6 +22,13 @@ export function TravellersStep({ errors }: { errors: TravellerErrors[] }) {
   const t = useTranslations('booking');
   const f = useFormatters();
   const booking = useBooking();
+  const { packages } = useSiteContent();
+  // A group tour travels on its departure, which the passport's validity is checked against.
+  const date = bookingDate(
+    packages.find((p) => p.slug === booking.packageSlug),
+    booking.date,
+    booking.pax,
+  );
 
   return (
     <>
@@ -34,7 +42,7 @@ export function TravellersStep({ errors }: { errors: TravellerErrors[] }) {
         </span>
       </div>
       {booking.travellers.map((traveller, i) => (
-        <TravellerCard key={i} index={i} traveller={traveller} errors={errors[i] ?? {}} travelDate={booking.date} />
+        <TravellerCard key={i} index={i} traveller={traveller} errors={errors[i] ?? {}} travelDate={date} />
       ))}
       <p className="text-12 leading-1.6 text-muted">{t('scanConsent')}</p>
     </>

@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
-import { defaultHotelCategory, quoteBooking, type RoomType } from '@bhabaghure/pricing';
+import { defaultHotelCategory, groupTourRoomPrices, quoteBooking, type RoomType } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
@@ -52,6 +52,7 @@ export function BookingModal() {
             grid: pkg.priceGrid,
             hotelCategory,
             discount: couponOff,
+            groupTour: pkg.groupTour,
           })
         : null,
     [pkg, booking.pax, booking.room, selectedAddons, pricing, hotelCategory, couponOff],
@@ -62,7 +63,7 @@ export function BookingModal() {
   // While the booking code check is on, the code goes by email too, so the lead's email is needed.
   const travellerRules = { leadEmail: pricing.verifyPhone === true };
 
-  const stepErrors = booking.step === 1 ? validatePackageStep(booking, tv) : booking.step === 2 ? validateTravellers(booking, tv, travellerRules) : null;
+  const stepErrors = booking.step === 1 ? validatePackageStep(booking, tv, pkg) : booking.step === 2 ? validateTravellers(booking, tv, travellerRules) : null;
   const stepInvalid = stepErrors ? stepErrors.invalid : booking.step === 3 ? !booking.terms : false;
 
   const next = () => {
@@ -71,14 +72,19 @@ export function BookingModal() {
     booking.goNext();
   };
 
-  const roomLabel = (room: RoomType) =>
-    room === 'single'
-      ? t('roomSingle', {
-          percent: f.percent(pricing.singleRoomSupplementPercent),
-        })
-      : room === 'triple'
-        ? t('roomTriple')
-        : t('roomTwin');
+  // A group tour's rooms each show their price per person: the tour's own single supplement and triple price.
+  const roomPrices = pkg.groupTour ? groupTourRoomPrices(pkg.listPrice, pkg.groupTour) : null;
+  const roomLabel = (room: RoomType) => {
+    const label =
+      room === 'single'
+        ? t('roomSingle', {
+            percent: f.percent(pkg.groupTour ? pkg.groupTour.singleSupplementPercent : pricing.singleRoomSupplementPercent),
+          })
+        : room === 'triple'
+          ? t('roomTriple')
+          : t('roomTwin');
+    return roomPrices ? t('roomPrice', { room: label, price: f.bdt(roomPrices[room]) }) : label;
+  };
 
   return (
     <Modal open={booking.open} onClose={booking.close} labelledBy="booking-title" size="lg" layer="booking">
@@ -95,7 +101,7 @@ export function BookingModal() {
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-fluid-18-28 pt-booking-body-top pb-fluid-20-28">
         <StepIndicator current={booking.step} />
 
-        {booking.step === 1 ? <PackageStep errors={booking.attempted[1] ? validatePackageStep(booking, tv).errors : {}} roomLabel={roomLabel} /> : null}
+        {booking.step === 1 ? <PackageStep errors={booking.attempted[1] ? validatePackageStep(booking, tv, pkg).errors : {}} roomLabel={roomLabel} /> : null}
         {booking.step === 2 ? <TravellersStep errors={booking.attempted[2] ? validateTravellers(booking, tv, travellerRules).errors : []} /> : null}
         {booking.step === 3 ? (
           <ReviewStep pkg={pkg} quote={quote} hotelCategory={hotelCategory} termsError={booking.attempted[3] && !booking.terms ? t('termsRequired') : undefined} />

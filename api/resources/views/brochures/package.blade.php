@@ -14,6 +14,8 @@
     $nights = $package->duration_nights;
     $includes = $package->inclusions->where('kind', 'include')->values();
     $excludes = $package->inclusions->where('kind', 'exclude')->values();
+    // A fixed-departure group tour: room prices and departure dates instead of the group-size table.
+    $groupTour = $groupTour ?? null;
     $sizeLabel = fn (int $size, bool $last) => $last ? $number($size).'+ '.$l('জন', $size === 1 ? 'traveller' : 'travellers') : $number($size).' '.$l('জন', $size === 1 ? 'traveller' : 'travellers');
 @endphp
 <html lang="{{ $locale }}">
@@ -81,16 +83,35 @@
   <div class="facts">
     <span class="fact">{{ $package->includes_airfare === true ? $l('✈ এয়ার টিকেট সহ', '✈ Air ticket included') : ($package->includes_airfare === false ? $l('শুধু ল্যান্ড প্যাকেজ', 'Land package only') : $l('টিকেট: জিজ্ঞাসা করুন', 'Air ticket: ask us')) }}</span>
     <span class="fact num">{{ $package->code }}</span>
+    <span class="fact">{{ $groupTour ? $l('গ্রুপ ট্যুর · ফিক্সড ডিপার্চার', 'Group Tour · Fixed Departure') : $l('কাস্টমাইজড ট্রিপ', 'Customized Trip') }}</span>
   </div>
 
   <div class="your">
     <span>
       <span class="eyebrow">{{ $l('আপনার বেছে নেওয়া', 'Your choice') }}</span><br>
-      @if ($grid){{ \App\Enums\HotelCategory::from($category)->label($locale) }} {{ $l('হোটেল', 'hotel') }} · @endif{{ $number($pax) }} {{ $l('জন', $pax === 1 ? 'traveller' : 'travellers') }}
+      @if ($groupTour){{ $l('টুইন শেয়ারিং', 'Twin sharing') }} · @elseif ($grid){{ \App\Enums\HotelCategory::from($category)->label($locale) }} {{ $l('হোটেল', 'hotel') }} · @endif{{ $number($pax) }} {{ $l('জন', $pax === 1 ? 'traveller' : 'travellers') }}
     </span>
     <span style="text-align:right"><strong class="num">{{ $money($yourPrice) }}</strong><br><span class="small muted">{{ $l('জনপ্রতি', 'per person') }} · {{ $l('মোট', 'total') }} <span class="num">{{ $money($yourPrice * $pax) }}</span></span></span>
   </div>
 
+  @if ($groupTour)
+  <section>
+    <h2>{{ $l('রুম অনুযায়ী মূল্য (জনপ্রতি)', 'Price per person by room') }}</h2>
+    <table>
+      <tbody>
+        <tr><td>{{ $l('টুইন শেয়ারিং', 'Twin sharing') }}</td><td class="num chosen">{{ $money($groupTour['rooms']['twin']) }}</td></tr>
+        <tr><td>{{ $l('সিঙ্গেল', 'Single') }} <span class="muted">(+{{ $percent($groupTour['rules']['singleSupplementPercent']) }})</span></td><td class="num">{{ $money($groupTour['rooms']['single']) }}</td></tr>
+        <tr><td>{{ $l('ট্রিপল শেয়ারিং', 'Triple sharing') }}@if ($groupTour['rules']['tripleDiscountPercent'] > 0) <span class="muted">(−{{ $percent($groupTour['rules']['tripleDiscountPercent']) }})</span>@endif</td><td class="num">{{ $money($groupTour['rooms']['triple']) }}</td></tr>
+      </tbody>
+    </table>
+    <h2 style="margin-top:3mm">{{ $l('ডিপার্চারের তারিখ', 'Departure dates') }}</h2>
+    <p style="margin:0">@forelse ($groupTour['departures'] as $i => $day){{ $i > 0 ? ' · ' : '' }}<span class="num">{{ $date($day) }}</span>@empty<span class="muted">{{ $l('পরবর্তী তারিখ শিগগিরই জানানো হবে — আমাদের জিজ্ঞাসা করুন।', 'The next dates will be announced soon — ask us.') }}</span>@endforelse</p>
+    <p class="small muted" style="margin:1.5mm 0 0">
+      {{ $l('গ্রুপ ট্যুরের মূল্য নির্ধারিত; দলের আকারে বদলায় না।', 'A group tour’s price is fixed; it does not change with the group size.') }}
+      {{ $l('সার্ভিস চার্জ ও ভ্যাট', 'Service charge and VAT') }} {{ $percent($config->serviceChargePercent) }}. {{ $l('মূল্য', 'Prices as of') }} {{ $date($asOf) }}{{ $l(' তারিখ অনুযায়ী; বুকিংয়ের সময়ের মূল্যই চূড়ান্ত।', '; the price at booking is final.') }}
+    </p>
+  </section>
+  @else
   <section>
     <h2>{{ $l('মূল্য (জনপ্রতি)', 'Price per person') }}</h2>
     <table>
@@ -121,6 +142,7 @@
       {{ $l('সার্ভিস চার্জ ও ভ্যাট', 'Service charge and VAT') }} {{ $percent($config->serviceChargePercent) }}. {{ $l('মূল্য', 'Prices as of') }} {{ $date($asOf) }}{{ $l(' তারিখ অনুযায়ী; বুকিংয়ের সময়ের মূল্যই চূড়ান্ত।', '; the price at booking is final.') }}
     </p>
   </section>
+  @endif
 
   @if ($package->itineraryDays->isNotEmpty())
     <section>

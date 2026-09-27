@@ -89,6 +89,8 @@ final class BookingCreator
                 // The chosen hotel category and its grid row as priced, kept like list_price (Phase 8 §4.D).
                 'hotel_category' => $quote['hotelCategory'],
                 'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
+                // A group tour's room prices as priced, so a later change of travellers or room keeps them.
+                'group_tour' => $package->groupTourRooms(),
                 'unit_price' => $quote['perPerson'],
                 'subtotal_amount' => $quote['subtotal'],
                 'single_supplement_amount' => $quote['singleSupplement'],
@@ -170,7 +172,7 @@ final class BookingCreator
                 'package_title_en' => $quotation->package_title_en,
                 'package_title_bn' => $quotation->package_title_bn,
                 'duration_days' => $quotation->duration_days,
-            ] + $quotation->only(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
+            ] + $quotation->only(['list_price', 'hotel_category', 'price_grid', 'group_tour', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
                 $quotation->lines->map(fn (QuotationLine $line) => $line->only(['kind', 'code', 'title_en', 'title_bn', 'quantity', 'unit_price', 'amount']))->all(),
                 $quotation->customer, $staff, $quotation->id, $quotation->assigned_staff_id ?? $staff->id);
         });
@@ -261,8 +263,12 @@ final class BookingCreator
             $verification->forceFill(['consumed_at' => now()])->save();
         }
 
-        $departure = $snapshot['tour_package_id'] === null ? null : PackageDeparture::query()->where('tour_package_id', $snapshot['tour_package_id'])
+        $departure = $snapshot['tour_package_id'] === null || $request->travelDate === null ? null : PackageDeparture::query()->where('tour_package_id', $snapshot['tour_package_id'])
             ->where('status', 'scheduled')->whereDate('departs_on', $request->travelDate)->lockForUpdate()->first();
+        // A group tour leaves on its scheduled departures only (docs/fixed-departure-group-tours.md).
+        if (($snapshot['group_tour'] ?? null) !== null && $departure === null) {
+            throw ValidationException::withMessages(['travel_date' => [__('cms.group_tour_departure')]]);
+        }
         if ($departure && $departure->seats_total !== null && DepartureSeats::available($departure) < $request->pax) {
             throw new SeatsUnavailable(DepartureSeats::available($departure));
         }
@@ -302,7 +308,7 @@ final class BookingCreator
             'access_token_hash' => Booking::hashAccessToken($accessToken),
             'idempotency_key' => $request->idempotencyKey,
             'phone_verified_at' => $verification === null ? null : now(),
-        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'coupon_discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
+        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'group_tour', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'coupon_discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
 
         foreach (array_values($lines) as $index => $line) {
             $booking->lines()->create($line + ['sort_order' => $index]);
@@ -373,18 +379,19 @@ final class BookingCreator
             $discount,
             grid: $package->price_grid,
             hotelCategory: $hotelCategory,
+            groupTour: $package->groupTourRooms(),
         );
     }
 
     /**
      * A package with a price grid is booked and quoted in one of the categories it offers; the category is refused as a
-     * validation error on `hotel_category`, never as a server error.
+     * validation error on `hotel_category`, never as a server error. A group tour has one fixed price: no category.
      *
      * @throws ValidationException
      */
     public static function assertHotelCategory(TourPackage $package, ?string $category): void
     {
-        $offered = PricingService::gridCategories($package->price_grid);
+        $offered = $package->isGroupTour() ? [] : PricingService::gridCategories($package->price_grid);
         if ($offered !== [] && ! in_array($category, $offered, true)) {
             throw ValidationException::withMessages(['hotel_category' => [__('cms.hotel_category_required')]]);
         }

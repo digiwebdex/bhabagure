@@ -51,7 +51,9 @@ export function PackageCard({ pkg, perPerson, pax }: PackageCardProps) {
 
   // A grid package shows basic/3-star (or its first category) for the search bar’s travellers (decided 2026-09-16).
   const gridCategory = defaultHotelCategory(pkg.priceGrid);
-  const caption = gridCategory
+  const caption = pkg.groupTour
+    ? t('groupCaption')
+    : gridCategory
     ? t('gridCaption', { category: t(`hotelCategories.${gridCategory}`), pax, paxText: f.number(pax) })
     : pax <= 2
       ? pkg.salePrice != null

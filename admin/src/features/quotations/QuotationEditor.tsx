@@ -1,4 +1,4 @@
-import { defaultHotelCategory, gridCategories, quoteBooking, type HotelCategory, type PriceGrid, type Quote, type RoomType } from '@bhabaghure/pricing'
+import { defaultHotelCategory, gridCategories, groupTourRoomPrices, quoteBooking, type HotelCategory, type PriceGrid, type Quote, type RoomType } from '@bhabaghure/pricing'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -47,7 +47,7 @@ export function useQuotationForm(options: QuotationOptions | undefined, initial:
     if (!options || !current || !pkg) return null
     try {
       const addons = options.addons.filter((addon) => current.addons.includes(addon.code))
-      return quoteBooking({ listPrice: pkg.list_price, pax: current.pax, room: current.room, addons, config: options.config, discount: current.discount, chargePercent: current.vat_rate, grid: pkg.price_grid, hotelCategory: gridCategory(pkg.price_grid, current.hotel_category) })
+      return quoteBooking({ listPrice: pkg.list_price, pax: current.pax, room: current.room, addons, config: options.config, discount: current.discount, chargePercent: current.vat_rate, grid: pkg.price_grid, hotelCategory: pkg.group_tour ? null : gridCategory(pkg.price_grid, current.hotel_category), groupTour: pkg.group_tour })
     } catch {
       return null
     }
@@ -79,7 +79,8 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
         options={[{ value: '', label: t('common.choose') }, ...options.packages.map((p) => ({ value: p.slug, label: p.title_en || p.title_bn || p.slug }))]}
         error={fieldError('package_slug')}
       />
-      {pkg && pkg.departures.length > 0 ? (
+      {/* A group tour is quoted for one of its departures or with the date left for later — never another date. */}
+      {pkg && (pkg.departures.length > 0 || pkg.group_tour) ? (
         <SelectInput
           label={t('newBooking.departure')}
           value={form.travel_date}
@@ -108,7 +109,7 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
           options={options.validity_days.map((days) => ({ value: String(days), label: t('quotations.days', { count: days, n: number(days) }) }))}
           error={fieldError('validity_days')}
         />
-        {pkg && gridCategory(pkg.price_grid, form.hotel_category) ? (
+        {pkg && !pkg.group_tour && gridCategory(pkg.price_grid, form.hotel_category) ? (
           <SelectInput
             label={t('grid.hotelCategory')}
             value={gridCategory(pkg.price_grid, form.hotel_category) ?? ''}
@@ -117,7 +118,15 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
             error={fieldError('hotel_category')}
           />
         ) : null}
-        <SelectInput label={t('bookings.room')} value={form.room} onChange={(value) => set({ room: value as RoomType })} options={(['twin', 'triple', 'single'] as const).map((value) => ({ value, label: t(`bookings.rooms.${value}`) }))} />
+        <SelectInput
+          label={t('bookings.room')}
+          value={form.room}
+          onChange={(value) => set({ room: value as RoomType })}
+          options={(['twin', 'triple', 'single'] as const).map((value) => ({
+            value,
+            label: pkg?.group_tour ? `${t(`bookings.rooms.${value}`)} · ${bdt(groupTourRoomPrices(pkg.list_price, pkg.group_tour)[value])}` : t(`bookings.rooms.${value}`),
+          }))}
+        />
         <SelectInput label={t('quotations.vatRate')} value={String(form.vat_rate)} onChange={(value) => set({ vat_rate: Number(value) })} options={options.vat_rates.map((rate) => ({ value: String(rate), label: `${number(rate)}%` }))} error={fieldError('vat_rate')} />
       </div>
       <NumberInput label={t('bookings.discount')} value={form.discount} onChange={(discount) => set({ discount: discount ?? 0 })} preview={(value) => bdt(value)} error={fieldError('discount')} />

@@ -66,6 +66,24 @@ class PricingServiceTest extends TestCase
     }
 
     #[Test]
+    public function group_tour_quotes_match_the_shared_fixtures(): void
+    {
+        $config = PricingConfig::fromArray(self::$fixtures['config']);
+        foreach (self::$fixtures['quoteBookingGroupTour'] as $case) {
+            $input = $case['input'];
+            $grid = ($input['withGrid'] ?? false) ? self::$fixtures['grid'] : null;
+            $quote = PricingService::quoteBooking($input['listPrice'], $input['pax'], $input['room'], $input['addons'], $config, 0, null, $grid, $input['hotelCategory'] ?? null, $input['groupTour']);
+            $this->assertSame(0, $quote['slab']['discountPercent']);
+            unset($quote['pax'], $quote['slab']);
+            $this->assertEquals($case['expected'], $quote, $case['$comment']);
+        }
+        $this->assertSame(['twin' => 75000, 'single' => 112500, 'triple' => 71250], PricingService::groupTourRoomPrices(75000, ['singleSupplementPercent' => 50, 'tripleDiscountPercent' => 5]));
+
+        $this->expectException(\InvalidArgumentException::class);
+        PricingService::quoteBooking(75000, 2, 'single', [], $config, groupTour: ['singleSupplementPercent' => 101, 'tripleDiscountPercent' => 0]);
+    }
+
+    #[Test]
     public function invoice_totals_match_the_shared_fixtures(): void
     {
         foreach (self::$fixtures['invoiceTotals'] as $case) {

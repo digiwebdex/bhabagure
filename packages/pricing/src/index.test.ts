@@ -17,6 +17,7 @@ import {
   paymentStatus,
   perPersonRate,
   quoteBooking,
+  groupTourRoomPrices,
   savingPercent,
   slabFor,
   type HotelCategory,
@@ -68,6 +69,29 @@ test('gridRate and grid quotes match the shared fixtures', () => {
     assert.deepEqual(amounts, c.expected, c.$comment);
     assert.equal(slab.discountPercent, 0, 'a grid never takes the group discount too');
   }
+});
+
+test('group tour quotes match the shared fixtures', () => {
+  const grid = fixtures.grid as PriceGrid;
+  for (const c of fixtures.quoteBookingGroupTour) {
+    const { withGrid, ...input } = c.input as Omit<QuoteInput, 'config'> & { withGrid?: boolean };
+    const quote = quoteBooking({ ...input, config, grid: withGrid ? grid : null });
+    const { pax: _pax, slab, ...amounts } = quote;
+    assert.deepEqual(amounts, c.expected, c.$comment);
+    assert.equal(slab.discountPercent, 0, 'a group tour never takes the group-size discount');
+  }
+  // Each room's price for one traveller is what a quote for that room charges per person.
+  const rooms = { singleSupplementPercent: 50, tripleDiscountPercent: 5 };
+  assert.deepEqual(groupTourRoomPrices(75000, rooms), { twin: 75000, single: 112500, triple: 71250 });
+  for (const room of ['twin', 'single', 'triple'] as const) {
+    const quote = quoteBooking({ listPrice: 75000, pax: 3, room, addons: [], config, groupTour: rooms });
+    assert.equal((quote.subtotal + quote.singleSupplement) / 3, groupTourRoomPrices(75000, rooms)[room], room);
+  }
+  // Cards and lists: the fixed price whatever the group size, grid or not.
+  assert.equal(packagePerPerson({ listPrice: 75000, priceGrid: grid, groupTour: rooms }, 6, config.slabs, '5'), 75000);
+  const base = { listPrice: 75000, pax: 2, room: 'single' as const, addons: [], config };
+  assert.throws(() => quoteBooking({ ...base, groupTour: { singleSupplementPercent: 101, tripleDiscountPercent: 0 } }), RangeError);
+  assert.throws(() => quoteBooking({ ...base, groupTour: { singleSupplementPercent: 50, tripleDiscountPercent: -1 } }), RangeError);
 });
 
 test('cards show basic/3-star by default, another category on request, and the slab price without a grid', () => {

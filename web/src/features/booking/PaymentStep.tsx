@@ -16,6 +16,7 @@ import { normalizeBdMobile, normalizeDigits, parseDayMonthYear } from '@/lib/val
 import { useBooking, type CreatedBooking, type PaymentMethod } from '@/state/booking';
 
 import { applyCoupon, removeCoupon } from './coupon';
+import { bookingDate } from './departures';
 import { PhoneCodeBox, type CodeNote } from './PhoneCodeBox';
 import { onlineChargeLine, PriceBreakdown, quoteLines } from './ReviewStep';
 
@@ -128,7 +129,7 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
     if (!current) {
       const result = await createBooking({
         package_slug: booking.packageSlug,
-        travel_date: booking.date,
+        travel_date: bookingDate(pkg, booking.date, booking.pax),
         pax: booking.pax,
         room: booking.room,
         hotel_category: quote.hotelCategory,
@@ -215,7 +216,7 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
     <>
       <h3 className="text-19 font-semibold">{t('paymentHeading')}</h3>
       <PriceBreakdown
-        lines={[...quoteLines(quote, pkg.title, addons, pricing.singleRoomSupplementPercent, t, f, couponCode), ...(checkout ? onlineChargeLine(online, t, f) : [])]}
+        lines={[...quoteLines(quote, pkg.title, addons, pkg.groupTour?.singleSupplementPercent ?? pricing.singleRoomSupplementPercent, t, f, couponCode), ...(checkout ? onlineChargeLine(online, t, f) : [])]}
         total={checkout ? online.total : quote.total}
         totalLabel={t('totalToPay')}
       />

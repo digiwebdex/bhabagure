@@ -64,9 +64,10 @@ export function defaultHotelCategory(grid: PriceGrid | null | undefined): HotelC
 
 /**
  * The per-person price a package card, chip or list shows: from the grid in `category` (an offered one, else the default)
- * or, for a package without a grid, the list price after the group slab.
+ * or, for a package without a grid, the list price after the group slab. A group tour: its fixed twin-sharing price.
  */
-export function packagePerPerson(pkg: { listPrice: number; priceGrid?: PriceGrid | null }, pax: number, slabs: readonly Slab[], category?: HotelCategory | null): number {
+export function packagePerPerson(pkg: { listPrice: number; priceGrid?: PriceGrid | null; groupTour?: GroupTourRooms | null }, pax: number, slabs: readonly Slab[], category?: HotelCategory | null): number {
+  if (pkg.groupTour) return groupTourRate(pkg.listPrice, 'twin', pkg.groupTour).perPerson;
   const offered = gridCategories(pkg.priceGrid);
   if (offered.length === 0) return perPersonRate(pkg.listPrice, pax, slabs);
   const chosen = category && offered.includes(category) ? category : (defaultHotelCategory(pkg.priceGrid) as HotelCategory);
@@ -148,6 +149,17 @@ export interface QuoteInput {
   grid?: PriceGrid | null;
   /** Required with a grid: one of the categories it offers. */
   hotelCategory?: HotelCategory | null;
+  /**
+   * A fixed-departure group tour's room prices (docs/fixed-departure-group-tours.md). The price is fixed: `listPrice`
+   * per person, no group-size discount and no hotel grid; a single room adds the tour's own supplement and triple
+   * sharing takes its own discount.
+   */
+  groupTour?: GroupTourRooms | null;
+}
+
+export interface GroupTourRooms {
+  singleSupplementPercent: number;
+  tripleDiscountPercent: number;
 }
 
 export type LineKind = 'package' | 'single_supplement' | 'addon';
@@ -269,16 +281,19 @@ export function paymentStatus(total: number, paid: number): PaymentStatus {
   return paid <= 0 ? 'unpaid' : 'partial';
 }
 
-export function quoteBooking({ listPrice: list, pax, room, addons, config, discount = 0, chargePercent, grid, hotelCategory }: QuoteInput): Quote {
+export function quoteBooking({ listPrice: list, pax, room, addons, config, discount = 0, chargePercent, grid, hotelCategory, groupTour }: QuoteInput): Quote {
   assertTravellers(pax);
   if (pax > config.maxTravellers) {
     throw new RangeError(`@bhabaghure/pricing: at most ${config.maxTravellers} travellers per booking`);
   }
-  const offered = gridCategories(grid);
+  const offered = groupTour ? [] : gridCategories(grid);
   let slab: Slab;
   let perPerson: number;
   let category: HotelCategory | null = null;
-  if (offered.length > 0) {
+  if (groupTour) {
+    slab = { minPax: 1, discountPercent: 0 };
+    perPerson = groupTourRate(list, room, groupTour).perPerson;
+  } else if (offered.length > 0) {
     if (!hotelCategory || !offered.includes(hotelCategory)) {
       throw new RangeError(`@bhabaghure/pricing: choose one of the hotel categories ${offered.join(', ')}`);
     }
@@ -293,7 +308,9 @@ export function quoteBooking({ listPrice: list, pax, room, addons, config, disco
   const lines: QuoteLine[] = [{ kind: 'package', code: null, quantity: pax, unitPrice: perPerson, amount: perPerson * pax }];
   // A grid's 1-traveller price already includes a single room (decided 2026-09-16); larger groups pay the supplement.
   if (room === 'single' && !(category !== null && pax === 1)) {
-    const perPersonSupplement = Math.round((perPerson * config.singleRoomSupplementPercent) / 100);
+    const perPersonSupplement = groupTour
+      ? groupTourRate(list, room, groupTour).supplement
+      : Math.round((perPerson * config.singleRoomSupplementPercent) / 100);
     lines.push({ kind: 'single_supplement', code: null, quantity: pax, unitPrice: perPersonSupplement, amount: perPersonSupplement * pax });
   }
   for (const addon of addons) {
@@ -319,9 +336,38 @@ export function quoteBooking({ listPrice: list, pax, room, addons, config, disco
   };
 }
 
+/**
+ * A group tour's price per person in a room: the package line's unit price and the single supplement on top of it.
+ * The fixed list price for twin sharing, less the tour's discount for triple sharing, plus its supplement for a single.
+ */
+export function groupTourRate(list: number, room: RoomType, groupTour: GroupTourRooms): { perPerson: number; supplement: number } {
+  assertAmount(list);
+  assertPercent(groupTour.singleSupplementPercent);
+  assertPercent(groupTour.tripleDiscountPercent);
+  const twin = Math.round(list);
+  if (room === 'triple') return { perPerson: twin - Math.round((twin * groupTour.tripleDiscountPercent) / 100), supplement: 0 };
+  if (room === 'single') return { perPerson: twin, supplement: Math.round((twin * groupTour.singleSupplementPercent) / 100) };
+  return { perPerson: twin, supplement: 0 };
+}
+
+/** What each room costs one traveller on a group tour, supplement included — the booking form's and brochure's room prices. */
+export function groupTourRoomPrices(list: number, groupTour: GroupTourRooms): Record<RoomType, number> {
+  const total = (room: RoomType) => {
+    const rate = groupTourRate(list, room, groupTour);
+    return rate.perPerson + rate.supplement;
+  };
+  return { twin: total('twin'), single: total('single'), triple: total('triple') };
+}
+
 function assertTravellers(pax: number): void {
   if (!Number.isInteger(pax) || pax < 1) {
     throw new RangeError(`@bhabaghure/pricing: travellers must be a whole number from 1, got ${pax}`);
+  }
+}
+
+function assertPercent(percent: number): void {
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+    throw new RangeError(`@bhabaghure/pricing: a percentage must be from 0 to 100, got ${percent}`);
   }
 }
 

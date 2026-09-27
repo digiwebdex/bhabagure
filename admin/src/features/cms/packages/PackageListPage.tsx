@@ -92,6 +92,7 @@ export function PackageListPage() {
                   </Link>
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     <StatusBadge status={pkg.status} />
+                    {pkg.trip_type === 'group_fixed' ? <Badge tone="blue">{t('packages.tripKinds.group_fixed')}</Badge> : null}
                     {pkg.missing_bangla ? <Badge tone="orange">{t('packages.missingBangla')}</Badge> : null}
                   </span>
                 </li>

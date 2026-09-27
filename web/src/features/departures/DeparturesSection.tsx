@@ -23,7 +23,7 @@ export async function DeparturesSection({ locale, departures }: { locale: AppLoc
           {departures.map((d) => {
             const almostFull = d.seatsLeft <= 3;
             const booked = d.seatsTotal - d.seatsLeft;
-            const labels = packageLabels({ ...d, code: '', groupMode: 'any', minPax: null, departureMode: 'any_date' }, tp, f);
+            const labels = packageLabels({ ...d, code: '', minPax: null, departureMode: 'any_date' }, tp, f);
             const dateText = d.departsOn ? f.date(d.departsOn) : d.dateLabel;
             return (
               <div

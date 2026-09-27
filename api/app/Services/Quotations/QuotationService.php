@@ -24,6 +24,7 @@ use App\Support\Pricing\PricingService;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The only code that changes a quotation (docs/phase-5-admin-core.md §4.5, staff-side lifecycle):
@@ -321,13 +322,17 @@ final class QuotationService
             $listPrice, $input->pax, $input->room,
             $addons->map(fn (Addon $addon) => ['code' => $addon->code, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit])->all(),
             PricingConfig::current(), $input->discount, $input->vatRate,
-            grid: $package->price_grid, hotelCategory: $input->hotelCategory,
+            grid: $package->price_grid, hotelCategory: $input->hotelCategory, groupTour: $package->groupTourRooms(),
         );
         if ((int) round($input->expectedTotal) !== $quote['total']) {
             throw new PriceChanged($quote);
         }
         $departure = $input->travelDate === null ? null : PackageDeparture::query()->where('tour_package_id', $package->id)
             ->where('status', 'scheduled')->whereDate('departs_on', $input->travelDate)->first();
+        // A group tour is quoted for one of its departures, or with no date yet (docs/fixed-departure-group-tours.md).
+        if ($package->isGroupTour() && $input->travelDate !== null && $departure === null) {
+            throw ValidationException::withMessages(['travel_date' => [__('cms.group_tour_departure')]]);
+        }
 
         $quotation->fill([
             'tour_package_id' => $package->id,
@@ -344,6 +349,7 @@ final class QuotationService
             'hotel_category' => $quote['hotelCategory'],
             'list_price' => $listPrice,
             'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
+            'group_tour' => $package->groupTourRooms(),
             'unit_price' => $quote['perPerson'],
             'subtotal_amount' => $quote['subtotal'],
             'single_supplement_amount' => $quote['singleSupplement'],

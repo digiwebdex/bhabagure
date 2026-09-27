@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import type { Addon, CouponTerms, HotelCategory, PriceGrid, PricingConfig, RoomType } from '@bhabaghure/pricing'
+import type { Addon, CouponTerms, GroupTourRooms, HotelCategory, PriceGrid, PricingConfig, RoomType } from '@bhabaghure/pricing'
 
 import { api } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
@@ -10,7 +10,7 @@ import type { Voucher } from '../vouchers/api'
 
 /** api/app/Services/Booking/BookingFormOptions.php — what the staff booking form and the quotation editor price with. */
 export type BookingFormOptions = {
-  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; price_grid: PriceGrid | null; departures: { date: string; seats_left: number | null }[] }[]
+  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; price_grid: PriceGrid | null; group_tour: GroupTourRooms | null; departures: { date: string; seats_left: number | null }[] }[]
   addons: { code: string; name_en: string; name_bn: string | null; price: number; unit: 'per_person' | 'per_booking' }[]
   config: { slabs: { minPax: number; discountPercent: number }[]; singleRoomSupplementPercent: number; serviceChargePercent: number; maxTravellers: number; onlinePaymentChargePercent: number }
   sources: string[]
@@ -159,6 +159,8 @@ export type BookingDetail = BookingSummary & {
     list_price: number
     grid: PriceGrid | null
     hotel_category: HotelCategory | null
+    /** A group tour's room prices as booked (docs/fixed-departure-group-tours.md); null for a customized trip. */
+    group_tour: GroupTourRooms | null
     addons: Addon[]
     /** A custom service's items as booked, each at a price per person; null for a package. */
     custom_items: { title: string; unitPrice: number }[] | null

@@ -32,6 +32,8 @@ final class BookingFormOptions
                     'duration_days' => $package->duration_days,
                     'list_price' => Money::toNumber($package->sale_price ?? $package->regular_price),
                     'price_grid' => $package->price_grid,
+                    // A group tour: its room prices, and it is booked on one of the departures below only.
+                    'group_tour' => $package->groupTourRooms(),
                     'departures' => $package->departures->map(fn (PackageDeparture $departure) => [
                         'date' => $departure->departs_on->toDateString(),
                         'seats_left' => $departure->seats_total === null ? null : DepartureSeats::available($departure),

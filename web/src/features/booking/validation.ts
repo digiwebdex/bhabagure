@@ -1,15 +1,21 @@
+import type { PackageView } from '@/lib/content/views';
 import { addMonths, isEmail, isPassportNumber, normalizeBdMobile, parseDayMonthYear, todayIso } from '@/lib/validators';
 import type { BookingState, TravellerDraft } from '@/state/booking';
+
+import { bookingDate } from './departures';
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
 
 export type PackageStepErrors = { date?: string };
 export type TravellerErrors = Partial<Record<keyof TravellerDraft, string>>;
 
-export function validatePackageStep(booking: Pick<BookingState, 'date'>, tv: Translate) {
+/** A group tour needs one of its departures with room for everyone; a customized trip any date from today. */
+export function validatePackageStep(booking: Pick<BookingState, 'date' | 'pax'>, tv: Translate, pkg?: Pick<PackageView, 'groupTour' | 'departures'>) {
   const errors: PackageStepErrors = {};
-  if (!booking.date) errors.date = tv('required');
-  else if (booking.date < todayIso()) errors.date = tv('dateFuture');
+  const date = bookingDate(pkg, booking.date, booking.pax);
+  if (pkg?.groupTour && !date) errors.date = pkg.departures.length === 0 ? tv('noDepartures') : tv('pickDeparture');
+  else if (!date) errors.date = tv('required');
+  else if (date < todayIso()) errors.date = tv('dateFuture');
   return { errors, invalid: Object.keys(errors).length > 0 };
 }
 

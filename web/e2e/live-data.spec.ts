@@ -640,6 +640,73 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('a group tour: a fixed price, the room changes it, and it is booked on its departures only — no calendar (docs/fixed-departure-group-tours.md)', async ({ page, request }) => {
+    const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages', 'departures'] } });
+    const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+    const [soon, later] = [day(40), day(70)];
+    // 27,000 per person; single +50%; two departures, the later with 2 seats.
+    artisan(
+      'tinker',
+      `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'group_fixed', 'single_supplement_percent' => 50, 'triple_discount_percent' => 0]); ` +
+        `$p->departures()->create(['departs_on' => '${soon}', 'seats_total' => 12, 'status' => 'scheduled']); $p->departures()->create(['departs_on' => '${later}', 'seats_total' => 2, 'status' => 'scheduled']); echo 'ok';`,
+    );
+    try {
+      expect((await refresh()).status()).toBe(200);
+      const card = page.locator('#packages article').filter({ hasText: 'THAILAND BUDGET ESCAPE' });
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return card.innerText();
+      }, { timeout: 20_000 }).toContain('Group Tour · Fixed Departure');
+      await expect(card.locator('.text-price')).toHaveText('৳ 27,000');
+      await expect(card).toContainText('twin sharing · fixed price');
+
+      // The modal: each room's price per person and the departures, not the group-size chips.
+      await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
+      const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
+      const prices = detail.getByTestId('group-tour-prices');
+      await expect(prices.getByRole('listitem')).toHaveText([/^Twin sharing৳ 27,000$/, /^Single \(\+50%\)৳ 40,500$/, /^Triple sharing৳ 27,000$/, /12 seats left$/, /2 seats left$/]);
+      await expect(detail.getByRole('button', { name: /^4 people/ })).toHaveCount(0);
+
+      // Booking: no calendar; the 2-seat departure can't take 3 travellers.
+      await detail.getByRole('button', { name: 'Book now' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Book online' });
+      await expect(dialog.locator('input[type="date"]')).toHaveCount(0);
+      await expect(dialog).toContainText('Group Tour · Fixed Departure — the price is fixed; only the room changes it.');
+      const dates = dialog.getByTestId('group-tour-date');
+      await dialog.getByLabel('Travellers').fill('2');
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      await expect(dialog.getByText('Choose one of the departure dates.')).toBeVisible();
+      // Three travellers fit only the first departure, which is then the one taken.
+      await dialog.getByLabel('Travellers').fill('3');
+      await expect(dates.locator(`option[value="${later}"]`)).toHaveAttribute('disabled');
+      await expect(dates.locator(`option[value="${later}"]`)).toContainText('Only 2 left');
+      await expect(dates).toHaveValue(soon);
+      await dialog.getByLabel('Travellers').fill('2');
+      await dates.selectOption(later);
+      await dialog.getByLabel('Room').selectOption({ label: 'Single (+50%) · ৳ 40,500 per person' });
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      const lead = dialog.locator('section').nth(0);
+      await lead.getByLabel('Name (as on passport)').fill('KARIM HOSSAIN');
+      await lead.getByLabel('WhatsApp number').fill(uniquePhone());
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      // 27,000 × 2 + 13,500 × 2 = 81,000 + 2% = 82,620, and the API charges exactly that on the later departure.
+      await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 82,620');
+      await dialog.getByRole('checkbox').check();
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      await dialog.getByRole('button', { name: 'Pay ৳ 82,620 with SSLCommerz →' }).click();
+      await expect(page.locator('body')).toContainText('BDT 82,620.00');
+      const booked = artisan('tinker', `--execute=echo App\\Models\\Booking::query()->latest('id')->first()->travel_start->toDateString();`).trim().split(/\r?\n/).pop();
+      expect(booked).toBe(later);
+    } finally {
+      artisan(
+        'tinker',
+        `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'customized']); $p->departures()->update(['status' => 'cancelled']); echo 'ok';`,
+      );
+      await refresh();
+    }
+  });
+
   test('the package page lists the prices for two and four, each extra added on, and the estimates apart (docs/package-price-options.md)', async ({ page, request }) => {
     const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
     const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages'] } });

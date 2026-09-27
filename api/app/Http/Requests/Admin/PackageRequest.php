@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\TourPackage;
 use App\Support\Pricing\PriceGrid;
 use App\Support\Pricing\PricingService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,10 +39,11 @@ class PackageRequest extends FormRequest
 
         // A hotel-category price grid replaces the one price and the group discounts (Phase 8 §4.D). The price older
         // screens show becomes the grid's reference price, and a grid package has no sale price (decided 2026-09-16).
+        // A group tour keeps its grid unused and is sold at the price entered (docs/fixed-departure-group-tours.md).
         if ($this->has('price_grid')) {
             $grid = PriceGrid::normalize($this->input('price_grid'));
             $this->merge(['price_grid' => $grid]);
-            if ($grid !== null && PricingService::gridCategories($grid) !== []) {
+            if ($grid !== null && PricingService::gridCategories($grid) !== [] && $this->input('trip_type') !== TourPackage::GROUP_FIXED) {
                 $this->merge(['regular_price' => PriceGrid::referencePrice($grid), 'sale_price' => null]);
             }
         }
@@ -106,6 +108,11 @@ class PackageRequest extends FormRequest
             'group_mode' => ['required', Rule::in(['group', 'any'])],
             'min_pax' => ['nullable', 'integer', 'between:1,99'],
             'departure_mode' => ['required', Rule::in(['regular', 'any_date', 'on_request'])],
+            // A fixed-departure group tour or a customized trip (docs/fixed-departure-group-tours.md); a group tour's own
+            // room prices: single adds a percentage, triple sharing takes one off.
+            'trip_type' => ['sometimes', Rule::in([TourPackage::GROUP_FIXED, TourPackage::CUSTOMIZED])],
+            'single_supplement_percent' => ['sometimes', 'integer', 'between:0,100'],
+            'triple_discount_percent' => ['sometimes', 'integer', 'between:0,100'],
             'difficulty' => ['nullable', 'string', 'max:20'],
             'is_featured' => ['sometimes', 'boolean'],
             'seo_title_bn' => ['nullable', 'string', 'max:255'],

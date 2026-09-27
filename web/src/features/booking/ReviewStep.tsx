@@ -11,6 +11,7 @@ import { useFormatters } from '@/lib/use-formatters';
 import { useBooking } from '@/state/booking';
 
 import { CouponBox } from './CouponBox';
+import { bookingDate } from './departures';
 
 /**
  * Every line and the total from the shared pricing service, then consent to the (draft) terms. The total here is what
@@ -26,8 +27,9 @@ export function ReviewStep({ pkg, quote, hotelCategory, termsError }: { pkg: Pac
   const prefix = locale === 'en' ? '/en' : '';
 
   const online = onlinePayment(quote.total, pricing.onlinePaymentChargePercent);
-  const lines = [...quoteLines(quote, pkg.title, addons, pricing.singleRoomSupplementPercent, t, f, booking.coupon?.code), ...onlineChargeLine(online, t, f)];
-  const dateText = booking.date ? f.date(booking.date) : t('dateNotChosen');
+  const lines = [...quoteLines(quote, pkg.title, addons, pkg.groupTour?.singleSupplementPercent ?? pricing.singleRoomSupplementPercent, t, f, booking.coupon?.code), ...onlineChargeLine(online, t, f)];
+  const date = bookingDate(pkg, booking.date, booking.pax);
+  const dateText = date ? f.date(date) : t('dateNotChosen');
 
   return (
     <>

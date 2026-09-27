@@ -1,4 +1,4 @@
-import { gridCategories } from '@bhabaghure/pricing'
+import { gridCategories, groupTourRoomPrices } from '@bhabaghure/pricing'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router'
@@ -47,8 +47,20 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
   const [form, setForm] = useState<PackageForm>(initial)
   const [slugTouched, setSlugTouched] = useState(!!pkg)
   const dirty = JSON.stringify(form) !== JSON.stringify(initial)
-  // Priced by hotel category: the one price and the sale price come from the grid (Phase 8 §4.D).
-  const hasGrid = gridCategories(form.price_grid).length > 0
+  // A fixed-departure group tour: one price, its own room prices, booked on its departures only.
+  const groupTour = form.trip_type === 'group_fixed'
+  // Priced by hotel category: the one price and the sale price come from the grid (Phase 8 §4.D). A group tour keeps
+  // its grid unused.
+  const hasGrid = !groupTour && gridCategories(form.price_grid).length > 0
+  // What a single or triple room costs per person at the percentage being typed; nothing while it is out of range.
+  const roomPreview = (room: 'single' | 'triple', percent: number) => {
+    try {
+      const rules = room === 'single' ? { singleSupplementPercent: percent, tripleDiscountPercent: 0 } : { singleSupplementPercent: 0, tripleDiscountPercent: percent }
+      return t('packages.roomPreview', { amount: bdt(groupTourRoomPrices(form.sale_price ?? form.regular_price, rules)[room]) })
+    } catch {
+      return undefined
+    }
+  }
 
   const save = usePackageMutation((values: PackageForm) => (pkg ? packageActions.update(pkg.id, values) : packageActions.create(values)))
   const transition = usePackageMutation((action: 'publish' | 'unpublish' | 'archive') => packageActions.transition(pkg!.id, action))
@@ -160,7 +172,37 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
               <NumberInput disabled={hasGrid} label={t('packages.regularPrice')} value={form.regular_price} onChange={(value) => set('regular_price', value ?? 0)} error={error('regular_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} />
               <NumberInput disabled={hasGrid} label={t('packages.salePrice')} value={hasGrid ? null : form.sale_price} onChange={(value) => set('sale_price', value)} error={error('sale_price')} preview={(value) => t('packages.perPerson', { amount: bdt(value) })} hint={hasGrid ? t('grid.pricesFromGrid') : form.sale_price === null ? t('packages.salePriceHint') : undefined} />
             </Pair>
-            <PriceGridField value={form.price_grid} onChange={(grid) => set('price_grid', grid)} error={error} />
+            <SelectInput
+              label={t('packages.tripKind')}
+              value={form.trip_type}
+              onChange={(value) => set('trip_type', value as PackageForm['trip_type'])}
+              options={(['customized', 'group_fixed'] as const).map((value) => ({ value, label: t(`packages.tripKinds.${value}`) }))}
+              hint={t(`packages.tripKindHints.${form.trip_type}`)}
+            />
+            {groupTour ? (
+              <div className="flex flex-col gap-2 rounded-10 bg-app-surface-2 p-3" data-testid="group-tour-rooms">
+                <Pair>
+                  <NumberInput
+                    label={t('packages.singleSupplement')}
+                    value={form.single_supplement_percent}
+                    onChange={(value) => set('single_supplement_percent', value ?? 0)}
+                    error={error('single_supplement_percent')}
+                    preview={(value) => roomPreview('single', value)}
+                  />
+                  <NumberInput
+                    label={t('packages.tripleDiscount')}
+                    value={form.triple_discount_percent}
+                    onChange={(value) => set('triple_discount_percent', value ?? 0)}
+                    error={error('triple_discount_percent')}
+                    preview={(value) => roomPreview('triple', value)}
+                    hint={form.triple_discount_percent === 0 ? t('packages.tripleSameAsTwin') : undefined}
+                  />
+                </Pair>
+                <p className="m-0 text-12 text-app-muted">{t('packages.groupTourNote')}</p>
+              </div>
+            ) : (
+              <PriceGridField value={form.price_grid} onChange={(grid) => set('price_grid', grid)} error={error} />
+            )}
             <PriceOptionsField value={form.price_options} onChange={(options) => set('price_options', options)} error={error} />
             <Pair>
               <SelectInput

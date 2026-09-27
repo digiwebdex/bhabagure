@@ -190,6 +190,8 @@ final class AdminBooking
                 'list_price' => Money::toNumber($booking->list_price),
                 'grid' => $booking->price_grid,
                 'hotel_category' => $booking->hotel_category,
+                // A group tour's room prices as booked (docs/fixed-departure-group-tours.md); null for a customized trip.
+                'group_tour' => $booking->group_tour,
                 'addons' => app(BookingQuoteEditor::class)->addonInputs($booking),
                 // A custom service (docs/custom-service-bookings.md) is priced from its own items with invoiceTotals.
                 'custom_items' => $booking->is_custom ? app(BookingQuoteEditor::class)->customItems($booking) : null,

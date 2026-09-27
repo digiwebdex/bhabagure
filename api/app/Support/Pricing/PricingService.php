@@ -83,18 +83,22 @@ final class PricingService
     /**
      * @param  list<array{code: string, price: int|float, unit: string}>  $addons  only the selected add-ons
      * @param  array<string, array<string, int|float>>|null  $grid  the package's hotel-category grid; when it offers a category it replaces the list price and the slabs
+     * @param  array{singleSupplementPercent: int|float, tripleDiscountPercent: int|float}|null  $groupTour  a fixed-departure group tour's room prices: the list price is fixed (no slabs, no grid)
      * @return array{pax: int, slab: array, hotelCategory: ?string, perPerson: int, subtotal: int, singleSupplement: int, addons: list<array{code: string, amount: int}>, discount: int, chargePercent: int|float, serviceCharge: int, total: int, lines: list<array{kind: string, code: ?string, quantity: int, unitPrice: int, amount: int}>}
      */
-    public static function quoteBooking(int|float $listPrice, int $pax, string $room, array $addons, PricingConfig $config, int|float $discount = 0, int|float|null $chargePercent = null, ?array $grid = null, ?string $hotelCategory = null): array
+    public static function quoteBooking(int|float $listPrice, int $pax, string $room, array $addons, PricingConfig $config, int|float $discount = 0, int|float|null $chargePercent = null, ?array $grid = null, ?string $hotelCategory = null, ?array $groupTour = null): array
     {
         self::assertTravellers($pax);
         if ($pax > $config->maxTravellers) {
             throw new InvalidArgumentException("At most {$config->maxTravellers} travellers per booking");
         }
 
-        $offered = self::gridCategories($grid);
+        $offered = $groupTour !== null ? [] : self::gridCategories($grid);
         $category = null;
-        if ($offered !== []) {
+        if ($groupTour !== null) {
+            $slab = ['minPax' => 1, 'discountPercent' => 0];
+            $perPerson = self::groupTourRate($listPrice, $room, $groupTour)['perPerson'];
+        } elseif ($offered !== []) {
             if ($hotelCategory === null || ! in_array($hotelCategory, $offered, true)) {
                 throw new InvalidArgumentException('Choose one of the hotel categories '.implode(', ', $offered));
             }
@@ -110,7 +114,9 @@ final class PricingService
 
         // A grid's 1-traveller price already includes a single room (decided 2026-09-16); larger groups pay the supplement.
         if ($room === 'single' && ! ($category !== null && $pax === 1)) {
-            $supplement = self::round($perPerson * $config->singleRoomSupplementPercent / 100);
+            $supplement = $groupTour !== null
+                ? self::groupTourRate($listPrice, $room, $groupTour)['supplement']
+                : self::round($perPerson * $config->singleRoomSupplementPercent / 100);
             $lines[] = ['kind' => 'single_supplement', 'code' => null, 'quantity' => $pax, 'unitPrice' => $supplement, 'amount' => $supplement * $pax];
         }
 
@@ -222,6 +228,40 @@ final class PricingService
         return (float) $paid <= 0 ? 'unpaid' : 'partial';
     }
 
+    /**
+     * A group tour's price per person in a room: the fixed list price for twin sharing, less the tour's discount for
+     * triple sharing, plus its supplement for a single.
+     *
+     * @param  array{singleSupplementPercent: int|float, tripleDiscountPercent: int|float}  $groupTour
+     * @return array{perPerson: int, supplement: int}
+     */
+    public static function groupTourRate(int|float $listPrice, string $room, array $groupTour): array
+    {
+        self::assertAmount($listPrice);
+        self::assertPercent($groupTour['singleSupplementPercent']);
+        self::assertPercent($groupTour['tripleDiscountPercent']);
+        $twin = self::round($listPrice);
+
+        return match ($room) {
+            'triple' => ['perPerson' => $twin - self::round($twin * $groupTour['tripleDiscountPercent'] / 100), 'supplement' => 0],
+            'single' => ['perPerson' => $twin, 'supplement' => self::round($twin * $groupTour['singleSupplementPercent'] / 100)],
+            default => ['perPerson' => $twin, 'supplement' => 0],
+        };
+    }
+
+    /**
+     * What each room costs one traveller on a group tour, supplement included.
+     *
+     * @param  array{singleSupplementPercent: int|float, tripleDiscountPercent: int|float}  $groupTour
+     * @return array{twin: int, single: int, triple: int}
+     */
+    public static function groupTourRoomPrices(int|float $listPrice, array $groupTour): array
+    {
+        $total = fn (string $room) => array_sum(self::groupTourRate($listPrice, $room, $groupTour));
+
+        return ['twin' => $total('twin'), 'single' => $total('single'), 'triple' => $total('triple')];
+    }
+
     private static function round(int|float $value): int
     {
         return (int) round($value, 0, PHP_ROUND_HALF_UP);
@@ -238,6 +278,13 @@ final class PricingService
     {
         if (! is_finite((float) $amount) || $amount < 0) {
             throw new InvalidArgumentException("Amounts must be finite and non-negative, got {$amount}");
+        }
+    }
+
+    private static function assertPercent(int|float $percent): void
+    {
+        if (! is_finite((float) $percent) || $percent < 0 || $percent > 100) {
+            throw new InvalidArgumentException("A percentage must be from 0 to 100, got {$percent}");
         }
     }
 }

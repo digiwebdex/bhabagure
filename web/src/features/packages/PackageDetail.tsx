@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 
-import { defaultHotelCategory, packagePerPerson } from '@bhabaghure/pricing';
+import { defaultHotelCategory, groupTourRoomPrices, packagePerPerson, type GroupTourRooms } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
@@ -61,7 +61,9 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
   const total = perPerson * pax;
   const paxText = f.number(pax);
 
-  const slabNote = category
+  const slabNote = pkg.groupTour
+    ? t('groupNote')
+    : category
     ? pax === 1
       ? t('gridNoteOne', { category: t(`hotelCategories.${category}`) })
       : t('gridNote', { category: t(`hotelCategories.${category}`), percent: f.percent(pricing.singleRoomSupplementPercent) })
@@ -119,6 +121,9 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
             ))}
           </div>
         ) : null}
+        {pkg.groupTour ? (
+          <GroupTourPrices pkg={pkg} groupTour={pkg.groupTour} />
+        ) : (
         <div className="flex flex-wrap gap-1.75">
           {SLAB_CHIPS.map((min, i) => {
             const active = activeChip === min;
@@ -139,6 +144,7 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
             );
           })}
         </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-16 border border-hairline bg-paper-alt px-4.5 py-4">
           <div className="flex flex-col gap-1.5 text-12 font-semibold text-muted">
             {t('travellers')}
@@ -163,7 +169,7 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
           </span>
         </div>
 
-        <PriceTable pkg={pkg} rate={rate} />
+        {pkg.groupTour ? null : <PriceTable pkg={pkg} rate={rate} />}
       </div>
 
       {pkg.itinerary.length > 0 ? (
@@ -222,6 +228,55 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * A fixed-departure group tour (docs/fixed-departure-group-tours.md): what each room costs one traveller, and the
+ * dates the group leaves on — the only dates it is booked on.
+ */
+function GroupTourPrices({ pkg, groupTour }: { pkg: PackageView; groupTour: GroupTourRooms }) {
+  const t = useTranslations('detail');
+  const tb = useTranslations('booking');
+  const f = useFormatters();
+  const prices = groupTourRoomPrices(pkg.listPrice, groupTour);
+  const rooms = [
+    { room: 'twin', label: tb('roomTwin') },
+    { room: 'single', label: tb('roomSingle', { percent: f.percent(groupTour.singleSupplementPercent) }) },
+    { room: 'triple', label: tb('roomTriple') },
+  ] as const;
+
+  return (
+    <div className="grid-auto-fit-250 grid gap-3.5" data-testid="group-tour-prices">
+      <div className="flex flex-col gap-2 rounded-16 border border-hairline bg-white p-4">
+        <h4 className="text-15 font-bold">{t('roomsHeading')}</h4>
+        <ul className="flex flex-col">
+          {rooms.map(({ room, label }) => (
+            <li key={room} className="flex items-baseline justify-between gap-3 border-b border-hairline py-2 text-14 last:border-b-0">
+              <span>{label}</span>
+              <span className="font-display text-16 font-extrabold tracking-heading">{f.bdt(prices[room])}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="flex flex-col gap-2 rounded-16 border border-hairline bg-white p-4">
+        <h4 className="text-15 font-bold">{t('departuresHeading')}</h4>
+        {pkg.departures.length === 0 ? (
+          <p className="text-14 text-muted">{tb('noDeparturesYet')}</p>
+        ) : (
+          <ul className="flex flex-col">
+            {pkg.departures.map((d) => (
+              <li key={d.departsOn} className="flex items-baseline justify-between gap-3 border-b border-hairline py-2 text-14 last:border-b-0">
+                <span className="font-semibold">{f.date(d.departsOn)}</span>
+                <span className={d.seatsLeft === 0 ? 'font-semibold text-red' : 'text-muted'}>
+                  {d.seatsLeft === 0 ? tb('soldOut') : tb('seatsLeft', { seats: d.seatsLeft, seatsText: f.number(d.seatsLeft) })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

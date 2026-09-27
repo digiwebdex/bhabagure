@@ -158,6 +158,7 @@
     "passportExpiry": "Passport expiry",
     "departure": "Departure",
     "departureSeats": "{{date}} · {{seats}} seats left",
+    "noDepartures": "This group tour has no upcoming departures. Add one under Packages → the package → Group departures.",
     "travelDate": "Travel date",
     "messagesIn": "Messages to the customer in",
     "addons": "Add-ons",
@@ -449,6 +450,20 @@
     "salePrice": "Sale price per person",
     "salePriceHint": "Optional. When set, the card shows the regular price crossed out.",
     "perPerson": "{{amount}} per person",
+    "tripKind": "Trip type",
+    "tripKinds": {
+      "customized": "Customized trip",
+      "group_fixed": "Group tour · fixed departure"
+    },
+    "tripKindHints": {
+      "customized": "Any date the customer picks; the site-wide single supplement and group discounts.",
+      "group_fixed": "One fixed price. Booked only on the dates under Group departures — no calendar."
+    },
+    "singleSupplement": "Single room (+%)",
+    "tripleDiscount": "Triple sharing (−%)",
+    "tripleSameAsTwin": "0 = the same as twin sharing.",
+    "roomPreview": "{{amount}} per person",
+    "groupTourNote": "Twin sharing is the price above. Group discounts and the hotel-category grid don’t apply to a group tour.",
     "departureMode": "Departures",
     "departureModes": {
       "regular": "Regular group dates",

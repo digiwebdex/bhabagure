@@ -72,6 +72,7 @@ final class AdminContent
             // Hotel-category price grid (Phase 8 §4.D); null when the package is priced the old way.
             'price_grid' => $package->price_grid,
             'price_options' => $package->price_options,
+            'trip_type' => $package->trip_type,
             'status' => $package->status->value,
             'published_at' => $package->published_at?->toIso8601String(),
             'is_featured' => $package->is_featured,
@@ -97,6 +98,8 @@ final class AdminContent
             'group_mode' => $package->group_mode,
             'min_pax' => $package->min_pax,
             'departure_mode' => $package->departure_mode,
+            'single_supplement_percent' => $package->single_supplement_percent,
+            'triple_discount_percent' => $package->triple_discount_percent,
             'difficulty' => $package->difficulty,
             'seo_title_bn' => $package->seo_title_bn,
             'seo_title_en' => $package->seo_title_en,

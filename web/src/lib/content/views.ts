@@ -2,7 +2,7 @@
  * Single-language views of the content. Built on the server per request locale, so client
  * components receive plain strings in one language instead of every translation.
  */
-import { gridCategories, listPrice, savingPercent, type HotelCategory, type PriceGrid } from '@bhabaghure/pricing';
+import { gridCategories, listPrice, savingPercent, type GroupTourRooms, type HotelCategory, type PriceGrid } from '@bhabaghure/pricing';
 
 import type { AppLocale } from '@/i18n/routing';
 
@@ -56,10 +56,20 @@ export interface PackageView {
   groupMode: 'group' | 'any';
   minPax: number | null;
   departureMode: TourPackage['departureMode'];
+  /** A fixed-departure group tour's room prices; null for a customized trip (docs/fixed-departure-group-tours.md). */
+  groupTour: GroupTourRooms | null;
+  /** A group tour's upcoming departures, soonest first — the only dates it is booked on. Empty for a customized trip. */
+  departures: PackageDepartureView[];
   itinerary: { day: number; title: string; body: string }[];
   includes: string[];
   excludes: string[];
   images: ImageView[];
+}
+
+export interface PackageDepartureView {
+  departsOn: string;
+  seatsLeft: number;
+  seatsTotal: number;
 }
 
 export interface DepartureView {
@@ -195,6 +205,9 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
 
   const packages: PackageView[] = published.map((p) => {
     const destination = destinationBySlug.get(p.destination);
+    // A group tour has one fixed price: its hotel-category grid, if it kept one, is not used.
+    const groupTour = p.groupTour ?? null;
+    const grid = groupTour ? null : (p.priceGrid ?? null);
     return {
       code: p.code,
       slug: p.slug,
@@ -209,8 +222,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       salePrice: p.salePrice,
       listPrice: listPrice(p),
       savingPercent: savingPercent(p),
-      priceGrid: p.priceGrid ?? null,
-      hotelCategories: gridCategories(p.priceGrid),
+      priceGrid: grid,
+      hotelCategories: gridCategories(grid),
       priceOptions: (p.priceOptions ?? []).map((o) => ({
         label: pick(o.label, locale),
         extraPerPerson: o.extraPerPerson,
@@ -220,6 +233,13 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       groupMode: p.groupMode,
       minPax: p.minPax,
       departureMode: p.departureMode,
+      groupTour,
+      departures: groupTour
+        ? bundle.departures
+            .filter((d): d is typeof d & { departsOn: string } => d.packageCode === p.code && d.departsOn !== null)
+            .map((d) => ({ departsOn: d.departsOn, seatsTotal: d.seatsTotal, seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked) }))
+            .sort((a, b) => a.departsOn.localeCompare(b.departsOn))
+        : [],
       itinerary: p.itinerary.map((d) => ({ day: d.day, title: pick(d.title, locale), body: pick(d.body, locale) })),
       includes: p.includes.map((x) => pick(x, locale)),
       excludes: p.excludes.map((x) => pick(x, locale)),
