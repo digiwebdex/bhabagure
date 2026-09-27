@@ -16,6 +16,21 @@ export interface ImageView {
   isPlaceholder: boolean;
 }
 
+/** A published review (docs/customer-reviews.md): the customer's photos, and whether they travelled with the agency. */
+export interface ReviewView {
+  quote: string;
+  reviewerName: string;
+  tripLabel: string;
+  rating: number;
+  packageSlug: string | null;
+  verified: boolean;
+  /**
+   * The API's own WebP sizes, used as plain images: customers' photos must not go through the website's image optimiser,
+   * which held the site over its memory limit on 2026-09-24 (see tourPhotoSrcSet).
+   */
+  photos: { thumb: string; large: string; alt: string }[];
+}
+
 export interface PackageView {
   code: string;
   slug: string;
@@ -104,7 +119,7 @@ export interface SiteViews {
   categories: { slug: string; name: string; tone: BlogCategory['tone'] }[];
   posts: PostView[];
   team: { employeeCode: string; name: string; role: string; roleEn: string; photo: ImageView | null }[];
-  reviews: { quote: string; reviewerName: string; tripLabel: string; rating: number }[];
+  reviews: ReviewView[];
   gallery: { kind: 'reel' | 'photo'; url: string; viewsThousands: number | null; caption: string | null; thumbnail: ImageView | null }[];
   visas: VisaView[];
   visaCountries: VisaCountryView[];
@@ -284,7 +299,19 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       .filter((m) => m.isVisible)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((m) => ({ employeeCode: m.employeeCode, name: pick(m.name, locale), role: pick(m.role, locale), roleEn: m.role.en, photo: m.photo ? image(m.photo, locale) : null })),
-    reviews: bundle.reviews.map((r) => ({ quote: pick(r.quote, locale), reviewerName: r.reviewerName, tripLabel: pick(r.tripLabel, locale), rating: r.rating })),
+    reviews: bundle.reviews.map((r) => ({
+      quote: pick(r.quote, locale),
+      reviewerName: r.reviewerName,
+      tripLabel: pick(r.tripLabel, locale),
+      rating: r.rating,
+      packageSlug: r.packageSlug ?? null,
+      verified: r.verified === true,
+      photos: (r.photos ?? []).map((photo) => ({
+        thumb: photo.variants?.thumb?.url ?? photo.url,
+        large: photo.variants?.detail?.url ?? photo.url,
+        alt: pick(photo.alt, locale),
+      })),
+    })),
     gallery: bundle.gallery.map((g) => ({
       kind: g.kind,
       url: g.url,

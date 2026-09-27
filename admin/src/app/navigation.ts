@@ -69,7 +69,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
     items: [
       { key: 'posts', path: '/posts', icon: 'B', permissions: ['cms.manage'] },
       { key: 'team', path: '/team', icon: 'T', permissions: ['cms.manage'] },
-      { key: 'reviews', path: '/reviews', icon: 'R', permissions: ['cms.manage'] },
+      // The badge counts customers' reviews waiting for approval (docs/customer-reviews.md).
+      { key: 'reviews', path: '/reviews', icon: 'R', permissions: ['cms.manage'], badge: 'reviews' },
       { key: 'gallery', path: '/gallery', icon: 'G', permissions: ['cms.manage'] },
       { key: 'visas', path: '/visas', icon: 'V', permissions: ['cms.manage'] },
       // The traveller behind the agency, on the home page (docs/travel-host.md).

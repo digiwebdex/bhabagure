@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\V1\Public\PublicFormController;
 use App\Http\Controllers\Api\V1\Public\PublicInvoiceController;
 use App\Http\Controllers\Api\V1\Public\PublicPassportScanController;
 use App\Http\Controllers\Api\V1\Public\PublicQuotationController;
+use App\Http\Controllers\Api\V1\Public\PublicReviewController;
 use App\Http\Controllers\Api\V1\Webhooks\WaSenderWebhookController;
 use App\Models\TravellerDocument;
 use Illuminate\Support\Facades\Route;
@@ -176,6 +177,8 @@ Route::prefix('v1')->group(function () {
             Route::post('hotel-quotes', 'hotelQuote');
             Route::post('newsletter', 'subscribe');
         });
+        // "Share your trip": a customer's review with trip photos, checked by staff (docs/customer-reviews.md).
+        Route::post('reviews', [PublicReviewController::class, 'store'])->middleware('throttle:public-forms');
 
         // Booking (docs/phase-3-booking.md). Guests pass the booking's private token in X-Booking-Token.
         Route::controller(PublicBookingController::class)->group(function () {
@@ -633,6 +636,14 @@ Route::prefix('v1')->group(function () {
             Route::controller(CreatorProfileController::class)->group(function () {
                 Route::get('creator', 'show');
                 Route::put('creator', 'update');
+            });
+
+            // Customers' reviews from the website, waiting for staff (docs/customer-reviews.md).
+            Route::controller(ReviewController::class)->group(function () {
+                Route::get('reviews/pending', 'pending');
+                Route::post('reviews/{id}/approve', 'approve')->whereNumber('id');
+                Route::post('reviews/{id}/reject', 'reject')->whereNumber('id');
+                Route::put('review-photos/{photoId}', 'photo')->whereNumber('photoId');
             });
 
             foreach (['team' => TeamMemberController::class, 'reviews' => ReviewController::class, 'gallery' => GalleryItemController::class, 'visas' => VisaServiceController::class, 'creator-videos' => CreatorVideoController::class, 'airline-partners' => AirlinePartnerController::class, 'offer-banners' => OfferBannerController::class, 'tour-photos' => TourPhotoController::class] as $path => $controller) {

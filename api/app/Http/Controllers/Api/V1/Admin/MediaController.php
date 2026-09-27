@@ -10,6 +10,7 @@ use App\Models\GalleryItem;
 use App\Models\Media;
 use App\Models\OfferBanner;
 use App\Models\PackageImage;
+use App\Models\ReviewPhoto;
 use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Models\TourPhoto;
@@ -75,6 +76,7 @@ class MediaController extends Controller
             || AirlinePartner::query()->where('media_id', $media->id)->exists()
             || OfferBanner::query()->where('media_id', $media->id)->exists()
             || TourPhoto::query()->where('media_id', $media->id)->exists()
+            || ReviewPhoto::query()->where('media_id', $media->id)->exists()
             // The travel host's photos and covers live in a site setting, not a column (docs/travel-host.md).
             || in_array($media->id, CreatorProfile::mediaIds(SiteSetting::get(CreatorProfile::KEY)), true);
 

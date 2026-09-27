@@ -187,6 +187,16 @@ export type Review = {
   sort_order: number
   travelled_on: string | null
   status: ContentStatus
+  /** docs/customer-reviews.md: written by staff, or sent by a customer from the website. */
+  source: 'staff' | 'customer'
+  /** The customer's mobile (8801…), for the office only. */
+  phone: string | null
+  /** A customer's review nobody has approved or rejected yet. */
+  pending: boolean
+  /** The booking the customer's number matched: they travelled with the agency. */
+  booking: { id: number; reference: string } | null
+  photos: { id: number; is_shown: boolean; image: Media | null }[]
+  submitted_at: string | null
 }
 
 /** api/app/Http/Resources/AdminContent.php visaService (docs/phase-8-visa-quotes-pricing-downloads.md §4.C). */

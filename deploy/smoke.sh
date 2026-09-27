@@ -84,6 +84,9 @@ check "downloads screen without a token" 401 "$(get a_downloads "$API/api/v1/adm
 check "chart of accounts without a token" 401 "$(get a_accounts "$API/api/v1/admin/accounts" -H 'Accept: application/json')"
 check "journal entries without a token" 401 "$(get a_journal "$API/api/v1/admin/journal-entries" -H 'Accept: application/json')"
 check "coupons without a token" 401 "$(get a_coupons "$API/api/v1/admin/coupons" -H 'Accept: application/json')"
+check "waiting reviews without a token" 401 "$(get a_reviews_pending "$API/api/v1/admin/reviews/pending" -H 'Accept: application/json')"
+# The reviews address takes GET (the list) and POST (the website's form); a PUT is refused, not missing. Nothing is sent.
+check "review form route (POST only)" 405 "$(get p_review_form "$API/api/v1/public/reviews" -X PUT -H 'Accept: application/json')"
 check "confirmation vouchers without a token" 401 "$(get a_vouchers "$API/api/v1/admin/vouchers" -H 'Accept: application/json')"
 check "coupon report without a token" 401 "$(get a_coupon_report "$API/api/v1/admin/coupon-report" -H 'Accept: application/json')"
 # The booking form's coupon check exists (POST only; a GET is refused, not missing) — nothing is sent to it here.

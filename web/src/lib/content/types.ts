@@ -107,6 +107,12 @@ export interface Review {
   reviewerName: string;
   tripLabel: Localized;
   rating: number;
+  /** docs/customer-reviews.md: the package it's about (shown on that package's page too). Absent from the demo seed. */
+  packageSlug?: string | null;
+  /** The reviewer's number matched a booking: they travelled with the agency. */
+  verified?: boolean;
+  /** The customer's trip photos staff left shown. */
+  photos?: ContentImage[];
 }
 
 export interface GalleryItem {

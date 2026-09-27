@@ -162,6 +162,9 @@ test.describe('website content', () => {
   test('a review starts as a draft and appears publicly once published', async ({ page, request }) => {
     await signIn(page, 'admin')
     await page.goto('/reviews')
+    // The screen's first requests (the list, customers' waiting reviews, the packages) queue on the one-at-a-time e2e
+    // API: let them land before saving, or the save queues behind them.
+    await expect(page.getByText('No reviews yet')).toBeVisible(FIRST_LOAD)
     await page.getByRole('button', { name: '+ Add review' }).first().click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel('Review (Bangla)').fill('খুব ভালো ব্যবস্থাপনা।')

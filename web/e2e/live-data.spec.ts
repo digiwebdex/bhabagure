@@ -396,6 +396,61 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('a customer writes a review with a trip photo; once staff approve it, it shows with the photo on the home page and its package (docs/customer-reviews.md)', async ({ page, request }) => {
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const password = 'e2e-review-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'review.editor@e2e.test'], ['employee_code' => 'E2E-REV', 'name' => 'Review editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const phone = `0171${String(Date.now()).slice(-7)}`;
+
+    // The form sits in "What travellers say" even before any review is published.
+    await page.goto('/en');
+    const section = page.locator('#reviews');
+    await section.getByRole('button', { name: /Write a review/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'Share your trip' });
+    // Nothing is sent until the form is complete.
+    await dialog.getByRole('button', { name: 'Send review' }).click();
+    await expect(dialog.getByText('Choose how many stars.')).toBeVisible();
+    await dialog.getByRole('radio', { name: '4 stars' }).click();
+    await dialog.getByLabel('Your name').fill('Rahim Uddin');
+    await dialog.getByLabel('Mobile number').fill(phone);
+    await dialog.getByLabel('Which trip?').selectOption('nepal-mustang-adventure-tour-8-days-7-nights');
+    await dialog.getByLabel('Your review').fill('Great group, great guide — Muktinath at sunrise was the highlight of the whole trip.');
+    await dialog.locator('input[type=file]').setInputFiles({ name: 'muktinath.png', mimeType: 'image/png', buffer: png });
+    await expect(dialog.getByTestId('review-photo-previews').locator('img')).toHaveCount(1);
+    await dialog.getByRole('button', { name: 'Send review' }).click();
+    await expect(dialog.getByTestId('review-sent')).toContainText('Thank you for your review!');
+
+    // Waiting for staff: not on the website yet. Then approved through the admin API.
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'review.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+    const pending = (await (await request.get(`${E2E_API_URL}/api/v1/admin/reviews/pending`, { headers })).json()).data as { id: number; reviewer_name: string; photos: unknown[] }[];
+    const mine = pending.find((review) => review.reviewer_name === 'Rahim Uddin')!;
+    expect(mine.photos).toHaveLength(1);
+    try {
+      expect((await request.post(`${E2E_API_URL}/api/v1/admin/reviews/${mine.id}/approve`, { headers })).status()).toBe(200);
+
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return page.locator('#reviews').getByText('Rahim Uddin').count();
+      }, { timeout: 20_000 }).toBeGreaterThan(0);
+      const card = page.getByTestId('review-cards').locator('figure').filter({ hasText: 'Rahim Uddin' });
+      await expect(card).toContainText('Muktinath at sunrise');
+      // No booking with this number: no "verified" mark, and the number itself never shows.
+      await expect(card.getByTestId('review-verified')).toHaveCount(0);
+      await expect(page.locator('body')).not.toContainText(phone);
+      // The photo opens larger.
+      await card.getByTestId('review-photos').getByRole('button').first().click();
+      await expect(page.getByRole('dialog', { name: /Photo from Rahim Uddin/ })).toBeVisible();
+      await page.keyboard.press('Escape');
+
+      // Its package's page shows it too.
+      await page.goto('/en/packages/nepal-mustang-adventure-tour-8-days-7-nights');
+      await expect(page.locator('#package-reviews')).toContainText('Rahim Uddin');
+    } finally {
+      await request.delete(`${E2E_API_URL}/api/v1/admin/reviews/${mine.id}`, { headers });
+    }
+  });
+
   test('group tour photos published in the CMS slide by themselves, whole, with their trip and next/previous (docs/group-tour-gallery.md)', async ({ page, request }) => {
     const password = 'e2e-photo-editor-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'photo.editor@e2e.test'], ['employee_code' => 'E2E-PHO', 'name' => 'Photo editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

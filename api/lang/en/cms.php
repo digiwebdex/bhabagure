@@ -20,6 +20,8 @@ return [
     ],
     'has_bookings' => 'This has bookings. Archive it instead of deleting.',
     'gallery_url' => 'Use the link of the reel or photo on the Facebook page. A reel needs the video’s own link, e.g. https://www.facebook.com/reel/1097420422945413.',
+    'review_limit' => 'This number has sent several reviews today. Please try again tomorrow, or call us.',
+    'review_decided' => 'This review has already been approved or rejected.',
     'banner_link' => 'Give a full web address (https://…) or a page on this site starting with a slash, e.g. /packages/nepal-mustang.',
     'creator_link' => 'Add the Facebook page or the YouTube channel link: a card with neither links nowhere.',
     'creator_facebook_url' => 'Use the Facebook page or profile link, e.g. https://www.facebook.com/shishirdeb.traveller.',

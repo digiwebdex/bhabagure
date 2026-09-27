@@ -101,7 +101,7 @@ class PublicContentController extends Controller
 
     public function reviews(): JsonResponse
     {
-        $reviews = Review::query()->published()->orderBy('sort_order')->orderBy('id')->get();
+        $reviews = Review::query()->published()->with(['package', 'photos.image'])->orderBy('sort_order')->orderBy('id')->get();
 
         return $this->data($reviews->map(PublicContent::review(...)));
     }

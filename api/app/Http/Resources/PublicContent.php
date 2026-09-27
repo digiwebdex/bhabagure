@@ -15,6 +15,7 @@ use App\Models\OfferBanner;
 use App\Models\PackageDeparture;
 use App\Models\PackageInclusion;
 use App\Models\Review;
+use App\Models\ReviewPhoto;
 use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
@@ -255,6 +256,13 @@ final class PublicContent
             'reviewerName' => $review->reviewer_name,
             'tripLabel' => $review->localized('trip_label'),
             'rating' => $review->rating,
+            // docs/customer-reviews.md: the package it's about (its page shows it), the photos staff left shown, and whether
+            // the reviewer's number matched a booking. Never the number itself.
+            'packageSlug' => $review->relationLoaded('package') ? $review->package?->slug : null,
+            'verified' => $review->booking_id !== null,
+            'photos' => $review->relationLoaded('photos')
+                ? $review->photos->where('is_shown', true)->map(fn (ReviewPhoto $photo) => self::image($photo->image, MediaVariant::Detail))->filter()->values()->all()
+                : [],
         ];
     }
 

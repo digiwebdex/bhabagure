@@ -9,6 +9,7 @@ use App\Models\BookingTraveller;
 use App\Models\Customer;
 use App\Models\Inquiry;
 use App\Models\Quotation;
+use App\Models\Review;
 use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\SupportTicket;
@@ -108,9 +109,18 @@ class NavCountsContractTest extends TestCase
         $approvedBonus = $bonus->approve($bonus->request($this->staff['agent_b'], 1500, null), null, $this->staff['admin']);
         $bonus->cancel($bonus->request($this->staff['agent_b'], 600, null), $this->staff['agent_b']);
 
+        // Customers' reviews (docs/customer-reviews.md): two waiting; a rejected one and a staff-written one don't count.
+        $review = fn (array $extra = []) => Review::query()->create([
+            'quote_bn' => 'চমৎকার ট্রিপ, সবকিছু ঠিকঠাক ছিল।', 'reviewer_name' => 'Traveller', 'rating' => 5, 'status' => 'draft', 'source' => Review::CUSTOMER, ...$extra,
+        ]);
+        $waitingReview = $review();
+        $review();
+        $review()->forceFill(['reviewed_at' => now(), 'rejected_at' => now()])->save();
+        $review(['source' => Review::STAFF]);
+
         $this->assertContract([
-            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
+            'super_admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'staff_documents' => 2],
             'accountant' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'support' => 1],
             'tour_operator' => ['bookings' => 4, 'documents' => 2, 'support' => 1],
             'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1],
@@ -122,7 +132,7 @@ class NavCountsContractTest extends TestCase
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/bookings/{$pool1->id}/claim")->assertOk();
         $this->actingAsApi($this->staff['agent_a'])->postJson("/api/v1/admin/air-inquiries/{$stalePool->id}/claim")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'staff_documents' => 2],
+            'admin' => ['bookings' => 4, 'quotations' => 2, 'documents' => 2, 'air_inquiries' => 3, 'hotel_inquiries' => 2, 'support' => 1, 'leave_requests' => 1, 'bonus_withdrawals' => 2, 'reviews' => 2, 'staff_documents' => 2],
             'agent_a' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 1],
             'agent_b' => ['bookings' => 2, 'quotations' => 1, 'documents' => 0, 'air_inquiries' => 1, 'hotel_inquiries' => 1, 'support' => 1],
         ]);
@@ -140,8 +150,9 @@ class NavCountsContractTest extends TestCase
         // A's request is rejected; B's approved one stays waiting until it is paid.
         $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/bonus-withdrawals/{$pendingBonus->id}/reject", ['note' => 'Next month'])->assertOk();
         $this->assertSame('approved', $approvedBonus->fresh()->status);
+        $this->actingAsApi($this->staff['admin'])->postJson("/api/v1/admin/reviews/{$waitingReview->id}/approve")->assertOk();
         $this->assertContract([
-            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'staff_documents' => 1],
+            'admin' => ['bookings' => 3, 'quotations' => 1, 'documents' => 2, 'air_inquiries' => 2, 'hotel_inquiries' => 2, 'support' => 0, 'leave_requests' => 0, 'bonus_withdrawals' => 1, 'reviews' => 1, 'staff_documents' => 1],
             'agent_a' => ['bookings' => 1, 'quotations' => 1, 'documents' => 1, 'air_inquiries' => 2, 'hotel_inquiries' => 1, 'support' => 0],
             'agent_b' => ['bookings' => 2, 'quotations' => 0, 'documents' => 1, 'air_inquiries' => 0, 'hotel_inquiries' => 1, 'support' => 0],
             'tour_operator' => ['bookings' => 3, 'documents' => 2, 'support' => 0],

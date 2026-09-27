@@ -13,6 +13,7 @@ use App\Models\Booking;
 use App\Models\Inquiry;
 use App\Models\LeaveRequest;
 use App\Models\Quotation;
+use App\Models\Review;
 use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\SupportTicket;
@@ -89,6 +90,13 @@ final class NavBadges
                 'path' => '/api/v1/admin/bonus-withdrawals',
                 'filter' => ['withdrawals' => 'open'],
                 'query' => fn (Staff $staff) => BonusController::filtered('open'),
+            ],
+            // Customers' reviews from the website waiting to be approved or rejected (docs/customer-reviews.md).
+            'reviews' => [
+                'permission' => ['cms.manage'],
+                'path' => '/api/v1/admin/reviews/pending',
+                'filter' => [],
+                'query' => fn (Staff $staff) => Review::query()->pending(),
             ],
             // Staff documents expired or expiring within 30 days, for staff who aren't suspended (Phase 7 §4.2).
             'staff_documents' => [

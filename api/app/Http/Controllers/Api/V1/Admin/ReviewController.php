@@ -6,12 +6,20 @@ use App\Http\Controllers\Api\V1\Admin\Concerns\ManagesPublishedList;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminContent;
 use App\Models\Review;
+use App\Models\ReviewPhoto;
+use App\Services\Media\ImageUploader;
+use App\Services\Reviews\ReviewAlreadyDecided;
+use App\Services\Reviews\ReviewSubmissions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
 
-/** Customer reviews shown on the website. Hidden there until at least one is published. */
+/**
+ * Reviews shown on the website ("What travellers say"): written here by staff, or sent by customers from the website and
+ * approved here first (docs/customer-reviews.md). Hidden on the website until at least one is published.
+ */
 class ReviewController extends Controller
 {
     use ManagesPublishedList;
@@ -33,17 +41,60 @@ class ReviewController extends Controller
 
     protected function present(Model $model): array
     {
-        return AdminContent::review($model);
+        return AdminContent::review($model->loadMissing(['photos.image', 'booking']));
     }
 
+    /** Staff reviews and approved customer ones; customers' waiting reviews have their own list, rejected ones none. */
     public function index(Request $request): JsonResponse
     {
         $status = $request->validate(['status' => ['nullable', Rule::in(['draft', 'published'])]])['status'] ?? null;
 
-        $reviews = Review::query()->when($status, fn ($query) => $query->where('status', $status))
+        $reviews = Review::query()->listed()->with(['photos.image', 'booking'])->when($status, fn ($query) => $query->where('status', $status))
             ->orderBy('sort_order')->orderBy('id')->get();
 
         return response()->json(['data' => $reviews->map(AdminContent::review(...))]);
+    }
+
+    /** Customers' reviews from the website waiting for staff, oldest first (docs/customer-reviews.md). */
+    public function pending(): JsonResponse
+    {
+        $reviews = Review::query()->pending()->with(['photos.image', 'booking', 'package'])->orderBy('id')->get();
+
+        // meta.total is what the sidebar badge counts (NavBadges `reviews`).
+        return response()->json(['data' => $reviews->map(AdminContent::review(...)), 'meta' => ['total' => $reviews->count()]]);
+    }
+
+    public function approve(Request $request, int $id, ReviewSubmissions $submissions): JsonResponse
+    {
+        return $this->decided(fn () => $submissions->approve(Review::query()->findOrFail($id), $request->user('staff')));
+    }
+
+    public function reject(Request $request, int $id, ReviewSubmissions $submissions): JsonResponse
+    {
+        $reason = $request->validate(['reason' => ['nullable', 'string', 'max:300']])['reason'] ?? null;
+
+        return $this->decided(fn () => $submissions->reject(Review::query()->findOrFail($id), $reason, $request->user('staff')));
+    }
+
+    /** Show or hide one of a review's photos on the website. */
+    public function photo(Request $request, int $photoId, ReviewSubmissions $submissions): JsonResponse
+    {
+        $shown = $request->validate(['is_shown' => ['required', 'boolean']])['is_shown'];
+        $photo = $submissions->showPhoto(ReviewPhoto::query()->findOrFail($photoId), (bool) $shown, $request->user('staff'));
+
+        return response()->json(['data' => AdminContent::review($photo->review->load(['photos.image', 'booking']))]);
+    }
+
+    /** @param callable(): Review $decide */
+    private function decided(callable $decide): JsonResponse
+    {
+        try {
+            $review = $decide();
+        } catch (ReviewAlreadyDecided) {
+            return response()->json(['message' => __('cms.review_decided'), 'code' => 'review_decided'], Response::HTTP_CONFLICT);
+        }
+
+        return response()->json(['data' => AdminContent::review($review->load(['photos.image', 'booking']))]);
     }
 
     public function store(Request $request): JsonResponse
@@ -72,8 +123,13 @@ class ReviewController extends Controller
 
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $review = Review::query()->findOrFail($id);
+        $review = Review::query()->with('photos.image')->findOrFail($id);
+        // A customer's photos belong to their review: they go with it.
+        $photos = $review->photos->pluck('image')->filter();
         $review->delete();
+        foreach ($photos as $media) {
+            app(ImageUploader::class)->delete($media);
+        }
 
         return $this->saved($request, $review, 'deleted');
     }

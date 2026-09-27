@@ -5,6 +5,7 @@ import type { Review } from '../../../lib/api/types'
 import { useFormat } from '../../../lib/useFormat'
 import { PublishedList } from '../lists/PublishedList'
 import { usePackages } from '../packages/api'
+import { PendingReviews } from './PendingReviews'
 
 type ReviewForm = Pick<Review, 'quote_bn' | 'quote_en' | 'reviewer_name' | 'trip_label_bn' | 'trip_label_en' | 'rating' | 'travelled_on' | 'tour_package_id'>
 
@@ -21,7 +22,13 @@ export function ReviewsPage() {
       newLabel={t('reviews.new')}
       emptyTitle={t('reviews.empty')}
       emptyNote={t('reviews.emptyNote')}
-      note={<p className="m-0 text-13 leading-1.6 text-app-muted">{t('reviews.realOnly')}</p>}
+      note={
+        <>
+          {/* Customers' reviews from the website, waiting to be approved (docs/customer-reviews.md). */}
+          <PendingReviews />
+          <p className="m-0 text-13 leading-1.6 text-app-muted">{t('reviews.realOnly')}</p>
+        </>
+      }
       row={(review) => ({
         label: review.reviewer_name,
         content: (

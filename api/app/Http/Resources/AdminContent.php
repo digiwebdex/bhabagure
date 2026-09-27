@@ -15,6 +15,7 @@ use App\Models\PackageDeparture;
 use App\Models\PackageImage;
 use App\Models\PackageInclusion;
 use App\Models\Review;
+use App\Models\ReviewPhoto;
 use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
@@ -197,6 +198,15 @@ final class AdminContent
             ...$review->only(['id', 'quote_bn', 'quote_en', 'reviewer_name', 'trip_label_bn', 'trip_label_en', 'rating', 'tour_package_id', 'sort_order']),
             'travelled_on' => $review->travelled_on?->toDateString(),
             'status' => $review->status->value,
+            // docs/customer-reviews.md: who wrote it, and for a customer's review what staff check before approving.
+            'source' => $review->source ?? Review::STAFF,
+            'phone' => $review->phone,
+            'pending' => $review->isPending(),
+            'booking' => $review->relationLoaded('booking') && $review->booking ? ['id' => $review->booking->id, 'reference' => $review->booking->reference] : null,
+            'photos' => $review->relationLoaded('photos') ? $review->photos->map(fn (ReviewPhoto $photo) => [
+                'id' => $photo->id, 'is_shown' => $photo->is_shown, 'image' => self::media($photo->image),
+            ])->values()->all() : [],
+            'submitted_at' => $review->created_at?->toIso8601String(),
         ];
     }
 

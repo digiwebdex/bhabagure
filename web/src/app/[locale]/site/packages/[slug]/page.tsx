@@ -4,6 +4,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { loadContent } from '@/lib/content/source';
 import { PackageDetailActions, PackageDetailBody, PackageDetailHeading } from '@/features/packages/PackageDetail';
+import { ReviewForm } from '@/features/reviews/ReviewForm';
+import { ReviewCards } from '@/features/reviews/ReviewsSection';
 import { SiteChrome } from '@/features/SiteChrome';
 import { Link } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
@@ -41,7 +43,9 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
   const pkg = views.packages.find((p) => p.slug === slug);
   if (!pkg) notFound();
   const t = await getTranslations({ locale, namespace: 'common' });
+  const tr = await getTranslations({ locale, namespace: 'reviewForm' });
   const path = packagePath(slug);
+  const reviews = views.reviews.filter((review) => review.packageSlug === slug);
 
   return (
     <SiteChrome locale={locale} views={views} pathname={path}>
@@ -55,6 +59,14 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-16 border border-hairline bg-paper-soft px-fluid-18-28 py-4">
           <PackageDetailActions pkg={pkg} />
         </div>
+        {/* Travellers' reviews of this package (docs/customer-reviews.md), and a form with it already chosen. */}
+        <section id="package-reviews" className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-fluid-20-26 font-bold tracking-heading">{tr('packageHeading')}</h2>
+            <ReviewForm packageSlug={pkg.slug} variant="outlineInk" />
+          </div>
+          {reviews.length > 0 ? <ReviewCards reviews={reviews} verifiedLabel={tr('verified')} /> : <p className="text-14 text-muted">{tr('packageNone')}</p>}
+        </section>
       </article>
     </SiteChrome>
   );
