@@ -1,4 +1,4 @@
-import { gridCategories, groupTourRoomPrices } from '@bhabaghure/pricing'
+import { gridCategories, roomPrices } from '@bhabaghure/pricing'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router'
@@ -52,11 +52,12 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
   // Priced by hotel category: the one price and the sale price come from the grid (Phase 8 §4.D). A group tour keeps
   // its grid unused.
   const hasGrid = !groupTour && gridCategories(form.price_grid).length > 0
-  // What a single or triple room costs per person at the percentage being typed; nothing while it is out of range.
-  const roomPreview = (room: 'single' | 'triple', percent: number) => {
+  // What a twin or single room costs per person on the price above at the percentage being typed; nothing while it is
+  // out of range. A size table's prices are the base for each group size, so this is an example on the price above.
+  const roomPreview = (room: 'twin' | 'single', percent: number) => {
     try {
-      const rules = room === 'single' ? { singleSupplementPercent: percent, tripleDiscountPercent: 0 } : { singleSupplementPercent: 0, tripleDiscountPercent: percent }
-      return t('packages.roomPreview', { amount: bdt(groupTourRoomPrices(form.sale_price ?? form.regular_price, rules)[room]) })
+      const rates = room === 'single' ? { singleSupplementPercent: percent, twinSupplementPercent: 0 } : { singleSupplementPercent: 0, twinSupplementPercent: percent }
+      return t('packages.roomPreview', { amount: bdt(roomPrices(form.sale_price ?? form.regular_price, rates, { singleRoomSupplementPercent: 0 })[room]) })
     } catch {
       return undefined
     }
@@ -179,30 +180,28 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
               options={(['customized', 'group_fixed'] as const).map((value) => ({ value, label: t(`packages.tripKinds.${value}`) }))}
               hint={t(`packages.tripKindHints.${form.trip_type}`)}
             />
-            {groupTour ? (
-              <div className="flex flex-col gap-2 rounded-10 bg-app-surface-2 p-3" data-testid="group-tour-rooms">
-                <Pair>
-                  <NumberInput
-                    label={t('packages.singleSupplement')}
-                    value={form.single_supplement_percent}
-                    onChange={(value) => set('single_supplement_percent', value ?? 0)}
-                    error={error('single_supplement_percent')}
-                    preview={(value) => roomPreview('single', value)}
-                  />
-                  <NumberInput
-                    label={t('packages.tripleDiscount')}
-                    value={form.triple_discount_percent}
-                    onChange={(value) => set('triple_discount_percent', value ?? 0)}
-                    error={error('triple_discount_percent')}
-                    preview={(value) => roomPreview('triple', value)}
-                    hint={form.triple_discount_percent === 0 ? t('packages.tripleSameAsTwin') : undefined}
-                  />
-                </Pair>
-                <p className="m-0 text-12 text-app-muted">{t('packages.groupTourNote')}</p>
-              </div>
-            ) : (
-              <PriceGridField value={form.price_grid} onChange={(grid) => set('price_grid', grid)} error={error} />
-            )}
+            {/* Room rates (docs/room-rates.md): triple sharing is the base price; twin and single add a percentage of it. */}
+            <div className="flex flex-col gap-2 rounded-10 bg-app-surface-2 p-3" data-testid="room-rates">
+              <Pair>
+                <NumberInput
+                  label={t('packages.twinSupplement')}
+                  value={form.twin_supplement_percent}
+                  onChange={(value) => set('twin_supplement_percent', value ?? 0)}
+                  error={error('twin_supplement_percent')}
+                  preview={(value) => roomPreview('twin', value)}
+                  hint={form.twin_supplement_percent === 0 ? t('packages.twinSameAsTriple') : undefined}
+                />
+                <NumberInput
+                  label={t('packages.singleSupplement')}
+                  value={form.single_supplement_percent}
+                  onChange={(value) => set('single_supplement_percent', value ?? 0)}
+                  error={error('single_supplement_percent')}
+                  preview={(value) => roomPreview('single', value)}
+                />
+              </Pair>
+              <p className="m-0 text-12 text-app-muted">{groupTour ? t('packages.groupTourNote') : t('packages.roomRatesNote')}</p>
+            </div>
+            {groupTour ? null : <PriceGridField value={form.price_grid} onChange={(grid) => set('price_grid', grid)} error={error} />}
             <PriceOptionsField value={form.price_options} onChange={(options) => set('price_options', options)} error={error} />
             <Pair>
               <SelectInput

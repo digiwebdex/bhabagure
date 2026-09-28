@@ -104,9 +104,9 @@ class PriceGridTest extends TestCase
         // 95,000 + 2% = 96,900: no supplement on the 1-traveller price.
         $this->postJson('/api/v1/public/bookings', [...$this->booking(1, '3', 0), 'room' => 'single'])->assertStatus(409)
             ->assertJsonPath('quote.total', 96900)->assertJsonPath('quote.singleSupplement', 0);
-        // Two in single rooms: 75,000 × 2 + 12% × 2 = 1,68,000 + 2% = 1,71,360.
+        // Two in single rooms: 75,000 × 2 + the package's 15% × 2 = 1,72,500 + 2% = 1,75,950.
         $this->postJson('/api/v1/public/bookings', [...$this->booking(2, '3', 0), 'room' => 'single'])->assertStatus(409)
-            ->assertJsonPath('quote.total', 171360)->assertJsonPath('quote.singleSupplement', 18000);
+            ->assertJsonPath('quote.total', 175950)->assertJsonPath('quote.singleSupplement', 22500);
         // A package without a grid is unchanged, and ignores a category.
         TourPackage::query()->where('slug', self::MUSTANG)->update(['price_grid' => null]);
         $this->postJson('/api/v1/public/bookings', $this->booking(3, '4', 0))->assertStatus(409)->assertJsonPath('quote.total', 222615)->assertJsonPath('quote.hotelCategory', null);

@@ -3,11 +3,12 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
-import { defaultHotelCategory, groupTourRoomPrices, quoteBooking, type RoomType } from '@bhabaghure/pricing';
+import { defaultHotelCategory, quoteBooking, type RoomType } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Modal, ModalClose } from '@/components/ui/Modal';
+import { roomPercent, roomPricesFor } from '@/lib/package-price';
 import { useFormatters } from '@/lib/use-formatters';
 import { useBooking, type BookingStep } from '@/state/booking';
 
@@ -52,7 +53,8 @@ export function BookingModal() {
             grid: pkg.priceGrid,
             hotelCategory,
             discount: couponOff,
-            groupTour: pkg.groupTour,
+            rooms: pkg.roomRates,
+            fixedPrice: pkg.groupTour,
           })
         : null,
     [pkg, booking.pax, booking.room, selectedAddons, pricing, hotelCategory, couponOff],
@@ -72,18 +74,20 @@ export function BookingModal() {
     booking.goNext();
   };
 
-  // A group tour's rooms each show their price per person: the tour's own single supplement and triple price.
-  const roomPrices = pkg.groupTour ? groupTourRoomPrices(pkg.listPrice, pkg.groupTour) : null;
+  // Every room with its price per person for these travellers (docs/room-rates.md): triple is the base, twin and
+  // single add the package's percentages.
+  const roomPrices = roomPricesFor(pkg, booking.pax, pricing, hotelCategory);
   const roomLabel = (room: RoomType) => {
+    const twin = roomPercent(pkg, 'twin', pricing);
     const label =
       room === 'single'
-        ? t('roomSingle', {
-            percent: f.percent(pkg.groupTour ? pkg.groupTour.singleSupplementPercent : pricing.singleRoomSupplementPercent),
-          })
+        ? t('roomSingle', { percent: f.percent(roomPercent(pkg, 'single', pricing)) })
         : room === 'triple'
           ? t('roomTriple')
-          : t('roomTwin');
-    return roomPrices ? t('roomPrice', { room: label, price: f.bdt(roomPrices[room]) }) : label;
+          : twin > 0
+            ? t('roomTwinPlus', { percent: f.percent(twin) })
+            : t('roomTwin');
+    return t('roomPrice', { room: label, price: f.bdt(roomPrices[room]) });
   };
 
   return (

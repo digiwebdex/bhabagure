@@ -47,8 +47,8 @@ class InvoicePdfTest extends TestCase
                 ['name' => 'Md Tanvir Hasan', 'passportNumber' => 'BW0912345', 'dateOfBirth' => '1990-04-12', 'passportExpiry' => '2031-03-12', 'phone' => '8801711223344', 'email' => 'tanvir.hasan@example.test'],
                 ['name' => 'Nusrat Jahan', 'passportNumber' => 'BX4471228', 'dateOfBirth' => '1992-08-03', 'passportExpiry' => '2029-07-11', 'phone' => null, 'email' => null],
             ],
-            // 2 pax twin-slab 75,000 + 12% single 9,000 pp + insurance 2,400 + pickup 800 = 171,200; 2% = 3,424.
-            174624, 'bn', 'website', true,
+            // 2 pax at 75,000 + the package's 15% single 11,250 pp + insurance 2,400 + pickup 800 = 175,700; 2% = 3,514.
+            179214, 'bn', 'website', true,
         ));
         $staff = $this->staff();
         $this->invoice = app(InvoiceIssuer::class)->issueForBooking($created['booking'], $staff);
@@ -106,10 +106,10 @@ class InvoicePdfTest extends TestCase
 
         $this->assertSame($before, $after);
         // English only since 2026-09-19 (the client's decision): Latin digits, whatever the customer's language.
-        $this->assertPdfContains('1,74,624', $after, 'total in English digits');
+        $this->assertPdfContains('1,79,214', $after, 'total in English digits');
         // Not even the ৳ sign: amounts read "BDT".
         $this->assertDoesNotMatchRegularExpression('/[\x{0980}-\x{09FF}]/u', implode('', $after), 'no Bangla on the invoice');
-        $this->assertPdfContains('BDT 1,74,624', $after, 'total in BDT');
+        $this->assertPdfContains('BDT 1,79,214', $after, 'total in BDT');
         $this->assertStringNotContainsString('Renamed', implode('', $after));
     }
 
@@ -120,7 +120,7 @@ class InvoicePdfTest extends TestCase
 
         $this->assertPdfContains('PARTIAL', $texts);
         $this->assertPdfContains('1,00,000', $texts, 'paid');
-        $this->assertPdfContains('74,624', $texts, 'balance due');
+        $this->assertPdfContains('79,214', $texts, 'balance due');
         $this->assertPdfContains('8FK2M4QX', $texts, 'payment reference');
         $this->assertPdfContains('Notifications: 01911000111', $texts, 'the notifications number beside the main line');
     }

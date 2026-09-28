@@ -76,9 +76,11 @@ final class PublicContent
             'groupMode' => $package->group_mode,
             'minPax' => $package->min_pax,
             'departureMode' => $package->departure_mode,
-            // A fixed-departure group tour's room prices ({singleSupplementPercent, tripleDiscountPercent}), booked on the
-            // dates in /public/departures only; null for a customized trip (docs/fixed-departure-group-tours.md).
-            'groupTour' => $package->groupTourRooms(),
+            // A fixed-departure group tour: one price, booked on the dates in /public/departures only
+            // (docs/fixed-departure-group-tours.md). Otherwise a customized trip.
+            'groupTour' => $package->isGroupTour(),
+            // Triple sharing is the base price; twin and single add their percentage (docs/room-rates.md).
+            'roomRates' => $package->roomRates(),
             'itinerary' => $package->itineraryDays->map(fn ($day) => [
                 'day' => $day->day_number,
                 'title' => $day->localized('title'),

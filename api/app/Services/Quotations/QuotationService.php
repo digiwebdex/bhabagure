@@ -322,7 +322,7 @@ final class QuotationService
             $listPrice, $input->pax, $input->room,
             $addons->map(fn (Addon $addon) => ['code' => $addon->code, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit])->all(),
             PricingConfig::current(), $input->discount, $input->vatRate,
-            grid: $package->price_grid, hotelCategory: $input->hotelCategory, groupTour: $package->groupTourRooms(),
+            grid: $package->price_grid, hotelCategory: $input->hotelCategory, rooms: $package->roomRates(), fixedPrice: $package->isGroupTour(),
         );
         if ((int) round($input->expectedTotal) !== $quote['total']) {
             throw new PriceChanged($quote);
@@ -349,7 +349,8 @@ final class QuotationService
             'hotel_category' => $quote['hotelCategory'],
             'list_price' => $listPrice,
             'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
-            'group_tour' => $package->groupTourRooms(),
+            'room_rates' => $package->roomRates(),
+            'fixed_price' => $package->isGroupTour(),
             'unit_price' => $quote['perPerson'],
             'subtotal_amount' => $quote['subtotal'],
             'single_supplement_amount' => $quote['singleSupplement'],

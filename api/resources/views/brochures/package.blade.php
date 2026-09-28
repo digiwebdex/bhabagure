@@ -89,7 +89,7 @@
   <div class="your">
     <span>
       <span class="eyebrow">{{ $l('আপনার বেছে নেওয়া', 'Your choice') }}</span><br>
-      @if ($groupTour){{ $l('টুইন শেয়ারিং', 'Twin sharing') }} · @elseif ($grid){{ \App\Enums\HotelCategory::from($category)->label($locale) }} {{ $l('হোটেল', 'hotel') }} · @endif{{ $number($pax) }} {{ $l('জন', $pax === 1 ? 'traveller' : 'travellers') }}
+      @if ($groupTour){{ $l('ট্রিপল শেয়ারিং', 'Triple sharing') }} · @elseif ($grid){{ \App\Enums\HotelCategory::from($category)->label($locale) }} {{ $l('হোটেল', 'hotel') }} · @endif{{ $number($pax) }} {{ $l('জন', $pax === 1 ? 'traveller' : 'travellers') }}
     </span>
     <span style="text-align:right"><strong class="num">{{ $money($yourPrice) }}</strong><br><span class="small muted">{{ $l('জনপ্রতি', 'per person') }} · {{ $l('মোট', 'total') }} <span class="num">{{ $money($yourPrice * $pax) }}</span></span></span>
   </div>
@@ -99,9 +99,9 @@
     <h2>{{ $l('রুম অনুযায়ী মূল্য (জনপ্রতি)', 'Price per person by room') }}</h2>
     <table>
       <tbody>
-        <tr><td>{{ $l('টুইন শেয়ারিং', 'Twin sharing') }}</td><td class="num chosen">{{ $money($groupTour['rooms']['twin']) }}</td></tr>
-        <tr><td>{{ $l('সিঙ্গেল', 'Single') }} <span class="muted">(+{{ $percent($groupTour['rules']['singleSupplementPercent']) }})</span></td><td class="num">{{ $money($groupTour['rooms']['single']) }}</td></tr>
-        <tr><td>{{ $l('ট্রিপল শেয়ারিং', 'Triple sharing') }}@if ($groupTour['rules']['tripleDiscountPercent'] > 0) <span class="muted">(−{{ $percent($groupTour['rules']['tripleDiscountPercent']) }})</span>@endif</td><td class="num">{{ $money($groupTour['rooms']['triple']) }}</td></tr>
+        <tr><td>{{ $l('ট্রিপল শেয়ারিং', 'Triple sharing') }}</td><td class="num chosen">{{ $money($groupTour['rooms']['triple']) }}</td></tr>
+        <tr><td>{{ $l('টুইন শেয়ারিং', 'Twin sharing') }}@if ($rates['twinSupplementPercent'] > 0) <span class="muted">(+{{ $percent($rates['twinSupplementPercent']) }})</span>@endif</td><td class="num">{{ $money($groupTour['rooms']['twin']) }}</td></tr>
+        <tr><td>{{ $l('সিঙ্গেল', 'Single') }} <span class="muted">(+{{ $percent($rates['singleSupplementPercent']) }})</span></td><td class="num">{{ $money($groupTour['rooms']['single']) }}</td></tr>
       </tbody>
     </table>
     <h2 style="margin-top:3mm">{{ $l('ডিপার্চারের তারিখ', 'Departure dates') }}</h2>
@@ -134,10 +134,13 @@
       </tbody>
     </table>
     <p class="small muted" style="margin:1.5mm 0 0">
+      {{-- Triple sharing is the base price; twin and single add the package's own percentages (docs/room-rates.md). --}}
+      {{ $l('মূল্য ট্রিপল শেয়ারিং রুমে জনপ্রতি।', 'Prices are per person in a triple-sharing room.') }}
+      @if ($rates['twinSupplementPercent'] > 0){{ $l('টুইন শেয়ারিং রুমে +', 'A twin-sharing room adds ') }}{{ $percent($rates['twinSupplementPercent']) }}. @endif
       @if ($grid)
-        {{ $l('দুই আকারের মাঝের দল ছোট আকারের মূল্য দেয়। একজনের মূল্যে সিঙ্গেল রুম ধরা আছে; দুই বা বেশি জনের সিঙ্গেল রুমে +', 'A group between two sizes pays the smaller size’s price. The price for one includes a single room; for two or more a single room adds ') }}{{ $percent($config->singleRoomSupplementPercent) }}.
+        {{ $l('দুই আকারের মাঝের দল ছোট আকারের মূল্য দেয়। একজনের মূল্যে সিঙ্গেল রুম ধরা আছে; দুই বা বেশি জনের সিঙ্গেল রুমে +', 'A group between two sizes pays the smaller size’s price. The price for one includes a single room; for two or more a single room adds ') }}{{ $percent($rates['singleSupplementPercent']) }}.
       @else
-        {{ $l('একজন সিঙ্গেল রুম নিলে +', 'A single room adds ') }}{{ $percent($config->singleRoomSupplementPercent) }}.
+        {{ $l('একজন সিঙ্গেল রুম নিলে +', 'A single room adds ') }}{{ $percent($rates['singleSupplementPercent']) }}.
       @endif
       {{ $l('সার্ভিস চার্জ ও ভ্যাট', 'Service charge and VAT') }} {{ $percent($config->serviceChargePercent) }}. {{ $l('মূল্য', 'Prices as of') }} {{ $date($asOf) }}{{ $l(' তারিখ অনুযায়ী; বুকিংয়ের সময়ের মূল্যই চূড়ান্ত।', '; the price at booking is final.') }}
     </p>

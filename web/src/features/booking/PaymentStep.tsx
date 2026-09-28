@@ -11,6 +11,7 @@ import { createBooking, markJustBooked, recallBookingToken, rememberBookingToken
 import type { PackageView } from '@/lib/content/views';
 import { useRouter } from '@/i18n/navigation';
 import { whatsappUrl } from '@/lib/links';
+import { roomPercent } from '@/lib/package-price';
 import { useFormatters } from '@/lib/use-formatters';
 import { normalizeBdMobile, normalizeDigits, parseDayMonthYear } from '@/lib/validators';
 import { useBooking, type CreatedBooking, type PaymentMethod } from '@/state/booking';
@@ -216,7 +217,7 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
     <>
       <h3 className="text-19 font-semibold">{t('paymentHeading')}</h3>
       <PriceBreakdown
-        lines={[...quoteLines(quote, pkg.title, addons, pkg.groupTour?.singleSupplementPercent ?? pricing.singleRoomSupplementPercent, t, f, couponCode), ...(checkout ? onlineChargeLine(online, t, f) : [])]}
+        lines={[...quoteLines(quote, pkg.title, addons, { single: roomPercent(pkg, 'single', pricing), twin: roomPercent(pkg, 'twin', pricing) }, t, f, couponCode), ...(checkout ? onlineChargeLine(online, t, f) : [])]}
         total={checkout ? online.total : quote.total}
         totalLabel={t('totalToPay')}
       />

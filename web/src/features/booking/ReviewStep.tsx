@@ -7,6 +7,7 @@ import { onlinePayment, type OnlinePayment, type Quote } from '@bhabaghure/prici
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import type { PackageView } from '@/lib/content/views';
 import { displayPhone } from '@/lib/links';
+import { roomPercent } from '@/lib/package-price';
 import { useFormatters } from '@/lib/use-formatters';
 import { useBooking } from '@/state/booking';
 
@@ -27,7 +28,7 @@ export function ReviewStep({ pkg, quote, hotelCategory, termsError }: { pkg: Pac
   const prefix = locale === 'en' ? '/en' : '';
 
   const online = onlinePayment(quote.total, pricing.onlinePaymentChargePercent);
-  const lines = [...quoteLines(quote, pkg.title, addons, pkg.groupTour?.singleSupplementPercent ?? pricing.singleRoomSupplementPercent, t, f, booking.coupon?.code), ...onlineChargeLine(online, t, f)];
+  const lines = [...quoteLines(quote, pkg.title, addons, { single: roomPercent(pkg, 'single', pricing), twin: roomPercent(pkg, 'twin', pricing) }, t, f, booking.coupon?.code), ...onlineChargeLine(online, t, f)];
   const date = bookingDate(pkg, booking.date, booking.pax);
   const dateText = date ? f.date(date) : t('dateNotChosen');
 
@@ -101,14 +102,16 @@ export type BreakdownLine = { label: string; amount: number; tone?: 'subtotal' |
  * The quote's lines. With a coupon (docs/coupons.md) the lines are totalled, the coupon comes off, and the service
  * charge follows on what is left — the order the API prices in. Without one, exactly the lines as before.
  */
-export function quoteLines(quote: Quote, title: string, addons: { code: string; name: string }[], singlePercent: number, t: Translate, f: Formatters, couponCode?: string | null): BreakdownLine[] {
+/** `percents`: the package's single and twin percentages, for the room supplement's label (docs/room-rates.md). */
+export function quoteLines(quote: Quote, title: string, addons: { code: string; name: string }[], percents: { single: number; twin: number }, t: Translate, f: Formatters, couponCode?: string | null): BreakdownLine[] {
   const paxText = f.number(quote.pax);
+  const twin = quote.lines.some((line) => line.kind === 'twin_supplement');
   return [
     { label: t('lineBase', { title: quote.hotelCategory ? `${title} · ${t(`hotelCategories.${quote.hotelCategory}`)}` : title, paxText }), amount: quote.subtotal },
     ...(quote.singleSupplement
       ? [
           {
-            label: t('lineSingle', { percent: f.percent(singlePercent) }),
+            label: twin ? t('lineTwin', { percent: f.percent(percents.twin) }) : t('lineSingle', { percent: f.percent(percents.single) }),
             amount: quote.singleSupplement,
           },
         ]

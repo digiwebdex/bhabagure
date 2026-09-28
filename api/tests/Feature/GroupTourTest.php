@@ -29,9 +29,9 @@ class GroupTourTest extends TestCase
     {
         parent::setUp();
         $this->seed(ContentSeeder::class);
-        // 75,000 per person (sale price); single +50%, triple sharing 5% off.
+        // 75,000 per person (sale price) in triple sharing, the base; twin +5%, single +50% (docs/room-rates.md).
         $this->package = TourPackage::query()->where('slug', self::MUSTANG)->sole();
-        $this->package->update(['trip_type' => TourPackage::GROUP_FIXED, 'single_supplement_percent' => 50, 'triple_discount_percent' => 5]);
+        $this->package->update(['trip_type' => TourPackage::GROUP_FIXED, 'single_supplement_percent' => 50, 'twin_supplement_percent' => 5]);
         $this->departure = PackageDeparture::query()->create([
             'tour_package_id' => $this->package->id, 'departs_on' => now('Asia/Dhaka')->addDays(30)->toDateString(), 'seats_total' => 12, 'status' => 'scheduled',
         ]);
@@ -40,62 +40,72 @@ class GroupTourTest extends TestCase
     #[Test]
     public function the_price_is_fixed_and_only_the_room_changes_it(): void
     {
-        // Four travellers pay the list price: no group-size discount (a customized trip's 4–5 tier would take 6% off).
-        $this->assertSame(306000, $this->quote(['pax' => 4, 'room' => 'twin']));
-        // Triple sharing: 71,250 each; one traveller in a single: 75,000 + 37,500, with the 2% service charge.
-        $this->assertSame(218025, $this->quote(['pax' => 3, 'room' => 'triple']));
+        // Four travellers in triple sharing pay the list price: no group-size discount (a customized trip's 4–5 tier
+        // would take 6% off). All with the 2% service charge.
+        $this->assertSame(306000, $this->quote(['pax' => 4, 'room' => 'triple']));
+        // Twin sharing: 75,000 + 3,750 each; one traveller in a single: 75,000 + 37,500.
+        $this->assertSame(240975, $this->quote(['pax' => 3, 'room' => 'twin']));
         $this->assertSame(114750, $this->quote(['pax' => 1, 'room' => 'single']));
 
-        $booking = $this->book(['pax' => 3, 'room' => 'triple']);
-        $this->assertSame([$this->departure->id, 71250.0, 218025.0], [$booking->departure_id, (float) $booking->unit_price, (float) $booking->total_amount]);
-        $this->assertEquals(['singleSupplementPercent' => 50, 'tripleDiscountPercent' => 5], $booking->group_tour);
+        $booking = $this->book(['pax' => 3, 'room' => 'twin']);
+        $this->assertSame([$this->departure->id, 75000.0, 11250.0, 240975.0], [$booking->departure_id, (float) $booking->unit_price, (float) $booking->single_supplement_amount, (float) $booking->total_amount]);
+        $this->assertEquals(['singleSupplementPercent' => 50, 'twinSupplementPercent' => 5], $booking->room_rates);
+        $this->assertTrue($booking->fixed_price);
+        $twin = $booking->lines()->where('kind', 'twin_supplement')->sole();
+        $this->assertSame(['Twin sharing supplement', 'টুইন শেয়ারিং সাপ্লিমেন্ট', 3, 3750.0], [$twin->title_en, $twin->title_bn, (int) $twin->quantity, (float) $twin->unit_price]);
     }
 
     #[Test]
     public function a_group_tour_is_booked_on_its_departures_only(): void
     {
         $elsewhere = now('Asia/Dhaka')->addDays(31)->toDateString();
-        $this->postJson('/api/v1/public/bookings', $this->payload(['travel_date' => $elsewhere]) + ['expected_total' => 153000])
+        $this->postJson('/api/v1/public/bookings', $this->payload(['travel_date' => $elsewhere, 'room' => 'triple']) + ['expected_total' => 153000])
             ->assertUnprocessable()->assertJsonValidationErrors(['travel_date']);
 
         // A cancelled departure is no longer offered.
         $this->departure->update(['status' => 'cancelled']);
-        $this->postJson('/api/v1/public/bookings', $this->payload() + ['expected_total' => 153000])
+        $this->postJson('/api/v1/public/bookings', $this->payload(['room' => 'triple']) + ['expected_total' => 153000])
             ->assertUnprocessable()->assertJsonValidationErrors(['travel_date']);
         $this->departure->update(['status' => 'scheduled']);
 
         // At the office too: a walk-in booking on another date is refused the same way.
         $this->actingAsApi($this->staff('sales_agent'))->postJson('/api/v1/admin/bookings', [
             'customer' => ['name' => 'Karim Uddin', 'phone' => '01711-000555', 'source' => 'walk_in'],
-            'package_slug' => self::MUSTANG, 'travel_date' => $elsewhere, 'pax' => 2, 'room' => 'twin', 'addons' => [],
+            'package_slug' => self::MUSTANG, 'travel_date' => $elsewhere, 'pax' => 2, 'room' => 'triple', 'addons' => [],
             'travellers' => [['name' => 'Karim Uddin'], ['name' => 'Salma Begum']], 'expected_total' => 153000, 'locale' => 'bn',
         ])->assertUnprocessable()->assertJsonValidationErrors(['travel_date']);
         $this->assertSame(0, Booking::query()->count());
 
         // A full departure is refused as before.
         $this->departure->update(['seats_total' => 1]);
-        $this->postJson('/api/v1/public/bookings', $this->payload() + ['expected_total' => 153000])->assertStatus(409);
+        $this->postJson('/api/v1/public/bookings', $this->payload(['room' => 'triple']) + ['expected_total' => 153000])->assertStatus(409);
     }
 
     #[Test]
     public function a_booking_keeps_the_room_prices_it_was_booked_with(): void
     {
-        $booking = $this->book(['pax' => 2, 'room' => 'twin']);
-        $this->package->update(['single_supplement_percent' => 60]);
+        $booking = $this->book(['pax' => 2, 'room' => 'triple']);
+        $this->package->update(['single_supplement_percent' => 60, 'twin_supplement_percent' => 10]);
 
         // Staff move them to singles: +50% as booked, not the new 60%. 150,000 + 75,000, then 2%.
-        $this->actingAsApi($this->staff('admin'))->putJson("/api/v1/admin/bookings/{$booking->id}/quote", [
+        $admin = $this->staff('admin');
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/bookings/{$booking->id}/quote", [
             'pax' => 2, 'room' => 'single', 'discount' => 0, 'vat_rate' => 2, 'expected_total' => 229500,
         ])->assertOk();
         $this->assertSame(229500.0, (float) $booking->refresh()->total_amount);
+        // And to a twin room: +5% as booked, not the new 10%. 150,000 + 7,500, then 2%.
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/bookings/{$booking->id}/quote", [
+            'pax' => 2, 'room' => 'twin', 'discount' => 0, 'vat_rate' => 2, 'expected_total' => 160650,
+        ])->assertOk()->assertJsonPath('data.quote_inputs.room_rates.twinSupplementPercent', 5);
     }
 
     #[Test]
-    public function a_customized_trip_is_priced_and_booked_as_before(): void
+    public function a_customized_trip_takes_its_group_rate_as_the_base_and_its_own_room_rates(): void
     {
         $this->package->update(['trip_type' => TourPackage::CUSTOMIZED]);
-        // Four travellers: the 6% group-size tier; any date.
-        $this->assertSame(287640, $this->quote(['pax' => 4, 'room' => 'twin', 'travel_date' => now('Asia/Dhaka')->addDays(31)->toDateString()]));
+        // Four travellers: the 6% group-size tier is the base (70,500), twin adds the package's 5% (3,525); any date.
+        $this->assertSame(302022, $this->quote(['pax' => 4, 'room' => 'twin', 'travel_date' => now('Asia/Dhaka')->addDays(31)->toDateString()]));
+        $this->assertSame(287640, $this->quote(['pax' => 4, 'room' => 'triple', 'travel_date' => now('Asia/Dhaka')->addDays(31)->toDateString()]));
     }
 
     #[Test]
@@ -104,16 +114,17 @@ class GroupTourTest extends TestCase
         $operator = $this->staff('tour_operator');
         $url = "/api/v1/admin/packages/{$this->package->id}";
         $detail = $this->actingAsApi($operator)->getJson($url)->assertOk()->json('data');
-        $this->assertSame(['group_fixed', 50, 5], [$detail['trip_type'], $detail['single_supplement_percent'], $detail['triple_discount_percent']]);
+        $this->assertSame(['group_fixed', 50, 5], [$detail['trip_type'], $detail['single_supplement_percent'], $detail['twin_supplement_percent']]);
 
         $this->actingAsApi($operator)->putJson($url, ['single_supplement_percent' => 101] + $this->editable($detail))
             ->assertUnprocessable()->assertJsonValidationErrors(['single_supplement_percent']);
-        $this->actingAsApi($operator)->putJson($url, ['trip_type' => 'customized', 'triple_discount_percent' => 0] + $this->editable($detail))->assertOk();
+        $this->actingAsApi($operator)->putJson($url, ['trip_type' => 'customized', 'twin_supplement_percent' => 0] + $this->editable($detail))->assertOk();
         $this->assertFalse($this->package->refresh()->isGroupTour());
-        $this->actingAsApi($operator)->putJson($url, ['trip_type' => 'group_fixed', 'single_supplement_percent' => 40, 'triple_discount_percent' => 0] + $this->editable($detail))->assertOk();
+        $this->actingAsApi($operator)->putJson($url, ['trip_type' => 'group_fixed', 'single_supplement_percent' => 40, 'twin_supplement_percent' => 8] + $this->editable($detail))->assertOk();
 
         $this->getJson('/api/v1/public/packages/'.self::MUSTANG)->assertOk()
-            ->assertJsonPath('data.groupTour', ['singleSupplementPercent' => 40, 'tripleDiscountPercent' => 0]);
+            ->assertJsonPath('data.groupTour', true)
+            ->assertJsonPath('data.roomRates', ['singleSupplementPercent' => 40, 'twinSupplementPercent' => 8]);
     }
 
     #[Test]
@@ -124,7 +135,8 @@ class GroupTourTest extends TestCase
 
         $this->assertStringContainsString('Group Tour · Fixed Departure', $html);
         $this->assertStringContainsString('Twin sharing', $html);
-        foreach (['৳ 75,000', '৳ 1,12,500', '৳ 71,250'] as $price) {
+        // Triple 75,000 (the base), twin +5% 78,750, single +50% 1,12,500.
+        foreach (['৳ 75,000', '৳ 78,750', '৳ 1,12,500'] as $price) {
             $this->assertStringContainsString($price, $html);
         }
         $this->assertStringNotContainsString('Group size', $html);
@@ -178,7 +190,7 @@ class GroupTourTest extends TestCase
             ...collect($detail)->only([
                 'code', 'slug', 'destination_id', 'title_en', 'title_bn', 'summary_en', 'summary_bn', 'duration_days', 'duration_nights',
                 'regular_price', 'sale_price', 'price_grid', 'price_options', 'includes_airfare', 'group_mode', 'min_pax', 'departure_mode',
-                'trip_type', 'single_supplement_percent', 'triple_discount_percent', 'difficulty', 'is_featured',
+                'trip_type', 'single_supplement_percent', 'twin_supplement_percent', 'difficulty', 'is_featured',
                 'seo_title_bn', 'seo_title_en', 'seo_description_bn', 'seo_description_en', 'itinerary', 'includes', 'excludes', 'activities', 'trip_types',
             ])->all(),
         ];

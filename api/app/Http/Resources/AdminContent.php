@@ -99,7 +99,7 @@ final class AdminContent
             'min_pax' => $package->min_pax,
             'departure_mode' => $package->departure_mode,
             'single_supplement_percent' => $package->single_supplement_percent,
-            'triple_discount_percent' => $package->triple_discount_percent,
+            'twin_supplement_percent' => $package->twin_supplement_percent,
             'difficulty' => $package->difficulty,
             'seo_title_bn' => $package->seo_title_bn,
             'seo_title_en' => $package->seo_title_en,

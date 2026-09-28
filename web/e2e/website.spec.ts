@@ -90,8 +90,10 @@ test.describe('package detail', () => {
     const dialog = page.getByRole('dialog', { name: /NEPAL MUSTANG/ });
     await dialog.getByRole('button', { name: /^4 people/ }).click();
     await expect(dialog.getByText('Group total').locator('..')).toContainText('৳ 2,82,000'); // 70,500 × 4
+    // Each room for 4 (docs/room-rates.md): triple is the base, twin the same until a twin % is set, single the package's +15%.
+    await expect(dialog.getByTestId('room-prices').getByRole('listitem')).toHaveText([/^Triple sharing৳ 70,500$/, /^Twin sharing৳ 70,500$/, /^Single \(\+15%\)৳ 81,075$/]);
     await dialog.getByRole('button', { name: /^1 person/ }).click();
-    await expect(dialog).toContainText('a single room adds 12% at booking');
+    await expect(dialog).toContainText('a single room adds 15% at booking');
   });
 
   test('a direct visit renders the full package page', async ({ page }) => {

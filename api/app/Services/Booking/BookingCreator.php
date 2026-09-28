@@ -89,8 +89,9 @@ final class BookingCreator
                 // The chosen hotel category and its grid row as priced, kept like list_price (Phase 8 §4.D).
                 'hotel_category' => $quote['hotelCategory'],
                 'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
-                // A group tour's room prices as priced, so a later change of travellers or room keeps them.
-                'group_tour' => $package->groupTourRooms(),
+                // The room rates as priced (and a group tour's fixed price), so a later change of travellers or room keeps them.
+                'room_rates' => $package->roomRates(),
+                'fixed_price' => $package->isGroupTour(),
                 'unit_price' => $quote['perPerson'],
                 'subtotal_amount' => $quote['subtotal'],
                 'single_supplement_amount' => $quote['singleSupplement'],
@@ -139,12 +140,23 @@ final class BookingCreator
         return array_map(fn (array $line) => [
             'kind' => $line['kind'],
             'code' => $line['code'],
-            'title_en' => ($line['code'] ? $addonsByCode[$line['code']]->name_en : null) ?? ($line['kind'] === 'package' ? PriceGrid::lineTitle($package->title_en, $quote['hotelCategory'] ?? null, 'en') : 'Single room supplement'),
-            'title_bn' => ($line['code'] ? $addonsByCode[$line['code']]->name_bn : null) ?? ($line['kind'] === 'package' ? ($package->title_bn === null ? null : PriceGrid::lineTitle($package->title_bn, $quote['hotelCategory'] ?? null, 'bn')) : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
+            'title_en' => ($line['code'] ? $addonsByCode[$line['code']]->name_en : null) ?? ($line['kind'] === 'package' ? PriceGrid::lineTitle($package->title_en, $quote['hotelCategory'] ?? null, 'en') : self::supplementTitle($line['kind'], 'en')),
+            'title_bn' => ($line['code'] ? $addonsByCode[$line['code']]->name_bn : null) ?? ($line['kind'] === 'package' ? ($package->title_bn === null ? null : PriceGrid::lineTitle($package->title_bn, $quote['hotelCategory'] ?? null, 'bn')) : self::supplementTitle($line['kind'], 'bn')),
             'quantity' => $line['quantity'],
             'unit_price' => $line['unitPrice'],
             'amount' => $line['amount'],
         ], $quote['lines']);
+    }
+
+    /** The name a room supplement line is printed with: a single room's, or a twin room's (docs/room-rates.md). */
+    public static function supplementTitle(string $kind, string $locale): string
+    {
+        return match ([$kind, $locale]) {
+            ['twin_supplement', 'en'] => 'Twin sharing supplement',
+            ['twin_supplement', 'bn'] => 'টুইন শেয়ারিং সাপ্লিমেন্ট',
+            ['single_supplement', 'bn'] => 'সিঙ্গেল রুম সাপ্লিমেন্ট',
+            default => 'Single room supplement',
+        };
     }
 
     /**
@@ -172,7 +184,7 @@ final class BookingCreator
                 'package_title_en' => $quotation->package_title_en,
                 'package_title_bn' => $quotation->package_title_bn,
                 'duration_days' => $quotation->duration_days,
-            ] + $quotation->only(['list_price', 'hotel_category', 'price_grid', 'group_tour', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
+            ] + $quotation->only(['list_price', 'hotel_category', 'price_grid', 'room_rates', 'fixed_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount']),
                 $quotation->lines->map(fn (QuotationLine $line) => $line->only(['kind', 'code', 'title_en', 'title_bn', 'quantity', 'unit_price', 'amount']))->all(),
                 $quotation->customer, $staff, $quotation->id, $quotation->assigned_staff_id ?? $staff->id);
         });
@@ -266,7 +278,7 @@ final class BookingCreator
         $departure = $snapshot['tour_package_id'] === null || $request->travelDate === null ? null : PackageDeparture::query()->where('tour_package_id', $snapshot['tour_package_id'])
             ->where('status', 'scheduled')->whereDate('departs_on', $request->travelDate)->lockForUpdate()->first();
         // A group tour leaves on its scheduled departures only (docs/fixed-departure-group-tours.md).
-        if (($snapshot['group_tour'] ?? null) !== null && $departure === null) {
+        if (($snapshot['fixed_price'] ?? false) && $departure === null) {
             throw ValidationException::withMessages(['travel_date' => [__('cms.group_tour_departure')]]);
         }
         if ($departure && $departure->seats_total !== null && DepartureSeats::available($departure) < $request->pax) {
@@ -308,7 +320,7 @@ final class BookingCreator
             'access_token_hash' => Booking::hashAccessToken($accessToken),
             'idempotency_key' => $request->idempotencyKey,
             'phone_verified_at' => $verification === null ? null : now(),
-        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'group_tour', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'coupon_discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
+        ] + array_intersect_key($snapshot, array_flip(['list_price', 'hotel_category', 'price_grid', 'room_rates', 'fixed_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'coupon_discount_amount', 'vat_rate', 'vat_amount', 'total_amount'])));
 
         foreach (array_values($lines) as $index => $line) {
             $booking->lines()->create($line + ['sort_order' => $index]);
@@ -379,7 +391,8 @@ final class BookingCreator
             $discount,
             grid: $package->price_grid,
             hotelCategory: $hotelCategory,
-            groupTour: $package->groupTourRooms(),
+            rooms: $package->roomRates(),
+            fixedPrice: $package->isGroupTour(),
         );
     }
 

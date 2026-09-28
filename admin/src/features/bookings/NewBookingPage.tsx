@@ -1,4 +1,4 @@
-import { defaultHotelCategory, gridCategories, groupTourRoomPrices, invoiceTotals, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
+import { defaultHotelCategory, gridCategories, invoiceTotals, quoteBooking, type HotelCategory, type RoomType } from '@bhabaghure/pricing'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -60,7 +60,7 @@ export function NewBookingPage() {
 
   const pkg = options.data?.packages.find((p) => p.slug === slug)
   // A group tour has one fixed price and is booked on its departures only (docs/fixed-departure-group-tours.md).
-  const groupTour = pkg?.group_tour ?? null
+  const groupTour = pkg?.fixed_price ?? false
   // A package priced by hotel category is booked in one of its categories; basic/3-star until another is picked.
   const categories = groupTour ? [] : gridCategories(pkg?.price_grid)
   const category = categories.length === 0 ? null : hotelCategory && categories.includes(hotelCategory) ? hotelCategory : defaultHotelCategory(pkg?.price_grid)
@@ -76,12 +76,22 @@ export function NewBookingPage() {
   const packageQuote = (() => {
     if (!pkg || !options.data) return null
     try {
-      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category, groupTour })
+      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category, rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
     } catch {
       return null
     }
   })()
   const quote = custom ? customQuote : packageQuote
+  // What one traveller pays in each room, supplement included, priced the way the booking will be.
+  const roomPrice = (value: RoomType): number | null => {
+    if (!pkg || !options.data) return null
+    try {
+      const priced = quoteBooking({ listPrice: pkg.list_price, pax, room: value, addons: [], config: options.data.config, grid: pkg.price_grid, hotelCategory: category, rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
+      return Math.round((priced.subtotal + priced.singleSupplement) / pax)
+    } catch {
+      return null
+    }
+  }
 
   const create = useMutation({
     mutationFn: () =>
@@ -253,11 +263,11 @@ export function NewBookingPage() {
                 label={t('bookings.room')}
                 value={room}
                 onChange={(value) => setRoom(value as RoomType)}
-                // A group tour's rooms each have their own price per person.
-                options={(['twin', 'triple', 'single'] as const).map((value) => ({
-                  value,
-                  label: pkg && groupTour ? `${t(`bookings.rooms.${value}`)} · ${bdt(groupTourRoomPrices(pkg.list_price, groupTour)[value])}` : t(`bookings.rooms.${value}`),
-                }))}
+                // Each room with its price per person for these travellers (docs/room-rates.md).
+                options={(['twin', 'triple', 'single'] as const).map((value) => {
+                  const price = roomPrice(value)
+                  return { value, label: price === null ? t(`bookings.rooms.${value}`) : `${t(`bookings.rooms.${value}`)} · ${bdt(price)}` }
+                })}
               />
             )}
             <SelectInput label={t('newBooking.messagesIn')} value={bookingLocale} onChange={(value) => setBookingLocale(value as 'bn' | 'en')} options={[{ value: 'bn', label: 'Bangla' }, { value: 'en', label: 'English' }]} />

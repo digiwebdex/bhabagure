@@ -2,13 +2,14 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 
-import { defaultHotelCategory, groupTourRoomPrices, packagePerPerson, type GroupTourRooms } from '@bhabaghure/pricing';
+import { defaultHotelCategory, type HotelCategory } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Stepper } from '@/components/ui/Stepper';
 import { DownloadButton } from '@/features/downloads/DownloadButton';
 import type { PackageView } from '@/lib/content/views';
+import { basePrice, roomPercent, roomPricesFor } from '@/lib/package-price';
 import { whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
 import { useBooking } from '@/state/booking';
@@ -54,7 +55,7 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
   // A grid package: pick the hotel category first, then the group size (Phase 8 §4.D).
   const grid = pkg.hotelCategories.length > 0 ? pkg.priceGrid : null;
   const category = grid ? (chosenCategory && pkg.hotelCategories.includes(chosenCategory) ? chosenCategory : defaultHotelCategory(grid)) : null;
-  const rate = (travellers: number) => packagePerPerson(pkg, travellers, pricing.slabs, category);
+  const rate = (travellers: number) => basePrice(pkg, travellers, pricing.slabs, category);
   const perPerson = rate(pax);
   const total = perPerson * pax;
   const paxText = f.number(pax);
@@ -64,9 +65,9 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
     : category
     ? pax === 1
       ? t('gridNoteOne', { category: t(`hotelCategories.${category}`) })
-      : t('gridNote', { category: t(`hotelCategories.${category}`), percent: f.percent(pricing.singleRoomSupplementPercent) })
+      : t('gridNote', { category: t(`hotelCategories.${category}`), percent: f.percent(roomPercent(pkg, 'single', pricing)) })
     : pax === 1
-      ? t('slabNoteOne', { percent: f.percent(pricing.singleRoomSupplementPercent) })
+      ? t('slabNoteOne', { percent: f.percent(roomPercent(pkg, 'single', pricing)) })
       : pax === 2
         ? t('slabNoteTwo')
         : t('slabNoteGroup', { paxText });
@@ -121,7 +122,7 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
           </div>
         ) : null}
         {pkg.groupTour ? (
-          <GroupTourPrices pkg={pkg} groupTour={pkg.groupTour} />
+          <GroupTourPrices pkg={pkg} pax={pax} />
         ) : (
         <div className="flex flex-wrap gap-1.75">
           {chips.map((min, i) => {
@@ -168,6 +169,12 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
           </span>
         </div>
 
+        {pkg.groupTour ? null : (
+          <div className="flex flex-col gap-1 rounded-16 border border-hairline bg-white p-4" data-testid="room-prices">
+            <h4 className="text-15 font-bold">{t('roomsFor', { pax, paxText })}</h4>
+            <RoomPriceList pkg={pkg} pax={pax} category={category} />
+          </div>
+        )}
         {pkg.groupTour ? null : <PriceTable pkg={pkg} rate={rate} />}
       </div>
 
@@ -232,32 +239,47 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
 }
 
 /**
+ * What each room costs one traveller (docs/room-rates.md): triple sharing is the base, twin and single add the
+ * package's percentages — priced for these travellers exactly as the booking will be.
+ */
+function RoomPriceList({ pkg, pax, category }: { pkg: PackageView; pax: number; category: HotelCategory | null }) {
+  const tb = useTranslations('booking');
+  const f = useFormatters();
+  const { pricing } = useSiteContent();
+  const prices = roomPricesFor(pkg, pax, pricing, category);
+  const twin = roomPercent(pkg, 'twin', pricing);
+  const rooms = [
+    { room: 'triple', label: tb('roomTriple') },
+    { room: 'twin', label: twin > 0 ? tb('roomTwinPlus', { percent: f.percent(twin) }) : tb('roomTwin') },
+    { room: 'single', label: tb('roomSingle', { percent: f.percent(roomPercent(pkg, 'single', pricing)) }) },
+  ] as const;
+
+  return (
+    <ul className="flex flex-col">
+      {rooms.map(({ room, label }) => (
+        <li key={room} className="flex items-baseline justify-between gap-3 border-b border-hairline py-2 text-14 last:border-b-0">
+          <span>{label}</span>
+          <span className="font-display text-16 font-extrabold tracking-heading">{f.bdt(prices[room])}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * A fixed-departure group tour (docs/fixed-departure-group-tours.md): what each room costs one traveller, and the
  * dates the group leaves on — the only dates it is booked on.
  */
-function GroupTourPrices({ pkg, groupTour }: { pkg: PackageView; groupTour: GroupTourRooms }) {
+function GroupTourPrices({ pkg, pax }: { pkg: PackageView; pax: number }) {
   const t = useTranslations('detail');
   const tb = useTranslations('booking');
   const f = useFormatters();
-  const prices = groupTourRoomPrices(pkg.listPrice, groupTour);
-  const rooms = [
-    { room: 'twin', label: tb('roomTwin') },
-    { room: 'single', label: tb('roomSingle', { percent: f.percent(groupTour.singleSupplementPercent) }) },
-    { room: 'triple', label: tb('roomTriple') },
-  ] as const;
 
   return (
     <div className="grid-auto-fit-250 grid gap-3.5" data-testid="group-tour-prices">
       <div className="flex flex-col gap-2 rounded-16 border border-hairline bg-white p-4">
         <h4 className="text-15 font-bold">{t('roomsHeading')}</h4>
-        <ul className="flex flex-col">
-          {rooms.map(({ room, label }) => (
-            <li key={room} className="flex items-baseline justify-between gap-3 border-b border-hairline py-2 text-14 last:border-b-0">
-              <span>{label}</span>
-              <span className="font-display text-16 font-extrabold tracking-heading">{f.bdt(prices[room])}</span>
-            </li>
-          ))}
-        </ul>
+        <RoomPriceList pkg={pkg} pax={pax} category={null} />
       </div>
       <div className="flex flex-col gap-2 rounded-16 border border-hairline bg-white p-4">
         <h4 className="text-15 font-bold">{t('departuresHeading')}</h4>

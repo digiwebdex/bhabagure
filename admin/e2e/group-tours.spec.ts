@@ -17,13 +17,14 @@ test('a package marked as a group tour is booked at the office on its departures
   await expect(tripType).toHaveValue('customized', FIRST_LOAD)
 
   try {
-    // 13,800 per person: single +50% = 20,700; triple sharing 5% off = 13,110.
+    // 13,800 per person in triple sharing (the base): twin +5% = 14,490; single +50% = 20,700 (docs/room-rates.md).
     await tripType.selectOption('group_fixed')
     await expect(page.getByTestId('price-grid')).toHaveCount(0)
-    const rooms = page.getByTestId('group-tour-rooms')
+    const rooms = page.getByTestId('room-rates')
+    await rooms.getByLabel('Twin sharing (+%)').fill('5')
+    await expect(rooms).toContainText('BDT 14,490 per person')
+    await rooms.getByLabel('Single room (+%)').fill('50')
     await expect(rooms).toContainText('BDT 20,700 per person')
-    await rooms.getByLabel('Triple sharing (−%)').fill('5')
-    await expect(rooms).toContainText('BDT 13,110 per person')
     await page.getByRole('button', { name: 'Save', exact: true }).first().click()
     await expect(page.getByRole('button', { name: 'Saved', exact: true }).first()).toBeVisible()
 
@@ -49,14 +50,14 @@ test('a package marked as a group tour is booked at the office on its departures
     await expect(page.getByRole('heading', { level: 1 })).toContainText(/BH-\d{4}-\d{3,}/, FIRST_LOAD)
     await expect(page.locator('main')).toContainText('BDT 42,228', FIRST_LOAD)
 
-    const stored = artisan('tinker', `--execute=echo json_encode(App\\Models\\Booking::query()->latest('id')->first(['travel_start', 'single_supplement_amount', 'group_tour']));`).trim().split(/\r?\n/).pop()!
-    expect(JSON.parse(stored)).toMatchObject({ travel_start: `${departsOn}T00:00:00.000000Z`, single_supplement_amount: '13800.00', group_tour: { singleSupplementPercent: 50, tripleDiscountPercent: 5 } })
+    const stored = artisan('tinker', `--execute=echo json_encode(App\\Models\\Booking::query()->latest('id')->first(['travel_start', 'single_supplement_amount', 'room_rates', 'fixed_price']));`).trim().split(/\r?\n/).pop()!
+    expect(JSON.parse(stored)).toMatchObject({ travel_start: `${departsOn}T00:00:00.000000Z`, single_supplement_amount: '13800.00', room_rates: { singleSupplementPercent: 50, twinSupplementPercent: 5 }, fixed_price: true })
 
     // The package list marks it.
     await page.goto('/packages')
     await expect(page.locator('li, tr').filter({ hasText: 'Kathmandu–Pokhara Tour' }).first()).toContainText('Group tour · fixed departure', FIRST_LOAD)
   } finally {
     // Other specs book this package on any date.
-    artisan('tinker', `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${KATHMANDU}')->firstOrFail(); $p->update(['trip_type' => 'customized', 'triple_discount_percent' => 0]); $p->departures()->update(['status' => 'cancelled']); echo 'ok';`)
+    artisan('tinker', `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${KATHMANDU}')->firstOrFail(); $p->update(['trip_type' => 'customized', 'single_supplement_percent' => 15, 'twin_supplement_percent' => 0]); $p->departures()->update(['status' => 'cancelled']); echo 'ok';`)
   }
 })

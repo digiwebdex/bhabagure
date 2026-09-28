@@ -2,12 +2,13 @@
 
 import { useTranslations } from 'next-intl';
 
-import { defaultHotelCategory, packagePerPerson, type HotelCategory, type RoomType } from '@bhabaghure/pricing';
+import { defaultHotelCategory, type HotelCategory, type RoomType } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { controlClass, Field } from '@/components/ui/Field';
 import { activeSize, groupSizes } from '@/features/packages/group-sizes';
 import type { PackageDepartureView, PackageView } from '@/lib/content/views';
+import { basePrice } from '@/lib/package-price';
 import { useFormatters } from '@/lib/use-formatters';
 import { normalizeDigits, todayIso } from '@/lib/validators';
 import { useBooking } from '@/state/booking';
@@ -107,7 +108,7 @@ function GroupSizePicker({ pkg }: { pkg: PackageView }) {
               className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-12 border-chip px-3.5 py-2 text-left ${active ? 'border-blue bg-blue-tint text-blue-deep' : 'border-hairline bg-white text-ink'}`}
             >
               <span className="text-12 opacity-75">{i === sizes.length - 1 ? td('slabChipPlus', { paxText: f.number(size) }) : td('slabChip', { pax: size, paxText: f.number(size) })}</span>
-              <span className="font-display text-15 font-extrabold tracking-heading">{f.bdt(packagePerPerson(pkg, size, pricing.slabs, category))}</span>
+              <span className="font-display text-15 font-extrabold tracking-heading">{f.bdt(basePrice(pkg, size, pricing.slabs, category))}</span>
             </button>
           );
         })}
@@ -172,7 +173,7 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
             >
               {pkg.hotelCategories.map((category) => (
                 <option key={category} value={category}>
-                  {t(`hotelCategories.${category}`)} · {f.bdt(packagePerPerson(pkg, booking.pax, pricing.slabs, category))} {t('perPersonShort')}
+                  {t(`hotelCategories.${category}`)} · {f.bdt(basePrice(pkg, booking.pax, pricing.slabs, category))} {t('perPersonShort')}
                 </option>
               ))}
             </select>

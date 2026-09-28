@@ -46,9 +46,10 @@ class PublicContentContractTest extends TestCase
             foreach (self::PACKAGE_FIELDS as $field) {
                 $this->assertEquals($expected[$field], $actual[$field], "{$expected['code']}: {$field}");
             }
-            // The seed's packages are customized trips (docs/fixed-departure-group-tours.md).
-            $this->assertArrayHasKey('groupTour', $actual);
-            $this->assertNull($actual['groupTour'], "{$expected['code']}: groupTour");
+            // The seed's packages are customized trips (docs/fixed-departure-group-tours.md) at the starting room rates:
+            // single +15%, twin the same as triple (docs/room-rates.md).
+            $this->assertFalse($actual['groupTour'], "{$expected['code']}: groupTour");
+            $this->assertSame(['singleSupplementPercent' => 15, 'twinSupplementPercent' => 0], $actual['roomRates'], "{$expected['code']}: roomRates");
             foreach ($expected['images'] as $position => $image) {
                 foreach (['url', 'alt', 'credit', 'creditUrl', 'isPlaceholder'] as $field) {
                     $this->assertEquals($image[$field] ?? null, $actual['images'][$position][$field], "{$expected['code']}: images[{$position}].{$field}");

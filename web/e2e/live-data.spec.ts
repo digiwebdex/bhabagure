@@ -616,7 +616,7 @@ test.describe('CMS to website', () => {
       await detail.getByRole('button', { name: /^4 people/ }).click();
       await expect(detail.getByText('Group total').locator('..')).toContainText('৳ 1,32,000');
       await expect(detail.getByRole('button', { name: /^2 people/ })).toContainText('৳ 36,000');
-      await expect(detail).toContainText('4-star hotel · a single room adds 12% for two or more');
+      await expect(detail).toContainText('4-star hotel · a single room adds 15% for two or more');
 
       // Booking starts in 4-star: 33,000 × 4 = 1,32,000 + 2% = 1,34,640, and the API charges exactly that.
       await detail.getByRole('button', { name: 'Book now' }).click();
@@ -695,7 +695,7 @@ test.describe('CMS to website', () => {
     // 27,000 per person; single +50%; two departures, the later with 2 seats.
     artisan(
       'tinker',
-      `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'group_fixed', 'single_supplement_percent' => 50, 'triple_discount_percent' => 0]); ` +
+      `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'group_fixed', 'single_supplement_percent' => 50, 'twin_supplement_percent' => 0]); ` +
         `$p->departures()->create(['departs_on' => '${soon}', 'seats_total' => 12, 'status' => 'scheduled']); $p->departures()->create(['departs_on' => '${later}', 'seats_total' => 2, 'status' => 'scheduled']); echo 'ok';`,
     );
     try {
@@ -706,13 +706,13 @@ test.describe('CMS to website', () => {
         return card.innerText();
       }, { timeout: 20_000 }).toContain('Group Tour · Fixed Departure');
       await expect(card.locator('.text-price')).toHaveText('৳ 27,000');
-      await expect(card).toContainText('twin sharing · fixed price');
+      await expect(card).toContainText('triple sharing · fixed price');
 
       // The modal: each room's price per person and the departures, not the group-size chips.
       await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
       const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
       const prices = detail.getByTestId('group-tour-prices');
-      await expect(prices.getByRole('listitem')).toHaveText([/^Twin sharing৳ 27,000$/, /^Single \(\+50%\)৳ 40,500$/, /^Triple sharing৳ 27,000$/, /12 seats left$/, /2 seats left$/]);
+      await expect(prices.getByRole('listitem')).toHaveText([/^Triple sharing৳ 27,000$/, /^Twin sharing৳ 27,000$/, /^Single \(\+50%\)৳ 40,500$/, /12 seats left$/, /2 seats left$/]);
       await expect(detail.getByRole('button', { name: /^4 people/ })).toHaveCount(0);
 
       // Booking: no calendar; the 2-seat departure can't take 3 travellers.

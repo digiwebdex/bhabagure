@@ -18,6 +18,8 @@ export interface PackageLike {
   listPrice: number;
   /** A grid package's card shows basic/3-star for the search bar's travellers (decided 2026-09-16). */
   priceGrid?: PriceGrid | null;
+  /** A group tour's card shows its one fixed price whatever the travellers (docs/fixed-departure-group-tours.md). */
+  groupTour?: boolean;
 }
 
 export interface PackageFilter {
@@ -51,7 +53,7 @@ export function filterPackages<P extends PackageLike>(
 ): { cards: PackageCard<P>[]; count: number } {
   const cards = packages
     .filter((pkg) => filter.destination === 'any' || pkg.destinationSlug === filter.destination)
-    .map((pkg) => ({ pkg, perPerson: packagePerPerson(pkg, filter.pax, slabs) }))
+    .map((pkg) => ({ pkg, perPerson: packagePerPerson({ listPrice: pkg.listPrice, priceGrid: pkg.priceGrid, fixedPrice: pkg.groupTour }, filter.pax, slabs) }))
     .filter((card) => inBudget(card.perPerson, filter.budget));
   return { cards, count: cards.length };
 }

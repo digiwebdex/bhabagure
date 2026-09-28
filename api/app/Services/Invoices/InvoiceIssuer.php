@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Staff;
 use App\Services\AuditLogger;
+use App\Services\Booking\BookingCreator;
 use App\Services\Documents\DocumentNumbers;
 use App\Services\Ledger\LedgerService;
 use App\Support\WriteScope;
@@ -149,7 +150,7 @@ final class InvoiceIssuer
     {
         return match ($line->kind) {
             'package' => $locale === 'en' ? $booking->package_title_en : $booking->package_title_bn,
-            'single_supplement' => $locale === 'en' ? 'Single room supplement' : 'সিঙ্গেল রুম সাপ্লিমেন্ট',
+            'single_supplement', 'twin_supplement' => BookingCreator::supplementTitle($line->kind, $locale === 'en' ? 'en' : 'bn'),
             default => $locale === 'en' ? $line->title_en : $line->title_bn,
         };
     }

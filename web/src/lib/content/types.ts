@@ -2,7 +2,7 @@
  * Content as the API serves it: every user-facing string in both languages.
  * Pages turn this into single-language views (see views.ts) before it reaches components.
  */
-import type { Addon, GroupTourRooms, PriceGrid, PricingConfig } from '@bhabaghure/pricing';
+import type { Addon, PriceGrid, PricingConfig, RoomRates } from '@bhabaghure/pricing';
 
 export type Localized = { bn: string; en: string };
 
@@ -51,10 +51,15 @@ export interface TourPackage {
   minPax: number | null;
   departureMode: 'regular' | 'any_date' | 'on_request';
   /**
-   * A fixed-departure group tour's room prices, booked only on its scheduled departures (docs/fixed-departure-group-tours.md).
-   * Absent or null: a customized trip.
+   * A fixed-departure group tour: one price, booked only on its scheduled departures (docs/fixed-departure-group-tours.md).
+   * Absent or false: a customized trip.
    */
-  groupTour?: GroupTourRooms | null;
+  groupTour?: boolean;
+  /**
+   * The package's room rates (docs/room-rates.md): triple sharing is the base price; twin and single add these
+   * percentages. Absent (the seed): the site-wide single supplement, twin the same as triple.
+   */
+  roomRates?: RoomRates | null;
   itinerary: { day: number; title: Localized; body: Localized }[];
   includes: Localized[];
   excludes: Localized[];

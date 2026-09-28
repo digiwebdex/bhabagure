@@ -137,7 +137,7 @@ function QuoteCard({ booking }: { booking: BookingDetail }) {
         const totals = invoiceTotals({ lines, discount: coupon.discount + extra, chargePercent: vat })
         return { lines, discount: totals.discount, couponDiscount: Math.min(coupon.discount, totals.discount), couponEligible: coupon.eligible, serviceCharge: totals.charge, total: totals.total }
       }
-      const priced = (off: number) => quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: off, chargePercent: vat, grid: inputs.grid, hotelCategory: inputs.hotel_category, groupTour: inputs.group_tour })
+      const priced = (off: number) => quoteBooking({ listPrice: inputs.list_price, pax, room, addons: inputs.addons, config: inputs.config, discount: off, chargePercent: vat, grid: inputs.grid, hotelCategory: inputs.hotel_category, rooms: inputs.room_rates, fixedPrice: inputs.fixed_price })
       const coupon = inputs.coupon ? couponDiscount(inputs.coupon, priced(0).lines.reduce((sum, line) => sum + line.amount, 0)) : { eligible: true, discount: 0 }
       const result = priced(coupon.discount + extra)
       return { ...result, couponDiscount: Math.min(coupon.discount, result.discount), couponEligible: coupon.eligible }

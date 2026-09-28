@@ -106,9 +106,9 @@ export type TourPackage = PackageSummary & {
   group_mode: 'group' | 'any'
   min_pax: number | null
   departure_mode: 'regular' | 'any_date' | 'on_request'
-  /** A group tour's room prices: a single room adds this percentage, triple sharing takes this one off. */
+  /** The package's room rates (docs/room-rates.md): triple sharing is the base; a single and a twin room add these percentages. */
   single_supplement_percent: number
-  triple_discount_percent: number
+  twin_supplement_percent: number
   difficulty: string | null
   seo_title_bn: string | null
   seo_title_en: string | null

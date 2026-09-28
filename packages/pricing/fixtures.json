@@ -819,10 +819,10 @@
       }
     }
   ],
-  "quoteBookingGroupTour": [
+  "quoteBookingRooms": [
     {
-      "$comment": "a group tour's price is fixed: 4 travellers pay the list price, no group-size discount",
-      "input": { "listPrice": 75000, "pax": 4, "room": "twin", "addons": [], "groupTour": { "singleSupplementPercent": 50, "tripleDiscountPercent": 0 } },
+      "$comment": "group tour: the price is fixed — 4 travellers pay the list price, no group-size discount; twin +0%",
+      "input": { "listPrice": 75000, "pax": 4, "room": "twin", "addons": [], "fixedPrice": true, "rooms": { "singleSupplementPercent": 50, "twinSupplementPercent": 0 } },
       "expected": {
         "hotelCategory": null, "perPerson": 75000, "subtotal": 300000, "singleSupplement": 0, "addons": [],
         "discount": 0, "chargePercent": 2, "serviceCharge": 6000, "total": 306000,
@@ -830,8 +830,8 @@
       }
     },
     {
-      "$comment": "single: the tour's own +50%, even for one traveller",
-      "input": { "listPrice": 75000, "pax": 1, "room": "single", "addons": [], "groupTour": { "singleSupplementPercent": 50, "tripleDiscountPercent": 0 } },
+      "$comment": "group tour single: the tour's own +50%, even for one traveller",
+      "input": { "listPrice": 75000, "pax": 1, "room": "single", "addons": [], "fixedPrice": true, "rooms": { "singleSupplementPercent": 50, "twinSupplementPercent": 0 } },
       "expected": {
         "hotelCategory": null, "perPerson": 75000, "subtotal": 75000, "singleSupplement": 37500, "addons": [],
         "discount": 0, "chargePercent": 2, "serviceCharge": 2250, "total": 114750,
@@ -842,17 +842,29 @@
       }
     },
     {
-      "$comment": "triple sharing: the tour's discount comes off the per-person price",
-      "input": { "listPrice": 75000, "pax": 3, "room": "triple", "addons": [], "groupTour": { "singleSupplementPercent": 50, "tripleDiscountPercent": 5 } },
+      "$comment": "group tour twin: +5% of the base on its own line",
+      "input": { "listPrice": 75000, "pax": 3, "room": "twin", "addons": [], "fixedPrice": true, "rooms": { "singleSupplementPercent": 50, "twinSupplementPercent": 5 } },
       "expected": {
-        "hotelCategory": null, "perPerson": 71250, "subtotal": 213750, "singleSupplement": 0, "addons": [],
-        "discount": 0, "chargePercent": 2, "serviceCharge": 4275, "total": 218025,
-        "lines": [{ "kind": "package", "code": null, "quantity": 3, "unitPrice": 71250, "amount": 213750 }]
+        "hotelCategory": null, "perPerson": 75000, "subtotal": 225000, "singleSupplement": 11250, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 4725, "total": 240975,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 3, "unitPrice": 75000, "amount": 225000 },
+          { "kind": "twin_supplement", "code": null, "quantity": 3, "unitPrice": 3750, "amount": 11250 }
+        ]
+      }
+    },
+    {
+      "$comment": "triple sharing is the base: nothing added",
+      "input": { "listPrice": 75000, "pax": 3, "room": "triple", "addons": [], "fixedPrice": true, "rooms": { "singleSupplementPercent": 50, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": null, "perPerson": 75000, "subtotal": 225000, "singleSupplement": 0, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 4500, "total": 229500,
+        "lines": [{ "kind": "package", "code": null, "quantity": 3, "unitPrice": 75000, "amount": 225000 }]
       }
     },
     {
       "$comment": "a group tour ignores the hotel grid and a chosen category",
-      "input": { "listPrice": 75000, "pax": 2, "room": "single", "addons": [], "hotelCategory": "3", "withGrid": true, "groupTour": { "singleSupplementPercent": 50, "tripleDiscountPercent": 0 } },
+      "input": { "listPrice": 75000, "pax": 2, "room": "single", "addons": [], "hotelCategory": "3", "withGrid": true, "fixedPrice": true, "rooms": { "singleSupplementPercent": 50, "twinSupplementPercent": 0 } },
       "expected": {
         "hotelCategory": null, "perPerson": 75000, "subtotal": 150000, "singleSupplement": 75000, "addons": [],
         "discount": 0, "chargePercent": 2, "serviceCharge": 4500, "total": 229500,
@@ -863,12 +875,93 @@
       }
     },
     {
-      "$comment": "an uneven triple discount rounds to whole taka, half up",
-      "input": { "listPrice": 22500, "pax": 3, "room": "triple", "addons": [], "groupTour": { "singleSupplementPercent": 50, "tripleDiscountPercent": 3 } },
+      "$comment": "an uneven twin supplement rounds to whole taka, half up (22,450 × 5% = 1,122.5 → 1,123)",
+      "input": { "listPrice": 22450, "pax": 3, "room": "twin", "addons": [], "fixedPrice": true, "rooms": { "singleSupplementPercent": 50, "twinSupplementPercent": 5 } },
       "expected": {
-        "hotelCategory": null, "perPerson": 21825, "subtotal": 65475, "singleSupplement": 0, "addons": [],
-        "discount": 0, "chargePercent": 2, "serviceCharge": 1310, "total": 66785,
-        "lines": [{ "kind": "package", "code": null, "quantity": 3, "unitPrice": 21825, "amount": 65475 }]
+        "hotelCategory": null, "perPerson": 22450, "subtotal": 67350, "singleSupplement": 3369, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 1414, "total": 72133,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 3, "unitPrice": 22450, "amount": 67350 },
+          { "kind": "twin_supplement", "code": null, "quantity": 3, "unitPrice": 1123, "amount": 3369 }
+        ]
+      }
+    },
+    {
+      "$comment": "customized trip: 4 travellers get the 6% group rate as the base (70,500), and twin adds the package's 5% of it",
+      "input": { "listPrice": 75000, "pax": 4, "room": "twin", "addons": [], "rooms": { "singleSupplementPercent": 15, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": null, "perPerson": 70500, "subtotal": 282000, "singleSupplement": 14100, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 5922, "total": 302022,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 4, "unitPrice": 70500, "amount": 282000 },
+          { "kind": "twin_supplement", "code": null, "quantity": 4, "unitPrice": 3525, "amount": 14100 }
+        ]
+      }
+    },
+    {
+      "$comment": "customized trip single: the package's +15%",
+      "input": { "listPrice": 75000, "pax": 1, "room": "single", "addons": [], "rooms": { "singleSupplementPercent": 15, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": null, "perPerson": 75000, "subtotal": 75000, "singleSupplement": 11250, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 1725, "total": 87975,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 1, "unitPrice": 75000, "amount": 75000 },
+          { "kind": "single_supplement", "code": null, "quantity": 1, "unitPrice": 11250, "amount": 11250 }
+        ]
+      }
+    },
+    {
+      "$comment": "customized trip triple: the base for the group size, nothing added",
+      "input": { "listPrice": 75000, "pax": 3, "room": "triple", "addons": [], "rooms": { "singleSupplementPercent": 15, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": null, "perPerson": 72750, "subtotal": 218250, "singleSupplement": 0, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 4365, "total": 222615,
+        "lines": [{ "kind": "package", "code": null, "quantity": 3, "unitPrice": 72750, "amount": 218250 }]
+      }
+    },
+    {
+      "$comment": "size table: one traveller pays the table's 1-person price as entered — it already includes the single room",
+      "input": { "listPrice": 1, "pax": 1, "room": "single", "addons": [], "hotelCategory": "3", "withGrid": true, "rooms": { "singleSupplementPercent": 15, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": "3", "perPerson": 95000, "subtotal": 95000, "singleSupplement": 0, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 1900, "total": 96900,
+        "lines": [{ "kind": "package", "code": null, "quantity": 1, "unitPrice": 95000, "amount": 95000 }]
+      }
+    },
+    {
+      "$comment": "size table, two in singles: the 2-person price is the base, +15% each",
+      "input": { "listPrice": 1, "pax": 2, "room": "single", "addons": [], "hotelCategory": "3", "withGrid": true, "rooms": { "singleSupplementPercent": 15, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": "3", "perPerson": 75000, "subtotal": 150000, "singleSupplement": 22500, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 3450, "total": 175950,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 2, "unitPrice": 75000, "amount": 150000 },
+          { "kind": "single_supplement", "code": null, "quantity": 2, "unitPrice": 11250, "amount": 22500 }
+        ]
+      }
+    },
+    {
+      "$comment": "size table, two sharing a twin room: the 2-person price +5% each",
+      "input": { "listPrice": 1, "pax": 2, "room": "twin", "addons": [], "hotelCategory": "3", "withGrid": true, "rooms": { "singleSupplementPercent": 15, "twinSupplementPercent": 5 } },
+      "expected": {
+        "hotelCategory": "3", "perPerson": 75000, "subtotal": 150000, "singleSupplement": 7500, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 3150, "total": 160650,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 2, "unitPrice": 75000, "amount": 150000 },
+          { "kind": "twin_supplement", "code": null, "quantity": 2, "unitPrice": 3750, "amount": 7500 }
+        ]
+      }
+    },
+    {
+      "$comment": "a booking made before the package's own rates (no rooms): twin free, single the site-wide 12%",
+      "input": { "listPrice": 75000, "pax": 2, "room": "single", "addons": [] },
+      "expected": {
+        "hotelCategory": null, "perPerson": 75000, "subtotal": 150000, "singleSupplement": 18000, "addons": [],
+        "discount": 0, "chargePercent": 2, "serviceCharge": 3360, "total": 171360,
+        "lines": [
+          { "kind": "package", "code": null, "quantity": 2, "unitPrice": 75000, "amount": 150000 },
+          { "kind": "single_supplement", "code": null, "quantity": 2, "unitPrice": 9000, "amount": 18000 }
+        ]
       }
     }
   ],

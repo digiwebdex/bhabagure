@@ -17,7 +17,7 @@ import {
   paymentStatus,
   perPersonRate,
   quoteBooking,
-  groupTourRoomPrices,
+  roomPrices,
   savingPercent,
   slabFor,
   type HotelCategory,
@@ -71,27 +71,28 @@ test('gridRate and grid quotes match the shared fixtures', () => {
   }
 });
 
-test('group tour quotes match the shared fixtures', () => {
+test('room rates match the shared fixtures: triple is the base, twin and single add the package’s percentages', () => {
   const grid = fixtures.grid as PriceGrid;
-  for (const c of fixtures.quoteBookingGroupTour) {
+  for (const c of fixtures.quoteBookingRooms) {
     const { withGrid, ...input } = c.input as Omit<QuoteInput, 'config'> & { withGrid?: boolean };
     const quote = quoteBooking({ ...input, config, grid: withGrid ? grid : null });
-    const { pax: _pax, slab, ...amounts } = quote;
+    const { pax: _pax, slab: _slab, ...amounts } = quote;
     assert.deepEqual(amounts, c.expected, c.$comment);
-    assert.equal(slab.discountPercent, 0, 'a group tour never takes the group-size discount');
   }
   // Each room's price for one traveller is what a quote for that room charges per person.
-  const rooms = { singleSupplementPercent: 50, tripleDiscountPercent: 5 };
-  assert.deepEqual(groupTourRoomPrices(75000, rooms), { twin: 75000, single: 112500, triple: 71250 });
+  const rooms = { singleSupplementPercent: 15, twinSupplementPercent: 5 };
+  assert.deepEqual(roomPrices(75000, rooms, config), { twin: 78750, single: 86250, triple: 75000 });
   for (const room of ['twin', 'single', 'triple'] as const) {
-    const quote = quoteBooking({ listPrice: 75000, pax: 3, room, addons: [], config, groupTour: rooms });
-    assert.equal((quote.subtotal + quote.singleSupplement) / 3, groupTourRoomPrices(75000, rooms)[room], room);
+    const quote = quoteBooking({ listPrice: 75000, pax: 3, room, addons: [], config, rooms, fixedPrice: true });
+    assert.equal((quote.subtotal + quote.singleSupplement) / 3, roomPrices(75000, rooms, config)[room], room);
   }
-  // Cards and lists: the fixed price whatever the group size, grid or not.
-  assert.equal(packagePerPerson({ listPrice: 75000, priceGrid: grid, groupTour: rooms }, 6, config.slabs, '5'), 75000);
+  // Without the package's rates: the site-wide single supplement, twin the same as triple.
+  assert.deepEqual(roomPrices(75000, null, config), { twin: 75000, single: 84000, triple: 75000 });
+  // Cards and lists: a group tour's fixed price whatever the group size, grid or not.
+  assert.equal(packagePerPerson({ listPrice: 75000, priceGrid: grid, fixedPrice: true }, 6, config.slabs, '5'), 75000);
   const base = { listPrice: 75000, pax: 2, room: 'single' as const, addons: [], config };
-  assert.throws(() => quoteBooking({ ...base, groupTour: { singleSupplementPercent: 101, tripleDiscountPercent: 0 } }), RangeError);
-  assert.throws(() => quoteBooking({ ...base, groupTour: { singleSupplementPercent: 50, tripleDiscountPercent: -1 } }), RangeError);
+  assert.throws(() => quoteBooking({ ...base, rooms: { singleSupplementPercent: 101, twinSupplementPercent: 0 } }), RangeError);
+  assert.throws(() => quoteBooking({ ...base, room: 'twin', rooms: { singleSupplementPercent: 15, twinSupplementPercent: -1 } }), RangeError);
 });
 
 test('cards show basic/3-star by default, another category on request, and the slab price without a grid', () => {

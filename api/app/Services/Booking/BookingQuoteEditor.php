@@ -139,9 +139,9 @@ final class BookingQuoteEditor
             return BookingCreator::customQuote($this->customItems($booking), $pax, $discount, $vatRate) + ['singleSupplement' => 0, 'addons' => []];
         }
 
-        // A grid booking keeps its category and that category's prices as booked; a group tour its room prices.
+        // A booking keeps what it was priced with: a grid category and its row, the room rates, a group tour's fixed price.
         return PricingService::quoteBooking((float) $booking->list_price, $pax, $room, $this->addonInputs($booking), PricingConfig::current(), $discount, $vatRate,
-            grid: $booking->price_grid, hotelCategory: $booking->hotel_category, groupTour: $booking->group_tour);
+            grid: $booking->price_grid, hotelCategory: $booking->hotel_category, rooms: $booking->room_rates, fixedPrice: (bool) $booking->fixed_price);
     }
 
     /**
@@ -203,8 +203,8 @@ final class BookingQuoteEditor
             $snapshot = $line['code'] ? $addonLines[$line['code']] : null;
             $booking->lines()->create([
                 'kind' => $line['kind'], 'code' => $line['code'],
-                'title_en' => $snapshot?->title_en ?? ($line['kind'] === 'package' ? PriceGrid::lineTitle($booking->package_title_en, $booking->hotel_category, 'en') : 'Single room supplement'),
-                'title_bn' => $snapshot?->title_bn ?? ($line['kind'] === 'package' ? ($booking->package_title_bn === null ? null : PriceGrid::lineTitle($booking->package_title_bn, $booking->hotel_category, 'bn')) : 'সিঙ্গেল রুম সাপ্লিমেন্ট'),
+                'title_en' => $snapshot?->title_en ?? ($line['kind'] === 'package' ? PriceGrid::lineTitle($booking->package_title_en, $booking->hotel_category, 'en') : BookingCreator::supplementTitle($line['kind'], 'en')),
+                'title_bn' => $snapshot?->title_bn ?? ($line['kind'] === 'package' ? ($booking->package_title_bn === null ? null : PriceGrid::lineTitle($booking->package_title_bn, $booking->hotel_category, 'bn')) : BookingCreator::supplementTitle($line['kind'], 'bn')),
                 'quantity' => $line['quantity'], 'unit_price' => $line['unitPrice'], 'amount' => $line['amount'], 'sort_order' => $index,
             ]);
         }

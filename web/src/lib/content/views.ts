@@ -2,7 +2,7 @@
  * Single-language views of the content. Built on the server per request locale, so client
  * components receive plain strings in one language instead of every translation.
  */
-import { gridCategories, listPrice, savingPercent, type GroupTourRooms, type HotelCategory, type PriceGrid } from '@bhabaghure/pricing';
+import { gridCategories, listPrice, savingPercent, type HotelCategory, type PriceGrid, type RoomRates } from '@bhabaghure/pricing';
 
 import type { AppLocale } from '@/i18n/routing';
 
@@ -56,8 +56,10 @@ export interface PackageView {
   groupMode: 'group' | 'any';
   minPax: number | null;
   departureMode: TourPackage['departureMode'];
-  /** A fixed-departure group tour's room prices; null for a customized trip (docs/fixed-departure-group-tours.md). */
-  groupTour: GroupTourRooms | null;
+  /** A fixed-departure group tour: one price whatever the group size (docs/fixed-departure-group-tours.md). */
+  groupTour: boolean;
+  /** Triple sharing is the base; twin and single add these percentages (docs/room-rates.md). Null: the old site-wide rule. */
+  roomRates: RoomRates | null;
   /** A group tour's upcoming departures, soonest first — the only dates it is booked on. Empty for a customized trip. */
   departures: PackageDepartureView[];
   itinerary: { day: number; title: string; body: string }[];
@@ -206,7 +208,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
   const packages: PackageView[] = published.map((p) => {
     const destination = destinationBySlug.get(p.destination);
     // A group tour has one fixed price: its hotel-category grid, if it kept one, is not used.
-    const groupTour = p.groupTour ?? null;
+    const groupTour = p.groupTour === true;
     const grid = groupTour ? null : (p.priceGrid ?? null);
     return {
       code: p.code,
@@ -234,6 +236,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       minPax: p.minPax,
       departureMode: p.departureMode,
       groupTour,
+      roomRates: p.roomRates ?? null,
       departures: groupTour
         ? bundle.departures
             .filter((d): d is typeof d & { departsOn: string } => d.packageCode === p.code && d.departsOn !== null)

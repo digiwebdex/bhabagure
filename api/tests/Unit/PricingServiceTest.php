@@ -66,21 +66,21 @@ class PricingServiceTest extends TestCase
     }
 
     #[Test]
-    public function group_tour_quotes_match_the_shared_fixtures(): void
+    public function room_rates_match_the_shared_fixtures(): void
     {
         $config = PricingConfig::fromArray(self::$fixtures['config']);
-        foreach (self::$fixtures['quoteBookingGroupTour'] as $case) {
+        foreach (self::$fixtures['quoteBookingRooms'] as $case) {
             $input = $case['input'];
             $grid = ($input['withGrid'] ?? false) ? self::$fixtures['grid'] : null;
-            $quote = PricingService::quoteBooking($input['listPrice'], $input['pax'], $input['room'], $input['addons'], $config, 0, null, $grid, $input['hotelCategory'] ?? null, $input['groupTour']);
-            $this->assertSame(0, $quote['slab']['discountPercent']);
+            $quote = PricingService::quoteBooking($input['listPrice'], $input['pax'], $input['room'], $input['addons'], $config, 0, null, $grid, $input['hotelCategory'] ?? null, $input['rooms'] ?? null, $input['fixedPrice'] ?? false);
             unset($quote['pax'], $quote['slab']);
             $this->assertEquals($case['expected'], $quote, $case['$comment']);
         }
-        $this->assertSame(['twin' => 75000, 'single' => 112500, 'triple' => 71250], PricingService::groupTourRoomPrices(75000, ['singleSupplementPercent' => 50, 'tripleDiscountPercent' => 5]));
+        $this->assertSame(['twin' => 78750, 'single' => 86250, 'triple' => 75000], PricingService::roomPrices(75000, ['singleSupplementPercent' => 15, 'twinSupplementPercent' => 5], $config));
+        $this->assertSame(['twin' => 75000, 'single' => 84000, 'triple' => 75000], PricingService::roomPrices(75000, null, $config));
 
         $this->expectException(\InvalidArgumentException::class);
-        PricingService::quoteBooking(75000, 2, 'single', [], $config, groupTour: ['singleSupplementPercent' => 101, 'tripleDiscountPercent' => 0]);
+        PricingService::quoteBooking(75000, 2, 'single', [], $config, rooms: ['singleSupplementPercent' => 101, 'twinSupplementPercent' => 0]);
     }
 
     #[Test]

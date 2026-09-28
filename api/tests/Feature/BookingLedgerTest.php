@@ -43,13 +43,13 @@ class BookingLedgerTest extends TestCase
     #[Test]
     public function the_server_recomputes_the_price_and_refuses_a_total_the_customer_did_not_see(): void
     {
-        // 4 travellers, single rooms, insurance: slab −6% → 70,500 pp; +12% supplement 8,460 pp; insurance 1,200 pp;
-        // lines 320,640; 2% service charge on that = 6,413 (rounded); total 327,053. Same as the website's quote.
-        $created = $this->book(pax: 4, room: 'single', addons: ['travel-insurance'], expectedTotal: 327053);
+        // 4 travellers, single rooms, insurance: slab −6% → 70,500 pp; the package's +15% supplement 10,575 pp; insurance 1,200 pp;
+        // lines 329,100; 2% service charge on that = 6,582; total 335,682. Same as the website's quote.
+        $created = $this->book(pax: 4, room: 'single', addons: ['travel-insurance'], expectedTotal: 335682);
         $booking = $created['booking'];
 
         $this->assertMatchesRegularExpression('/^BH-\d{4}-001$/', $booking->reference);
-        $this->assertSame(['327053.00', '282000.00', '33840.00', '4800.00', '6413.00'], [
+        $this->assertSame(['335682.00', '282000.00', '42300.00', '4800.00', '6582.00'], [
             $booking->total_amount, $booking->subtotal_amount, $booking->single_supplement_amount, $booking->addons_amount, $booking->vat_amount,
         ]);
         $this->assertSame(BookingStatus::Inquiry, $booking->status);
@@ -61,7 +61,7 @@ class BookingLedgerTest extends TestCase
             $this->book(pax: 4, room: 'single', addons: ['travel-insurance'], expectedTotal: 320640);
             $this->fail('A stale total was accepted.');
         } catch (PriceChanged $e) {
-            $this->assertSame(327053, $e->quote['total']);
+            $this->assertSame(335682, $e->quote['total']);
         }
         $this->assertSame(1, Booking::query()->count());
     }

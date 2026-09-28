@@ -24,7 +24,7 @@ class Booking extends Model
 
     protected $fillable = [
         'reference', 'customer_id', 'client_id', 'tour_package_id', 'departure_id', 'quotation_id', 'package_title_en', 'package_title_bn',
-        'travel_start', 'travel_end', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'group_tour', 'unit_price', 'subtotal_amount', 'single_supplement_amount',
+        'travel_start', 'travel_end', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'room_rates', 'fixed_price', 'unit_price', 'subtotal_amount', 'single_supplement_amount',
         'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount', 'source', 'assigned_staff_id', 'created_by_staff_id',
         'cancellation_reason', 'internal_notes', 'locale', 'terms_accepted_at', 'terms_version', 'access_token_hash', 'idempotency_key',
         'is_custom', 'coupon_discount_amount', 'phone_verified_at',
@@ -42,7 +42,8 @@ class Booking extends Model
             'travel_end' => 'date',
             'list_price' => 'decimal:2',
             'price_grid' => 'array',
-            'group_tour' => 'array',
+            'room_rates' => 'array',
+            'fixed_price' => 'boolean',
             'unit_price' => 'decimal:2',
             'subtotal_amount' => 'decimal:2',
             'single_supplement_amount' => 'decimal:2',

@@ -57,9 +57,9 @@ class QuotationTest extends TestCase
         $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', ['vat_rate' => 3, 'validity_days' => 10] + $this->payload($lead))
             ->assertUnprocessable()->assertJsonValidationErrors(['vat_rate', 'validity_days']);
 
-        // Editing a draft re-prices it: single rooms (+12 % = 9,000 each), a 5,000 discount and 5 % VAT → 1,63,000 + 8,150.
-        $this->actingAsApi($agent)->putJson("/api/v1/admin/quotations/{$quotation['id']}", ['room' => 'single', 'discount' => 5000, 'vat_rate' => 5, 'expected_total' => 171150] + array_diff_key($this->payload($lead), ['customer_id' => 1]))
-            ->assertOk()->assertJsonPath('data.amounts.single_supplement', 18000)->assertJsonPath('data.amounts.discount', 5000)->assertJsonPath('data.total_amount', 171150);
+        // Editing a draft re-prices it: single rooms (the package's +15 % = 11,250 each), a 5,000 discount and 5 % VAT → 1,67,500 + 8,375.
+        $this->actingAsApi($agent)->putJson("/api/v1/admin/quotations/{$quotation['id']}", ['room' => 'single', 'discount' => 5000, 'vat_rate' => 5, 'expected_total' => 175875] + array_diff_key($this->payload($lead), ['customer_id' => 1]))
+            ->assertOk()->assertJsonPath('data.amounts.single_supplement', 22500)->assertJsonPath('data.amounts.discount', 5000)->assertJsonPath('data.total_amount', 175875);
 
         $this->actingAsApi($this->staff('accountant'))->postJson('/api/v1/admin/quotations', $this->payload($lead))->assertForbidden();
         $this->actingAsApi($this->staff('accountant'))->getJson("/api/v1/admin/quotations/{$quotation['id']}")->assertOk()->assertJsonPath('data.actions.send', false);

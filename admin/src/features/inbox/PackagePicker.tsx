@@ -26,7 +26,7 @@ export function PackagePicker({ onPick, onClose }: { onPick: (text: string) => v
   const options = useQuery({ queryKey: ['booking-options'], queryFn: ({ signal }) => api.get<Data<BookingFormOptions>>('admin/bookings/options', signal).then((r) => r.data) })
 
   const price = (pkg: BookingFormOptions['packages'][number]) =>
-    packagePerPerson({ listPrice: pkg.list_price, priceGrid: pkg.price_grid, groupTour: pkg.group_tour }, 2, options.data?.config.slabs ?? [])
+    packagePerPerson({ listPrice: pkg.list_price, priceGrid: pkg.price_grid, fixedPrice: pkg.fixed_price }, 2, options.data?.config.slabs ?? [])
   const text = (pkg: BookingFormOptions['packages'][number]) =>
     [pkg.title_bn || pkg.title_en, `জনপ্রতি ${formatBdt(price(pkg), 'bn')} থেকে (২ জন)`, SITE_URL ? `${SITE_URL}/packages/${pkg.slug}` : null].filter(Boolean).join('\n')
 

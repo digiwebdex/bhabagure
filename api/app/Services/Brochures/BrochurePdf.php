@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
 class BrochurePdf
 {
     /** Bump when a template changes, so stored PDFs are made again. */
-    public const TEMPLATE_VERSION = 3;
+    public const TEMPLATE_VERSION = 4;
 
     /** Group sizes a package without a grid is priced for in the brochure. */
     private const SLAB_SIZES = [1, 2, 3, 4, 6, 10];
@@ -62,6 +62,7 @@ class BrochurePdf
             'pax' => $pax,
             'grid' => $categories !== [],
             'config' => $config,
+            'rates' => $package->roomRates(),
             'yourPrice' => $categories !== [] ? PricingService::gridRate($package->price_grid, $category, $pax)['perPerson'] : PricingService::perPersonRate($listPrice, $pax, $config->slabs),
             'asOf' => now('Asia/Dhaka')->toDateString(),
         ])->render();
@@ -71,19 +72,20 @@ class BrochurePdf
     private function groupTourHtml(TourPackage $package, int $pax, string $locale, bool $forPdf): string
     {
         $listPrice = Money::toNumber($package->sale_price ?? $package->regular_price);
-        $rooms = PricingService::groupTourRoomPrices($listPrice, $package->groupTourRooms());
+        $rooms = PricingService::roomPrices($listPrice, $package->roomRates(), PricingConfig::current());
 
         return view('brochures.package', $this->invoices->letterhead($locale) + [
             'locale' => $locale,
             'forPdf' => $forPdf,
             'package' => $package,
-            'groupTour' => ['rooms' => $rooms, 'rules' => $package->groupTourRooms(), 'departures' => self::upcomingDepartures($package)],
+            'groupTour' => ['rooms' => $rooms, 'departures' => self::upcomingDepartures($package)],
+            'rates' => $package->roomRates(),
             'rows' => [],
             'category' => null,
             'pax' => $pax,
             'grid' => false,
             'config' => PricingConfig::current(),
-            'yourPrice' => $rooms['twin'],
+            'yourPrice' => $rooms['triple'],
             'asOf' => now('Asia/Dhaka')->toDateString(),
         ])->render();
     }

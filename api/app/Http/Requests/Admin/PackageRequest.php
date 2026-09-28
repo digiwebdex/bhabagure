@@ -108,11 +108,11 @@ class PackageRequest extends FormRequest
             'group_mode' => ['required', Rule::in(['group', 'any'])],
             'min_pax' => ['nullable', 'integer', 'between:1,99'],
             'departure_mode' => ['required', Rule::in(['regular', 'any_date', 'on_request'])],
-            // A fixed-departure group tour or a customized trip (docs/fixed-departure-group-tours.md); a group tour's own
-            // room prices: single adds a percentage, triple sharing takes one off.
+            // A fixed-departure group tour or a customized trip (docs/fixed-departure-group-tours.md), and the package's
+            // room rates (docs/room-rates.md): triple sharing is the base, twin and single add their percentage.
             'trip_type' => ['sometimes', Rule::in([TourPackage::GROUP_FIXED, TourPackage::CUSTOMIZED])],
             'single_supplement_percent' => ['sometimes', 'integer', 'between:0,100'],
-            'triple_discount_percent' => ['sometimes', 'integer', 'between:0,100'],
+            'twin_supplement_percent' => ['sometimes', 'integer', 'between:0,100'],
             'difficulty' => ['nullable', 'string', 'max:20'],
             'is_featured' => ['sometimes', 'boolean'],
             'seo_title_bn' => ['nullable', 'string', 'max:255'],

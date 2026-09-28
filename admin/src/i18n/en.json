@@ -461,10 +461,11 @@
       "group_fixed": "One fixed price. Booked only on the dates under Group departures — no calendar."
     },
     "singleSupplement": "Single room (+%)",
-    "tripleDiscount": "Triple sharing (−%)",
-    "tripleSameAsTwin": "0 = the same as twin sharing.",
+    "twinSupplement": "Twin sharing (+%)",
+    "twinSameAsTriple": "0 = the same as triple sharing.",
     "roomPreview": "{{amount}} per person",
-    "groupTourNote": "Twin sharing is the price above. Group discounts and the hotel-category grid don’t apply to a group tour.",
+    "groupTourNote": "Triple sharing is the price above. Group discounts and the hotel-category grid don’t apply to a group tour.",
+    "roomRatesNote": "Triple sharing is the base: the price above, or the price-by-group-size table. Twin and single add these percentages of it.",
     "departureMode": "Departures",
     "departureModes": {
       "regular": "Regular group dates",
@@ -847,7 +848,7 @@
     "fromTravellers": "From travellers",
     "discountPercent": "Discount %",
     "addTier": "Add tier",
-    "supplementNote": "Charged only when the traveller chooses a single room at booking — never added automatically for travelling alone, and separate from the group slab.",
+    "supplementNote": "Since 28 September 2026 each package has its own single and twin percentages (Packages → the package → Room rates). This one still prices bookings made before then, and the website's FAQ quotes it.",
     "supplementPercent": "Supplement % of the per-person rate",
     "serviceCharge": "Service charge %",
     "maxTravellers": "Maximum travellers per booking",

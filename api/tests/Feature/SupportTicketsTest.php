@@ -91,7 +91,7 @@ class SupportTicketsTest extends TestCase
             'room' => 'single',
             'addons' => [],
             'travellers' => [['name' => 'Tanvir Hasan', 'passport_number' => 'A01234567', 'date_of_birth' => '1990-04-12', 'passport_expiry' => '2031-01-31', 'phone' => $phone, 'email' => $email]],
-            'expected_total' => 85680,
+            'expected_total' => 87975, // one traveller, single room: 75,000 + the package's 15% + 2% (docs/room-rates.md)
             'terms_accepted' => true,
             'locale' => 'en',
         ])->assertCreated()->json('data.reference');
