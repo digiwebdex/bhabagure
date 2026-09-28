@@ -38,8 +38,10 @@ test('a hotel request waiting over 24 hours is answered with a reply that marks 
   await row.getByRole('button', { name: `Reply — ${name}` }).click()
   const dialog = page.getByRole('dialog', { name: `Hotel request from ${name}` })
   await expect(dialog).toContainText('Honeymoon, sea view')
-  // No notifications number is published in the e2e data: WhatsApp is held, the email still goes.
-  await expect(dialog.getByRole('note')).toContainText('WhatsApp can’t go out now')
+  // No notifications number is published in the e2e data, but the inbox is on: the reply goes by WhatsApp from the
+  // main number, into the customer's Inbox chat (docs/admin-inbox.md §6), and by email.
+  await expect(dialog.getByRole('note')).toHaveCount(0)
+  await expect(dialog).toContainText('WhatsApp from the main number (it shows in the customer’s Inbox chat), and email.')
   const send = dialog.getByRole('button', { name: 'Send reply' })
   await expect(send).toBeDisabled()
   await dialog.getByRole('textbox', { name: 'Message' }).fill('Sayeman Beach Resort, sea-view deluxe: ৳ 14,500 a night with breakfast.')
@@ -51,9 +53,9 @@ test('a hotel request waiting over 24 hours is answered with a reply that marks 
   await send.click()
 
   await expect(page.getByText(`Reply sent to ${name}`)).toBeVisible()
-  // The dialog stays open on the log: the reply, WhatsApp not sent, the email taken by the log mailer.
+  // The dialog stays open on the log: the reply handed to the inbox's sender, the email taken by the log mailer.
   const reply = dialog.getByTestId('notification-group').filter({ hasText: 'Reply to a quotation request' })
-  await expect(reply.getByTestId('channel-whatsapp')).toContainText('Not sent')
+  await expect(reply.getByTestId('channel-whatsapp')).toContainText('Sent')
   await expect(reply.getByTestId('channel-email')).toContainText('Not delivered')
   await expect(dialog).toContainText('Marked quoted by E2E sales_agent')
   await page.keyboard.press('Escape')

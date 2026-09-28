@@ -55,6 +55,8 @@ export type HotelInquiry = QuoteRequest & {
 export type RequestDetail<T extends QuoteRequest> = T & {
   notification_groups: NotificationGroup[]
   notifications_number_published: boolean
+  /** How a staff reply goes by WhatsApp: the notifications number, the main number through the inbox, or not at all. */
+  staff_whatsapp_route: 'notifications' | 'inbox' | null
   notifications_sender_line: string
   /** The WhatsApp reply template filled for this request, with {{reply}} where the typed text goes. */
   reply_template: string

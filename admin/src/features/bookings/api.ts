@@ -82,6 +82,8 @@ export type BookingDetail = BookingSummary & {
   notification_groups: NotificationGroup[]
   /** Customer WhatsApp messages wait until the notifications number is published in site settings. */
   notifications_number_published: boolean
+  /** How a staff reply goes by WhatsApp: the notifications number, the main number through the inbox, or not at all. */
+  staff_whatsapp_route: 'notifications' | 'inbox' | null
   notifications_sender_line: string
   confirmed_at: string | null
   cancelled_at: string | null

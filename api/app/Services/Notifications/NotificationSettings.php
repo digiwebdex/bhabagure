@@ -6,6 +6,7 @@ use App\Enums\NotificationEvent;
 use App\Http\Controllers\Api\V1\Public\SiteSettingKeys;
 use App\Models\SiteSetting;
 use App\Models\Staff;
+use App\Services\Inbox\WhatsAppInbox;
 use Illuminate\Support\Collection;
 
 /** Notification settings kept in site_settings, editable without a deploy. */
@@ -17,6 +18,26 @@ final class NotificationSettings
         $number = SiteSetting::get('contact', [])['notificationsWhatsapp'] ?? null;
 
         return is_string($number) && $number !== '' ? $number : null;
+    }
+
+    /**
+     * How a message a staff member writes to a customer (a request reply, "Send WhatsApp") goes by WhatsApp:
+     * `notifications` — the automated messages' number, when they are on and it is published; `inbox` — else from the
+     * main number through the admin inbox's sender, and into that customer's chat (decided 2026-09-28,
+     * docs/admin-inbox.md §6); null when neither is set up.
+     */
+    public static function staffWhatsAppRoute(): ?string
+    {
+        $published = self::notificationsNumber() !== null;
+        if ($published && config('bhabaghure.notifications.whatsapp.mode') !== 'off') {
+            return 'notifications';
+        }
+        if (WhatsAppInbox::enabled()) {
+            return 'inbox';
+        }
+
+        // As before the inbox: with the number published a message is planned, and the log says if WhatsApp is off.
+        return $published ? 'notifications' : null;
     }
 
     public static function mainNumber(): ?string

@@ -76,6 +76,23 @@ final class InboxDesk
         return $message;
     }
 
+    /**
+     * A message a staff member wrote elsewhere (a request reply, "Send WhatsApp" on a booking) sent from the main number
+     * while the automated messages' number isn't in use (docs/admin-inbox.md §6). It goes into that customer's chat,
+     * started if need be, so the thread is complete and the reply is paced like every other.
+     *
+     * @throws ValidationException
+     */
+    public function replyToNumber(string $phone, ?Customer $customer, string $body, Staff $staff): ConversationMessage
+    {
+        $conversation = Conversation::query()->firstOrCreate(
+            ['channel' => Conversation::WHATSAPP, 'external_id' => $phone],
+            ['phone' => $phone, 'jid' => $phone.'@s.whatsapp.net', 'name' => $customer?->name, 'customer_id' => $customer?->id, 'status' => Conversation::OPEN, 'unread_count' => 0],
+        );
+
+        return $this->reply($conversation, $staff, $body, null);
+    }
+
     public function markRead(Conversation $conversation): void
     {
         if ($conversation->unread_count === 0) {

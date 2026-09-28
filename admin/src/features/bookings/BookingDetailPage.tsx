@@ -805,7 +805,7 @@ function MessagesCard({ booking }: { booking: BookingDetail }) {
       <CardTitle title="WhatsApp, email & SMS" />
       {!booking.notifications_number_published ? (
         <p role="note" className="m-0 rounded-10 border border-orange-line bg-orange-tint px-3 py-2.5 text-12 leading-1.55 text-orange-ink">
-          {t('notifications.onHold')}
+          {booking.staff_whatsapp_route === 'inbox' ? t('notifications.onHoldStaffFromMain') : t('notifications.onHold')}
         </p>
       ) : null}
       {customer?.whatsapp_opted_out ? (
@@ -821,7 +821,7 @@ function MessagesCard({ booking }: { booking: BookingDetail }) {
         ) : (
           <span />
         )}
-        {booking.actions.send_whatsapp && booking.notifications_number_published ? (
+        {booking.actions.send_whatsapp && booking.staff_whatsapp_route !== null ? (
           <button type="button" className={buttonClass('success')} onClick={() => setSendOpen(true)}>
             ✆ {t('notifications.sendWhatsApp')}
           </button>

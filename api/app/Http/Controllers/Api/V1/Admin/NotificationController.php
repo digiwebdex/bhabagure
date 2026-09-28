@@ -139,7 +139,8 @@ class NotificationController extends Controller
         if ($customer->whatsapp_opted_out_at !== null) {
             return response()->json(['message' => __('notifications.opted_out'), 'code' => 'opted_out'], Response::HTTP_CONFLICT);
         }
-        if (NotificationSettings::notificationsNumber() === null) {
+        // From the notifications number, or else the main number through the inbox (docs/admin-inbox.md §6).
+        if (NotificationSettings::staffWhatsAppRoute() === null) {
             return response()->json(['message' => __('notifications.number_not_published'), 'code' => 'notifications_number_not_published'], Response::HTTP_CONFLICT);
         }
 

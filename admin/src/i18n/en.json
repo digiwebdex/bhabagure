@@ -1342,6 +1342,7 @@
       "mail_not_set_up": "Email isn’t set up on the server yet (SendGrid), so this email was not delivered."
     },
     "onHold": "Customer WhatsApp messages are on hold until the notifications number is published in Site settings. Emails still go.",
+    "onHoldStaffFromMain": "Automated WhatsApp messages are on hold (no notifications number is published); emails still go. Messages you write here go from the main WhatsApp number and show in the customer’s Inbox chat.",
     "customerOptedOut": "This customer turned automated WhatsApp messages off. Emails still go.",
     "noMessages": "No messages about this booking yet.",
     "customerWhatsApp": "WhatsApp messages to this customer",
@@ -1816,6 +1817,7 @@
     "sent": "Reply sent to {{name}}",
     "messages": "Replies sent",
     "fromForm": "To the number and email on the request: WhatsApp from the notifications number, and email.",
+    "fromFormMain": "To the number and email on the request: WhatsApp from the main number (it shows in the customer’s Inbox chat), and email.",
     "whatsAppOff": "WhatsApp can’t go out now (the notifications number isn’t published or WhatsApp isn’t connected). The email still goes, and the message log says why.",
     "optedOut": "This customer has stopped WhatsApp messages; the reply goes by email only.",
     "noEmailEither": "There is no email on this request either, so nothing will reach the customer: call them.",

@@ -84,7 +84,8 @@ function ReplyForm<T extends QuoteRequest>({ spec, row, onDone }: { spec: Reques
   const send = useRequestAction(spec.kind, requestActions(spec.kind).reply)
   const fieldError = send.error instanceof ApiError && send.error.status === 422 ? send.error : null
   const valid = text.trim().length >= 2 && text.length <= 1000
-  const whatsAppHeld = !row.notifications_number_published || row.customer_opted_out
+  // WhatsApp goes from the notifications number, or the main number through the inbox (docs/admin-inbox.md §6).
+  const whatsAppHeld = row.staff_whatsapp_route === null || row.customer_opted_out
 
   return (
     <form
@@ -107,7 +108,7 @@ function ReplyForm<T extends QuoteRequest>({ spec, row, onDone }: { spec: Reques
           {row.name} · <span className="font-display">{digits(row.phone.replace(/^88/, ''))}</span>
           {row.email ? ` · ${row.email}` : ''}
         </strong>
-        <span className="text-12 text-app-muted">{t('requests.fromForm')}</span>
+        <span className="text-12 text-app-muted">{row.staff_whatsapp_route === 'inbox' ? t('requests.fromFormMain') : t('requests.fromForm')}</span>
       </div>
       {whatsAppHeld ? (
         <p role="note" className="m-0 rounded-10 bg-orange-tint px-3 py-2 text-13 text-amber">

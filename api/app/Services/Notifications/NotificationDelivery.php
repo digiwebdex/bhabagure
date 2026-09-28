@@ -16,6 +16,7 @@ use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
 use App\Models\Quotation;
 use App\Models\Staff;
+use App\Services\Inbox\InboxDesk;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Notifications\Sms\SmsGateway;
 use App\Services\Notifications\WhatsApp\WhatsAppGateway;
@@ -24,6 +25,7 @@ use App\Support\Sms\SmsParts;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -73,7 +75,7 @@ final class NotificationDelivery
         }
 
         return match ($row->channel) {
-            NotificationChannel::WhatsApp => $this->sendWhatsApp($row),
+            NotificationChannel::WhatsApp => $this->viaInbox($row) ? $this->sendViaInbox($row) : $this->sendWhatsApp($row),
             NotificationChannel::Email => $this->sendEmail($row),
             NotificationChannel::Sms => $this->sendSms($row),
         };
@@ -113,6 +115,35 @@ final class NotificationDelivery
         }
 
         return $this->afterWhatsApp($row, $result);
+    }
+
+    /**
+     * A message a staff member wrote to a customer, while the automated messages' number isn't in use: it goes from the
+     * main number through the admin inbox (decided 2026-09-28, docs/admin-inbox.md §6).
+     */
+    private function viaInbox(NotificationMessage $row): bool
+    {
+        return $row->channel === NotificationChannel::WhatsApp
+            && $row->triggered_by_staff_id !== null
+            && $row->recipient_type === (new Customer)->getMorphClass()
+            && NotificationSettings::staffWhatsAppRoute() === 'inbox';
+    }
+
+    /**
+     * Hands the message to the inbox, which sends it paced like every reply and shows it in the customer's chat; the
+     * ticks are followed there. A linked invoice goes as its link at the end of the text.
+     */
+    private function sendViaInbox(NotificationMessage $row): NotificationMessage
+    {
+        $document = $this->document($row);
+        $body = trim($row->body.($document ? "\n\n".$document['url'] : ''));
+        try {
+            $message = app(InboxDesk::class)->replyToNumber($row->to_address, Customer::query()->find($row->recipient_id), $body, Staff::query()->findOrFail($row->triggered_by_staff_id));
+        } catch (ValidationException $e) {
+            return $this->finish($row, NotificationStatus::Failed, ['failed_at' => now(), 'last_error' => mb_substr((string) collect($e->errors())->flatten()->first(), 0, 250)]);
+        }
+
+        return $this->finish($row, NotificationStatus::Sent, ['sent_at' => now(), 'provider_message_id' => 'inbox:'.$message->id]);
     }
 
     private function afterWhatsApp(NotificationMessage $row, SendResult $result): NotificationMessage
@@ -266,8 +297,9 @@ final class NotificationDelivery
             return 'opted_out';
         }
         // A customer must be able to check the number before trusting it: nothing goes out from an unpublished number.
+        // A staff-written message goes from the main number through the inbox instead (docs/admin-inbox.md §6).
         $toCustomer = $row->recipient_type !== (new Staff)->getMorphClass();
-        if ($toCustomer && NotificationSettings::notificationsNumber() === null) {
+        if ($toCustomer && NotificationSettings::notificationsNumber() === null && ! $this->viaInbox($row)) {
             return 'notifications_number_not_published';
         }
 

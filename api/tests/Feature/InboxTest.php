@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
 use App\Models\Customer;
+use App\Models\NotificationMessage;
 use App\Models\SiteSetting;
 use App\Services\Inbox\MessengerSettings;
 use App\Services\Notifications\NotificationDelivery;
+use App\Services\Notifications\NotificationSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
@@ -76,6 +78,35 @@ class InboxTest extends TestCase
         $this->getJson('/api/v1/webhooks/wasender')->assertOk()->assertExactJson(['status' => 'ok']);
         $this->postJson('/api/v1/webhooks/wasender', ['event' => 'messages.received', 'data' => ['messages' => $this->incoming('X1', 'Hi')]])->assertUnauthorized();
         $this->assertSame(0, Conversation::query()->count());
+    }
+
+    #[Test]
+    public function without_a_notifications_number_a_staff_message_goes_from_the_main_number_through_the_inbox(): void
+    {
+        // Decided 2026-09-28: automated messages stay off; what staff write goes from the main number (§6).
+        Http::fake([self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 8001]])]);
+        config(['bhabaghure.notifications.whatsapp.mode' => 'off']);
+        $customer = Customer::query()->create(['name' => 'Riyaz Chowdhury', 'phone' => '8801709275545', 'stage' => 'lead', 'source' => 'website_form', 'locale' => 'bn']);
+        $admin = $this->staff('admin');
+
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/notifications/whatsapp', ['customer_id' => $customer->id, 'text' => 'Nepal-er ticket confirm hoyeche.'])->assertCreated();
+
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === self::WASENDER.'/send-message' && $request['to'] === '+8801709275545'
+            && str_contains((string) $request['text'], 'Nepal-er ticket confirm hoyeche.'));
+        $conversation = Conversation::query()->where('external_id', '8801709275545')->sole();
+        $reply = $conversation->messages()->sole();
+        $this->assertSame(['out', 'staff', $admin->id, 'sent', $customer->id], [$reply->direction, $reply->origin, $reply->staff_id, $reply->status, $conversation->customer_id]);
+        $row = NotificationMessage::query()->where('channel', 'whatsapp')->sole();
+        $this->assertSame(['sent', 'inbox:'.$reply->id], [$row->status->value, $row->provider_message_id]);
+
+        // With automated messages on and their number published, staff messages go that way instead.
+        config(['bhabaghure.notifications.whatsapp.mode' => 'live']);
+        SiteSetting::query()->updateOrCreate(['key' => 'contact'], ['value' => ['notificationsWhatsapp' => '+8801911000111']]);
+        $this->assertSame('notifications', NotificationSettings::staffWhatsAppRoute());
+        config(['bhabaghure.notifications.inbox.whatsapp' => false, 'bhabaghure.notifications.whatsapp.mode' => 'off']);
+        SiteSetting::query()->where('key', 'contact')->delete();
+        $this->assertNull(NotificationSettings::staffWhatsAppRoute());
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/notifications/whatsapp', ['customer_id' => $customer->id, 'text' => 'Hello again'])->assertStatus(409);
     }
 
     #[Test]

@@ -127,3 +127,18 @@ Done by someone who is an **admin of the Facebook Page**:
 - `admin/e2e/inbox.spec.ts`:
   - a chat read, answered with a quick reply, made a lead, a booking started, then closed and reopened
   - settings: quick replies, and a refused Page token
+
+## 6. Staff messages from the main number (decided 2026-09-28)
+
+WaSender's plan has one session: the main number 01743-939300. So a message a staff member writes elsewhere — a reply
+to an air-ticket or hotel request, "Send WhatsApp" on a booking or customer — goes from the main number through the
+inbox's sender (paced like every reply) and shows in that customer's Inbox chat. The notification log marks it sent
+(`provider_message_id` = `inbox:<message id>`); its ticks are in the chat. The email copy still goes.
+
+`NotificationSettings::staffWhatsAppRoute()`: `notifications` when the automated messages are on and their number is
+published; else `inbox` while the WhatsApp inbox is on; else nothing. The **automated** messages (booking received,
+receipts, reminders, codes) stay on hold until a notifications number is published and `WASENDER_MODE=live` — the
+client's choice of 2026-09-28 was "staff replies only".
+
+The WaSender dashboard's webhook secret is WaSender's own (it generates it); `WASENDER_WEBHOOK_SECRET` on the server
+must match it exactly, or every event is refused with 401.

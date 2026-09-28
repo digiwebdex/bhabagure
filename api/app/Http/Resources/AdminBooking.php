@@ -107,6 +107,8 @@ final class AdminBooking
             'notification_groups' => AdminNotification::groups(NotificationMessage::query()->with('recipient')
                 ->where('related_type', $booking->getMorphClass())->where('related_id', $booking->id)->latest('id')->limit(90)->get()),
             'notifications_number_published' => NotificationSettings::notificationsNumber() !== null,
+            // How a message staff write here goes by WhatsApp: notifications · inbox (the main number) · null (it can't).
+            'staff_whatsapp_route' => NotificationSettings::staffWhatsAppRoute(),
             'notifications_sender_line' => MessageRenderer::senderLine(),
             'confirmed_at' => $booking->confirmed_at?->toIso8601String(),
             'cancelled_at' => $booking->cancelled_at?->toIso8601String(),

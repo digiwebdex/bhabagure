@@ -79,6 +79,8 @@ trait WorksQuoteRequests
             // The reply box says when WhatsApp can't go out (the email still does) and previews the WhatsApp exactly: the
             // sender line, then the template around the typed text, which stands in for {{reply}}.
             'notifications_number_published' => NotificationSettings::notificationsNumber() !== null,
+            // How a message staff write here goes by WhatsApp: notifications · inbox (the main number) · null (it can't).
+            'staff_whatsapp_route' => NotificationSettings::staffWhatsAppRoute(),
             'notifications_sender_line' => MessageRenderer::senderLine(),
             'reply_template' => $template
                 ? app(MessageRenderer::class)->fill($template->body($locale), app(NotificationVariables::class)->for(NotificationEvent::InquiryReply, $inquiry, $locale, NotificationChannel::WhatsApp, ['reply' => '{{reply}}']))
