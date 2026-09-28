@@ -142,3 +142,13 @@ client's choice of 2026-09-28 was "staff replies only".
 
 The WaSender dashboard's webhook secret is WaSender's own (it generates it); `WASENDER_WEBHOOK_SECRET` on the server
 must match it exactly, or every event is refused with 401.
+
+## 7. Sign-in and booking codes from the main number (client, 2026-09-29)
+
+With SMS and email not yet delivering, a customer asking for a portal sign-in code was told "the code can't be sent
+right now". A code is something the customer has just asked for, not an automated message, so while the automated
+messages are held (above) it now goes from the main number through the inbox's WaSender session, straight away
+(`LoginCodes::deliver`). The same holds for the booking code. SMS and email still go too once they work.
+
+A code is a credential: WaSender echoes each send back as the phone's own message, and that echo is kept out of the
+Inbox (`WhatsAppInbox::keepOut`). It still shows in the WhatsApp Business app on the office phone.

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
 use App\Models\Customer;
+use App\Models\CustomerLoginCode;
 use App\Models\NotificationMessage;
 use App\Models\SiteSetting;
 use App\Services\Inbox\MessengerSettings;
@@ -70,6 +71,36 @@ class InboxTest extends TestCase
         $this->wasender('messages.received', ['messages' => ['key' => ['id' => 'G1', 'fromMe' => false, 'remoteJid' => '1203630@g.us', 'participant' => '8801711000009@s.whatsapp.net'], 'messageBody' => 'group']])->assertOk();
         $this->postJson('/api/v1/webhooks/wasender', ['event' => 'messages.received', 'data' => ['messages' => $this->incoming('X9', 'spoof')]], ['X-Webhook-Signature' => 'wrong'])->assertUnauthorized();
         $this->assertSame(2, ConversationMessage::query()->count());
+    }
+
+    #[Test]
+    public function with_automated_messages_off_a_sign_in_code_goes_from_the_main_number_and_stays_out_of_the_inbox(): void
+    {
+        // Client, 2026-09-29: with SMS and email not delivering, portal codes were "can't be sent" (docs/admin-inbox.md §7).
+        Http::fake([self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 9001]])]);
+        config(['bhabaghure.notifications.whatsapp.mode' => 'off', 'bhabaghure.notifications.sms.mode' => 'off', 'mail.default' => 'log']);
+
+        $this->postJson('/api/v1/customer/auth/code', ['phone' => '01857668461', 'locale' => 'bn'])->assertAccepted()->assertJsonPath('data.status', 'sent');
+
+        $sent = null;
+        Http::assertSent(function (HttpRequest $request) use (&$sent) {
+            $sent = (string) $request['text'];
+
+            return $request->url() === self::WASENDER.'/send-message' && $request['to'] === '+8801857668461' && str_contains($sent, 'লগইন কোড');
+        });
+        $this->assertSame('whatsapp', CustomerLoginCode::query()->sole()->channel);
+
+        // WaSender echoes the send as the phone's own message: a credential staff must not read in the inbox.
+        $this->wasender('messages.upsert', ['messages' => [[
+            'key' => ['id' => 'ECHO1', 'fromMe' => true, 'remoteJid' => '8801857668461@s.whatsapp.net'],
+            'messageBody' => $sent, 'message' => ['conversation' => $sent],
+        ]]])->assertOk();
+        $this->assertSame(0, ConversationMessage::query()->count());
+
+        // Turned off, the inbox sends nothing: the code can't be sent, as before.
+        config(['bhabaghure.notifications.inbox.whatsapp' => false]);
+        $this->travel(2)->minutes();
+        $this->postJson('/api/v1/customer/auth/code', ['phone' => '01857668461', 'locale' => 'bn'])->assertStatus(503);
     }
 
     #[Test]

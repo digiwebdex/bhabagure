@@ -7,6 +7,7 @@ use App\Models\ConversationMessage;
 use App\Services\Notifications\WhatsApp\WaSenderGateway;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The WhatsApp half of the inbox (docs/admin-inbox.md §2): WaSender's webhook events for the main number, filed into
@@ -37,6 +38,20 @@ final class WhatsAppInbox
         $config = config('bhabaghure.notifications.whatsapp');
 
         return empty($config['api_key']) ? null : new WaSenderGateway((string) $config['base_url'], (string) $config['api_key'], (int) $config['timeout_seconds']);
+    }
+
+    /**
+     * A text the site sends from the main number that staff must not read in the inbox: a sign-in or booking code is a
+     * credential (LoginCodes). WaSender echoes every send back as the phone's own message; this one is dropped.
+     */
+    public static function keepOut(string $text): void
+    {
+        Cache::put(self::keepOutKey($text), true, now()->addMinutes(30));
+    }
+
+    private static function keepOutKey(string $text): string
+    {
+        return 'inbox:keep-out:'.hash('sha256', trim($text));
     }
 
     /** @param array<string, mixed> $payload a WaSender webhook, already authenticated */
@@ -88,6 +103,9 @@ final class WhatsAppInbox
         $body = $message['messageBody'] ?? $content['conversation'] ?? Arr::get($content, 'extendedTextMessage.text') ?? ($media !== null ? ($media['caption'] ?? null) : null);
         if (($body === null || trim((string) $body) === '') && $media === null) {
             // Reactions, protocol messages, deletions: nothing to show.
+            return;
+        }
+        if ($fromMe && $body !== null && Cache::has(self::keepOutKey((string) $body))) {
             return;
         }
 

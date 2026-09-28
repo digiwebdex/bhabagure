@@ -5,6 +5,7 @@ namespace App\Services\Customers;
 use App\Mail\LoginCodeMail;
 use App\Models\Customer;
 use App\Models\CustomerLoginCode;
+use App\Services\Inbox\WhatsAppInbox;
 use App\Services\Notifications\AdminAlerts;
 use App\Services\Notifications\MessageRenderer;
 use App\Services\Notifications\NotificationSettings;
@@ -22,7 +23,8 @@ use Throwable;
  *
  *  - Six digits, valid 10 minutes, five tries; only the newest code for a number works. Stored as an HMAC.
  *  - Sent by every channel at once (client, 2026-09-25; docs/booking-phone-verification.md §6): SMS; WhatsApp unless the
- *    customer turned it off or the notifications number isn't published (Phase 4 rules); and email when there is an
+ *    customer turned it off or the notifications number isn't published (Phase 4 rules), else from the main number
+ *    through the admin inbox (docs/admin-inbox.md §7); and email when there is an
  *    address and the mailer really sends. A phone-change code never goes by email: it must prove the new number.
  *  - Never written to the message log: a code is a credential, and staff read that log.
  *  - Limits per number: one a minute, five an hour. The route adds a per-address limit.
@@ -159,11 +161,22 @@ final class LoginCodes
         }
 
         $optedOut = Customer::query()->where('phone', $phone)->whereNotNull('whatsapp_opted_out_at')->exists();
-        if (! $optedOut && NotificationSettings::notificationsNumber() !== null) {
+        // Every WhatsApp opens with the sender line (MessageRenderer); SMS carries the operator's sender ID instead.
+        $whatsApp = MessageRenderer::senderLine()."\n".$text;
+        if (! $optedOut && NotificationSettings::notificationsNumber() !== null && config('bhabaghure.notifications.whatsapp.mode') !== 'off') {
             try {
-                // Every WhatsApp from the notifications number opens with the sender line (MessageRenderer); SMS carries
-                // the operator's sender ID instead.
-                if ($this->whatsApp->sendText($phone, MessageRenderer::senderLine()."\n".$text)->isSent()) {
+                if ($this->whatsApp->sendText($phone, $whatsApp)->isSent()) {
+                    $channels[] = 'whatsapp';
+                }
+            } catch (Throwable $e) {
+                report($e);
+            }
+        } elseif (! $optedOut && WhatsAppInbox::enabled()) {
+            // Automated messages off: the code the customer just asked for goes from the main number, through the admin
+            // inbox's WaSender session, straight away (client, 2026-09-29). Its echo is kept out of the staff inbox.
+            try {
+                WhatsAppInbox::keepOut($whatsApp);
+                if (WhatsAppInbox::gateway()?->sendTo($phone, $whatsApp)->isSent()) {
                     $channels[] = 'whatsapp';
                 }
             } catch (Throwable $e) {
