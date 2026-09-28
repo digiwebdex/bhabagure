@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
 use App\Http\Controllers\Api\V1\Admin\InboxController;
 use App\Http\Controllers\Api\V1\Admin\InboxSettingsController;
 use App\Http\Controllers\Api\V1\Admin\InvoiceBuilderController;
+use App\Http\Controllers\Api\V1\Admin\InvoiceProductController;
 use App\Http\Controllers\Api\V1\Admin\JournalController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
@@ -507,6 +508,12 @@ Route::prefix('v1')->group(function () {
                 Route::get('reference-presets', 'index');
                 Route::post('reference-presets', 'store');
                 Route::delete('reference-presets/{id}', 'destroy')->whereNumber('id');
+            });
+            // What an invoice's Add New Item offers: packages and the office's own products (docs/invoice-items.md).
+            Route::controller(InvoiceProductController::class)->group(function () {
+                Route::get('invoice-products', 'index');
+                Route::post('invoice-products', 'store')->middleware('permission:invoices.manage,staff');
+                Route::put('invoice-products/{id}', 'update')->whereNumber('id')->middleware('permission:invoices.manage,staff');
             });
             // Invoices staff write themselves (docs/phase-9-accounts.md §5): the list, the builder, and issuing a draft.
             // Paying and voiding stay on the deal endpoints below, which is where the ledger already handles them.

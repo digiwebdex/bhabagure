@@ -75,11 +75,16 @@ export function InvoicesPage() {
         title={t('invoices.title')}
         subtitle={t('invoices.subtitle')}
         actions={
-          can('invoices.manage') ? (
-            <Link to="/invoices/new" className={buttonClass('primary', 'sm')}>
-              {t('invoices.create')}
+          <>
+            <Link to="/invoices/products" className={buttonClass('outline', 'sm')}>
+              {t('invoices.items.productsTitle')}
             </Link>
-          ) : undefined
+            {can('invoices.manage') ? (
+              <Link to="/invoices/new" className={buttonClass('primary', 'sm')}>
+                {t('invoices.create')}
+              </Link>
+            ) : null}
+          </>
         }
       />
 

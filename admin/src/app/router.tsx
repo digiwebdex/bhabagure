@@ -36,6 +36,7 @@ const DocumentsPage = page(() => import('../features/documents/DocumentsPage'), 
 const DownloadsPage = page(() => import('../features/downloads/DownloadsPage'), 'DownloadsPage')
 const InvoicesPage = page(() => import('../features/invoices/InvoicesPage'), 'InvoicesPage')
 const InvoiceFormPage = page(() => import('../features/invoices/InvoiceForm'), 'InvoiceForm')
+const InvoiceProductsPage = page(() => import('../features/invoices/ProductsPage'), 'ProductsPage')
 const CustomerAccountsPage = page(() => import('../features/customer-accounts/CustomerAccountsPage'), 'CustomerAccountsPage')
 const CouponsPage = page(() => import('../features/coupons/CouponsPage'), 'CouponsPage')
 const CouponReportPage = page(() => import('../features/coupons/CouponReportPage'), 'CouponReportPage')
@@ -112,6 +113,8 @@ export const router = createBrowserRouter([
       { path: 'customers/:id', element: <Require permissions={['customers.view']}><CustomerProfilePage /></Require> },
       { path: 'downloads', element: <Require permissions={['downloads.view']}><DownloadsPage /></Require> },
       { path: 'invoices', element: <Require permissions={['payments.view']}><InvoicesPage /></Require> },
+      // The office's own products for invoices (docs/invoice-items.md).
+      { path: 'invoices/products', element: <Require permissions={['payments.view']}><InvoiceProductsPage /></Require> },
       { path: 'invoices/new', element: <Require permissions={['invoices.manage']}><InvoiceFormPage /></Require> },
       { path: 'invoices/:id/edit', element: <Require permissions={['invoices.manage']}><InvoiceFormPage /></Require> },
       { path: 'accounting/customers', element: <Require permissions={['payments.view']}><CustomerAccountsPage /></Require> },

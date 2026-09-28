@@ -7,4 +7,5 @@ return [
     'reminder_needs_issue' => 'Issue this invoice before reminding anyone about it.',
     'reminder_no_address' => 'There is no phone number or email address on file to send this to.',
     'phone_invalid' => 'Enter a Bangladeshi mobile number, e.g. 01711-000000.',
+    'product_exists' => 'A product with this name already exists — pick it from the list.',
 ];

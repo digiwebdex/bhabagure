@@ -19,6 +19,7 @@ use App\Models\BookingVoucher;
 use App\Models\CannedReply;
 use App\Models\Client;
 use App\Models\Conversation;
+use App\Models\InvoiceProduct;
 use App\Models\Coupon;
 use App\Models\CreatorVideo;
 use App\Models\Customer;
@@ -177,6 +178,7 @@ class AppServiceProvider extends ServiceProvider
             'offer_banner' => OfferBanner::class,
             'tour_photo' => TourPhoto::class,
             'booking_voucher' => BookingVoucher::class,
+            'invoice_product' => InvoiceProduct::class,
             'conversation' => Conversation::class,
             'canned_reply' => CannedReply::class,
             'media' => Media::class,

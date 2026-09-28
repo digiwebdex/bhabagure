@@ -53,8 +53,11 @@ test('an admin writes an invoice, issues it, reminds the customer, takes the pay
   await row.getByRole('button', { name: /^Actions —/ }).click()
   await page.getByRole('menuitem', { name: 'Edit' }).click()
   await expect(page.getByRole('heading', { name: /^Invoice Draft$/, level: 1 })).toBeVisible(FIRST_LOAD)
-  await page.getByRole('button', { name: '+ Add line' }).click()
-  await page.getByTestId('invoice-lines').getByLabel('Item').nth(1).fill('Visa processing')
+  // Add New Item, typed: an item only for this invoice (docs/invoice-items.md).
+  await page.getByRole('button', { name: '+ Add New Item' }).click()
+  await page.getByRole('searchbox', { name: /Search packages and products/ }).fill('Visa processing')
+  await page.getByRole('button', { name: 'Add "Visa processing" only for this invoice' }).click()
+  await expect(page.getByTestId('invoice-lines').getByLabel('Item').nth(1)).toHaveValue('Visa processing')
   await page.getByTestId('invoice-lines').getByLabel('Unit price').nth(1).fill('8000')
   await expect(page.getByTestId('invoice-totals')).toContainText('BDT 33,750')
 
@@ -101,6 +104,46 @@ test('an admin writes an invoice, issues it, reminds the customer, takes the pay
   await expect(details.getByTestId('invoice-details')).toContainText('PO-2026-11')
   await expect(details.getByTestId('invoice-payments')).toContainText('BDT 33,750')
   await expect(details.getByRole('button', { name: 'Print PDF' })).toBeVisible()
+})
+
+test('Add New Item offers the packages with their price, and a new item is saved as a product for next time', async ({ page }) => {
+  await signIn(page, 'admin')
+  const stamp = String(Date.now())
+  await page.goto('/invoices/new')
+  await expect(page.getByRole('heading', { name: 'New invoice', level: 1 })).toBeVisible(FIRST_LOAD)
+  const lines = page.getByTestId('invoice-lines')
+  const search = page.getByRole('searchbox', { name: /Search packages and products/ })
+
+  // A package from the list fills the empty line with its name, detail and per-person price.
+  await page.getByRole('button', { name: '+ Add New Item' }).click()
+  await search.fill('Mustang')
+  await page.getByRole('listbox', { name: 'Packages and products' }).getByRole('option', { name: /NEPAL MUSTANG/ }).first().click()
+  await expect(lines.getByLabel('Item')).toHaveCount(1)
+  await expect(lines.getByLabel('Item').first()).toHaveValue(/NEPAL MUSTANG/)
+  await expect(lines.getByLabel('Unit price').first()).toHaveValue('75000')
+  await expect(lines).toContainText('8 days')
+
+  // A new name, saved as a product with its price: it comes as a second line, and is offered next time.
+  const product = `Sylhet tea garden tour ${stamp}`
+  await page.getByRole('button', { name: '+ Add New Item' }).click()
+  await search.fill(product)
+  await page.getByRole('button', { name: `Add "${product}" as a new product` }).click()
+  const form = page.getByTestId('new-product')
+  await form.getByLabel('Price (BDT)').fill('6500')
+  await form.getByLabel('Short description (optional)').fill('Srimangal, Lawachara')
+  await form.getByRole('button', { name: 'Save and add' }).click()
+  await expect(lines.getByLabel('Item').nth(1)).toHaveValue(product)
+  await expect(lines.getByLabel('Unit price').nth(1)).toHaveValue('6500')
+
+  await page.getByRole('button', { name: '+ Add New Item' }).click()
+  await search.fill('Sylhet tea')
+  await expect(page.getByRole('option', { name: new RegExp(product) })).toContainText('BDT 6,500')
+  await page.keyboard.press('Escape')
+
+  // On Invoices → Products, where it can be edited or hidden.
+  await page.goto('/invoices/products')
+  await expect(page.getByTestId('products')).toContainText(product, FIRST_LOAD)
+  await expect(page.getByTestId('products')).toContainText('Srimangal, Lawachara')
 })
 
 test('a draft nobody wants is deleted, and an issued invoice is not', async ({ page }) => {

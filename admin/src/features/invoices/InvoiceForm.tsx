@@ -11,6 +11,7 @@ import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { invoiceActions, invoiceTotals, lineTotals, useInvoice, useInvoiceAction, type InvoiceDetail, type InvoiceInput } from './api'
+import { ItemPicker } from './ItemPicker'
 
 type Line = InvoiceInput['lines'][number]
 type CustomerHit = { id: number; name: string; phone: string; email?: string | null }
@@ -193,7 +194,7 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
             const { net, vat } = lineTotals(line)
             return (
               <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.7fr)_auto]">
-                <TextInput label={t('invoices.line.title')} value={line.title} onChange={(title) => setLine(index, { title })} disabled={issued} error={fieldError(`lines.${index}.title`)} />
+                <TextInput label={t('invoices.line.title')} value={line.title} onChange={(title) => setLine(index, { title })} disabled={issued} error={fieldError(`lines.${index}.title`)} hint={line.detail ?? undefined} />
                 <NumberInput label={t('invoices.line.quantity')} value={line.quantity} onChange={(quantity) => setLine(index, { quantity: quantity ?? 1 })} disabled={issued} error={fieldError(`lines.${index}.quantity`)} />
                 <NumberInput label={t('invoices.line.price')} value={line.unit_price} onChange={(unit_price) => setLine(index, { unit_price: unit_price ?? 0 })} disabled={issued} error={fieldError(`lines.${index}.unit_price`)} />
                 <NumberInput label={t('invoices.line.discount')} value={line.discount_amount} onChange={(discount_amount) => setLine(index, { discount_amount: discount_amount ?? 0 })} disabled={issued} />
@@ -210,9 +211,16 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
             )
           })}
           {!issued ? (
-            <button type="button" className={buttonClass('outline', 'sm', 'self-start')} onClick={() => setLines((all) => [...all, blankLine()])}>
-              {t('invoices.addLine')}
-            </button>
+            <ItemPicker
+              onPick={(item) =>
+                // A picked package or product fills the line still left empty, else comes as a new one.
+                setLines((all) => {
+                  const line = { ...blankLine(), title: item.title, detail: item.detail, unit_price: item.unit_price }
+                  const empty = all.findIndex((existing) => existing.title.trim() === '' && existing.unit_price === 0)
+                  return empty === -1 ? [...all, line] : all.map((existing, i) => (i === empty ? line : existing))
+                })
+              }
+            />
           ) : null}
         </div>
 
