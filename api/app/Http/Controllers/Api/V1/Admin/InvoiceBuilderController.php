@@ -218,6 +218,13 @@ class InvoiceBuilderController extends Controller
     /** @return array<string, mixed> */
     private function validated(Request $request): array
     {
+        // A new customer's number as staff type it — 01711-000000, +880 1711 000000 — is stored as 8801711000000, as
+        // everywhere else. Checked after it is tidied, never refused for its spaces or dashes.
+        if (is_array($request->input('customer')) && is_string($request->input('customer.phone'))) {
+            $typed = $request->input('customer.phone');
+            $request->merge(['customer' => ['phone' => Phone::normalizeBdMobile($typed) ?? $typed] + $request->input('customer')]);
+        }
+
         return $request->validate([
             'customer_id' => ['required_without_all:client_id,customer', 'nullable', 'integer', 'exists:customers,id', 'prohibits:client_id,customer'],
             'client_id' => ['nullable', 'integer', 'exists:clients,id'],
@@ -243,7 +250,7 @@ class InvoiceBuilderController extends Controller
             'lines.*.unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'lines.*.discount_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'lines.*.vat_rate' => ['nullable', 'numeric', 'between:0,100'],
-        ]);
+        ], ['customer.phone.regex' => __('invoices.phone_invalid')]);
     }
 
     /** @return array<string, mixed> */

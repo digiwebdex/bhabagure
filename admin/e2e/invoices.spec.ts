@@ -19,7 +19,8 @@ test('an admin writes an invoice, issues it, reminds the customer, takes the pay
   // Nobody on file: the name and number written here make the customer the invoice is billed to.
   await page.getByLabel('Billed to').fill(billedTo)
   await expect(page.getByRole('button', { name: 'Save draft' })).toBeDisabled()
-  await page.getByLabel('Phone', { exact: true }).fill(`88017${stamp.slice(-8)}`)
+  // Typed as staff type it (a leading 0, a dash): saved as 8801… (refused before 2026-09-28).
+  await page.getByLabel('Phone', { exact: true }).fill(`017${stamp.slice(-8, -6)}-${stamp.slice(-6)}`)
   await page.getByLabel('What it is for').fill('Umrah package, two people')
   await page.getByLabel('P.O. / S.O. number').fill('PO-2026-11')
 
@@ -110,7 +111,7 @@ test('a draft nobody wants is deleted, and an issued invoice is not', async ({ p
 
   await page.goto('/invoices/new')
   await page.getByLabel('Billed to').fill(customer)
-  await page.getByLabel('Phone', { exact: true }).fill(`88018${stamp.slice(-8)}`)
+  await page.getByLabel('Phone', { exact: true }).fill(`+880 18${stamp.slice(-8)}`)
   await page.getByLabel('What it is for').fill(title)
   await page.getByTestId('invoice-lines').getByLabel('Item').fill('Air ticket')
   await page.getByTestId('invoice-lines').getByLabel('Unit price').fill('9000')

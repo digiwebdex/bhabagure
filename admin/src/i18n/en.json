@@ -2940,6 +2940,7 @@
     "due": "Due",
     "saveDraft": "Save draft",
     "savedDraft": "Draft saved",
+    "notSaved": "Not saved — please fix this:",
     "issue": "Issue invoice",
     "issued": "Invoice issued",
     "issuedOn": "Issued {{date}}"

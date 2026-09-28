@@ -36,6 +36,26 @@ class InvoiceBuilderTest extends TestCase
     }
 
     #[Test]
+    public function a_new_customers_number_is_saved_however_staff_type_it(): void
+    {
+        // Exactly what the invoice screen sends (2026-09-28: every "Save" with a typed 017… number was refused).
+        $send = fn (string $phone) => $this->actingAsApi($this->admin())->postJson('/api/v1/admin/invoices', [
+            'customer_id' => null, 'customer' => ['name' => 'Rahim Uddin', 'phone' => $phone],
+            'title' => 'Cox’s Bazar tour', 'po_number' => null, 'note' => null, 'footer' => null, 'due_on' => now('Asia/Dhaka')->toDateString(),
+            'discount_label' => null, 'discount_amount' => 0, 'delivery_charge' => 0, 'vat_rate' => 0,
+            'lines' => [['title' => 'Tour package', 'detail' => null, 'quantity' => 2, 'unit_price' => 8500, 'discount_amount' => 0, 'vat_rate' => 0]],
+        ]);
+
+        $send('01711-000002')->assertCreated()->assertJsonPath('data.customer.phone', '8801711000002');
+        $send('+880 1811 000003')->assertCreated()->assertJsonPath('data.customer.phone', '8801811000003');
+        $send('01711000002')->assertCreated()->assertJsonPath('data.customer.phone', '8801711000002');
+        $this->assertSame(2, Customer::query()->count(), 'the same number finds the customer made before');
+
+        // Not a Bangladeshi mobile: refused with a message staff can act on.
+        $send('0171100')->assertUnprocessable()->assertJsonValidationErrors(['customer.phone' => 'Enter a Bangladeshi mobile number, e.g. 01711-000000.']);
+    }
+
+    #[Test]
     public function a_draft_adds_up_its_lines_and_can_be_changed_until_it_is_issued(): void
     {
         $staff = $this->admin();

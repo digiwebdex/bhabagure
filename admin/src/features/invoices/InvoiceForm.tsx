@@ -250,7 +250,17 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
           </div>
         </div>
 
-        {save.error && !(save.error instanceof ApiError && save.error.status === 422) ? <ErrorNotice error={save.error} /> : null}
+        {save.error instanceof ApiError && save.error.status === 422 ? (
+          // Refused: say so beside the buttons, with each reason, as well as under the fields above.
+          <div role="alert" className="flex flex-col gap-1 rounded-10 bg-red-tint px-3.5 py-2.5 text-13 text-red" data-testid="invoice-not-saved">
+            <strong>{t('invoices.notSaved')}</strong>
+            {[...new Set(Object.values(save.error.errors).flat())].map((message) => (
+              <span key={message}>{message}</span>
+            ))}
+          </div>
+        ) : save.error ? (
+          <ErrorNotice error={save.error} />
+        ) : null}
         {issue.error ? <ErrorNotice error={issue.error} /> : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
