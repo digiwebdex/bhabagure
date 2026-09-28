@@ -185,3 +185,44 @@ test('a draft nobody wants is deleted, and an issued invoice is not', async ({ p
   await expect(page.getByText('Draft deleted')).toBeVisible()
   await expect(page.getByTestId('invoices-table').locator('tbody tr').filter({ hasText: customer })).toHaveCount(0)
 })
+
+test('an issued invoice is edited under its own number, and Delete cancels it', async ({ page }) => {
+  // Client, 2026-09-29: Edit and Delete on issued invoices too (docs/phase-9-accounts.md §5).
+  await signIn(page, 'admin')
+  const stamp = String(Date.now())
+  const customer = `E2E Corrected ${stamp}`
+
+  await page.goto('/invoices/new')
+  await page.getByLabel('Billed to').fill(customer)
+  await page.getByLabel('Phone', { exact: true }).fill(`+880 19${stamp.slice(-8)}`)
+  await page.getByLabel('What it is for').fill('Hotel booking')
+  await page.getByTestId('invoice-lines').getByLabel('Item').fill('Hotel, two nights')
+  await page.getByTestId('invoice-lines').getByLabel('Unit price').fill('12000')
+  await page.getByRole('button', { name: 'Save invoice' }).click()
+  await expect(page.getByText('Invoice issued')).toBeVisible()
+
+  const table = page.getByTestId('invoices-table')
+  const row = table.locator('tbody tr').filter({ hasText: customer })
+  await expect(row).toContainText(/#INV-\d+/, FIRST_LOAD)
+  const number = (await row.getByRole('button', { name: /^#INV-\d+$/ }).textContent())?.trim() ?? ''
+
+  // Edit: the figures change, the number stays.
+  await row.getByRole('button', { name: /^Actions —/ }).click()
+  await page.getByRole('menuitem', { name: 'Edit' }).click()
+  await expect(page.getByText(/Saving keeps its number and date/)).toBeVisible(FIRST_LOAD)
+  await page.getByTestId('invoice-lines').getByLabel('Unit price').fill('15000')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Invoice updated')).toBeVisible()
+  const edited = table.locator('tbody tr').filter({ hasText: customer })
+  await expect(edited).toContainText('BDT 15,000', FIRST_LOAD)
+  await expect(edited).toContainText(number)
+
+  // Delete: cancelled with a reason, still listed under its number.
+  await edited.getByRole('button', { name: /^Actions —/ }).click()
+  await page.getByRole('menuitem', { name: 'Delete' }).click()
+  const dialog = page.getByRole('dialog', { name: `Delete ${number.replace('#', '')}?` })
+  await dialog.getByLabel('Why is it being cancelled?').fill('Customer changed the hotel')
+  await dialog.getByRole('button', { name: 'Cancel invoice' }).click()
+  await expect(page.getByText(`${number.replace('#', '')} cancelled`)).toBeVisible()
+  await expect(table.locator('tbody tr').filter({ hasText: customer })).toContainText('Cancelled', FIRST_LOAD)
+})

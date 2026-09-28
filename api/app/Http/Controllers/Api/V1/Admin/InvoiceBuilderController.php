@@ -114,7 +114,10 @@ class InvoiceBuilderController extends Controller
         $data = $this->validated($request);
 
         try {
-            $updated = $this->builder->updateDraft($invoice, $this->party($data), $data, $request->user('staff'));
+            // Issued: a correction, the books redone under the same number (client, 2026-09-29; §5).
+            $updated = $invoice->status === Invoice::DRAFT
+                ? $this->builder->updateDraft($invoice, $this->party($data), $data, $request->user('staff'))
+                : $this->builder->correct($invoice, $this->party($data), $data, $request->user('staff'));
         } catch (LogicException $e) {
             return response()->json(['message' => __('invoices.issued_frozen'), 'code' => 'invoice_issued'], 409);
         }
@@ -299,7 +302,8 @@ class InvoiceBuilderController extends Controller
             'overdue' => $overdue,
             'booking_id' => $invoice->booking_id,
             'actions' => [
-                'edit' => $invoice->status === Invoice::DRAFT,
+                // A draft, or an issued invoice written here (a correction); a booking's follows its booking.
+                'edit' => $invoice->status === Invoice::DRAFT || ($invoice->status === Invoice::ISSUED && $invoice->kind === Invoice::KIND_DEAL && $invoice->booking_id === null),
                 'issue' => $invoice->status === Invoice::DRAFT,
                 'pay' => $invoice->status === Invoice::ISSUED && LedgerService::paisa($invoice->balance_due) > 0 && $invoice->booking_id === null,
                 'void' => $invoice->status === Invoice::ISSUED && LedgerService::paisa($invoice->paid_amount) === 0 && $invoice->booking_id === null,

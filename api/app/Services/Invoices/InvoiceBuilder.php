@@ -13,14 +13,15 @@ use App\Services\Ledger\LedgerService;
 use App\Support\WriteScope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 
 /**
  * An invoice staff write themselves (docs/phase-9-accounts.md §5): a customer or company, as many lines as it needs,
  * each with its own discount and VAT, a discount on the whole invoice, a due date and the words printed at the foot.
  *
- * It is a draft until it is issued: only then does it take an invoice number and go into the books. After that its
- * figures are frozen — a mistake is voided and written again, which is what the ledger and the customer's copy expect.
+ * It is a draft until it is issued: only then does it take an invoice number and go into the books. After that a change
+ * is a correction: the books reverse the old figures and take the new ones (correct()); a cancelled one is voided.
  */
 final class InvoiceBuilder
 {
@@ -69,6 +70,52 @@ final class InvoiceBuilder
             $locked->items()->delete();
             $this->writeLines($locked, $data, $staff);
             $this->audit->record('invoice.draft_updated', $staff, $locked, ['total' => (float) $locked->total_amount]);
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
+     * An issued invoice put right (client, 2026-09-29; docs/phase-9-accounts.md §5): same number and date, new figures.
+     * The journal entry it was posted with is reversed and the new figures posted, both today, so a closed month is never
+     * rewritten; what was paid stays against it, so the new total can't be below that. A booking's invoice follows its
+     * booking and is not changed here.
+     *
+     * For the moment of the change the invoice is a draft again, inside this one transaction: the frozen-snapshot rules
+     * (the model's and the optional database triggers) hold everywhere else.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws LogicException when it isn't an issued invoice written here
+     * @throws ValidationException when the new total is below what has been paid
+     */
+    public function correct(Invoice $invoice, Customer|Client $party, array $data, Staff $staff): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $party, $data, $staff) {
+            $locked = Invoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status !== Invoice::ISSUED || $locked->kind !== Invoice::KIND_DEAL || $locked->booking_id !== null) {
+                throw new LogicException('Only an issued invoice written in the builder is corrected here.');
+            }
+            $before = (float) $locked->total_amount;
+
+            WriteScope::run(WriteScope::INVOICE_STATUS, fn () => $locked->forceFill(['status' => Invoice::DRAFT])->save());
+            $locked->fill(self::billedTo($party) + ['updated_by_staff_id' => $staff->id])->save();
+            $locked->items()->delete();
+            $this->writeLines($locked, $data, $staff);
+            WriteScope::run(WriteScope::INVOICE_STATUS, fn () => $locked->forceFill(['status' => Invoice::ISSUED])->save());
+
+            $total = LedgerService::paisa($locked->total_amount);
+            $paid = $this->ledger->invoicePaidPaisa($locked);
+            if ($total <= 0) {
+                throw ValidationException::withMessages(['lines' => __('invoices.needs_a_line')]);
+            }
+            if ($total < $paid) {
+                throw ValidationException::withMessages(['discount_amount' => __('invoices.below_paid', ['paid' => number_format(LedgerService::amount($paid), 2)])]);
+            }
+
+            $this->ledger->postDealCorrected($locked, $staff);
+            $this->ledger->syncInvoicePaid($locked);
+            $this->audit->record('invoice.corrected', $staff, $locked, ['number' => $locked->invoice_number, 'total_before' => $before, 'total' => (float) $locked->total_amount]);
 
             return $locked->refresh();
         });

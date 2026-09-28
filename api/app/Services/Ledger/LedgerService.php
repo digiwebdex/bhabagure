@@ -88,10 +88,38 @@ final class LedgerService
 
     public function postInvoiceVoided(Invoice $invoice, ?Staff $staff = null): ?JournalEntry
     {
-        $issued = JournalEntry::query()->where('source_type', $invoice->getMorphClass())->where('source_id', $invoice->id)
-            ->whereNull('reverses_journal_entry_id')->first();
+        $issued = $this->liveInvoiceEntry($invoice);
 
         return $issued ? $this->reverse($issued, "Invoice {$invoice->invoice_number} voided", $staff) : null;
+    }
+
+    /**
+     * A corrected deal invoice (InvoiceBuilder::correct): the figures it was posted with are reversed and the new ones
+     * posted, both today.
+     */
+    public function postDealCorrected(Invoice $invoice, ?Staff $staff = null): ?JournalEntry
+    {
+        $previous = $this->liveInvoiceEntry($invoice);
+        if ($previous !== null) {
+            $this->reverse($previous, "Invoice {$invoice->invoice_number} corrected: previous figures reversed", $staff);
+        }
+        $total = self::paisa($invoice->total_amount);
+        $vat = self::paisa($invoice->vat_amount);
+
+        return $this->post($invoice, "Deal invoice {$invoice->invoice_number} corrected · {$invoice->title}", null, $staff, [
+            [Account::RECEIVABLE, $total, 0],
+            [Account::DEAL_SALES, 0, $total - $vat],
+            [Account::VAT_PAYABLE, 0, $vat],
+        ]);
+    }
+
+    /** The entry an invoice now stands in the books by: posted for it, not a reversal, and not reversed since. */
+    private function liveInvoiceEntry(Invoice $invoice): ?JournalEntry
+    {
+        return JournalEntry::query()->where('source_type', $invoice->getMorphClass())->where('source_id', $invoice->id)
+            ->whereNull('reverses_journal_entry_id')
+            ->whereNotIn('id', JournalEntry::query()->whereNotNull('reverses_journal_entry_id')->select('reverses_journal_entry_id'))
+            ->latest('id')->first();
     }
 
     /**

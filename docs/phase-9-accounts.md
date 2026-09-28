@@ -62,8 +62,12 @@ An invoice staff write themselves, beside the ones a booking issues.
   many lines as it needs with a per-line discount and VAT rate, a discount on the whole invoice, a due date, a note and
   the words printed at the foot.
 - **Draft, then issued.** A draft has no number, is not in the books and can be changed freely. Issuing gives it the
-  next invoice number, posts receivable, sales and VAT to the journal, and freezes the figures — a mistake is voided and
-  written again. Paying and voiding stay on the deal endpoints, where the ledger already handles them.
+  next invoice number and posts receivable, sales and VAT to the journal. Paying and voiding stay on the deal
+  endpoints, where the ledger already handles them.
+- **Edit on an issued invoice (client, 2026-09-29)** corrects it under the same number and date: the journal entry it
+  stands by is reversed and the new figures posted, both dated today, so a closed month is never rewritten. What was
+  paid stays against it, so the new total can't be below that. The audit log keeps `invoice.corrected` with the totals
+  before and after. A booking's invoice is changed on its booking: its menu offers **Open booking** instead.
 - **The printed invoice** says a line's own discount and VAT under it (the amount is the line after its discount, so it
   would not otherwise read as quantity × rate), the due date, and the staff footer above the standing terms.
 - **Every invoice belongs to someone.** The invoices table insists on a customer or a B2B client, so what is owed can
@@ -80,8 +84,9 @@ An invoice staff write themselves, beside the ones a booking issues.
 - **Printed four ways** from the row: A4, A5, an 80mm counter slip, and a delivery receipt — the last with no prices and
   a line to sign for the documents handed over.
 - **Details** reads the invoice back the way the customer's copy reads, with every payment against it.
-- **Delete** throws away a draft. An issued invoice is never deleted — the customer has a copy and the books have the
-  entry — so that one is voided on its deal, which reverses the journal.
+- **Delete** throws away a draft. On an issued invoice it **cancels** it (client, 2026-09-29): it stays in the list
+  marked Cancelled, so its number is never missing, and its journal entry is reversed. A reason is asked for; money paid
+  on it is reversed in the cash book first.
 - API: `GET/POST /admin/invoices`, `GET/PUT /admin/invoices/{id}`, `POST /admin/invoices/{id}/issue`,
   `DELETE /admin/invoices/{id}`, `POST /admin/invoices/{id}/reminders`. Reading needs `payments.view`, writing
   `invoices.manage`, sending a reminder `notifications.send`.

@@ -12,6 +12,7 @@ import { api, fetchDocument } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import { INVOICE_STATES, printPath, useInvoiceAction, useInvoices, type InvoiceFilters, type InvoiceRow, type InvoiceState, type PrintSize } from './api'
+import { CancelInvoice } from './CancelInvoice'
 import { CustomerAvatar } from './CustomerAvatar'
 import { InvoiceDetails } from './InvoiceDetails'
 import { InvoicePayment } from './InvoicePayment'
@@ -21,7 +22,7 @@ import { InvoiceShare } from './InvoiceShare'
 /** The tabs the money is read by, in the order the old system had them. Drafts are ours: it had none. */
 const TABS = ['all', 'unpaid', 'partial', 'paid', 'overdue', 'draft'] as const
 
-type Dialog = { kind: 'payment' | 'details' | 'share' | 'remind'; row: InvoiceRow } | null
+type Dialog = { kind: 'payment' | 'details' | 'share' | 'remind' | 'cancel'; row: InvoiceRow } | null
 
 /**
  * Invoices (docs/phase-9-accounts.md §5): everything issued, by state, with what is still owed. A booking's invoice
@@ -64,7 +65,12 @@ export function InvoicesPage() {
     }
   }
 
+  // A draft is thrown away; an issued invoice is cancelled, keeping its number (client, 2026-09-29).
   const discard = async (row: InvoiceRow) => {
+    if (row.status !== 'draft') {
+      setOpen({ kind: 'cancel', row })
+      return
+    }
     if (!(await confirm(t('invoices.deleteConfirm')))) return
     remove.mutate(row.id, { onSuccess: () => toast(t('invoices.deleted')) })
   }
@@ -222,6 +228,7 @@ export function InvoicesPage() {
                           onPrint={(size) => void print(row, size)}
                           onDetails={() => setOpen({ kind: 'details', row })}
                           onEdit={() => navigate(`/invoices/${row.id}/edit`)}
+                          onOpenBooking={() => navigate(`/bookings/${row.booking_id}`)}
                           onShare={() => setOpen({ kind: 'share', row })}
                           onRemind={() => setOpen({ kind: 'remind', row })}
                           onDelete={() => void discard(row)}
@@ -252,6 +259,7 @@ export function InvoicesPage() {
 
       {open?.kind === 'payment' ? <InvoicePayment invoice={open.row} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'details' ? <InvoiceDetails id={open.row.id} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'cancel' ? <CancelInvoice invoice={open.row} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'share' || open?.kind === 'remind' ? <InvoiceShare invoice={open.row} purpose={open.kind === 'share' ? 'share' : 'remind'} onClose={() => setOpen(null)} /> : null}
       {confirmDialog}
     </>
@@ -303,6 +311,7 @@ function RowMenu({
   onPrint,
   onDetails,
   onEdit,
+  onOpenBooking,
   onShare,
   onRemind,
   onDelete,
@@ -313,6 +322,7 @@ function RowMenu({
   onPrint: (size: PrintSize) => void
   onDetails: () => void
   onEdit: () => void
+  onOpenBooking: () => void
   onShare: () => void
   onRemind: () => void
   onDelete: () => void
@@ -351,7 +361,10 @@ function RowMenu({
     ...(row.actions.edit && canManage ? [{ key: 'edit', label: t('table.edit'), onSelect: onEdit }] : []),
     ...(row.actions.share && canSend ? [{ key: 'mail', label: t('invoices.sendReminder'), onSelect: onRemind }] : []),
     ...(row.actions.share ? [{ key: 'share', label: t('invoices.share'), onSelect: onShare }] : []),
-    ...(row.actions.edit && canManage ? [{ key: 'delete', label: t('table.delete'), onSelect: onDelete, danger: true }] : []),
+    // A booking's invoice is changed on its booking (client, 2026-09-29).
+    ...(row.booking_id !== null ? [{ key: 'booking', label: t('invoices.openBooking'), onSelect: onOpenBooking }] : []),
+    // A draft is deleted; an issued one is cancelled (CancelInvoice), and a cancelled one stays as it is.
+    ...(row.actions.edit && row.status !== 'void' && canManage ? [{ key: 'delete', label: t('table.delete'), onSelect: onDelete, danger: true }] : []),
   ]
 
   return (

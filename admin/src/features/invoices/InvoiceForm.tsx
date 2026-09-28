@@ -21,7 +21,8 @@ const blankLine = (): Line => ({ title: '', detail: null, quantity: 1, unit_pric
  * its lines with their own discount and VAT, a discount on the whole invoice, a delivery charge, when it is due, and
  * the words printed under it.
  *
- * A draft can be changed; once issued the figures are frozen and the page only shows them.
+ * A draft can be changed; an issued one written here is corrected under its number, and the books redone. A booking's
+ * invoice and a cancelled one only show their figures.
  */
 export function InvoiceForm() {
   const { id } = useParams()
@@ -40,6 +41,10 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
   const toast = useToast()
   const navigate = useNavigate()
   const issued = detail !== null && detail.status !== 'draft'
+  // An issued invoice written here is corrected under its own number (client, 2026-09-29); a booking's invoice and a
+  // cancelled one only show their figures.
+  const correcting = issued && detail.status === 'issued' && detail.actions.edit
+  const frozen = issued && !correcting
 
   const [customerId, setCustomerId] = useState<number | null>(detail?.customer_id ?? null)
   const [customerName, setCustomerName] = useState(detail?.billed_name ?? '')
@@ -103,7 +108,7 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
     <>
       <PageHeader
         title={detail ? t('invoices.editTitle', { number: detail.number ?? t('invoices.draft') }) : t('invoices.createTitle')}
-        subtitle={issued ? t('invoices.frozenNote') : t('invoices.createNote')}
+        subtitle={correcting ? t('invoices.correctNote') : issued ? t('invoices.frozenNote') : t('invoices.createNote')}
         actions={
           <button type="button" className={buttonClass('outline', 'sm')} onClick={done}>
             {t('common.back')}
@@ -116,7 +121,7 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
           {/* Who it is for: someone on file, or a name and number that make the record as the invoice is saved. */}
           <div className="flex flex-col gap-3">
             <CardTitle title={t('invoices.invoiceTo')} as="h3" />
-            {!issued ? (
+            {!frozen ? (
               <CustomerFinder
                 onPick={(hit) => {
                   setCustomerId(hit.id)
@@ -129,19 +134,19 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
               label={t('invoices.customer')}
               value={customerName}
               onChange={setCustomerName}
-              disabled={issued || customerId !== null}
-              hint={issued || customerId !== null ? undefined : t('invoices.customerHint')}
+              disabled={frozen || customerId !== null}
+              hint={frozen || customerId !== null ? undefined : t('invoices.customerHint')}
               error={fieldError('customer.name')}
             />
             <TextInput
               label={t('invoices.customerPhone')}
               value={customerPhone}
               onChange={setCustomerPhone}
-              disabled={issued || customerId !== null}
-              hint={issued || customerId !== null ? undefined : t('invoices.customerPhoneHint')}
+              disabled={frozen || customerId !== null}
+              hint={frozen || customerId !== null ? undefined : t('invoices.customerPhoneHint')}
               error={fieldError('customer.phone')}
             />
-            {!issued && customerId !== null ? (
+            {!frozen && customerId !== null ? (
               <button
                 type="button"
                 className={buttonClass('outline', 'sm', 'self-start')}
@@ -158,15 +163,15 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
 
           <div className="flex flex-col gap-3">
             <TextInput label={t('invoices.invoiceNumber')} value={detail?.number ?? t('invoices.onIssue')} onChange={() => undefined} disabled />
-            <TextInput label={t('invoices.poNumber')} value={form.po_number} onChange={(po_number) => setForm({ ...form, po_number })} disabled={issued} error={fieldError('po_number')} />
+            <TextInput label={t('invoices.poNumber')} value={form.po_number} onChange={(po_number) => setForm({ ...form, po_number })} disabled={frozen} error={fieldError('po_number')} />
             <TextInput label={t('invoices.invoiceDateLabel')} value={detail?.issued_on ? date(detail.issued_on) : t('invoices.onIssue')} onChange={() => undefined} disabled />
-            <TextInput label={t('invoices.dueOn')} type="date" value={form.due_on} onChange={(due_on) => setForm({ ...form, due_on })} disabled={issued} error={fieldError('due_on')} />
+            <TextInput label={t('invoices.dueOn')} type="date" value={form.due_on} onChange={(due_on) => setForm({ ...form, due_on })} disabled={frozen} error={fieldError('due_on')} />
           </div>
         </div>
       </Card>
 
       <Card>
-        <TextInput label={t('invoices.invoiceTitle')} value={form.title} onChange={(title) => setForm({ ...form, title })} disabled={issued} error={fieldError('title')} />
+        <TextInput label={t('invoices.invoiceTitle')} value={form.title} onChange={(title) => setForm({ ...form, title })} disabled={frozen} error={fieldError('title')} />
 
         <div className="flex flex-col gap-2" data-testid="invoice-lines">
           {lines.map((line, index) => {
@@ -179,18 +184,18 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
                   // Typed over, it is no longer the picked package: its detail goes.
                   onChange={(title) => setLine(index, { title, detail: null })}
                   onPick={(item) => setLine(index, { title: item.title, detail: item.detail, unit_price: item.unit_price })}
-                  disabled={issued}
+                  disabled={frozen}
                   error={fieldError(`lines.${index}.title`)}
                   hint={line.detail}
                   autoFocus={index === focusLine}
                 />
-                <NumberInput label={t('invoices.line.quantity')} value={line.quantity} onChange={(quantity) => setLine(index, { quantity: quantity ?? 1 })} disabled={issued} error={fieldError(`lines.${index}.quantity`)} />
-                <NumberInput label={t('invoices.line.price')} value={line.unit_price} onChange={(unit_price) => setLine(index, { unit_price: unit_price ?? 0 })} disabled={issued} error={fieldError(`lines.${index}.unit_price`)} />
-                <NumberInput label={t('invoices.line.discount')} value={line.discount_amount} onChange={(discount_amount) => setLine(index, { discount_amount: discount_amount ?? 0 })} disabled={issued} />
-                <NumberInput label={t('invoices.line.vat')} value={line.vat_rate} onChange={(vat_rate) => setLine(index, { vat_rate: vat_rate ?? 0 })} disabled={issued} />
+                <NumberInput label={t('invoices.line.quantity')} value={line.quantity} onChange={(quantity) => setLine(index, { quantity: quantity ?? 1 })} disabled={frozen} error={fieldError(`lines.${index}.quantity`)} />
+                <NumberInput label={t('invoices.line.price')} value={line.unit_price} onChange={(unit_price) => setLine(index, { unit_price: unit_price ?? 0 })} disabled={frozen} error={fieldError(`lines.${index}.unit_price`)} />
+                <NumberInput label={t('invoices.line.discount')} value={line.discount_amount} onChange={(discount_amount) => setLine(index, { discount_amount: discount_amount ?? 0 })} disabled={frozen} />
+                <NumberInput label={t('invoices.line.vat')} value={line.vat_rate} onChange={(vat_rate) => setLine(index, { vat_rate: vat_rate ?? 0 })} disabled={frozen} />
                 <span className="flex items-end gap-1.5 pb-1">
                   <span className="font-display text-13 whitespace-nowrap">{bdt(net + vat)}</span>
-                  {!issued && lines.length > 1 ? (
+                  {!frozen && lines.length > 1 ? (
                     <button type="button" className={buttonClass('outline', 'sm', 'px-2 py-1 text-12')} aria-label={t('invoices.removeLine')} onClick={() => setLines((all) => all.filter((_, i) => i !== index))}>
                       ✕
                     </button>
@@ -199,7 +204,7 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
               </div>
             )
           })}
-          {!issued ? (
+          {!frozen ? (
             // A fully new, empty line; its Item box opens with the list.
             <button
               type="button"
@@ -216,22 +221,22 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-3">
-            <TextArea label={t('invoices.note')} value={form.note} onChange={(note) => setForm({ ...form, note })} rows={2} disabled={issued} />
-            {!issued ? <Switch label={t('invoices.addFooter')} checked={showFooter} onChange={setShowFooter} hint={t('invoices.footerHint')} /> : null}
-            {showFooter ? <TextArea label={t('invoices.footer')} value={form.footer} onChange={(footer) => setForm({ ...form, footer })} rows={2} disabled={issued} /> : null}
+            <TextArea label={t('invoices.note')} value={form.note} onChange={(note) => setForm({ ...form, note })} rows={2} disabled={frozen} />
+            {!frozen ? <Switch label={t('invoices.addFooter')} checked={showFooter} onChange={setShowFooter} hint={t('invoices.footerHint')} /> : null}
+            {showFooter ? <TextArea label={t('invoices.footer')} value={form.footer} onChange={(footer) => setForm({ ...form, footer })} rows={2} disabled={frozen} /> : null}
           </div>
 
           <div className="flex flex-col gap-2 rounded-12 border border-app-line p-3.5 text-13" data-testid="invoice-totals">
             <Row label={t('invoices.subtotal')} value={bdt(totals.subtotal)} />
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-              <TextInput label={t('invoices.discountLabel')} value={form.discount_label} onChange={(discount_label) => setForm({ ...form, discount_label })} disabled={issued} />
-              <NumberInput label={t('invoices.discount')} value={form.discount_amount} onChange={(discount_amount) => setForm({ ...form, discount_amount: discount_amount ?? 0 })} disabled={issued} />
+              <TextInput label={t('invoices.discountLabel')} value={form.discount_label} onChange={(discount_label) => setForm({ ...form, discount_label })} disabled={frozen} />
+              <NumberInput label={t('invoices.discount')} value={form.discount_amount} onChange={(discount_amount) => setForm({ ...form, discount_amount: discount_amount ?? 0 })} disabled={frozen} />
             </div>
             <Row label={t('invoices.vat')} value={bdt(totals.vat)} />
             {/* Sending tickets or passports across is charged on top, and most invoices have none. */}
             {showDelivery ? (
-              <NumberInput label={t('invoices.deliveryCharge')} value={form.delivery_charge} onChange={(delivery_charge) => setForm({ ...form, delivery_charge: delivery_charge ?? 0 })} disabled={issued} />
-            ) : !issued ? (
+              <NumberInput label={t('invoices.deliveryCharge')} value={form.delivery_charge} onChange={(delivery_charge) => setForm({ ...form, delivery_charge: delivery_charge ?? 0 })} disabled={frozen} />
+            ) : !frozen ? (
               <button type="button" className="cursor-pointer self-start border-0 bg-transparent p-0 text-12 font-semibold text-blue" onClick={() => setShowDelivery(true)}>
                 {t('invoices.addDelivery')}
               </button>
@@ -271,8 +276,18 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
           )}
           <span className="flex flex-wrap justify-end gap-2">
             <button type="button" className={buttonClass('outline')} onClick={done}>
-              {issued ? t('common.close') : t('common.cancel')}
+              {frozen ? t('common.close') : t('common.cancel')}
             </button>
+            {correcting ? (
+              <button
+                type="button"
+                className={buttonClass('primary')}
+                disabled={incomplete || save.isPending}
+                onClick={() => save.mutate(payload(), { onSuccess: () => { toast(t('invoices.corrected')); done() } })}
+              >
+                {save.isPending ? t('common.saving') : t('invoices.saveChanges')}
+              </button>
+            ) : null}
             {!issued ? (
               <>
                 <button

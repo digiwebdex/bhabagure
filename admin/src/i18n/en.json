@@ -2881,7 +2881,7 @@
     "clearCustomer": "Clear",
     "thisCustomer": "This customer",
     "createNote": "A draft can be changed as often as you like. Issuing it gives it a number and puts it in the books.",
-    "frozenNote": "This invoice is issued, so its figures are frozen. A mistake is voided and written again.",
+    "frozenNote": "This invoice can only be read here: a booking invoice is changed on its booking, and a cancelled one stays as it is.",
     "deleteConfirm": "Delete this draft? Nothing has been issued, so nothing is lost from the books.",
     "deleted": "Draft deleted",
     "linkCopied": "Link copied",
@@ -2976,7 +2976,18 @@
       "offeredHint": "A hidden product stays on the invoices that used it."
     },
     "customers": "Customers",
-    "noCustomerFound": "No customer found. Type the name and number below to add them."
+    "noCustomerFound": "No customer found. Type the name and number below to add them.",
+    "correctNote": "This invoice is issued. Saving keeps its number and date and redoes its entry in the books. The total can't go below what has been paid.",
+    "saveChanges": "Save changes",
+    "corrected": "Invoice updated",
+    "cancel": {
+      "title": "Delete {{number}}?",
+      "note": "An issued invoice is cancelled rather than removed: it stays in the list marked Cancelled, so its number is never missing, and its entry in the books is reversed.",
+      "paidFirst": "Money has been paid on this invoice. Reverse the payment in the cash book first, then delete the invoice.",
+      "reason": "Why is it being cancelled?",
+      "confirm": "Cancel invoice",
+      "done": "{{number}} cancelled"
+    }
   },
   "accounts": {
     "title": "Chart of accounts",

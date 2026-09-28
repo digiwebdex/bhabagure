@@ -114,10 +114,7 @@ class InvoiceBuilderTest extends TestCase
         $this->assertEquals(50000, $chart[Account::DEAL_SALES]['balance']);
         $this->assertEquals(1000, $chart[Account::VAT_PAYABLE]['balance']);
 
-        // Issued: no more editing, and issuing again changes nothing.
-        $this->actingAsApi($staff)->putJson("/api/v1/admin/invoices/{$draft['id']}", [
-            'customer_id' => $customer->id, 'title' => 'Changed', 'lines' => [['title' => 'x', 'quantity' => 1, 'unit_price' => 1]],
-        ])->assertStatus(409)->assertJsonPath('code', 'invoice_issued');
+        // Issuing again changes nothing.
         $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$draft['id']}/issue")->assertOk()->assertJsonPath('data.number', $issued['number']);
 
         // Paid through the ledger, as any invoice is; the row then reads paid with nothing due.
@@ -127,6 +124,58 @@ class InvoiceBuilderTest extends TestCase
         ])->assertCreated();
         $row = collect($this->actingAsApi($staff)->getJson('/api/v1/admin/invoices?state=paid')->assertOk()->json('data'))->firstWhere('id', $draft['id']);
         $this->assertEquals([51000, 0], [$row['paid'], $row['due']]);
+    }
+
+    #[Test]
+    public function an_issued_invoice_is_corrected_under_its_own_number_and_the_books_follow(): void
+    {
+        // Client, 2026-09-29: Edit on an issued invoice; the old figures are reversed and the new ones posted.
+        $staff = $this->admin();
+        $customer = $this->party();
+        $id = $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $customer->id, 'title' => 'Corporate tour',
+            'lines' => [['title' => 'Tour package', 'quantity' => 2, 'unit_price' => 25000, 'vat_rate' => 2]],
+        ])->assertCreated()->json('data.id');
+        $issued = $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$id}/issue")->assertOk()->json('data');
+        $this->assertTrue($issued['actions']['edit']);
+
+        Storage::fake('local');
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/deals/{$id}/payments", [
+            'amount' => 20000, 'method' => 'cash', 'reference' => 'CASH-2', 'evidence' => $this->receipt(),
+        ])->assertCreated();
+
+        $corrected = $this->actingAsApi($staff)->putJson("/api/v1/admin/invoices/{$id}", [
+            'customer_id' => $customer->id, 'title' => 'Corporate tour, three people',
+            'lines' => [['title' => 'Tour package', 'quantity' => 3, 'unit_price' => 20000]],
+        ])->assertOk()->json('data');
+        $this->assertSame([$issued['number'], $issued['issued_on'], 'issued', 'partial'], [$corrected['number'], $corrected['issued_on'], $corrected['status'], $corrected['payment_status']]);
+        $this->assertEquals([60000, 20000, 40000], [$corrected['total'], $corrected['paid'], $corrected['due']]);
+        $this->assertSame(['Tour package'], array_column($corrected['lines'], 'title'));
+
+        // The books hold the new figures only: 60,000 owed less the 20,000 paid, sales 60,000, no VAT.
+        $chart = collect(app(AccountBooks::class)->chart())->keyBy('code');
+        $this->assertEquals([40000, 60000, 0], [$chart[Account::RECEIVABLE]['balance'], $chart[Account::DEAL_SALES]['balance'], $chart[Account::VAT_PAYABLE]['balance']]);
+
+        // Not below what was paid; the invoice is left as it was.
+        $this->actingAsApi($staff)->putJson("/api/v1/admin/invoices/{$id}", [
+            'customer_id' => $customer->id, 'title' => 'Too low', 'lines' => [['title' => 'Tour package', 'quantity' => 1, 'unit_price' => 15000]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('discount_amount');
+        $this->assertEquals(60000, (float) Invoice::query()->findOrFail($id)->total_amount);
+
+        // Corrected twice, then cancelled once the payment is reversed: the books come back to nothing.
+        $this->actingAsApi($staff)->putJson("/api/v1/admin/invoices/{$id}", [
+            'customer_id' => $customer->id, 'title' => 'Corporate tour', 'lines' => [['title' => 'Tour package', 'quantity' => 1, 'unit_price' => 30000]],
+        ])->assertOk();
+        $payment = Invoice::query()->findOrFail($id)->transactions()->sole();
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/cash-book/{$payment->id}/reverse", ['reason' => 'Paid twice by mistake'])->assertCreated();
+        $this->actingAsApi($staff)->postJson("/api/v1/admin/deals/{$id}/void", ['reason' => 'Trip called off'])->assertOk();
+        $chart = collect(app(AccountBooks::class)->chart())->keyBy('code');
+        $this->assertEquals([0, 0], [$chart[Account::RECEIVABLE]['balance'], $chart[Account::DEAL_SALES]['balance']]);
+
+        // Cancelled, it stays as it is.
+        $this->actingAsApi($staff)->putJson("/api/v1/admin/invoices/{$id}", [
+            'customer_id' => $customer->id, 'title' => 'x', 'lines' => [['title' => 'x', 'quantity' => 1, 'unit_price' => 1]],
+        ])->assertStatus(409)->assertJsonPath('code', 'invoice_issued');
     }
 
     #[Test]
