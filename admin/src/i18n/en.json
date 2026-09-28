@@ -2949,7 +2949,7 @@
     "issuedOn": "Issued {{date}}",
     "items": {
       "addNew": "Add New Item",
-      "search": "Search packages and products, or type a new item",
+      "search": "Pick a package or product, or type a new item",
       "list": "Packages and products",
       "products": "Products",
       "packages": "Packages",
@@ -2974,7 +2974,9 @@
       "name": "Name",
       "offered": "Offered on new invoices",
       "offeredHint": "A hidden product stays on the invoices that used it."
-    }
+    },
+    "customers": "Customers",
+    "noCustomerFound": "No customer found. Type the name and number below to add them."
   },
   "accounts": {
     "title": "Chart of accounts",

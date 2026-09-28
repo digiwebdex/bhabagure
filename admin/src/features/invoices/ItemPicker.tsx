@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { buttonClass } from '../../components/ui/button'
@@ -9,80 +9,96 @@ import { Badge } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
 import { useCatalogue, useSaveProduct, type CatalogueItem } from './products'
+import { useDismiss } from './useDismiss'
 
 export type PickedItem = { title: string; detail: string | null; unit_price: number }
 
+/** The panel under a box: the list it offers. */
+export function Dropdown({ children, testId }: { children: ReactNode; testId?: string }) {
+  return (
+    <div className="absolute top-full left-0 z-30 mt-1 flex w-full min-w-[min(92vw,26rem)] flex-col gap-1.5 rounded-12 border border-app-line bg-app-surface p-2 shadow-lg" data-testid={testId}>
+      {children}
+    </div>
+  )
+}
+
 /**
- * "Add New Item" (docs/invoice-items.md, as in the office's old software): the packages and the office's own products
- * to pick from, each with its price; a name that isn't on the list is added only for this invoice, or saved as a new
- * product with its price for next time.
+ * An invoice line's Item box (docs/invoice-items.md): clicking it lists the packages and the office's products with
+ * their price, narrowing as staff type; picking one fills the line. A name that isn't on the list stays on this invoice
+ * only, or is saved as a new product with its price for next time.
  */
-export function ItemPicker({ onPick }: { onPick: (item: PickedItem) => void }) {
+export function ItemCombobox({ label, value, onChange, onPick, error, hint, disabled, autoFocus }: {
+  label: string
+  value: string
+  onChange: (title: string) => void
+  onPick: (item: PickedItem) => void
+  error?: string
+  /** Under the box: a picked package's code and length. */
+  hint?: string | null
+  disabled?: boolean
+  autoFocus?: boolean
+}) {
   const { t } = useTranslation()
   const { bdt } = useFormat()
+  const id = useId()
   const catalogue = useCatalogue()
   const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
   const box = useRef<HTMLDivElement>(null)
-
   const close = () => {
     setOpen(false)
-    setQuery('')
     setSaving(false)
   }
+  useDismiss(box, open, close)
+
+  const typed = value.trim()
+  const needle = typed.toLowerCase()
+  const all = catalogue.data?.data ?? []
+  const items = all.filter((item) => `${item.name} ${item.description ?? ''}`.toLowerCase().includes(needle))
+  const exact = all.some((item) => item.name.trim().toLowerCase() === needle)
+  const groups = [
+    { key: 'products', label: t('invoices.items.products'), items: items.filter((item) => item.kind === 'product') },
+    { key: 'packages', label: t('invoices.items.packages'), items: items.filter((item) => item.kind === 'package') },
+  ].filter((group) => group.items.length > 0)
   const pick = (item: PickedItem) => {
     onPick(item)
     close()
   }
 
-  // Clicking elsewhere or Escape closes it.
-  useEffect(() => {
-    if (!open) return
-    const onDown = (event: MouseEvent) => box.current && !box.current.contains(event.target as Node) && close()
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && close()
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  })
-
-  const typed = query.trim()
-  const needle = typed.toLowerCase()
-  const items = (catalogue.data?.data ?? []).filter((item) => `${item.name} ${item.description ?? ''}`.toLowerCase().includes(needle))
-  const exact = (catalogue.data?.data ?? []).some((item) => item.name.trim().toLowerCase() === needle)
-  const groups = [
-    { key: 'products', label: t('invoices.items.products'), items: items.filter((item) => item.kind === 'product') },
-    { key: 'packages', label: t('invoices.items.packages'), items: items.filter((item) => item.kind === 'package') },
-  ].filter((group) => group.items.length > 0)
-
   return (
-    <div ref={box} className="relative self-start" data-testid="item-picker">
-      <button type="button" className={buttonClass('outline', 'sm')} onClick={() => (open ? close() : setOpen(true))} aria-expanded={open}>
-        + {t('invoices.items.addNew')}
-      </button>
-      {open ? (
-        <div className="absolute top-full left-0 z-30 mt-1.5 flex w-[min(92vw,30rem)] flex-col gap-2 rounded-12 border border-app-line bg-app-surface p-2.5 shadow-lg">
-          <input
-            type="search"
-            autoFocus
-            className={controlClass()}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value)
-              setSaving(false)
-            }}
-            placeholder={t('invoices.items.search')}
-            aria-label={t('invoices.items.search')}
-          />
+    <div ref={box} className="relative flex min-w-0 flex-col gap-1.25">
+      <label htmlFor={id} className="text-13 text-app-muted">
+        {label}
+      </label>
+      <input
+        id={id}
+        value={value}
+        disabled={disabled}
+        autoFocus={autoFocus}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${id}-list`}
+        aria-invalid={!!error}
+        placeholder={t('invoices.items.search')}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onChange={(event) => {
+          onChange(event.target.value)
+          setOpen(true)
+          setSaving(false)
+        }}
+        className={controlClass(!!error)}
+      />
+      {error ? <span role="alert" className="text-12 font-semibold text-red">{error}</span> : hint ? <span className="text-12 text-app-muted">{hint}</span> : null}
+      {open && !disabled ? (
+        <Dropdown testId="item-options">
           {typed !== '' && !exact ? (
             saving ? (
               <NewProductForm name={typed} onSaved={pick} onCancel={() => setSaving(false)} />
             ) : (
               <div className="flex flex-col gap-1" data-testid="item-new-options">
-                <button type="button" className={buttonClass('ghost', 'sm', 'justify-start text-left')} onClick={() => pick({ title: typed, detail: null, unit_price: 0 })}>
+                <button type="button" className={buttonClass('ghost', 'sm', 'justify-start text-left')} onClick={close}>
                   {t('invoices.items.onlyThis', { name: typed })}
                 </button>
                 <button type="button" className={buttonClass('ghost', 'sm', 'justify-start text-left')} onClick={() => setSaving(true)}>
@@ -91,7 +107,7 @@ export function ItemPicker({ onPick }: { onPick: (item: PickedItem) => void }) {
               </div>
             )
           ) : null}
-          <div className="max-h-72 overflow-y-auto" role="listbox" aria-label={t('invoices.items.list')}>
+          <div id={`${id}-list`} className="max-h-72 overflow-y-auto" role="listbox" aria-label={t('invoices.items.list')}>
             {catalogue.isPending ? <p className="m-0 p-2 text-13 text-app-muted">{t('common.loading')}</p> : null}
             {catalogue.isError ? <ErrorNotice error={catalogue.error} /> : null}
             {catalogue.data && groups.length === 0 ? <p className="m-0 p-2 text-13 text-app-muted">{t('invoices.items.none')}</p> : null}
@@ -104,7 +120,7 @@ export function ItemPicker({ onPick }: { onPick: (item: PickedItem) => void }) {
               </div>
             ))}
           </div>
-        </div>
+        </Dropdown>
       ) : null}
     </div>
   )
@@ -126,7 +142,7 @@ function Option({ item, price, onPick }: { item: CatalogueItem; price: string; o
   )
 }
 
-/** "as a new product": its price and a short description, saved to the list and put on this invoice. */
+/** "as a new product": its price and a short description, saved to the list and put on this line. */
 function NewProductForm({ name, onSaved, onCancel }: { name: string; onSaved: (item: PickedItem) => void; onCancel: () => void }) {
   const { t } = useTranslation()
   const save = useSaveProduct()

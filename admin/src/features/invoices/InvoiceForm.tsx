@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router'
@@ -7,14 +6,13 @@ import { buttonClass } from '../../components/ui/button'
 import { ErrorNotice, useToast } from '../../components/ui/feedback'
 import { NumberInput, Switch, TextArea, TextInput } from '../../components/ui/fields'
 import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui/layout'
-import { api, ApiError } from '../../lib/api/client'
-import type { Data } from '../../lib/api/types'
+import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { invoiceActions, invoiceTotals, lineTotals, useInvoice, useInvoiceAction, type InvoiceDetail, type InvoiceInput } from './api'
-import { ItemPicker } from './ItemPicker'
+import { CustomerFinder } from './CustomerFinder'
+import { ItemCombobox } from './ItemPicker'
 
 type Line = InvoiceInput['lines'][number]
-type CustomerHit = { id: number; name: string; phone: string; email?: string | null }
 
 const blankLine = (): Line => ({ title: '', detail: null, quantity: 1, unit_price: 0, discount_amount: 0, vat_rate: 0 })
 
@@ -46,7 +44,6 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
   const [customerId, setCustomerId] = useState<number | null>(detail?.customer_id ?? null)
   const [customerName, setCustomerName] = useState(detail?.billed_name ?? '')
   const [customerPhone, setCustomerPhone] = useState(detail?.customer?.phone ?? '')
-  const [lookup, setLookup] = useState('')
   const [form, setForm] = useState({
     title: detail?.title ?? '',
     po_number: detail?.po_number ?? '',
@@ -71,12 +68,9 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
       vat_rate: line.vat_rate,
     })) ?? [blankLine()],
   )
+  // The line just added with Add New Item, whose Item box takes the focus (and opens its list).
+  const [focusLine, setFocusLine] = useState<number | null>(null)
 
-  const hits = useQuery({
-    queryKey: ['search', lookup.trim()],
-    queryFn: ({ signal }) => api.get<Data<{ customers?: CustomerHit[] }>>(`admin/search?q=${encodeURIComponent(lookup.trim())}`, signal).then((r) => r.data.customers ?? []),
-    enabled: lookup.trim().length >= 2 && !issued,
-  })
 
   const save = useInvoiceAction(detail ? invoiceActions.update(detail.id) : invoiceActions.create)
   const issue = useInvoiceAction((id: number) => invoiceActions.issue(id)())
@@ -123,28 +117,13 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
           <div className="flex flex-col gap-3">
             <CardTitle title={t('invoices.invoiceTo')} as="h3" />
             {!issued ? (
-              <>
-                <TextInput label={t('invoices.findCustomer')} value={lookup} onChange={setLookup} placeholder={t('invoices.findCustomerHint')} />
-                {hits.data && hits.data.length > 0 ? (
-                  <div className="flex flex-wrap gap-2" data-testid="customer-hits">
-                    {hits.data.slice(0, 6).map((hit) => (
-                      <button
-                        key={hit.id}
-                        type="button"
-                        className={buttonClass(customerId === hit.id ? 'primary' : 'outline', 'sm')}
-                        onClick={() => {
-                          setCustomerId(hit.id)
-                          setCustomerName(hit.name)
-                          setCustomerPhone(hit.phone)
-                          setLookup('')
-                        }}
-                      >
-                        {hit.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </>
+              <CustomerFinder
+                onPick={(hit) => {
+                  setCustomerId(hit.id)
+                  setCustomerName(hit.name)
+                  setCustomerPhone(hit.phone)
+                }}
+              />
             ) : null}
             <TextInput
               label={t('invoices.customer')}
@@ -194,7 +173,17 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
             const { net, vat } = lineTotals(line)
             return (
               <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.7fr)_auto]">
-                <TextInput label={t('invoices.line.title')} value={line.title} onChange={(title) => setLine(index, { title })} disabled={issued} error={fieldError(`lines.${index}.title`)} hint={line.detail ?? undefined} />
+                <ItemCombobox
+                  label={t('invoices.line.title')}
+                  value={line.title}
+                  // Typed over, it is no longer the picked package: its detail goes.
+                  onChange={(title) => setLine(index, { title, detail: null })}
+                  onPick={(item) => setLine(index, { title: item.title, detail: item.detail, unit_price: item.unit_price })}
+                  disabled={issued}
+                  error={fieldError(`lines.${index}.title`)}
+                  hint={line.detail}
+                  autoFocus={index === focusLine}
+                />
                 <NumberInput label={t('invoices.line.quantity')} value={line.quantity} onChange={(quantity) => setLine(index, { quantity: quantity ?? 1 })} disabled={issued} error={fieldError(`lines.${index}.quantity`)} />
                 <NumberInput label={t('invoices.line.price')} value={line.unit_price} onChange={(unit_price) => setLine(index, { unit_price: unit_price ?? 0 })} disabled={issued} error={fieldError(`lines.${index}.unit_price`)} />
                 <NumberInput label={t('invoices.line.discount')} value={line.discount_amount} onChange={(discount_amount) => setLine(index, { discount_amount: discount_amount ?? 0 })} disabled={issued} />
@@ -211,16 +200,17 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
             )
           })}
           {!issued ? (
-            <ItemPicker
-              onPick={(item) =>
-                // A picked package or product fills the line still left empty, else comes as a new one.
-                setLines((all) => {
-                  const line = { ...blankLine(), title: item.title, detail: item.detail, unit_price: item.unit_price }
-                  const empty = all.findIndex((existing) => existing.title.trim() === '' && existing.unit_price === 0)
-                  return empty === -1 ? [...all, line] : all.map((existing, i) => (i === empty ? line : existing))
-                })
-              }
-            />
+            // A fully new, empty line; its Item box opens with the list.
+            <button
+              type="button"
+              className={buttonClass('outline', 'sm', 'self-start')}
+              onClick={() => {
+                setFocusLine(lines.length)
+                setLines((all) => [...all, blankLine()])
+              }}
+            >
+              + {t('invoices.items.addNew')}
+            </button>
           ) : null}
         </div>
 

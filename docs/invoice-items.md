@@ -12,13 +12,15 @@ tour" only for this invoice**, or **Add "dhaka tour" as a new product**, which j
 
 ## How it works
 
-**Invoice form → + Add New Item:**
-- Opens a search box over the list:
+**Invoice form (changed 2026-09-29 at the client's request):**
+- **Find a customer**, clicked, lists the customers straight away (newest first); typing a name or number narrows it.
+- A line's **Item** box, clicked, lists everything to pick from; typing narrows it:
   - **Products:** the office's own, each with its price.
   - **Packages:** name, code and length, and the per-person price (the sale price, else the regular price; with a
     size table, its basic/3-star price for two). Drafts are marked.
-- Clicking one fills the empty line, or adds a line, with its name, its detail (printed under the item) and its price.
-  Staff then set the quantity and change the price if needed.
+- Clicking one fills that line with its name, its detail (printed under the item) and its price. Staff then set the
+  quantity and change the price if needed.
+- **+ Add New Item** adds a new, empty line, and its Item box opens with the list.
 - A typed name that isn't on the list offers:
   - **Add "…" only for this invoice:** a line with that name; staff type the price.
   - **Add "…" as a new product:** asks for the price and an optional description, saves the product, and adds it to

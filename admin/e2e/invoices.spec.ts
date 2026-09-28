@@ -53,10 +53,13 @@ test('an admin writes an invoice, issues it, reminds the customer, takes the pay
   await row.getByRole('button', { name: /^Actions —/ }).click()
   await page.getByRole('menuitem', { name: 'Edit' }).click()
   await expect(page.getByRole('heading', { name: /^Invoice Draft$/, level: 1 })).toBeVisible(FIRST_LOAD)
-  // Add New Item, typed: an item only for this invoice (docs/invoice-items.md).
+  // Add New Item: a fully new line, its Item box open with the list; a typed name kept only for this invoice
+  // (docs/invoice-items.md).
   await page.getByRole('button', { name: '+ Add New Item' }).click()
-  await page.getByRole('searchbox', { name: /Search packages and products/ }).fill('Visa processing')
+  await expect(page.getByTestId('item-options')).toBeVisible()
+  await page.getByTestId('invoice-lines').getByLabel('Item').nth(1).fill('Visa processing')
   await page.getByRole('button', { name: 'Add "Visa processing" only for this invoice' }).click()
+  await expect(page.getByTestId('item-options')).toHaveCount(0)
   await expect(page.getByTestId('invoice-lines').getByLabel('Item').nth(1)).toHaveValue('Visa processing')
   await page.getByTestId('invoice-lines').getByLabel('Unit price').nth(1).fill('8000')
   await expect(page.getByTestId('invoice-totals')).toContainText('BDT 33,750')
@@ -106,27 +109,39 @@ test('an admin writes an invoice, issues it, reminds the customer, takes the pay
   await expect(details.getByRole('button', { name: 'Print PDF' })).toBeVisible()
 })
 
-test('Add New Item offers the packages with their price, and a new item is saved as a product for next time', async ({ page }) => {
+test('the customer and Item boxes list their choices on a click, and a new item is saved as a product for next time', async ({ page }) => {
   await signIn(page, 'admin')
   const stamp = String(Date.now())
   await page.goto('/invoices/new')
   await expect(page.getByRole('heading', { name: 'New invoice', level: 1 })).toBeVisible(FIRST_LOAD)
   const lines = page.getByTestId('invoice-lines')
-  const search = page.getByRole('searchbox', { name: /Search packages and products/ })
+  const packages = page.getByRole('listbox', { name: 'Packages and products' })
 
-  // A package from the list fills the empty line with its name, detail and per-person price.
-  await page.getByRole('button', { name: '+ Add New Item' }).click()
-  await search.fill('Mustang')
-  await page.getByRole('listbox', { name: 'Packages and products' }).getByRole('option', { name: /NEPAL MUSTANG/ }).first().click()
+  // Find a customer: clicked, it lists the customers before anything is typed.
+  await page.getByLabel('Find a customer').click()
+  await expect(page.getByRole('listbox', { name: 'Customers' }).getByRole('option').first()).toBeVisible(FIRST_LOAD)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('listbox', { name: 'Customers' })).toHaveCount(0)
+
+  // The Item box, clicked, lists every package and product; typing narrows it, and a pick fills the line with its
+  // name, detail and per-person price.
+  await lines.getByLabel('Item').click()
+  await expect(packages.getByRole('option').first()).toBeVisible(FIRST_LOAD)
+  await lines.getByLabel('Item').fill('Mustang')
+  await packages.getByRole('option', { name: /NEPAL MUSTANG/ }).first().click()
   await expect(lines.getByLabel('Item')).toHaveCount(1)
   await expect(lines.getByLabel('Item').first()).toHaveValue(/NEPAL MUSTANG/)
   await expect(lines.getByLabel('Unit price').first()).toHaveValue('75000')
   await expect(lines).toContainText('8 days')
 
-  // A new name, saved as a product with its price: it comes as a second line, and is offered next time.
+  // Add New Item: a new empty line whose box opens with the list. A new name, saved as a product with its price.
   const product = `Sylhet tea garden tour ${stamp}`
   await page.getByRole('button', { name: '+ Add New Item' }).click()
-  await search.fill(product)
+  await expect(lines.getByLabel('Item')).toHaveCount(2)
+  await expect(lines.getByLabel('Item').nth(1)).toHaveValue('')
+  await expect(lines.getByLabel('Item').nth(1)).toBeFocused()
+  await expect(packages).toBeVisible()
+  await lines.getByLabel('Item').nth(1).fill(product)
   await page.getByRole('button', { name: `Add "${product}" as a new product` }).click()
   const form = page.getByTestId('new-product')
   await form.getByLabel('Price (BDT)').fill('6500')
@@ -135,8 +150,9 @@ test('Add New Item offers the packages with their price, and a new item is saved
   await expect(lines.getByLabel('Item').nth(1)).toHaveValue(product)
   await expect(lines.getByLabel('Unit price').nth(1)).toHaveValue('6500')
 
+  // Offered next time.
   await page.getByRole('button', { name: '+ Add New Item' }).click()
-  await search.fill('Sylhet tea')
+  await lines.getByLabel('Item').nth(2).fill('Sylhet tea')
   await expect(page.getByRole('option', { name: new RegExp(product) })).toContainText('BDT 6,500')
   await page.keyboard.press('Escape')
 
