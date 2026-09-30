@@ -46,7 +46,6 @@ RuntimeMaxSec=7200
 
 # Resource limits: the box has 2 CPUs, 7.9 GB RAM and little free swap, shared with other sites.
 # Hard cap including invoice-PDF Chrome processes; no swap, so pressure lands on this worker, not the neighbours.
-MemoryHigh=450M
 MemoryMax=600M
 MemorySwapMax=0
 # At most half of one CPU, lower CPU and IO priority, a bounded number of threads, and first in line for the OOM killer.

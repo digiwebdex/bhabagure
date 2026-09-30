@@ -35,7 +35,6 @@ TimeoutStopSec=40
 # Invoice, quotation, payslip and deal PDFs render in the request with headless Chrome (InvoicePdf): one render peaks at
 # 64 tasks (PHP, Node and Chrome's processes and threads, measured on this server) and about 200 MB. TasksMax=64 killed
 # every render with "Target crashed" (2026-09-15); 256 leaves room for three at once beside the workers.
-MemoryHigh=600M
 MemoryMax=800M
 MemorySwapMax=0
 CPUQuota=100%
