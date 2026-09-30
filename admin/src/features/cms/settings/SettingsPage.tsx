@@ -9,10 +9,11 @@ import { Card, CardTitle, Loading, PageHeader } from '../../../components/ui/lay
 import { api, ApiError } from '../../../lib/api/client'
 import type { BankAccount, CodeDelivery, Data, SiteSettings } from '../../../lib/api/types'
 import { useFormat } from '../../../lib/useFormat'
+import { HeroVideoCard } from './HeroVideoCard'
 
 type Key = keyof SiteSettings
 
-/** Company details, contact channels, hours and social stats. Each card saves its own key. */
+/** The home page video, company details, contact channels, hours and social stats. Each card saves its own key. */
 export function SettingsPage() {
   const { t } = useTranslation()
   const { number } = useFormat()
@@ -26,6 +27,7 @@ export function SettingsPage() {
     <>
       <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
+        <HeroVideoCard />
         <SettingCard settingKey="contact" title="Contact" initial={data.contact ?? { phone: '', phoneAlt: '', whatsapp: '', email: '', facebook: '', instagram: '', website: '' }}>
           {(value, set, error) => (
             <>

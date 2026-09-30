@@ -228,6 +228,8 @@ export interface SiteSettings {
   civilAviationNo: string;
   hours: { opens: number; closes: number };
   stats: { topReelViewsThousands: number; banglaSupportPercent: number };
+  /** The hero video staff chose in Site settings (docs/hero-video.md); absent or null: the one the site ships with. */
+  hero?: { videoUrl: string; posterUrl: string | null } | null;
 }
 
 export interface ContentBundle {

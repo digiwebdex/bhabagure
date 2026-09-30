@@ -28,5 +28,6 @@
   "stats": {
     "topReelViewsThousands": 104,
     "banglaSupportPercent": 100
-  }
+  },
+  "hero": null
 }

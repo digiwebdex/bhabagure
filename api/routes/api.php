@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\Admin\DepartureController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\DownloadLogController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
+use App\Http\Controllers\Api\V1\Admin\HeroVideoController;
 use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
 use App\Http\Controllers\Api\V1\Admin\InboxController;
 use App\Http\Controllers\Api\V1\Admin\InboxSettingsController;
@@ -708,6 +709,15 @@ Route::prefix('v1')->group(function () {
                     Route::post("{$path}/{id}/unpublish", 'unpublish')->whereNumber('id');
                 });
             }
+
+            // The home page's hero video (docs/hero-video.md): uploaded in pieces, or a direct link.
+            Route::controller(HeroVideoController::class)->prefix('settings/hero-video')->group(function () {
+                Route::get('', 'show');
+                Route::post('chunks', 'chunk')->middleware('throttle:media-upload');
+                Route::post('', 'publish');
+                Route::post('link', 'link');
+                Route::delete('', 'destroy');
+            });
 
             Route::controller(SiteSettingController::class)->group(function () {
                 Route::get('settings', 'index');

@@ -219,7 +219,10 @@ class ContentSeeder extends Seeder
     private function seedSettings(): void
     {
         foreach ($this->read('settings.json') as $key => $value) {
-            SiteSetting::query()->firstOrCreate(['key' => $key], ['value' => $value]);
+            // null is "nothing chosen" (the hero video: the website plays its own, docs/hero-video.md): no row to make.
+            if ($value !== null) {
+                SiteSetting::query()->firstOrCreate(['key' => $key], ['value' => $value]);
+            }
         }
     }
 

@@ -853,6 +853,36 @@ test.describe('CMS to website', () => {
       await refresh();
     }
   });
+
+  test('the hero plays the video chosen in Site settings, and the original again once it is restored', async ({ page, request }) => {
+    // docs/hero-video.md (client, 2026-10-01).
+    const password = 'e2e-hero-editor-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'hero.editor@e2e.test'], ['employee_code' => 'E2E-HERO', 'name' => 'Hero editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'hero.editor@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+    const heroSrc = async () => {
+      await page.goto('/en');
+      return page.locator('#top video').getAttribute('src');
+    };
+
+    // Nothing chosen: the video the site ships with, over its poster.
+    expect(await heroSrc()).toBe('/media/hero.mp4');
+    await expect(page.locator('#top video')).toHaveAttribute('poster', '/media/hero-poster.jpg');
+
+    const link = 'https://cdn.e2e.test/hero/winter.mp4';
+    try {
+      expect((await request.post(`${E2E_API_URL}/api/v1/admin/settings/hero-video/link`, { headers, data: { url: link } })).status()).toBe(200);
+      await expect.poll(heroSrc, { timeout: 20_000 }).toBe(link);
+      const video = page.locator('#top video');
+      // A link given without a poster: the hero's dark background shows until the video plays.
+      await expect(video).not.toHaveAttribute('poster');
+      // Played as before: muted, looping, inline.
+      expect(await video.evaluate((element: HTMLVideoElement) => [element.muted, element.loop, element.playsInline])).toEqual([true, true, true]);
+    } finally {
+      await request.delete(`${E2E_API_URL}/api/v1/admin/settings/hero-video`, { headers });
+    }
+    await expect.poll(heroSrc, { timeout: 20_000 }).toBe('/media/hero.mp4');
+  });
 });
 
 /**

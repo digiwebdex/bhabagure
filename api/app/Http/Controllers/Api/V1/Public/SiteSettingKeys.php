@@ -20,6 +20,12 @@ final class SiteSettingKeys
      */
     public const BOOKING = 'booking';
 
+    /**
+     * The home page's hero video (docs/hero-video.md). Written only by App\Services\Media\HeroVideo, never by the
+     * generic settings update (its paths are files that class deletes); served in the public settings as URLs only.
+     */
+    public const HERO = 'hero';
+
     /** The keys Admin → Site settings edits. */
     public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING];
 

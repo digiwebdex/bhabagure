@@ -21,6 +21,7 @@ use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
 use App\Services\Booking\PhoneCheck;
+use App\Services\Media\HeroVideo;
 use App\Support\CreatorProfile;
 use App\Support\Money;
 use App\Support\Payments\PaymentOptions;
@@ -179,8 +180,10 @@ class PublicContentController extends Controller
     public function settings(): JsonResponse
     {
         $settings = SiteSetting::query()->whereIn('key', SiteSettingKeys::PUBLIC)->pluck('value', 'key');
+        // The hero video as the page plays it: its URLs, never the stored paths (docs/hero-video.md).
+        $hero = HeroVideo::present();
 
-        return $this->data((object) $settings->all());
+        return $this->data((object) ($settings->all() + ['hero' => $hero === null ? null : ['videoUrl' => $hero['videoUrl'], 'posterUrl' => $hero['posterUrl']]]));
     }
 
     private function publishedPackages(): Builder
