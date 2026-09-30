@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 
 import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
@@ -43,6 +43,9 @@ export function LoginPage() {
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3.5">
         <TextInput label={t('auth.email')} type="email" autoComplete="username" required value={email} onChange={setEmail} error={fieldError('email')} />
         <TextInput label={t('auth.password')} type="password" autoComplete="current-password" required value={password} onChange={setPassword} error={fieldError('password')} />
+        <Link to="/forgot-password" className="-mt-1.5 self-end text-13 font-semibold text-blue">
+          {t('auth.forgotLink')}
+        </Link>
         {error && !(error instanceof ApiError && Object.keys(error.errors).length > 0 && error.status === 422) ? <ErrorNotice error={error} /> : null}
         <button type="submit" aria-disabled={sending} className={buttonClass('cta', 'md', 'w-full py-3 text-15')}>
           {sending ? t('common.working') : t('auth.signIn')}

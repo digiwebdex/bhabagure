@@ -96,6 +96,8 @@ Route::prefix('v1')->group(function () {
         Route::post('login', 'login');
         Route::post('refresh', 'refresh')->middleware('throttle:auth-refresh');
         Route::post('logout', 'logout');
+        // "Forgot password?": a reset link by email and WhatsApp (docs/phase-7-hr-attendance-bonus-wallet.md §4.1).
+        Route::post('forgot-password', 'forgotPassword')->middleware('throttle:staff-forgot-password');
         Route::middleware('auth:staff')->group(function () {
             Route::get('me', 'me');
             Route::post('change-password', 'changePassword');

@@ -8,6 +8,9 @@ use App\Models\Staff;
 use App\Models\StaffInvitation;
 use App\Services\AuditLogger;
 use App\Services\Auth\RefreshTokens;
+use App\Services\Inbox\WhatsAppInbox;
+use App\Services\Notifications\MessageRenderer;
+use App\Support\Numerals;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -16,7 +19,8 @@ use Throwable;
 /**
  * Links that set a staff password (docs/phase-7-hr-attendance-bonus-wallet.md §4.1). Nobody is ever given a temporary
  * password: a new account gets an invitation (72 hours; its link can also be copied once, for WhatsApp), and a forgotten
- * password gets a reset link (60 minutes) that goes only to the email on file, so no one else can take the account over.
+ * password gets a reset link (60 minutes) that goes only to the email on file — and, when the staff member asks for it
+ * themselves ("Forgot password?", 2026-10-01), to their own phone by WhatsApp — so no one else can take the account over.
  */
 final class StaffInvitations
 {
@@ -76,6 +80,38 @@ final class StaffInvitations
         }
 
         return in_array(config('mail.default'), ['log', 'array'], true) ? 'off' : 'sent';
+    }
+
+    /**
+     * WhatsApps the link to the staff member's own phone: the number they confirmed in their profile, else the one on
+     * their staff record. It goes from the main number through the admin inbox's session, and its echo is kept out of
+     * the inbox (a link that sets a password is a credential).
+     *
+     * @return 'sent'|'off'|'failed'|'no_number' `off` when the WhatsApp inbox isn't connected on this server
+     */
+    public function whatsApp(Staff $staff, string $plain, string $purpose): string
+    {
+        $number = $staff->verifiedWhatsAppNumber() ?? $staff->phone;
+        if (blank($number)) {
+            return 'no_number';
+        }
+        if (! WhatsAppInbox::enabled()) {
+            return 'off';
+        }
+        $minutes = $purpose === StaffInvitation::RESET ? self::RESET_MINUTES : self::INVITE_HOURS * 60;
+        $text = MessageRenderer::senderLine()."\n".($staff->locale === 'en'
+            ? 'Reset your Bhabaghure Holidays admin password: '.self::url($plain, $purpose)."\nThe link works once, for {$minutes} minutes. If you didn't ask for it, tell your admin."
+            : 'ভবঘুরে হলিডেজ অ্যাডমিন পাসওয়ার্ড রিসেট করুন: '.self::url($plain, $purpose)."\nলিংকটি একবারই, ".Numerals::number($minutes, 'bn').' মিনিট কাজ করবে। আপনি না চাইলে অ্যাডমিনকে জানান।');
+
+        try {
+            WhatsAppInbox::keepOut($text);
+
+            return WhatsAppInbox::gateway()?->sendTo($number, $text)->isSent() ? 'sent' : 'failed';
+        } catch (Throwable $e) {
+            Log::warning('Staff password link WhatsApp failed', ['staff_id' => $staff->id, 'error' => $e->getMessage()]);
+
+            return 'failed';
+        }
     }
 
     public function find(string $plain): ?StaffInvitation

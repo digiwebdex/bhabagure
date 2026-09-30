@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Enums\StaffStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StaffResource;
 use App\Models\Staff;
+use App\Models\StaffInvitation;
 use App\Services\AuditLogger;
 use App\Services\Auth\RefreshTokens;
+use App\Services\Hr\StaffInvitations;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -67,6 +70,27 @@ class StaffAuthController extends Controller
         }
 
         return $this->tokenResponse($staff, $request, ['staff' => new StaffResource($staff)], refreshToken: $rotated['token']);
+    }
+
+    /**
+     * "Forgot password?" on the admin sign-in (client, 2026-10-01): a reset link, the same one an admin can send from
+     * Staff, to the email on file and by WhatsApp to the staff member's own phone. The answer is the same whether or not
+     * the address belongs to anyone, so the form can't be used to find out who works here; one link a minute at most.
+     */
+    public function forgotPassword(Request $request, StaffInvitations $links): JsonResponse
+    {
+        $email = $request->validate(['email' => ['required', 'string', 'email', 'max:190']])['email'];
+        $staff = Staff::query()->where('email', $email)->first();
+
+        $recent = $staff !== null && StaffInvitation::query()->where('staff_id', $staff->id)->where('purpose', StaffInvitation::RESET)
+            ->where('created_at', '>', now()->subMinute())->exists();
+        if ($staff !== null && $staff->status === StaffStatus::Active && ! $recent) {
+            $plain = $links->issue($staff, StaffInvitation::RESET, null);
+            $channels = ['email' => $links->email($staff, $plain, StaffInvitation::RESET), 'whatsapp' => $links->whatsApp($staff, $plain, StaffInvitation::RESET)];
+            $this->audit->record('auth.staff.password_reset_requested', $staff, $staff, $channels + ['ip' => $request->ip()]);
+        }
+
+        return response()->json(['data' => ['status' => 'sent', 'minutes' => StaffInvitations::RESET_MINUTES]], Response::HTTP_ACCEPTED);
     }
 
     public function logout(Request $request): JsonResponse

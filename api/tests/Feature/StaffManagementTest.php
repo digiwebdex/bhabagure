@@ -11,7 +11,9 @@ use App\Services\Hr\HrRefused;
 use App\Services\Hr\StaffDirectory;
 use App\Services\Hr\StaffInvitations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\CreatesFinanceRecords;
@@ -185,6 +187,43 @@ class StaffManagementTest extends TestCase
         $this->assertSame(1, RefreshToken::query()->where('guard', 'staff')->where('subject_id', $agent->id)->whereNull('revoked_at')->count());
         $this->resetAuthState();
         $this->postJson('/api/v1/staff/auth/login', ['email' => $agent->email, 'password' => 'correct-horse-battery'])->assertUnauthorized();
+        $this->postJson('/api/v1/staff/auth/login', ['email' => $agent->email, 'password' => 'a-brand-new-password'])->assertOk();
+    }
+
+    #[Test]
+    public function forgot_password_sends_the_reset_link_by_email_and_whatsapp_and_says_nothing_about_who_works_here(): void
+    {
+        // Client, 2026-10-01: "Forgot password?" on the admin sign-in.
+        Mail::fake();
+        Http::fake(['https://wasender.test/api/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 1]])]);
+        config([
+            'bhabaghure.notifications.inbox.whatsapp' => true, 'bhabaghure.notifications.whatsapp.api_key' => 'session-key',
+            'bhabaghure.notifications.whatsapp.base_url' => 'https://wasender.test/api',
+        ]);
+        $agent = $this->staff('sales_agent');
+        $agent->forceFill(['phone' => '8801711000777', 'locale' => 'en'])->save();
+
+        $this->postJson('/api/v1/staff/auth/forgot-password', ['email' => $agent->email])->assertAccepted()->assertJsonPath('data.status', 'sent');
+
+        $url = null;
+        Mail::assertSent(StaffInvitationMail::class, function (StaffInvitationMail $mail) use ($agent, &$url) {
+            $url = $mail->url;
+
+            return $mail->hasTo($agent->email) && $mail->purpose === StaffInvitation::RESET;
+        });
+        Http::assertSent(fn (HttpRequest $request) => $request['to'] === '+8801711000777' && str_contains((string) $request['text'], $url));
+        $this->assertTrue(AuditLog::query()->where('action', 'auth.staff.password_reset_requested')->exists());
+
+        // The same answer for an address nobody has, and nothing sent; a second ask within the minute sends nothing either.
+        $this->postJson('/api/v1/staff/auth/forgot-password', ['email' => 'nobody@example.com'])->assertAccepted()->assertJsonPath('data.status', 'sent');
+        $this->postJson('/api/v1/staff/auth/forgot-password', ['email' => $agent->email])->assertAccepted();
+        Mail::assertSentCount(1);
+        Http::assertSentCount(1);
+
+        // The link sets the new password.
+        $this->resetAuthState();
+        $this->postJson('/api/v1/staff/auth/invitation/accept', ['token' => self::token($url), 'password' => 'a-brand-new-password', 'password_confirmation' => 'a-brand-new-password'])->assertOk();
+        $this->resetAuthState();
         $this->postJson('/api/v1/staff/auth/login', ['email' => $agent->email, 'password' => 'a-brand-new-password'])->assertOk();
     }
 

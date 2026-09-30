@@ -86,6 +86,13 @@ Screens: HR → Staff & bonus, and System → Roles & audit.
     once, for WhatsApp.
   - The status stays `invited` until the password is set. Resending cancels the previous link.
   - There are no temporary passwords.
+- **Forgot password (client, 2026-10-01):** "Forgot password?" under the sign-in form asks for the work email. For an
+  active account it sends the same reset link an admin can send from Staff (one use, 60 minutes, signs out every other
+  session): to the email on file, and by WhatsApp from the main number to the staff member's own phone (the number
+  they confirmed in Profile, else the one on their record). The page gives the same answer for any address, so it can't
+  be used to find out who works here. At most one link a minute per account, three requests a minute from one IP and
+  five an hour per email. Each request is audited (`auth.staff.password_reset_requested`, with how each channel went).
+  The WhatsApp copy is kept out of the admin inbox; it still shows in the WhatsApp Business app on the office phone.
 - **HR record** (`staff_profiles`, one per person):
   - designation, joining and leaving dates, date of birth;
   - NID number, encrypted with a lookup hash;

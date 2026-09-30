@@ -406,7 +406,7 @@
     "passwordMin": "At least {{min}} characters.",
     "passwordMismatch": "The two passwords don't match.",
     "linkInvalidTitle": "This link doesn’t work",
-    "linkInvalid": "It has expired or has already been used. Ask your admin for a new one.",
+    "linkInvalid": "It has expired or has already been used. Ask for a new one with “Forgot password?” on the sign-in page, or ask your admin.",
     "linkCheckFailed": "The link couldn’t be checked. Try again in a moment.",
     "toSignIn": "Go to sign in",
     "setPasswordTitle": "Set your password",
@@ -414,7 +414,14 @@
     "resetTitle": "Choose a new password",
     "resetSubtitle": "For {{email}}. Every other session will be signed out.",
     "setPassword": "Set password and sign in",
-    "welcome": "Welcome, {{name}}"
+    "welcome": "Welcome, {{name}}",
+    "forgotLink": "Forgot password?",
+    "forgotTitle": "Forgot your password?",
+    "forgotSubtitle": "Enter your work email. We’ll send a link to choose a new password to that email and, by WhatsApp, to your phone.",
+    "forgotSend": "Send reset link",
+    "forgotSentTitle": "Check your WhatsApp and email",
+    "forgotSent": "If {{email}} belongs to a staff account, a reset link is on its way to that email and to the staff member’s phone by WhatsApp. It works once, for {{minutes}} minutes. Nothing arrived? Ask your admin.",
+    "backToSignIn": "Back to sign in"
   },
   "packages": {
     "title": "Packages",

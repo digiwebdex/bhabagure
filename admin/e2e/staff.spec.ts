@@ -116,3 +116,17 @@ test('the super admin makes a custom role and grants it a permission from the ma
   // Role management itself is never switchable.
   await expect(matrix.getByRole('switch', { name: 'Manage roles and permissions' })).toHaveCount(0)
 })
+
+test('"Forgot password?" on the sign-in page asks for the email and says where the link went', async ({ page }) => {
+  // Client, 2026-10-01. The answer is the same for any address, so an unknown one shows the whole flow without
+  // touching a real account.
+  await page.goto('/login')
+  await page.getByRole('link', { name: 'Forgot password?' }).click({ timeout: FIRST_LOAD.timeout })
+  await expect(page.getByRole('heading', { name: 'Forgot your password?' })).toBeVisible()
+  await page.getByLabel('Email').fill(`nobody.${Date.now()}@e2e.test`)
+  await page.getByRole('button', { name: 'Send reset link' }).click()
+  await expect(page.getByRole('heading', { name: 'Check your WhatsApp and email' })).toBeVisible()
+  await expect(page.getByText(/works once, for 60 minutes/)).toBeVisible()
+  await page.getByRole('link', { name: 'Go to sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Staff sign in' })).toBeVisible()
+})

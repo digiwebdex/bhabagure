@@ -67,6 +67,7 @@ const ProfilePage = page(() => import('../features/profile/ProfilePage'), 'Profi
 const ReviewsPage = page(() => import('../features/cms/reviews/ReviewsPage'), 'ReviewsPage')
 const RolesPage = page(() => import('../features/staff/RolesPage'), 'RolesPage')
 const SetPasswordPage = page(() => import('../features/auth/SetPasswordPage'), 'SetPasswordPage')
+const ForgotPasswordPage = page(() => import('../features/auth/ForgotPasswordPage'), 'ForgotPasswordPage')
 const SettingsPage = page(() => import('../features/cms/settings/SettingsPage'), 'SettingsPage')
 const StaffPage = page(() => import('../features/staff/StaffPage'), 'StaffPage')
 const StaffProfilePage = page(() => import('../features/staff/StaffProfilePage'), 'StaffProfilePage')
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
   // Invitation and password-reset links (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): the token is the credential.
   { path: '/accept-invite', element: <SetPasswordPage /> },
   { path: '/reset-password', element: <SetPasswordPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
   {
     path: '/change-password',
     element: (

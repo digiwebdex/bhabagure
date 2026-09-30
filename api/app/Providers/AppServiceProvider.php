@@ -19,7 +19,6 @@ use App\Models\BookingVoucher;
 use App\Models\CannedReply;
 use App\Models\Client;
 use App\Models\Conversation;
-use App\Models\InvoiceProduct;
 use App\Models\Coupon;
 use App\Models\CreatorVideo;
 use App\Models\Customer;
@@ -27,6 +26,7 @@ use App\Models\Destination;
 use App\Models\GalleryItem;
 use App\Models\Inquiry;
 use App\Models\Invoice;
+use App\Models\InvoiceProduct;
 use App\Models\JournalEntry;
 use App\Models\Media;
 use App\Models\NotificationMessage;
@@ -300,6 +300,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
         // Staff invitation and reset links are 256-bit tokens; this only stops one address hammering the endpoint.
         RateLimiter::for('staff-invitations', fn (Request $request) => Limit::perMinute(10)->by('staff-invitations|'.$request->ip()));
+        // "Forgot password?" on the admin sign-in: a person asks once or twice; more is someone flooding a staff phone.
+        RateLimiter::for('staff-forgot-password', fn (Request $request) => [
+            Limit::perMinute(3)->by('staff-forgot-minute|'.$request->ip()),
+            Limit::perHour(5)->by('staff-forgot-email|'.mb_strtolower((string) $request->input('email'))),
+        ]);
         // The office agent: a check-in a minute, a report, and batches — a full resend of a large device log is a few
         // hundred batches, which this lets through in a couple of minutes.
         RateLimiter::for('attendance-agent', fn (Request $request) => Limit::perMinute(300)->by('attendance-agent|'.($request->attributes->get('attendance_device')?->id ?? $request->ip())));
