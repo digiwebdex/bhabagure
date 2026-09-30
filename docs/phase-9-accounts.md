@@ -70,6 +70,15 @@ An invoice staff write themselves, beside the ones a booking issues.
   before and after. A booking's invoice is changed on its booking: its menu offers **Open booking** instead.
 - **The printed invoice** says a line's own discount and VAT under it (the amount is the line after its discount, so it
   would not otherwise read as quantity × rate), the due date, and the staff footer above the standing terms.
+- **Notes of any length (client, 2026-10-01).** The note (Notes / Terms) and the footer take up to 50,000 characters
+  each (`Invoice::NOTE_MAX`, about ten A4 pages; LONGTEXT columns), and a line's detail and note up to 2,000
+  (`InvoiceItem::TEXT_MAX`, TEXT). Before, the note column held 500 characters under a 1,000-character rule, and a
+  line's 255 under a 300-character rule, so text between the two failed to save. On paper a long note starts right
+  under the figures and runs on to as many pages as it needs: whole lines only, never a lone line or heading at the
+  foot of a page, and long links wrapped at the margin. Every page keeps clear of the paper's edge. From page 2 the foot
+  says "INV-0001 · Page 2 of 3", and with the header off the pad's letterhead area stays blank on every sheet. Table rows
+  are never split and the column headings repeat. The terms, signatures and thank-you move to the last page together,
+  and a voided document is marked VOID on every page. A one-page invoice prints exactly as before.
 - **Every invoice belongs to someone.** The invoices table insists on a customer or a B2B client, so what is owed can
   always be traced; a name and number typed into the builder find or make that customer record.
 - **Payment** on a row takes money against the invoice through the same endpoint the Payments screen uses — one payment,
@@ -105,6 +114,7 @@ the amount **in words** beside it, each payment as its own line with its referen
 payment breakdown, Notes / Terms, and two signature lines above the thank-you. Three deliberate differences from
 theirs: the amount in words is written out in words (theirs prints the digits again), the page counter is left off
 (theirs prints "Page 0 OF 0"), and amounts keep the ৳ symbol, which is what every customer-facing document here uses.
+Since 2026-10-01 a document that runs to more than one page counts its pages from page 2 (§5, notes of any length).
 
 This is the shared print view, so booking invoices and quotations changed with it — one look for everything the company
 prints. It replaces the layout from `_design/Bhabaghure Invoice.dc.html`. A4 reserves the exact height a pre-printed pad

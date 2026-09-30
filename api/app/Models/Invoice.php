@@ -38,6 +38,12 @@ class Invoice extends Model
     /** A standalone invoice for a customer or company, no package (docs/phase-5-admin-core.md, question 3). */
     public const KIND_DEAL = 'deal';
 
+    /**
+     * The longest note or footer staff may write (client, 2026-10-01: no practical limit). The columns take far more;
+     * this only keeps one runaway paste from turning into a hundred-page PDF on the shared server. About ten A4 pages.
+     */
+    public const NOTE_MAX = 50000;
+
     protected $fillable = [
         'invoice_number', 'kind', 'booking_id', 'customer_id', 'client_id', 'issued_on', 'due_on', 'title', 'note',
         'billed_name', 'billed_phone', 'billed_email', 'billed_address', 'package_code', 'package_title_en', 'package_title_bn',

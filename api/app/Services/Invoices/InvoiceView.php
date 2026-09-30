@@ -20,8 +20,11 @@ use App\Support\Payments\PaymentOptions;
  */
 final class InvoiceView
 {
-    /** 5: English only (2026-09-19); 6: a smaller logo (2026-09-23). A stored PDF from before is made again. */
-    public const TEMPLATE_VERSION = '6';
+    /**
+     * 5: English only (2026-09-19); 6: a smaller logo (2026-09-23); 7: notes of any length run on to further pages, and a
+     * line's detail prints under it (2026-10-01). A stored PDF from before is made again.
+     */
+    public const TEMPLATE_VERSION = '7';
 
     /**
      * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on
@@ -120,10 +123,12 @@ final class InvoiceView
                 'code' => $invoice->package_code,
                 'detail' => implode(' · ', $packageDetail),
             ],
-            // A line's own discount and VAT are said under it: otherwise the amount would not read as quantity × rate.
+            // Under a line: what it is (a picked package's code and length, a product's description — docs/invoice-items.md),
+            // then its own discount and VAT, which the amount would otherwise not read as quantity × rate.
             'items' => $invoice->items->map(fn (InvoiceItem $item) => [
                 'title' => $item->title_en ?: $item->title_bn,
                 'note' => implode(' · ', array_filter([
+                    $item->detail,
                     $item->note,
                     (float) $item->discount_amount > 0 ? 'Discount − '.$bdt($item->discount_amount) : null,
                     (float) $item->vat_amount > 0 ? 'VAT '.Numerals::percent((float) $item->vat_rate, $locale).' '.$bdt($item->vat_amount) : null,

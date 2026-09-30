@@ -75,7 +75,7 @@ class DealController extends Controller
             'company.contact_phone' => ['nullable', 'regex:/^8801[3-9]\d{8}$/'],
             'company.contact_email' => ['nullable', 'email', 'max:190'],
             'title' => ['required', 'string', 'min:3', 'max:255'],
-            'note' => ['nullable', 'string', 'max:500'],
+            'note' => ['nullable', 'string', 'max:'.Invoice::NOTE_MAX],
             'total' => ['required', 'numeric', 'min:1', 'max:9999999999'],
             'advance' => ['nullable', 'numeric', 'min:0', 'lte:total'],
             'advance_method' => ['required_unless:advance,null,0', 'nullable', Rule::in(LedgerService::STAFF_METHODS)],

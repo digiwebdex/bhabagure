@@ -373,4 +373,36 @@ class InvoiceBuilderTest extends TestCase
         $free = Invoice::query()->latest('id')->sole();
         $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$free->id}/issue")->assertStatus(409)->assertJsonPath('code', 'invoice_empty');
     }
+
+    #[Test]
+    public function notes_of_any_length_are_saved_whole(): void
+    {
+        // Client, 2026-10-01. The note was a 500-character column under a 1,000-character rule, so a longer note could not
+        // be saved; a line's detail was 255 characters under a 300-character rule.
+        $staff = $this->admin();
+        $customer = $this->party();
+        $note = implode("\n", array_map(fn (int $i) => "{$i}. বাতিলের শর্ত: যাত্রার ৩০ দিন আগে বাতিল করলে অফেরতযোগ্য অংশ বাদে টাকা ফেরত। Cancelled 30 days or more before departure: refunded less the deposits.", range(1, 80)));
+        $this->assertGreaterThan(10000, mb_strlen($note));
+        $detail = str_repeat('Srimangal, Lawachara, Madhabpur lake · ', 7).'and back';
+        $this->assertGreaterThan(255, mb_strlen($detail));
+
+        $id = $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $customer->id, 'title' => 'Sylhet tour', 'note' => $note, 'footer' => $note,
+            'lines' => [['title' => 'Sylhet tea garden tour', 'detail' => $detail, 'quantity' => 2, 'unit_price' => 6500]],
+        ])->assertCreated()->json('data.id');
+
+        $saved = $this->actingAsApi($staff)->getJson("/api/v1/admin/invoices/{$id}")->assertOk()->json('data');
+        $this->assertSame([$note, $note, $detail], [$saved['note'], $saved['footer'], $saved['lines'][0]['detail']]);
+
+        // Longer than any invoice needs: refused with the reason, never a server error.
+        $this->actingAsApi($staff)->putJson("/api/v1/admin/invoices/{$id}", [
+            'customer_id' => $customer->id, 'title' => 'Sylhet tour', 'note' => str_repeat('x', Invoice::NOTE_MAX + 1),
+            'lines' => [['title' => 'Sylhet tea garden tour', 'quantity' => 2, 'unit_price' => 6500]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('note');
+
+        // A deal written on the Payments screen takes a long note too.
+        $this->actingAsApi($staff)->postJson('/api/v1/admin/deals', ['customer_id' => $customer->id, 'title' => 'Group visa processing', 'note' => $note, 'total' => 45000])
+            ->assertCreated();
+        $this->assertSame($note, Invoice::query()->where('title', 'Group visa processing')->sole()->note);
+    }
 }

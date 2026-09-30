@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\SiteSetting;
 use App\Models\Transaction;
 use App\Services\AuditLogger;
@@ -238,8 +239,9 @@ class InvoiceBuilderController extends Controller
             'customer.email' => ['nullable', 'email', 'max:190'],
             'title' => ['required', 'string', 'max:160'],
             'po_number' => ['nullable', 'string', 'max:60'],
-            'note' => ['nullable', 'string', 'max:1000'],
-            'footer' => ['nullable', 'string', 'max:500'],
+            // As long as it needs to be (client, 2026-10-01): the printed invoice runs on to further pages.
+            'note' => ['nullable', 'string', 'max:'.Invoice::NOTE_MAX],
+            'footer' => ['nullable', 'string', 'max:'.Invoice::NOTE_MAX],
             'due_on' => ['nullable', 'date_format:Y-m-d'],
             'discount_label' => ['nullable', 'string', 'max:60'],
             'discount_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
@@ -247,8 +249,8 @@ class InvoiceBuilderController extends Controller
             'vat_rate' => ['nullable', 'numeric', 'between:0,100'],
             'lines' => ['required', 'array', 'min:1', 'max:50'],
             'lines.*.title' => ['required', 'string', 'max:160'],
-            'lines.*.detail' => ['nullable', 'string', 'max:300'],
-            'lines.*.note' => ['nullable', 'string', 'max:300'],
+            'lines.*.detail' => ['nullable', 'string', 'max:'.InvoiceItem::TEXT_MAX],
+            'lines.*.note' => ['nullable', 'string', 'max:'.InvoiceItem::TEXT_MAX],
             'lines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:99999'],
             'lines.*.unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'lines.*.discount_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],

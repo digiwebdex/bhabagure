@@ -18,8 +18,8 @@ tour" only for this invoice**, or **Add "dhaka tour" as a new product**, which j
   - **Products:** the office's own, each with its price.
   - **Packages:** name, code and length, and the per-person price (the sale price, else the regular price; with a
     size table, its basic/3-star price for two). Drafts are marked.
-- Clicking one fills that line with its name, its detail (printed under the item) and its price. Staff then set the
-  quantity and change the price if needed.
+- Clicking one fills that line with its name, its detail (shown under the item, on the printed invoice too since
+  2026-10-01) and its price. Staff then set the quantity and change the price if needed.
 - **+ Add New Item** adds a new, empty line, and its Item box opens with the list.
 - A typed name that isn't on the list offers:
   - **Add "…" only for this invoice:** a line with that name; staff type the price.

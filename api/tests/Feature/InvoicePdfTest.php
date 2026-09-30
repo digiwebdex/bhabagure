@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\SiteSetting;
 use App\Models\TourPackage;
@@ -125,10 +126,56 @@ class InvoicePdfTest extends TestCase
         $this->assertPdfContains('Notifications: 01911000111', $texts, 'the notifications number beside the main line');
     }
 
-    private function renderPdf(bool $header): string
+    #[Test]
+    public function a_long_note_runs_on_to_further_pages_and_nothing_is_cut_off(): void
+    {
+        // Client, 2026-10-01: a long note flows on to the next page instead of being cut off.
+        $admin = $this->staff('admin');
+        $customer = Customer::query()->forceCreate(['name' => 'Corporate Client', 'phone' => '8801711000900', 'stage' => 'customer', 'source' => 'walk_in']);
+        $clauses = array_map(fn (int $i) => "{$i}. Clause {$i}: cancelled 30 days or more before departure, the amount paid is refunded less the non-refundable airline and hotel deposits; within 29 days, no refund.", range(1, 45));
+        // A reference with no space in it wraps at the margin instead of running off the paper.
+        $reference = 'REF-'.str_repeat('7', 300);
+        $id = $this->actingAsApi($admin)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $customer->id, 'title' => 'Umrah package, two people', 'note' => implode("\n", [...$clauses, $reference]),
+            'lines' => [['title' => 'Umrah package', 'quantity' => 2, 'unit_price' => 150000]],
+        ])->assertCreated()->json('data.id');
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/invoices/{$id}/issue")->assertOk();
+        $invoice = Invoice::query()->findOrFail($id);
+
+        // Printed on a pre-printed pad (header off): every sheet has the letterhead, so page 2 leaves it blank too.
+        $pdf = $this->inspect($this->renderPdf(false, $invoice), inkBottomMm: self::LETTERHEAD_BOTTOM_MM, page: 2);
+        $this->assertGreaterThanOrEqual(2, $pdf['pages']);
+        $this->assertSame(0, $pdf['ink']['darkPixels'], "ink at {$pdf['ink']['firstDarkRowMm']} mm on page 2");
+
+        // Every clause is printed whole and in order, starting on the first page under the figures.
+        $body = array_filter($pdf['texts'], fn (array $text) => ! str_contains($text['str'], ' · Page '));
+        $printed = preg_replace('/\s+/u', '', implode('', array_column($body, 'str')));
+        $from = 0;
+        foreach ([...$clauses, $reference] as $clause) {
+            $at = mb_strpos($printed, preg_replace('/\s+/u', '', $clause), $from);
+            $this->assertNotFalse($at, "not printed: {$clause}");
+            $from = $at;
+        }
+        $this->assertSame(1, $this->find($pdf, 'Notes / Terms')['page']);
+
+        // On every page, nothing within 5 mm of the paper's top or bottom edge and nothing past the side margins.
+        foreach ($pdf['texts'] as $text) {
+            $where = "\"{$text['str']}\" on page {$text['page']}";
+            $this->assertGreaterThanOrEqual(5.0, $text['yMm'], $where);
+            $this->assertLessThanOrEqual(292.0, $text['baselineMm'], $where);
+            $this->assertGreaterThanOrEqual(8.9, $text['xMm'], $where);
+            $this->assertLessThanOrEqual(201.2, $text['rightMm'], $where);
+        }
+
+        // A further page says whose it is and how many there are; the signatures close the last page.
+        $this->assertPdfContains("{$invoice->invoice_number} · Page 2 of {$pdf['pages']}", array_column(array_filter($pdf['texts'], fn (array $text) => $text['page'] === 2), 'str'));
+        $this->assertSame($pdf['pages'], $this->find($pdf, 'Customer Signature')['page']);
+    }
+
+    private function renderPdf(bool $header, ?Invoice $invoice = null): string
     {
         try {
-            $bytes = app(InvoicePdf::class)->pdf($this->invoice->fresh(), $header);
+            $bytes = app(InvoicePdf::class)->pdf(($invoice ?? $this->invoice)->fresh(), $header);
         } catch (RuntimeException $e) {
             if (str_contains($e->getMessage(), "Executable doesn't exist")) {
                 $this->markTestSkipped('No Chrome for PDF rendering: set PDF_CHROME_PATH in api/.env.');
@@ -146,9 +193,9 @@ class InvoicePdfTest extends TestCase
         return $file;
     }
 
-    private function inspect(string $file, ?float $inkBottomMm = null, bool $barcode = false): array
+    private function inspect(string $file, ?float $inkBottomMm = null, bool $barcode = false, int $page = 1): array
     {
-        $args = [config('bhabaghure.invoices.node_binary'), config('bhabaghure.invoices.inspector'), $file];
+        $args = [config('bhabaghure.invoices.node_binary'), config('bhabaghure.invoices.inspector'), $file, '--page', (string) $page];
         if ($inkBottomMm !== null) {
             array_push($args, '--ink-top-mm', '0', '--ink-bottom-mm', (string) $inkBottomMm);
         }

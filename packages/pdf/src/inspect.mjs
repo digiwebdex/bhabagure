@@ -2,11 +2,12 @@
 /**
  * Measures a rendered PDF the way a printer sees it — used by the API's invoice tests.
  *
- *   node inspect.mjs <file.pdf> [--dpi 200] [--ink-top-mm 0] [--ink-bottom-mm 40] [--barcode]
+ *   node inspect.mjs <file.pdf> [--dpi 200] [--ink-top-mm 0] [--ink-bottom-mm 40] [--barcode] [--page 1]
  *
- * Prints JSON: page size in mm; every text run with its position in mm from the top-left of page 1; the count of dark
- * pixels in a horizontal band of the rasterised page (to prove a region is blank); and any Code 128 decoded from the
- * raster (to prove the barcode scans, not just that it was drawn).
+ * Prints JSON: page count and size in mm; every text run on every page, with its page and its position in mm from the
+ * top-left of that page; the count of dark pixels in a horizontal band of one rasterised page (--page, default the
+ * first: to prove a region is blank); and any Code 128 decoded from that raster (to prove the barcode scans, not just
+ * that it was drawn).
  */
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -25,22 +26,29 @@ function option(args, name, fallback) {
   return i >= 0 ? args[i + 1] : fallback;
 }
 
-export async function inspectPdf(file, { dpi = 200, inkTopMm = null, inkBottomMm = null, barcode = false } = {}) {
+export async function inspectPdf(file, { dpi = 200, inkTopMm = null, inkBottomMm = null, barcode = false, pageNumber = 1 } = {}) {
   const pdf = await getDocument({ data: new Uint8Array(readFileSync(file)), useSystemFonts: false, isEvalSupported: false }).promise;
-  const page = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 1 });
+  const first = await pdf.getPage(1);
+  const viewport = first.getViewport({ scale: 1 });
   const heightPt = viewport.height;
 
-  const content = await page.getTextContent();
-  const texts = content.items
-    .filter((item) => 'str' in item && item.str.trim() !== '')
-    .map((item) => ({
-      str: item.str,
-      xMm: +(item.transform[4] * PT_TO_MM).toFixed(2),
-      // PDF y is the baseline from the bottom; report the top of the glyph box from the page top.
-      yMm: +((heightPt - item.transform[5] - item.height) * PT_TO_MM).toFixed(2),
-      baselineMm: +((heightPt - item.transform[5]) * PT_TO_MM).toFixed(2),
-    }));
+  const texts = [];
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const content = await (await pdf.getPage(n)).getTextContent();
+    for (const item of content.items) {
+      if (!('str' in item) || item.str.trim() === '') continue;
+      texts.push({
+        page: n,
+        str: item.str,
+        xMm: +(item.transform[4] * PT_TO_MM).toFixed(2),
+        rightMm: +((item.transform[4] + item.width) * PT_TO_MM).toFixed(2),
+        // PDF y is the baseline from the bottom; report the top of the glyph box from the page top.
+        yMm: +((heightPt - item.transform[5] - item.height) * PT_TO_MM).toFixed(2),
+        baselineMm: +((heightPt - item.transform[5]) * PT_TO_MM).toFixed(2),
+      });
+    }
+  }
+  const page = await pdf.getPage(Math.min(Math.max(1, pageNumber), pdf.numPages));
 
   const result = {
     pages: pdf.numPages,
@@ -101,7 +109,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const args = process.argv.slice(2);
   const file = args[0];
   if (!file) {
-    console.error('usage: inspect.mjs <file.pdf> [--dpi 200] [--ink-top-mm N --ink-bottom-mm N] [--barcode]');
+    console.error('usage: inspect.mjs <file.pdf> [--dpi 200] [--ink-top-mm N --ink-bottom-mm N] [--barcode] [--page N]');
     process.exit(2);
   }
   const inkTop = option(args, 'ink-top-mm', null);
@@ -110,6 +118,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     inkTopMm: inkTop === null ? null : Number(inkTop),
     inkBottomMm: inkTop === null ? null : Number(option(args, 'ink-bottom-mm', inkTop)),
     barcode: args.includes('--barcode'),
+    pageNumber: Number(option(args, 'page', 1)),
   })
     .then((result) => process.stdout.write(JSON.stringify(result)))
     .catch((error) => {

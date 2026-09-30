@@ -22,16 +22,34 @@
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
 @endif
 @php($a5 = ($size ?? 'a4') === 'a5')
+{{-- Pages (client, 2026-10-01: a long note runs on to further pages, never cut off). The first page keeps the exact
+     spacing it always had, so the letterhead block and everything under it stay where a pre-printed pad expects them.
+     A further page leaves the pad's letterhead area blank with the header off (every sheet of a pad has it printed),
+     keeps clear of the paper's edge, and carries the document number and page count at its foot. --}}
+@php($firstTopMm = $a5 ? 4 : 6)
+@php($firstBottomMm = $a5 ? 5 : 7)
+@php($sideMm = $a5 ? 6 : 9)
+@php($nextTopMm = ! $header && ! $a5 ? $firstTopMm + $headerHeightMm : ($a5 ? 7 : 10))
+@php($nextBottomMm = $a5 ? 10 : 12)
+@php($runningHead = preg_replace('/[^A-Za-z0-9#\/ -]/', '', (string) $number))
 <style>
   {{-- A5 is the same page on half the paper: every size below carries its own A5 value. --}}
-  @page { size: {{ $a5 ? 'A5' : 'A4' }}; margin: 0; }
+  @page {
+    size: {{ $a5 ? 'A5' : 'A4' }};
+    margin: {{ $nextTopMm }}mm {{ $sideMm }}mm {{ $nextBottomMm }}mm;
+    @bottom-right { content: "{{ $runningHead }} · Page " counter(page) " of " counter(pages); font-family: 'Bricolage Grotesque', sans-serif; font-size: {{ $a5 ? '6pt' : '7.5pt' }}; color: #4A5A78; vertical-align: top; padding-top: {{ $a5 ? '2mm' : '3mm' }}; }
+  }
+  @page :first { margin: {{ $firstTopMm }}mm {{ $sideMm }}mm {{ $firstBottomMm }}mm; @bottom-right { content: none; } }
   :root { --ink: #0F1E3A; --muted: #4A5A78; --blue: #0B5ED7; --line: #E1E7F2; --wash: #F4F8FF; --wash-line: #D6E4FF; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; color: var(--ink); font-family: 'Hind Siliguri', 'Bricolage Grotesque', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff; }
   @media screen { body { background: #EEF1F6; padding: 8mm 0; } .page { margin: 0 auto; box-shadow: 0 2mm 8mm rgba(15, 30, 58, .12); } }
   .num { font-family: 'Bricolage Grotesque', 'Hind Siliguri', sans-serif; }
-  .page { width: {{ $a5 ? '148mm' : '210mm' }}; min-height: {{ $a5 ? '210mm' : '297mm' }}; padding: {{ $a5 ? '4mm 6mm 5mm' : '6mm 9mm 7mm' }}; display: flex; flex-direction: column; gap: {{ $a5 ? '1mm' : '2mm' }}; background: #fff; font-size: {{ $a5 ? '6.8pt' : '9.5pt' }}; position: relative; }
+  .page { width: {{ $a5 ? '148mm' : '210mm' }}; min-height: {{ $a5 ? '210mm' : '297mm' }}; padding: {{ $firstTopMm }}mm {{ $sideMm }}mm {{ $firstBottomMm }}mm; display: flex; flex-direction: column; gap: {{ $a5 ? '1mm' : '2mm' }}; background: #fff; font-size: {{ $a5 ? '6.8pt' : '9.5pt' }}; position: relative; }
+  {{-- On paper the page margins (above) do the spacing, on every page; the first page's area is filled exactly, so on a
+       one-page document the signatures still sit at its foot. --}}
+  @media print { .page { width: auto; min-height: {{ ($a5 ? 210 : 297) - $firstTopMm - $firstBottomMm }}mm; padding: 0; } }
 
   {{-- A4 reserves the exact height a pre-printed pad's header needs, printed or not, so nothing below it ever moves.
        The pads are A4; an A5 copy is always printed whole, so there its letterhead takes only the room it needs. --}}
@@ -87,7 +105,10 @@
   td.rate { text-align: right; width: {{ $a5 ? '22mm' : '30mm' }}; }
   td.amount { text-align: right; width: {{ $a5 ? '24mm' : '34mm' }}; font-weight: 600; }
   td .what { font-weight: 700; }
-  td .note { display: block; font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); font-weight: 400; }
+  td .note { display: block; font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); font-weight: 400; white-space: pre-line; overflow-wrap: anywhere; }
+  {{-- A line is never split across two pages, and the column headings repeat at the top of the next one. --}}
+  tr { break-inside: avoid; }
+  .title, .dates, .parties, .package, .totals, .received { break-inside: avoid; }
 
   {{-- Every figure under the table lines up on one right-hand column, as an invoice is read. --}}
   .totals { display: flex; flex-direction: column; gap: 0.8mm; }
@@ -110,23 +131,28 @@
   .stack span.row, .stack span.muted { font-size: {{ $a5 ? '7.5pt' : '9pt' }}; line-height: 1.5; }
   .stack span.row .num { color: var(--muted); }
   .stack span.muted { color: var(--muted); }
-  .notes { display: flex; flex-direction: column; gap: 0.8mm; break-inside: avoid; }
-  .notes h2 { margin: 0; font-size: {{ $a5 ? '8.5pt' : '10.5pt' }}; font-weight: 700; }
-  .notes span.t { font-size: {{ $a5 ? '7.5pt' : '9pt' }}; line-height: 1.5; white-space: pre-line; }
+  {{-- Notes of any length (2026-10-01): they start right under the figures and run on page after page, a whole line at a
+       time, never a heading or a lone line left at the foot of a page; a long link or reference wraps at the margin. --}}
+  .notes h2 { margin: 0 0 0.8mm; font-size: {{ $a5 ? '8.5pt' : '10.5pt' }}; font-weight: 700; break-after: avoid; }
+  .notes span.t { display: block; font-size: {{ $a5 ? '7.5pt' : '9pt' }}; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; orphans: 3; widows: 3; }
   .how-to-pay { display: flex; flex-direction: column; gap: 0.6mm; border: 0.25mm solid var(--line); border-radius: 2mm; padding: 2mm 3mm; break-inside: avoid; }
   .how-to-pay span.t { font-size: {{ $a5 ? '7pt' : '8.8pt' }}; line-height: 1.45; overflow-wrap: anywhere; }
 
-  {{-- Both signatures sit at the foot of the last page, whatever length the invoice ran to. --}}
-  footer { margin-top: auto; padding-top: {{ $a5 ? '4mm' : '6mm' }}; display: flex; flex-direction: column; gap: 2.5mm; }
+  {{-- On a one-page document both signatures sit at its foot; on a longer one they follow the last of the notes. The
+       terms, the signatures and the thank-you move to the next page together rather than leave the signatures there
+       on their own; a footer longer than a page still runs on, its signatures kept with the thank-you. --}}
+  footer { margin-top: auto; padding-top: {{ $a5 ? '4mm' : '6mm' }}; display: flex; flex-direction: column; gap: 2.5mm; break-inside: avoid; }
   footer .terms { display: flex; flex-direction: column; gap: 0.6mm; }
-  footer .terms span.t { font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); line-height: 1.5; }
-  footer .signs { display: flex; justify-content: space-between; gap: 10mm; padding-top: {{ $a5 ? '2mm' : '3.5mm' }}; }
+  footer .terms span.t { font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; orphans: 2; widows: 2; }
+  footer .signs { display: flex; justify-content: space-between; gap: 10mm; padding-top: {{ $a5 ? '2mm' : '3.5mm' }}; break-inside: avoid; break-after: avoid; }
   footer .sign { flex: 1; max-width: {{ $a5 ? '46mm' : '64mm' }}; display: flex; flex-direction: column; gap: 1mm; text-align: center; }
   footer .sign .line { border-top: 0.3mm dashed var(--muted); }
   footer .sign span { font-size: {{ $a5 ? '7.5pt' : '9.5pt' }}; }
   footer .thanks { text-align: center; font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); line-height: 1.55; }
 
   .void-mark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  {{-- Printed, a fixed element repeats on every page: each page of a voided document says so. --}}
+  @media print { .void-mark { position: fixed; } }
   .void-mark span { transform: rotate(-24deg); font-family: 'Bricolage Grotesque', sans-serif; font-size: 72pt; font-weight: 800; color: rgba(185, 28, 28, .14); letter-spacing: .1em; }
 </style>
 </head>

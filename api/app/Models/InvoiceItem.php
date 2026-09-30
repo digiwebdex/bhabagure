@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InvoiceItem extends Model
 {
+    /** The longest detail or note under a line (a TEXT column takes about four times as much). */
+    public const TEXT_MAX = 2000;
+
     protected $fillable = ['kind', 'title_en', 'title_bn', 'detail', 'note', 'quantity', 'unit_price', 'discount_amount', 'vat_rate', 'vat_amount', 'line_total', 'sort_order'];
 
     protected function casts(): array
