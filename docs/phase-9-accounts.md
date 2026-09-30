@@ -92,6 +92,12 @@ An invoice staff write themselves, beside the ones a booking issues.
 - **Share invoice** hands over the customer's own link, to copy or to pass to WhatsApp on the staff member's own device.
 - **Printed four ways** from the row: A4, A5, an 80mm counter slip, and a delivery receipt — the last with no prices and
   a line to sign for the documents handed over.
+- **Saved under the invoice number (client, 2026-10-01).** Each one downloads straight away, named as the API names it:
+  INV-1065.pdf, INV-1065-a5.pdf, INV-1065-slip.pdf, INV-1065-delivery.pdf, and INV-1065-pad.pdf with the header off.
+  Before, the PDF opened in a new tab as a blob, which the browser can only name after its random id, so every saved
+  copy had to be renamed. A booking's invoice (↓ PDF on the booking, PDF in the lists) and a quotation (QT-0001.pdf)
+  download the same way; the admin PDF responses are `Content-Disposition: attachment`, and the API lets the admin (on
+  another origin) read that header. The customer's own link still opens the PDF in their browser, under the same name.
 - **Details** reads the invoice back the way the customer's copy reads, with every payment against it.
 - **Delete** throws away a draft. On an issued invoice it **cancels** it (client, 2026-09-29): it stays in the list
   marked Cancelled, so its number is never missing, and its journal entry is reversed. A reason is asked for; money paid

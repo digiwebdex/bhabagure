@@ -937,7 +937,7 @@
     "claimFirst": "Claim this booking first",
     "contactSubject": "Your Bhabaghure Holidays booking {{reference}}",
     "noInvoiceYet": "No invoice issued yet",
-    "pdfFailed": "The PDF could not be opened. Try again.",
+    "pdfFailed": "The PDF could not be downloaded. Try again.",
     "noEditPermission": "You can’t edit bookings",
     "closedNoEdit": "Completed or cancelled",
     "noDeletePermission": "You can’t delete bookings",
@@ -2863,8 +2863,8 @@
     "detailsTitle": "Invoice details",
     "createdBy": "Created by: {{name}}",
     "updatedBy": "Updated by: {{name}}",
-    "printPdf": "Print PDF",
-    "printSlip": "Print slip",
+    "downloadPdf": "Download PDF",
+    "downloadSlip": "Download slip",
     "printSizes": {
       "a4": "PDF (A4)",
       "a5": "PDF (A5)",
@@ -2892,7 +2892,7 @@
     "deleteConfirm": "Delete this draft? Nothing has been issued, so nothing is lost from the books.",
     "deleted": "Draft deleted",
     "linkCopied": "Link copied",
-    "pdfFailed": "The PDF didn’t open — please try again.",
+    "pdfFailed": "The PDF didn’t download — please try again.",
     "reminderSubject": "Invoice {{number}} from Bhabaghure Holidays",
     "reminderMessage": "Assalamu alaikum. This is a reminder about invoice {{number}} from Bhabaghure Holidays — {{amount}} is still due. Thank you.",
     "tabs": {

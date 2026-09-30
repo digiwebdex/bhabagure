@@ -159,7 +159,8 @@ class DealController extends Controller
 
         return response($pdf->pdf($invoice, $header, $options['lang'] ?? 'bn', size: $size))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', "inline; filename=\"{$invoice->invoice_number}".($size === 'a4' ? '' : "-{$size}").($header ? '' : '-pad').'.pdf"')
+            // Saved under the invoice's own number, e.g. INV-1065.pdf (client, 2026-10-01): the admin downloads it.
+            ->header('Content-Disposition', "attachment; filename=\"{$invoice->invoice_number}".($size === 'a4' ? '' : "-{$size}").($header ? '' : '-pad').'.pdf"')
             ->header('Cache-Control', 'no-store');
     }
 

@@ -250,7 +250,8 @@ class QuotationController extends Controller
 
         return response($pdf->pdf($quotation, $header, $locale))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', "inline; filename=\"{$quotation->number}".($header ? '' : '-pad').'.pdf"')
+            // Saved under the quotation's own number (client, 2026-10-01): the admin downloads it.
+            ->header('Content-Disposition', "attachment; filename=\"{$quotation->number}".($header ? '' : '-pad').'.pdf"')
             ->header('Cache-Control', 'no-store');
     }
 

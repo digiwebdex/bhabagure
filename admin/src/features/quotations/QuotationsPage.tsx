@@ -14,7 +14,7 @@ import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import { useCustomer } from '../customers/api'
-import { daysLeft, QUOTATION_FILTERS, quotationActions, useOpenQuotationPdf, useQuotationMutation, useQuotationOptions, useQuotations, useQuotationSummary, type QuotationFilter, type QuotationFilters, type QuotationRow } from './api'
+import { daysLeft, QUOTATION_FILTERS, quotationActions, useDownloadQuotationPdf, useQuotationMutation, useQuotationOptions, useQuotations, useQuotationSummary, type QuotationFilter, type QuotationFilters, type QuotationRow } from './api'
 import { QuotationFields, QuotationTotals, useQuotationForm } from './QuotationEditor'
 import { QuotationStatusBadge } from './QuotationStatusBadge'
 
@@ -44,7 +44,7 @@ export function QuotationsPage() {
   const filters = readFilters(params)
   const list = useQuotations(filters)
   const summary = useQuotationSummary()
-  const openPdf = useOpenQuotationPdf()
+  const openPdf = useDownloadQuotationPdf()
   const remove = useQuotationMutation((id: number) => quotationActions.remove(id), () => null)
   const withdraw = useQuotationMutation((id: number) => quotationActions.transition(id, 'withdraw'), (r) => r.data)
   const revise = useQuotationMutation((id: number) => quotationActions.transition(id, 'revise'), (r) => r.data)

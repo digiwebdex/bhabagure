@@ -375,6 +375,26 @@ class InvoiceBuilderTest extends TestCase
     }
 
     #[Test]
+    public function a_downloaded_pdf_is_named_after_the_invoice_number(): void
+    {
+        // Client, 2026-10-01: a saved invoice came out named after the browser's random blob id and had to be renamed.
+        $this->mock(InvoicePdf::class, fn ($mock) => $mock->shouldReceive('pdf')->andReturn('%PDF-1.4 test'));
+        config(['cors.allowed_origins' => ['https://admin.bhabaghure.test']]);
+        $staff = $this->admin();
+        $id = $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+            'customer_id' => $this->party()->id, 'title' => 'Air ticket', 'lines' => [['title' => 'Dhaka–Kathmandu', 'quantity' => 1, 'unit_price' => 18000]],
+        ])->assertCreated()->json('data.id');
+        $number = $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$id}/issue")->assertOk()->json('data.number');
+
+        foreach (['' => "{$number}.pdf", '?size=a5' => "{$number}-a5.pdf", '?size=slip' => "{$number}-slip.pdf", '?size=delivery' => "{$number}-delivery.pdf", '?header=0' => "{$number}-pad.pdf"] as $query => $name) {
+            $response = $this->actingAsApi($staff)->withHeaders(['Origin' => 'https://admin.bhabaghure.test'])->get("/api/v1/admin/deals/{$id}/pdf{$query}")
+                ->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertHeader('Content-Disposition', "attachment; filename=\"{$name}\"");
+            // The admin is on another origin: its browser lets it read the name only because the API says so.
+            $this->assertStringContainsString('Content-Disposition', (string) $response->headers->get('Access-Control-Expose-Headers'));
+        }
+    }
+
+    #[Test]
     public function notes_of_any_length_are_saved_whole(): void
     {
         // Client, 2026-10-01. The note was a 500-character column under a 1,000-character rule, so a longer note could not

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { buttonClass } from '../../components/ui/button'
 import { Dialog, ErrorNotice, useToast } from '../../components/ui/feedback'
 import { Badge, Loading } from '../../components/ui/layout'
-import { fetchDocument } from '../../lib/api/client'
+import { downloadDocument } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
 import { printPath, useInvoice, type PrintSize } from './api'
 
@@ -17,10 +17,10 @@ export function InvoiceDetails({ id, onClose }: { id: number; onClose: () => voi
   const toast = useToast()
   const invoice = useInvoice(id)
 
+  // Saved under the invoice's number, e.g. INV-1065.pdf (client, 2026-10-01).
   const print = async (size: PrintSize) => {
     try {
-      const blob = await fetchDocument(printPath(id, size))
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+      await downloadDocument(printPath(id, size), `${invoice.data?.data.number ?? 'invoice'}.pdf`)
     } catch {
       toast(t('invoices.pdfFailed'), 'error')
     }
@@ -49,10 +49,10 @@ export function InvoiceDetails({ id, onClose }: { id: number; onClose: () => voi
           </span>
           <span className="flex flex-wrap gap-2">
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => void print('a4')}>
-              {t('invoices.printPdf')}
+              {t('invoices.downloadPdf')}
             </button>
             <button type="button" className={buttonClass('outline', 'sm')} onClick={() => void print('slip')}>
-              {t('invoices.printSlip')}
+              {t('invoices.downloadSlip')}
             </button>
           </span>
         </div>

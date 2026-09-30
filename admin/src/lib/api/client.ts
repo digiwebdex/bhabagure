@@ -109,7 +109,12 @@ export const api = {
  * A non-JSON response (invoice print HTML, PDF) with the same auth and refresh rules. The token can't ride along on an
  * <iframe src> or a link, so the page fetches the document and shows it from memory.
  */
-export async function fetchDocument(path: string, retry = true): Promise<Blob> {
+export async function fetchDocument(path: string): Promise<Blob> {
+  return (await fetchNamedDocument(path)).blob
+}
+
+/** The same, with the file name the API sends it under (Content-Disposition), when it gives one. */
+export async function fetchNamedDocument(path: string, retry = true): Promise<{ blob: Blob; filename: string | null }> {
   let response: Response
   try {
     response = await fetch(`${API_URL}/api/v1/${path.replace(/^\//, '')}`, {
@@ -120,14 +125,47 @@ export async function fetchDocument(path: string, retry = true): Promise<Blob> {
     throw new NetworkError('Network unavailable')
   }
   if (response.status === 401 && retry) {
-    if (await refreshSession()) return fetchDocument(path, false)
+    if (await refreshSession()) return fetchNamedDocument(path, false)
     onSessionEnded()
   }
   if (!response.ok) {
     const text = await response.text()
     throw new ApiError(response.status, text.startsWith('{') ? JSON.parse(text) : null)
   }
-  return response.blob()
+  return { blob: await response.blob(), filename: dispositionFilename(response.headers.get('Content-Disposition')) }
+}
+
+/**
+ * Saves a document from the API under its own name — an invoice as INV-1065.pdf, as the API names it — rather than
+ * opening it in a tab, where the browser can only name it after the blob's random id (client, 2026-10-01).
+ * `fallback` is used if the name can't be read.
+ */
+export async function downloadDocument(path: string, fallback: string): Promise<void> {
+  const { blob, filename } = await fetchNamedDocument(path)
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename ?? fallback
+  document.body.append(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+/** `attachment; filename="INV-1065.pdf"` → INV-1065.pdf; the RFC 5987 `filename*=UTF-8''…` form wins when both are sent. */
+export function dispositionFilename(header: string | null): string | null {
+  if (!header) return null
+  const encoded = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header)
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1].trim())
+    } catch {
+      // Malformed: fall back to the plain name.
+    }
+  }
+  const plain = /filename\s*=\s*(?:"([^"]*)"|([^;]+))/i.exec(header)
+  const name = (plain?.[1] ?? plain?.[2] ?? '').trim()
+  return name === '' ? null : name
 }
 
 /** Upload with progress (fetch can't report upload progress). Same auth and refresh rules as request(). */

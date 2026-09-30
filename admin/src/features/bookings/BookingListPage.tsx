@@ -8,7 +8,7 @@ import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
 import { ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
 import { Card, Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
-import { fetchDocument } from '../../lib/api/client'
+import { downloadDocument } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
 import { useBookings, useClaimBooking, useDeleteBooking, type BookingFilters, type BookingStatus, type BookingSummary, type PaymentStatus } from './api'
 import { BookingStatusBadge, PaymentBadge } from './badges'
@@ -54,10 +54,10 @@ export function BookingListPage() {
     setParams(query, { replace: true })
   }
 
+  // Saved under the invoice's number, e.g. INV-1065.pdf (client, 2026-10-01).
   const openPdf = async (booking: BookingSummary) => {
     try {
-      const blob = await fetchDocument(`admin/bookings/${booking.id}/invoice/pdf?lang=${locale}`)
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+      await downloadDocument(`admin/bookings/${booking.id}/invoice/pdf?lang=${locale}`, `${booking.reference}.pdf`)
     } catch {
       toast(t('bookings.pdfFailed'))
     }

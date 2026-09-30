@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { HotelCategory, RoomType } from '@bhabaghure/pricing'
 
 import { useToast } from '../../components/ui/feedback'
-import { api, fetchDocument } from '../../lib/api/client'
+import { api, downloadDocument } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import type { BookingFormOptions } from '../bookings/api'
@@ -127,15 +127,17 @@ export const quotationActions = {
 /** Whole days from today (Dhaka) to a YYYY-MM-DD date: 0 today, negative once past. */
 export const daysLeft = (validUntil: string) => Math.round((Date.parse(validUntil) - Date.parse(todayInDhaka())) / 86_400_000)
 
-/** Opens the quotation PDF (fetched with the staff token) in a new tab; header off prints for the pre-printed pad. */
-export function useOpenQuotationPdf() {
+/**
+ * Saves the quotation PDF (fetched with the staff token) under its number, e.g. QT-0001.pdf (client, 2026-10-01);
+ * header off prints for the pre-printed pad (QT-0001-pad.pdf).
+ */
+export function useDownloadQuotationPdf() {
   const { t } = useTranslation()
   const { locale } = useFormat()
   const toast = useToast()
   return async (id: number, header = true) => {
     try {
-      const blob = await fetchDocument(`admin/quotations/${id}/pdf?lang=${locale}&header=${header ? 1 : 0}`)
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+      await downloadDocument(`admin/quotations/${id}/pdf?lang=${locale}&header=${header ? 1 : 0}`, 'quotation.pdf')
     } catch {
       toast(t('bookings.pdfFailed'), 'error')
     }

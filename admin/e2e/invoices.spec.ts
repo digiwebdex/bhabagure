@@ -101,12 +101,18 @@ test('an admin writes an invoice, issues it, reminds the customer, takes the pay
   await expect(paid).toContainText('Paid', FIRST_LOAD)
 
   // Read back: the lines, the money taken, and nothing owed.
-  await paid.getByRole('button', { name: /^#INV-\d+$/ }).click()
+  const numberButton = paid.getByRole('button', { name: /^#INV-\d+$/ })
+  const number = ((await numberButton.textContent()) ?? '').trim().replace(/^#/, '')
+  await numberButton.click()
   const details = page.getByRole('dialog', { name: 'Invoice details' })
   await expect(details.getByTestId('invoice-details')).toContainText('Umrah package', FIRST_LOAD)
   await expect(details.getByTestId('invoice-details')).toContainText('PO-2026-11')
   await expect(details.getByTestId('invoice-payments')).toContainText('BDT 33,750')
-  await expect(details.getByRole('button', { name: 'Print PDF' })).toBeVisible()
+
+  // The PDF is saved under the invoice's number, not the browser's random blob id (client, 2026-10-01).
+  const saving = page.waitForEvent('download', { timeout: 60_000 })
+  await details.getByRole('button', { name: 'Download PDF' }).click()
+  expect((await saving).suggestedFilename()).toBe(`${number}.pdf`)
 })
 
 test('the customer and Item boxes list their choices on a click, and a new item is saved as a product for next time', async ({ page }) => {
@@ -216,6 +222,12 @@ test('an issued invoice is edited under its own number, and Delete cancels it', 
   const edited = table.locator('tbody tr').filter({ hasText: customer })
   await expect(edited).toContainText('BDT 15,000', FIRST_LOAD)
   await expect(edited).toContainText(number)
+
+  // From the row, each paper is saved under the number too (client, 2026-10-01).
+  await edited.getByRole('button', { name: /^Actions —/ }).click()
+  const a5 = page.waitForEvent('download', { timeout: 60_000 })
+  await page.getByRole('menuitem', { name: 'PDF (A5)' }).click()
+  expect((await a5).suggestedFilename()).toBe(`${number.replace('#', '')}-a5.pdf`)
 
   // Delete: cancelled with a reason, still listed under its number.
   await edited.getByRole('button', { name: /^Actions —/ }).click()

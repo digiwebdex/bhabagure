@@ -8,7 +8,7 @@ import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
 import { ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
 import { Card, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
-import { api, fetchDocument } from '../../lib/api/client'
+import { api, downloadDocument } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import { INVOICE_STATES, printPath, useInvoiceAction, useInvoices, type InvoiceFilters, type InvoiceRow, type InvoiceState, type PrintSize } from './api'
@@ -56,10 +56,10 @@ export function InvoicesPage() {
     setParams(query, { replace: true })
   }
 
+  // Saved as INV-1065.pdf (INV-1065-a5.pdf, -slip, -delivery), the name the API gives it (client, 2026-10-01).
   const print = async (row: InvoiceRow, size: PrintSize) => {
     try {
-      const blob = await fetchDocument(printPath(row.id, size))
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+      await downloadDocument(printPath(row.id, size), `${row.number ?? 'invoice'}.pdf`)
     } catch {
       toast(t('invoices.pdfFailed'), 'error')
     }

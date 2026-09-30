@@ -7,7 +7,7 @@ import { contactActions } from '../../components/table/contactActions'
 import { DataTable, type Column, type RowAction } from '../../components/table/DataTable'
 import { ErrorNotice, useToast } from '../../components/ui/feedback'
 import { Card, CardTitle, Loading, PageHeader } from '../../components/ui/layout'
-import { api, fetchDocument } from '../../lib/api/client'
+import { api, downloadDocument } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { useFormat } from '../../lib/useFormat'
 import type { BookingSummary } from '../bookings/api'
@@ -249,10 +249,10 @@ function RecentBookings({ rows }: { rows: BookingSummary[] }) {
   const navigate = useNavigate()
   const toast = useToast()
 
+  // Saved under the invoice's number, e.g. INV-1065.pdf (client, 2026-10-01).
   const openPdf = async (booking: BookingSummary) => {
     try {
-      const blob = await fetchDocument(`admin/bookings/${booking.id}/invoice/pdf?lang=${locale}`)
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+      await downloadDocument(`admin/bookings/${booking.id}/invoice/pdf?lang=${locale}`, `${booking.reference}.pdf`)
     } catch {
       toast(t('bookings.pdfFailed'), 'error')
     }

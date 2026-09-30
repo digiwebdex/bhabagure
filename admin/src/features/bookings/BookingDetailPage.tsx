@@ -11,7 +11,7 @@ import { EvidenceInput, evidenceReady } from '../../components/ui/EvidenceInput'
 import { Dialog, ErrorNotice, useToast } from '../../components/ui/feedback'
 import { NumberInput, SelectInput, Switch, TextArea, TextInput } from '../../components/ui/fields'
 import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui/layout'
-import { ApiError, fetchDocument } from '../../lib/api/client'
+import { ApiError, downloadDocument, fetchDocument } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { sendBookingWhatsApp, setCustomerOptOut } from '../notifications/api'
 import { useReviewDocument, useSetIssuedStatus, type DocumentSlot, type IssuedKind, type IssuedStatus } from '../documents/api'
@@ -352,12 +352,10 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
     return () => observer.disconnect()
   }, [])
 
+  // Saved under the invoice's number, e.g. INV-1065.pdf (client, 2026-10-01); Print prints the preview above.
   const openPdf = async () => {
     try {
-      const blob = await fetchDocument(`admin/bookings/${booking.id}/invoice/pdf?${query}`)
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener')
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      await downloadDocument(`admin/bookings/${booking.id}/invoice/pdf?${query}`, `${current?.invoice_number ?? booking.reference}.pdf`)
     } catch (reason) {
       setError(reason)
     }

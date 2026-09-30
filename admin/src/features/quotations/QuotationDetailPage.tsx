@@ -11,7 +11,7 @@ import { Card, CardTitle, EmptyState, Loading, PageHeader } from '../../componen
 import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
-import { quotationActions, useOpenQuotationPdf, useQuotation, useQuotationMutation, useQuotationOptions, type QuotationDetail } from './api'
+import { quotationActions, useDownloadQuotationPdf, useQuotation, useQuotationMutation, useQuotationOptions, type QuotationDetail } from './api'
 import { QuotationFields, QuotationTotals, useQuotationForm } from './QuotationEditor'
 import { ValidUntil } from './QuotationsPage'
 import { QuotationStatusBadge } from './QuotationStatusBadge'
@@ -37,7 +37,7 @@ function Quotation({ q }: { q: QuotationDetail }) {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const { confirm, element: confirmDialog } = useConfirm()
-  const openPdf = useOpenQuotationPdf()
+  const openPdf = useDownloadQuotationPdf()
   const [reasonFor, setReasonFor] = useState<'decline' | 'withdraw' | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const convertOpen = params.get('convert') === '1' && q.actions.convert

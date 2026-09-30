@@ -127,6 +127,19 @@ class InvoicePdfTest extends TestCase
     }
 
     #[Test]
+    public function a_bookings_invoice_downloads_under_its_number(): void
+    {
+        // Client, 2026-10-01: saved as INV-0001.pdf, not under the browser's random blob id.
+        $admin = $this->staff('admin');
+        $booking = $this->invoice->booking_id;
+
+        $this->actingAsApi($admin)->get("/api/v1/admin/bookings/{$booking}/invoice/pdf")->assertOk()
+            ->assertHeader('Content-Disposition', "attachment; filename=\"{$this->invoice->invoice_number}.pdf\"");
+        $this->actingAsApi($admin)->get("/api/v1/admin/bookings/{$booking}/invoice/pdf?header=0")->assertOk()
+            ->assertHeader('Content-Disposition', "attachment; filename=\"{$this->invoice->invoice_number}-pad.pdf\"");
+    }
+
+    #[Test]
     public function a_long_note_runs_on_to_further_pages_and_nothing_is_cut_off(): void
     {
         // Client, 2026-10-01: a long note flows on to the next page instead of being cut off.

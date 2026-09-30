@@ -12,6 +12,7 @@ use App\Models\Staff;
 use App\Models\TourPackage;
 use App\Services\Notifications\NotificationDelivery;
 use App\Services\Notifications\WhatsApp\FakeWhatsAppGateway;
+use App\Services\Quotations\QuotationPdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -219,6 +220,18 @@ class QuotationTest extends TestCase
         $this->assertTrue(AuditLog::query()->where('action', 'quotation.reassigned')->exists());
         $this->actingAsApi($agentB)->postJson("/api/v1/admin/quotations/{$ofA}/decline", ['reason' => 'Chose another agency'])->assertOk()->assertJsonPath('data.status', 'declined');
         $this->actingAsApi($agentA)->getJson("/api/v1/admin/quotations/{$ofA}")->assertNotFound();
+    }
+
+    #[Test]
+    public function a_downloaded_quotation_pdf_is_named_after_its_number(): void
+    {
+        // Client, 2026-10-01: saved under its own number, not the browser's random blob id.
+        $this->mock(QuotationPdf::class, fn ($mock) => $mock->shouldReceive('pdf')->andReturn('%PDF-1.4 test'));
+        $agent = $this->staff('sales_agent');
+        $id = $this->sent($agent, $this->lead());
+
+        $this->actingAsApi($agent)->get("/api/v1/admin/quotations/{$id}/pdf")->assertOk()->assertHeader('Content-Disposition', 'attachment; filename="QT-0001.pdf"');
+        $this->actingAsApi($agent)->get("/api/v1/admin/quotations/{$id}/pdf?header=0")->assertOk()->assertHeader('Content-Disposition', 'attachment; filename="QT-0001-pad.pdf"');
     }
 
     #[Test]

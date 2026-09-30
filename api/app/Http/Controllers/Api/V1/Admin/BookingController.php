@@ -329,7 +329,8 @@ class BookingController extends Controller
 
         return response($invoice->exists ? $pdf->pdf($invoice, $header, $locale) : $pdf->render($pdf->html($invoice, $header, $locale, forPdf: true)))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', "inline; filename=\"{$name}\"")
+            // Saved under the invoice's own number, e.g. INV-1065.pdf (client, 2026-10-01): the admin downloads it.
+            ->header('Content-Disposition', "attachment; filename=\"{$name}\"")
             ->header('Cache-Control', 'no-store');
     }
 
