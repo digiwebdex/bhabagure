@@ -453,6 +453,67 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('reviews show two rows at a time with previous, next, dots and swipe; a long one stops at five lines with "Read more" (docs/customer-reviews.md)', async ({ page, request }) => {
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['reviews'] } });
+    // Eight reviews, the first far longer than five lines.
+    const long = 'Ten days in Nepal with a group that felt like family, and a guide who knew every village. '.repeat(10).trim();
+    const ids = artisan(
+      'tinker',
+      `--execute=$ids = []; foreach (range(1, 8) as $n) { $ids[] = App\\Models\\Review::query()->create(['reviewer_name' => "Carousel Reviewer {$n}", 'quote_en' => $n === 1 ? '${long}' : "Short review number {$n}.", 'quote_bn' => $n === 1 ? '${long}' : "Short review number {$n}.", 'trip_label_en' => 'Nepal', 'trip_label_bn' => 'Nepal', 'rating' => 5, 'status' => 'published', 'sort_order' => $n, 'source' => 'staff'])->id; } echo implode(',', $ids);`,
+    ).trim().split(/\r?\n/).pop();
+    try {
+      expect((await refresh()).status()).toBe(200);
+      const section = page.locator('#reviews');
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return section.getByText('Carousel Reviewer 8').count();
+      }, { timeout: 20_000 }).toBeGreaterThan(0);
+      await section.scrollIntoViewIfNeeded();
+      const track = page.getByTestId('review-cards');
+      const cards = track.locator('figure');
+      const pages = page.getByTestId('review-pages');
+      const total = await cards.count();
+
+      // Desktop: six to a page, three across and two down, every card the same height.
+      await expect(track.locator(':scope > li')).toHaveCount(Math.ceil(total / 6));
+      await expect(cards.nth(0)).toBeInViewport();
+      await expect(cards.nth(6)).not.toBeInViewport();
+      const [first, fourth] = [await cards.nth(0).boundingBox(), await cards.nth(3).boundingBox()];
+      expect(Math.abs(first!.x - fourth!.x)).toBeLessThan(2);
+      expect(fourth!.y).toBeGreaterThan(first!.y + first!.height);
+      const heights = await Promise.all([0, 1, 2, 3, 4, 5].map(async (n) => (await cards.nth(n).boundingBox())!.height));
+      expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(2);
+
+      // Next and previous, with the dots following.
+      await pages.getByRole('button', { name: 'Next reviews' }).click();
+      await expect(cards.nth(6)).toBeInViewport();
+      await expect(cards.nth(0)).not.toBeInViewport();
+      await expect(pages.getByRole('button', { name: 'Show page 2' })).toHaveAttribute('aria-current', 'true');
+      await pages.getByRole('button', { name: 'Previous reviews' }).click();
+      await expect(cards.nth(0)).toBeInViewport();
+      await expect(pages.getByRole('button', { name: 'Show page 1' })).toHaveAttribute('aria-current', 'true');
+
+      // The long review stops at five lines; "Read more" opens all of it. A short one has nothing more to read.
+      const longCard = cards.filter({ hasText: 'Carousel Reviewer 1' });
+      await expect(cards.filter({ hasText: 'Carousel Reviewer 2' }).getByRole('button', { name: 'Read more' })).toHaveCount(0);
+      await longCard.getByRole('button', { name: 'Read more' }).click();
+      const full = page.getByRole('dialog', { name: 'Carousel Reviewer 1’s review' });
+      await expect(full.getByTestId('full-review')).toContainText(long);
+      await page.keyboard.press('Escape');
+      await expect(full).toHaveCount(0);
+
+      // A phone: two to a page, and a swipe moves the dots on.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(track.locator(':scope > li')).toHaveCount(Math.ceil(total / 2));
+      await expect(pages.getByRole('button', { name: /^Show page/ })).toHaveCount(Math.ceil(total / 2));
+      await track.evaluate((list) => list.scrollTo({ left: list.clientWidth }));
+      await expect(pages.getByRole('button', { name: 'Show page 2' })).toHaveAttribute('aria-current', 'true');
+    } finally {
+      artisan('tinker', `--execute=App\\Models\\Review::query()->whereIn('id', [${ids}])->delete(); echo 'ok';`);
+      await refresh();
+    }
+  });
+
   test('group tour photos published in the CMS slide by themselves, whole, with their trip and next/previous (docs/group-tour-gallery.md)', async ({ page, request }) => {
     const password = 'e2e-photo-editor-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'photo.editor@e2e.test'], ['employee_code' => 'E2E-PHO', 'name' => 'Photo editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

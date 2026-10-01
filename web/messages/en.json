@@ -1139,6 +1139,13 @@
     "previousPhoto": "Previous photo",
     "nextPhoto": "Next photo",
     "packageHeading": "Travellers’ reviews",
-    "packageNone": "No reviews of this tour yet."
+    "packageNone": "No reviews of this tour yet.",
+    "listLabel": "Travellers’ reviews",
+    "page": "Page {n} of {total}",
+    "goToPage": "Show page {n}",
+    "previousPage": "Previous reviews",
+    "nextPage": "Next reviews",
+    "readMore": "Read more",
+    "fullReview": "{name}’s review"
   }
 }

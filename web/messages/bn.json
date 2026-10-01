@@ -1139,6 +1139,13 @@
     "previousPhoto": "আগের ছবি",
     "nextPhoto": "পরের ছবি",
     "packageHeading": "যাত্রীদের রিভিউ",
-    "packageNone": "এই ট্যুরের এখনো কোনো রিভিউ নেই।"
+    "packageNone": "এই ট্যুরের এখনো কোনো রিভিউ নেই।",
+    "listLabel": "যাত্রীদের রিভিউ",
+    "page": "পৃষ্ঠা {n} / {total}",
+    "goToPage": "পৃষ্ঠা {n} দেখুন",
+    "previousPage": "আগের রিভিউ",
+    "nextPage": "পরের রিভিউ",
+    "readMore": "আরও পড়ুন",
+    "fullReview": "{name}-এর রিভিউ"
   }
 }

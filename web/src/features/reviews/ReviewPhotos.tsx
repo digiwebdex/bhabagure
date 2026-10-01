@@ -11,8 +11,9 @@ import { useFormatters } from '@/lib/use-formatters';
  * A review's trip photos (docs/customer-reviews.md): small thumbnails on the card; a click opens the photo larger, with
  * previous/next when there are several. Plain images of the sizes the API stored (400 px and 1600 px), never the
  * website's image optimiser: optimising photos on the site's server once held it over its memory limit (2026-09-24).
+ * `max`: thumbnails shown, the last saying how many more there are (a card keeps to one row of them).
  */
-export function ReviewPhotos({ photos, reviewer }: { photos: ReviewView['photos']; reviewer: string }) {
+export function ReviewPhotos({ photos, reviewer, max = Infinity }: { photos: ReviewView['photos']; reviewer: string; max?: number }) {
   const t = useTranslations('reviewForm');
   const tc = useTranslations('common');
   const f = useFormatters();
@@ -20,15 +21,22 @@ export function ReviewPhotos({ photos, reviewer }: { photos: ReviewView['photos'
   const [shown, setShown] = useState<number | null>(null);
   if (photos.length === 0) return null;
   const photo = shown === null ? null : photos[shown];
+  const thumbs = photos.slice(0, max);
+  const more = photos.length - thumbs.length;
 
   return (
     <>
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0" data-testid="review-photos">
-        {photos.map((item, index) => (
+        {thumbs.map((item, index) => (
           <li key={item.thumb}>
-            <button type="button" onClick={() => setShown(index)} aria-label={t('openPhoto', { n: f.number(index + 1), name: reviewer })} className="block cursor-pointer overflow-hidden rounded-10">
+            <button type="button" onClick={() => setShown(index)} aria-label={t('openPhoto', { n: f.number(index + 1), name: reviewer })} className="relative block cursor-pointer overflow-hidden rounded-10">
               {/* eslint-disable-next-line @next/next/no-img-element -- the API's own 400 px WebP */}
               <img src={item.thumb} alt={item.alt} loading="lazy" decoding="async" width={72} height={72} className="size-18 object-cover transition-transform duration-300 ease-lift hover:scale-105" />
+              {more > 0 && index === thumbs.length - 1 ? (
+                <span aria-hidden className="absolute inset-0 flex items-center justify-center bg-scrim/55 font-display text-15 font-bold text-white">
+                  +{f.number(more)}
+                </span>
+              ) : null}
             </button>
           </li>
         ))}

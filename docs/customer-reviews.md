@@ -69,3 +69,21 @@ the home page and the reviewed package's page.
   photo.
 - **Website e2e** `live-data.spec.ts`: the form refuses an incomplete review, sends one with a photo; after approval it
   shows on the home page with its photo (opened larger), without the number or a verified mark, and on its package page.
+  "Reviews show two rows at a time…": six to a page on a desktop (three across, two down, equal heights), next and
+  previous with the dots following, "Read more" only on the long review and opening all of it, two to a page on a phone,
+  and a swipe moving the dots on.
+
+## 6. Two rows at a time (client, 2026-10-02)
+
+The reviews filled the home page as one long grid, every review at full length. Now `ReviewCards`
+(web/src/features/reviews/ReviewCarousel.tsx), on the home page and a package's page:
+
+- **Pages of two rows:** six reviews to a page on a desktop (three across), four on a tablet (two across, from 640 px),
+  two on a phone. Previous and next buttons and a dot for each page sit below; a phone swipes. The arrows and dots appear
+  only when there is more than one page. Nothing moves by itself (decided: a review doesn't slide away while someone is
+  reading it). It is the offers' scroll-snapping track (`useSlideshow` with no timer), so swipe, buttons and dots agree.
+- **Cards of one height:** a review stops at five lines. **Read more**, shown only when something is cut, opens the whole
+  review in a window with its photos (each opens full size in a new tab, so no second window opens on top). A card shows
+  three photo thumbnails at most; the third says "+2" when there are more, and opens the photo viewer, which has them all.
+- Every page keeps two rows' height, so paging never moves what is below. The server lays the cards out three across;
+  a narrower screen re-pages as the page goes live, below the fold.
