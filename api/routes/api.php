@@ -614,8 +614,8 @@ Route::prefix('v1')->group(function () {
             });
         });
 
-        // The inbox: customers' WhatsApp and Messenger chats (docs/admin-inbox.md). Reading needs inbox.view; replying,
-        // taking and closing a chat inbox.reply; settings and canned replies inbox.manage.
+        // The inbox: customers' WhatsApp and Messenger chats (docs/admin-inbox.md). Reading needs inbox.view; starting a
+        // chat, replying, taking and closing one inbox.reply; settings and canned replies inbox.manage.
         Route::middleware('permission:inbox.view,staff')->prefix('inbox')->group(function () {
             Route::controller(InboxController::class)->group(function () {
                 Route::get('conversations', 'index');
@@ -624,6 +624,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('messages/{id}/file', 'file')->whereNumber('id');
                 Route::get('canned-replies', 'cannedReplies');
                 Route::middleware('permission:inbox.reply,staff')->group(function () {
+                    // A WhatsApp chat with a number typed in (docs/admin-inbox.md §8).
+                    Route::post('conversations', 'start')->middleware('throttle:inbox-replies');
                     Route::post('conversations/{id}/messages', 'reply')->whereNumber('id')->middleware('throttle:inbox-replies');
                     Route::post('conversations/{id}/assign', 'assign')->whereNumber('id');
                     Route::post('conversations/{id}/{action}', 'status')->whereNumber('id')->whereIn('action', ['close', 'reopen']);

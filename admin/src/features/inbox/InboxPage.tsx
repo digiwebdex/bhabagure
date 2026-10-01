@@ -10,7 +10,9 @@ import { Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layo
 import { useFormat } from '../../lib/useFormat'
 import { useConversations, type ConversationRow, type InboxFilters, type InboxView } from './api'
 import { ConversationPane } from './ConversationPane'
+import { NewChatDialog } from './NewChatDialog'
 import { Avatar, ChannelBadge } from './parts'
+import { whatsAppNumber } from './phone'
 
 const VIEWS: InboxView[] = ['all', 'unread', 'mine', 'closed']
 
@@ -20,6 +22,7 @@ const VIEWS: InboxView[] = ['all', 'unread', 'mine', 'closed']
  */
 export function InboxPage() {
   const { t } = useTranslation()
+  const { digits } = useFormat()
   const { can } = useAuth()
   const navigate = useNavigate()
   const { id } = useParams()
@@ -34,6 +37,15 @@ export function InboxPage() {
   const set = (patch: Partial<InboxFilters>) => setFilters((current) => ({ ...current, page: 1, ...patch }))
   const list = useConversations(filters)
   const query = filters.view === 'all' ? '' : `?view=${filters.view}`
+  // "New chat": the number to start with, or null while the dialog is closed (docs/admin-inbox.md §8).
+  const [newChat, setNewChat] = useState<string | null>(null)
+  const typed = can('inbox.reply') ? whatsAppNumber(filters.search) : null
+  // A chat started or reopened is open and at the top of the open list.
+  const opened = (chatId: number) => {
+    setNewChat(null)
+    setFilters({ view: 'all', channel: 'all', search: '', page: 1 })
+    navigate(`/inbox/${chatId}`)
+  }
 
   return (
     <>
@@ -41,10 +53,19 @@ export function InboxPage() {
         title={t('inbox.title')}
         subtitle={t('inbox.subtitle')}
         actions={
-          can('inbox.manage') ? (
-            <Link to="/inbox/settings" className={buttonClass('outline', 'sm')}>
-              {t('inbox.settings')}
-            </Link>
+          can('inbox.reply') || can('inbox.manage') ? (
+            <>
+              {can('inbox.reply') ? (
+                <button type="button" className={buttonClass('cta', 'sm')} onClick={() => setNewChat('')}>
+                  + {t('inbox.newChat')}
+                </button>
+              ) : null}
+              {can('inbox.manage') ? (
+                <Link to="/inbox/settings" className={buttonClass('outline', 'sm')}>
+                  {t('inbox.settings')}
+                </Link>
+              ) : null}
+            </>
           ) : null
         }
       />
@@ -90,7 +111,17 @@ export function InboxPage() {
                 <ErrorNotice error={list.error} />
               </div>
             ) : list.data.data.length === 0 ? (
-              <EmptyState title={t('inbox.empty')} note={filters.view === 'all' && filters.channel === 'all' && !filters.search ? t('inbox.emptyNote') : undefined} />
+              <EmptyState
+                title={t('inbox.empty')}
+                note={filters.view === 'all' && filters.channel === 'all' && !filters.search ? t('inbox.emptyNote') : undefined}
+                action={
+                  typed ? (
+                    <button type="button" className={buttonClass('cta', 'sm')} onClick={() => setNewChat(filters.search)}>
+                      {t('inbox.startChatWith', { number: digits(`+${typed}`) })}
+                    </button>
+                  ) : undefined
+                }
+              />
             ) : (
               <ul className="m-0 list-none p-0">
                 {list.data.data.map((row) => (
@@ -124,6 +155,7 @@ export function InboxPage() {
           )}
         </section>
       </div>
+      {newChat !== null ? <NewChatDialog initialPhone={newChat} onClose={() => setNewChat(null)} onOpened={opened} /> : null}
     </>
   )
 }
@@ -151,7 +183,7 @@ function ConversationItem({ row, now, active, onOpen }: { row: ConversationRow; 
         </span>
         <span className={`truncate text-13 ${unread ? 'text-app-text' : 'text-app-muted'}`}>
           {row.last_message_direction === 'out' ? `${t('inbox.you')}: ` : ''}
-          {row.last_message_preview ?? ''}
+          {row.last_message_preview ?? <em>{t('inbox.noMessages')}</em>}
         </span>
         <span className="flex flex-wrap items-center gap-1.5">
           <ChannelBadge channel={row.channel} />

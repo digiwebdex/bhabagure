@@ -20,12 +20,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Communication → Inbox (docs/admin-inbox.md): customers' WhatsApp and Messenger chats. Reading needs inbox.view;
- * replying, assigning to oneself, closing and linking a customer inbox.reply (admins and sales agents, decided
- * 2026-09-27); assigning to someone else inbox.manage.
+ * starting a WhatsApp chat, replying, assigning to oneself, closing and linking a customer inbox.reply (admins and sales
+ * agents, decided 2026-09-27); assigning to someone else inbox.manage.
  */
 class InboxController extends Controller
 {
@@ -81,6 +82,29 @@ class InboxController extends Controller
             // Who the chat can be handed to: only for those who may hand it over.
             'assignees' => $staff->can('inbox.manage') ? self::assignees() : null,
         ]]);
+    }
+
+    /**
+     * POST /admin/inbox/conversations: a WhatsApp chat with a number staff type in (docs/admin-inbox.md §8) — the one
+     * already there for that number, or a new one. 201 when started, 200 when it existed; `existing` says which.
+     */
+    public function start(Request $request, InboxDesk $desk): JsonResponse
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:40'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'body' => ['nullable', 'string', 'max:4000'],
+        ]);
+        $phone = Phone::normalizeWhatsApp($data['phone']);
+        if ($phone === null) {
+            throw ValidationException::withMessages(['phone' => [__('inbox.invalid_number')]]);
+        }
+        ['conversation' => $conversation, 'existing' => $existing] = $desk->startChat($phone, $data['name'] ?? null, $data['body'] ?? null, $request->user('staff'));
+
+        return response()->json(
+            ['data' => self::row($conversation->load(['assignee', 'customer'])) + ['existing' => $existing]],
+            $existing ? Response::HTTP_OK : Response::HTTP_CREATED,
+        );
     }
 
     public function reply(Request $request, int $id, InboxDesk $desk): JsonResponse

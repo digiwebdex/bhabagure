@@ -100,6 +100,27 @@ final class WaSenderGateway implements WhatsAppGateway
         return $response->successful() && preg_match('/^(\d{8,15})@/', $pn, $m) === 1 ? $m[1] : null;
     }
 
+    /**
+     * Whether a number is on WhatsApp (GET /on-whatsapp/{number}): what WaSender says, or null when it couldn't be asked
+     * or gave no clear answer — a new chat from the inbox is then tried anyway (docs/admin-inbox.md §8).
+     */
+    public function onWhatsApp(string $to): ?bool
+    {
+        $number = self::e164($to);
+        if (preg_match('/^\+\d{8,15}$/', $number) !== 1) {
+            return null;
+        }
+        try {
+            // In the path as WaSender's docs write it: /on-whatsapp/+8801711000000 (checked against the live API, 2026-10-01).
+            $response = $this->client()->get('/on-whatsapp/'.$number);
+        } catch (ConnectionException) {
+            return null;
+        }
+        $exists = $response->json('data.exists');
+
+        return $response->successful() && is_bool($exists) ? $exists : null;
+    }
+
     public function sessionStatus(): string
     {
         try {

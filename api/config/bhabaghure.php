@@ -128,6 +128,9 @@ return [
             'graph_url' => env('META_GRAPH_URL', 'https://graph.facebook.com/v21.0'),
             // Photos, PDFs and voice notes staff attach or customers send, in kilobytes.
             'max_attachment_kb' => 16384,
+            // WhatsApp chats staff may start with new numbers in a day, for the whole office (client, 2026-10-01;
+            // docs/admin-inbox.md §8): WhatsApp restricts a number that messages many people who haven't saved it.
+            'new_chats_per_day' => (int) env('INBOX_NEW_CHATS_PER_DAY', 30),
         ],
         // SMS through bulksmsbd.net (docs/phase-4-whatsapp.md §10): a fallback for money-critical messages WhatsApp
         // couldn't deliver, and the departure-day message. Never the review request, invoice PDFs or staff alerts.

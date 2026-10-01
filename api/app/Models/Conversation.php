@@ -24,7 +24,7 @@ class Conversation extends Model
     public const MESSENGER_WINDOW_HOURS = 24;
 
     protected $fillable = [
-        'channel', 'external_id', 'name', 'phone', 'jid', 'lid', 'customer_id', 'assigned_staff_id', 'status', 'unread_count',
+        'channel', 'external_id', 'name', 'phone', 'jid', 'lid', 'customer_id', 'assigned_staff_id', 'started_by_staff_id', 'status', 'unread_count',
         'last_message_at', 'last_message_preview', 'last_message_direction', 'last_incoming_at',
     ];
 

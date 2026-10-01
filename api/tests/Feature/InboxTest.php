@@ -14,6 +14,7 @@ use App\Services\Notifications\NotificationSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -324,6 +325,106 @@ class InboxTest extends TestCase
         $this->actingAsApi($agent)->getJson('/api/v1/admin/inbox/canned-replies')->assertOk()->assertJsonCount(3, 'data');
         $this->actingAsApi($agent)->postJson('/api/v1/admin/inbox/canned-replies', ['title' => 'x', 'body' => 'y'])->assertForbidden();
         $this->actingAsApi($admin)->postJson('/api/v1/admin/inbox/canned-replies', ['title' => 'Office address', 'body' => 'Our office…'])->assertCreated();
+    }
+
+    #[Test]
+    public function staff_start_a_whatsapp_chat_with_a_new_number_and_it_is_theirs_at_the_top_of_the_list(): void
+    {
+        // Client, 2026-10-01 (docs/admin-inbox.md §8): agents start chats from the inbox with a number they type.
+        Http::fake([
+            self::WASENDER.'/on-whatsapp/*' => Http::response(['success' => true, 'data' => ['exists' => true]]),
+            self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 6001]]),
+        ]);
+        $customer = Customer::query()->create(['name' => 'Nusrat Jahan', 'phone' => '8801812000002', 'stage' => 'lead', 'source' => 'website_form', 'locale' => 'bn']);
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Hi')])->assertOk();
+        $agent = $this->staff('sales_agent');
+        $this->travel(1)->minutes();
+
+        $id = $this->actingAsApi($agent)->postJson('/api/v1/admin/inbox/conversations', ['phone' => '01812-000002', 'name' => ' Nusrat (Bali) ', 'body' => 'Assalamu alaikum, Bhabaghure Holidays theke bolchi.'])
+            ->assertCreated()->assertJsonPath('data.existing', false)->assertJsonPath('data.name', 'Nusrat (Bali)')
+            ->assertJsonPath('data.assignee.id', $agent->id)->assertJsonPath('data.customer_id', $customer->id)->json('data.id');
+
+        Http::assertSent(fn (HttpRequest $request) => $request->method() === 'GET' && $request->url() === self::WASENDER.'/on-whatsapp/+8801812000002');
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === self::WASENDER.'/send-message' && $request['to'] === '+8801812000002'
+            && $request['text'] === 'Assalamu alaikum, Bhabaghure Holidays theke bolchi.');
+        $conversation = Conversation::query()->findOrFail($id);
+        $this->assertSame(['8801812000002', '8801812000002@s.whatsapp.net', $agent->id, 'open'], [$conversation->external_id, $conversation->jid, $conversation->started_by_staff_id, $conversation->status]);
+        $first = $conversation->messages()->sole();
+        $this->assertSame(['out', 'staff', $agent->id, 'sent'], [$first->direction, $first->origin, $first->staff_id, $first->status]);
+        // The newest chat heads the list, among the starter's own.
+        $this->assertSame($id, $this->actingAsApi($agent)->getJson('/api/v1/admin/inbox/conversations')->assertOk()->json('data.0.id'));
+        $this->assertSame([$id], array_column($this->actingAsApi($agent)->getJson('/api/v1/admin/inbox/conversations?view=mine')->json('data'), 'id'));
+
+        // The customer answers into the same thread, which keeps the name staff gave it.
+        $this->wasender('messages.received', ['messages' => [
+            'key' => ['id' => 'IN2', 'fromMe' => false, 'remoteJid' => '8801812000002@s.whatsapp.net', 'cleanedSenderPn' => '8801812000002'],
+            'pushName' => 'Nusu', 'messageBody' => 'Ji, bolun', 'message' => ['conversation' => 'Ji, bolun'],
+        ]])->assertOk();
+        $this->assertSame([2, 'Nusrat (Bali)', 1], [Conversation::query()->count(), $conversation->fresh()->name, $conversation->fresh()->unread_count]);
+
+        // Without a first message the chat is still started, empty, for the reply box.
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/inbox/conversations', ['phone' => '+8801912000003'])->assertCreated()
+            ->assertJsonPath('data.name', null)->assertJsonPath('data.last_message_preview', null);
+        $this->assertSame(0, Conversation::query()->where('external_id', '8801912000003')->sole()->messages()->count());
+    }
+
+    #[Test]
+    public function a_number_that_has_a_chat_opens_that_chat_instead_of_a_second_one(): void
+    {
+        Http::fake([self::WASENDER.'/*' => Http::response(['success' => true, 'data' => ['exists' => true, 'msgId' => 6002]])]);
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Hi')])->assertOk();
+        $conversation = Conversation::query()->sole();
+        $agent = $this->staff('sales_agent');
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/inbox/conversations/{$conversation->id}/close")->assertOk();
+
+        // Found by the number however it is typed, opened again, nothing asked of WaSender.
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/inbox/conversations', ['phone' => '+880 1711-000001', 'name' => 'Someone else'])->assertOk()
+            ->assertJsonPath('data.id', $conversation->id)->assertJsonPath('data.existing', true)->assertJsonPath('data.status', 'open')->assertJsonPath('data.name', 'Tanvir');
+        $this->assertSame(1, Conversation::query()->count());
+        Http::assertNothingSent();
+
+        // A chat filed under WhatsApp's privacy id, with the number learnt since, is found by the number too.
+        $hidden = Conversation::query()->create(['channel' => 'whatsapp', 'external_id' => 'lid:7771', 'lid' => '7771@lid', 'phone' => '8801911000004', 'status' => 'open', 'unread_count' => 0]);
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/inbox/conversations', ['phone' => '01911000004', 'name' => 'Rafi', 'body' => 'Hello Rafi'])->assertOk()
+            ->assertJsonPath('data.id', $hidden->id)->assertJsonPath('data.name', 'Rafi')->assertJsonPath('data.last_message_preview', 'Hello Rafi');
+        $this->assertSame(2, Conversation::query()->count());
+    }
+
+    #[Test]
+    public function a_new_chat_needs_a_whatsapp_number_and_a_place_in_the_days_limit(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-01 11:00', 'Asia/Dhaka')->utc());
+        Http::fake([
+            self::WASENDER.'/on-whatsapp/+8801300000001' => Http::response(['success' => true, 'data' => ['exists' => false]]),
+            self::WASENDER.'/on-whatsapp/*' => Http::response(['success' => true, 'data' => ['exists' => true]]),
+        ]);
+        $agent = $this->staff('sales_agent');
+        $start = fn (string $phone) => $this->actingAsApi($agent)->postJson('/api/v1/admin/inbox/conversations', ['phone' => $phone]);
+
+        // Not a number, or a foreign one without its country code.
+        $start('017110')->assertUnprocessable()->assertJsonPath('errors.phone.0', __('inbox.invalid_number'));
+        $start('9812345678')->assertUnprocessable()->assertJsonValidationErrors('phone');
+        // WaSender says the number isn't on WhatsApp: nothing is started.
+        $start('01300000001')->assertUnprocessable()->assertJsonPath('errors.phone.0', __('inbox.not_on_whatsapp'));
+        $this->assertSame(0, Conversation::query()->count());
+        // Another country's number, with its code.
+        $start('+977 981-2345678')->assertCreated()->assertJsonPath('data.phone', '9779812345678');
+
+        // The office's limit for the day (Dhaka), whoever starts them; it opens again in the morning.
+        config(['bhabaghure.notifications.inbox.new_chats_per_day' => 2]);
+        $this->actingAsApi($this->staff('admin'))->postJson('/api/v1/admin/inbox/conversations', ['phone' => '01711000002'])->assertCreated();
+        $start('01711000003')->assertUnprocessable()->assertJsonPath('errors.phone.0', __('inbox.new_chat_limit', ['limit' => 2]));
+        $this->assertSame(2, Conversation::query()->count());
+        // Opening a chat that is there isn't a new one.
+        $start('01711000002')->assertOk();
+        $this->travelTo(Carbon::parse('2026-10-02 00:05', 'Asia/Dhaka')->utc());
+        $start('01711000003')->assertCreated();
+
+        // Those without inbox.reply can't; with the WhatsApp inbox off nobody can.
+        $this->actingAsApi($this->staff('accountant'))->postJson('/api/v1/admin/inbox/conversations', ['phone' => '01711000004'])->assertForbidden();
+        config(['bhabaghure.notifications.inbox.whatsapp' => false]);
+        $start('01711000004')->assertUnprocessable()->assertJsonPath('errors.phone.0', __('inbox.whatsapp_off'));
+        $this->assertSame(3, Conversation::query()->count());
     }
 
     /** @param array<string, mixed> $data */

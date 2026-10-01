@@ -75,6 +75,44 @@ test('a WhatsApp chat is read, answered with a quick reply, turned into a lead a
   await expect(page.getByRole('tab', { name: /Open/ })).toContainText('1', FIRST_LOAD)
 })
 
+test('an agent starts a WhatsApp chat with a typed number, and the same number opens that chat again', async ({ page }) => {
+  // Client, 2026-10-01 (docs/admin-inbox.md §8). WaSender can't be reached here, so the number's check is skipped.
+  const typed = `013${String(Date.now()).slice(-8)}`
+  await signIn(page, 'sales_agent')
+  await page.goto('/inbox')
+
+  // A number with no chat, searched for, offers to start one.
+  await page.getByRole('searchbox', { name: 'Search name, number or message' }).fill(typed)
+  await page.getByRole('button', { name: `Start a chat with +88${typed}` }).click(FIRST_LOAD)
+  const dialog = page.getByTestId('new-chat')
+  await expect(dialog.getByLabel('WhatsApp number')).toHaveValue(typed)
+  await expect(dialog).toContainText(`Chat with +88${typed}`)
+  await dialog.getByLabel('Name (optional)').fill('Sadia Afrin')
+  await dialog.getByLabel('First message (optional)').fill('Assalamu alaikum, Bhabaghure Holidays theke bolchi.')
+  await dialog.getByRole('button', { name: 'Start chat and send' }).click()
+
+  // It opens as the agent's chat, at the top of the open list, with the first message going out.
+  await expect(page).toHaveURL(/\/inbox\/\d+$/, FIRST_LOAD)
+  await expect(page.getByText('Chat started')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sadia Afrin' })).toBeVisible(FIRST_LOAD)
+  await expect(page.getByTestId('thread').locator('[data-testid="bubble"][data-direction="out"]')).toContainText('Bhabaghure Holidays theke bolchi.')
+  await expect(page.getByRole('button', { name: 'Let it go' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Conversations' }).getByRole('listitem').first()).toContainText('Sadia Afrin', FIRST_LOAD)
+
+  // The same number, written another way, opens that chat instead of a second one.
+  await page.getByRole('button', { name: '+ New chat' }).click()
+  await dialog.getByLabel('WhatsApp number').fill(`+88 ${typed.slice(0, 5)}-${typed.slice(5)}`)
+  await dialog.getByRole('button', { name: 'Start chat', exact: true }).click()
+  await expect(page.getByText('This number already has a chat: opened it')).toBeVisible(FIRST_LOAD)
+  await expect(page.getByRole('button', { name: /Sadia Afrin/ })).toHaveCount(1)
+
+  // A foreign number without its country code can't be told from a typo.
+  await page.getByRole('button', { name: '+ New chat' }).click()
+  await dialog.getByLabel('WhatsApp number').fill('9812345678')
+  await dialog.getByRole('button', { name: 'Start chat', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Enter a WhatsApp number', FIRST_LOAD)
+})
+
 test('an admin manages quick replies, and a Page token Facebook refuses is not saved', async ({ page }) => {
   await signIn(page, 'admin')
   await page.goto('/inbox/settings')

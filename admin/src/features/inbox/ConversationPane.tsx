@@ -306,6 +306,8 @@ function Composer({ conversation }: { conversation: ConversationDetail }) {
           onChange={(event) => setBody(event.target.value)}
           onKeyDown={onKeyDown}
           rows={Math.min(6, Math.max(1, body.split('\n').length))}
+          // A chat just started from "New chat" waits for its first message.
+          autoFocus={conversation.messages.length === 0}
           placeholder={t('inbox.typeReply')}
           aria-label={t('inbox.typeReply')}
           className={`${controlClass(!!fieldError)} min-w-0 flex-1 resize-none rounded-18 py-2.5`}

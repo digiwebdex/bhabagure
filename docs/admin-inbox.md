@@ -152,3 +152,33 @@ messages are held (above) it now goes from the main number through the inbox's W
 
 A code is a credential: WaSender echoes each send back as the phone's own message, and that echo is kept out of the
 Inbox (`WhatsAppInbox::keepOut`). It still shows in the WhatsApp Business app on the office phone.
+
+## 8. Starting a WhatsApp chat from the inbox (client, 2026-10-01)
+
+Agents start a chat with a customer who hasn't written first, by number. **+ New chat** in the Inbox header (anyone
+with `inbox.reply`) opens a dialog: the number, an optional name and an optional first message. Searching the list for
+a number that has no chat offers **Start a chat with +880…**, which opens the same dialog with the number filled in.
+
+- **The number**: a Bangladeshi mobile in any form (01711-000000, +880 1711 000000, Bangla digits), or another
+  country's with its `+` or `00` code (+977 981-2345678). A foreign number without its code is refused: it can't be told
+  from a typo. `Phone::normalizeWhatsApp`; the dialog mirrors it in `admin/src/features/inbox/phone.ts`.
+- **A number that has a chat** opens that chat — found by the number, also a chat first filed under WhatsApp's privacy
+  id. A closed one is reopened. No second chat, nothing asked of WaSender, nothing counted.
+- **A new number** is first checked with WaSender (`GET /on-whatsapp/+8801…`, answering `{"data":{"exists":…}}`,
+  checked against the live API). "Not on WhatsApp" refuses it with that message. When WaSender can't answer, the chat is
+  started anyway; a send that WhatsApp then refuses shows on the message as "Not sent: this number isn't on WhatsApp".
+- **The new chat** belongs to whoever started it (assigned, and `started_by_staff_id`), carries the name they gave, is
+  linked to the customer with that number if there is one, and sits at the top of the open list. The first message, if
+  written, goes like any reply (paced, with ticks). Without one the chat opens empty with the reply box ready. When the
+  customer answers, their WhatsApp profile name doesn't replace the name staff gave (`InboxRecorder`).
+- **A daily limit for the office**: 30 new chats a Dhaka day (`INBOX_NEW_CHATS_PER_DAY`), whoever starts them, because
+  WhatsApp restricts a number that messages many people who haven't saved it, and WaSender isn't official WhatsApp.
+  Chats customers start, and replies, are not limited. The day's 31st is refused with a message saying so.
+- **Messenger** chats can't be started: Facebook lets a Page message only people who wrote to it first, and gives no
+  phone numbers. WaSender has no 24-hour window or message templates, so none apply to WhatsApp here.
+- Every new chat is in the audit log (`inbox.chat_started`). `POST /admin/inbox/conversations` (`phone`, `name`, `body`)
+  answers 201 for a new chat and 200 for one that was there, with `existing`; it shares the replies' rate limit.
+
+Tests: `InboxTest` (a new number, the list, the customer's answer and the name; an existing and a privacy-id chat; a
+wrong number, "not on WhatsApp", another country's number, the daily limit and the next day, permissions, the inbox off)
+and `admin/e2e/inbox.spec.ts` (from the search, the same number again, a number without its code).

@@ -11,12 +11,13 @@ use App\Models\Customer;
 use App\Models\Staff;
 use App\Services\AuditLogger;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
-/** What staff do in the inbox (docs/admin-inbox.md): reply, read, assign, close, and tie a chat to a customer. */
+/** What staff do in the inbox (docs/admin-inbox.md): start a chat, reply, read, assign, close, and tie a chat to a customer. */
 final class InboxDesk
 {
     public function __construct(private readonly InboxRecorder $recorder, private readonly AuditLogger $audit) {}
@@ -85,12 +86,98 @@ final class InboxDesk
      */
     public function replyToNumber(string $phone, ?Customer $customer, string $body, Staff $staff): ConversationMessage
     {
-        $conversation = Conversation::query()->firstOrCreate(
+        $conversation = self::chatWith($phone) ?? Conversation::query()->firstOrCreate(
             ['channel' => Conversation::WHATSAPP, 'external_id' => $phone],
             ['phone' => $phone, 'jid' => $phone.'@s.whatsapp.net', 'name' => $customer?->name, 'customer_id' => $customer?->id, 'status' => Conversation::OPEN, 'unread_count' => 0],
         );
 
         return $this->reply($conversation, $staff, $body, null);
+    }
+
+    /**
+     * A WhatsApp chat staff start with a number from the inbox (docs/admin-inbox.md §8). The chat already there for that
+     * number opens instead of a second one, reopened if it was closed. A new one needs the number on WhatsApp (as far as
+     * WaSender can tell) and a place in the office's daily limit; it belongs to whoever started it and carries the name
+     * they gave. The first message, when written, goes like any reply.
+     *
+     * @param  string  $phone  digits with the country code (Phone::normalizeWhatsApp)
+     * @return array{conversation: Conversation, existing: bool}
+     *
+     * @throws ValidationException
+     */
+    public function startChat(string $phone, ?string $name, ?string $body, Staff $staff): array
+    {
+        if (! WhatsAppInbox::enabled()) {
+            throw ValidationException::withMessages(['phone' => [__('inbox.whatsapp_off')]]);
+        }
+        $name = $name === null || trim($name) === '' ? null : mb_substr(trim($name), 0, 120);
+
+        $conversation = self::chatWith($phone);
+        $existing = $conversation !== null;
+        if (! $existing) {
+            // Asked before taking the lock: WaSender can take seconds to answer. Unknown (null) is tried anyway, and a
+            // send to a number that isn't on WhatsApp then shows as failed with that reason.
+            $this->refuseOverDailyLimit();
+            if (WhatsAppInbox::gateway()?->onWhatsApp($phone) === false) {
+                throw ValidationException::withMessages(['phone' => [__('inbox.not_on_whatsapp')]]);
+            }
+            // One at a time, so two people can't both take the day's last chat or start two chats with one number.
+            $conversation = Cache::lock('inbox:start-chat', 15)->block(10, function () use ($phone, $name, $staff, &$existing) {
+                $found = self::chatWith($phone);
+                if ($found !== null) {
+                    $existing = true;
+
+                    return $found;
+                }
+                $this->refuseOverDailyLimit();
+                $conversation = Conversation::query()->create([
+                    'channel' => Conversation::WHATSAPP,
+                    'external_id' => $phone,
+                    'phone' => $phone,
+                    'jid' => $phone.'@s.whatsapp.net',
+                    'name' => $name,
+                    'customer_id' => Customer::query()->where('phone', $phone)->value('id'),
+                    'assigned_staff_id' => $staff->id,
+                    'started_by_staff_id' => $staff->id,
+                    'status' => Conversation::OPEN,
+                    'unread_count' => 0,
+                    // At the top of the list before its first message.
+                    'last_message_at' => now(),
+                ]);
+                $this->audit->record('inbox.chat_started', $staff, $conversation);
+
+                return $conversation;
+            });
+        }
+        if ($existing && $conversation->status === Conversation::CLOSED) {
+            $this->setStatus($conversation, Conversation::OPEN, $staff);
+        }
+        if ($existing && $conversation->name === null && $name !== null) {
+            $conversation->forceFill(['name' => $name])->save();
+        }
+        if ($body !== null && trim($body) !== '') {
+            $this->reply($conversation, $staff, $body, null);
+        }
+
+        return ['conversation' => $conversation->refresh(), 'existing' => $existing];
+    }
+
+    /** The office's new chats today (Dhaka), against the limit that keeps the main number clear of WhatsApp's spam rules. */
+    private function refuseOverDailyLimit(): void
+    {
+        $limit = (int) config('bhabaghure.notifications.inbox.new_chats_per_day');
+        $started = Conversation::query()->whereNotNull('started_by_staff_id')->where('created_at', '>=', now('Asia/Dhaka')->startOfDay()->utc())->count();
+        if ($started >= $limit) {
+            throw ValidationException::withMessages(['phone' => [__('inbox.new_chat_limit', ['limit' => $limit])]]);
+        }
+    }
+
+    /** The WhatsApp chat with a number: keyed on it, or started under WhatsApp's privacy id and matched to it since. */
+    private static function chatWith(string $phone): ?Conversation
+    {
+        return Conversation::query()->where('channel', Conversation::WHATSAPP)
+            ->where(fn ($query) => $query->where('external_id', $phone)->orWhere('phone', $phone))
+            ->orderByRaw('external_id = ? desc', [$phone])->orderByDesc('last_message_at')->first();
     }
 
     public function markRead(Conversation $conversation): void

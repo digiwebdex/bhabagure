@@ -84,7 +84,8 @@ final class InboxRecorder
                 $conversation->{$field} = $who[$field];
             }
         }
-        if (! empty($who['name'])) {
+        // WhatsApp's profile name, except over the name staff gave a chat they started (docs/admin-inbox.md §8).
+        if (! empty($who['name']) && ($conversation->started_by_staff_id === null || $conversation->name === null)) {
             $conversation->name = mb_substr(trim($who['name']), 0, 120);
         }
         if ($conversation->customer_id === null && $conversation->phone !== null) {

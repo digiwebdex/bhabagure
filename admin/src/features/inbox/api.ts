@@ -126,6 +126,21 @@ export const useReply = (id: number) =>
     return upload<Data<InboxMessage>>(`admin/inbox/conversations/${id}/messages`, form, () => undefined)
   })
 
+/** A started (or reopened) chat: `existing` when the number had a chat already. */
+export type StartedChat = ConversationRow & { existing: boolean }
+
+/** A WhatsApp chat with a number staff type in (docs/admin-inbox.md §8): the one already there, or a new one. */
+export function useStartChat() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (chat: { phone: string; name: string; body: string }) => api.post<Data<StartedChat>>('admin/inbox/conversations', chat),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['inbox', 'list'] })
+      void client.invalidateQueries({ queryKey: ['nav-counts'] })
+    },
+  })
+}
+
 export const useMarkRead = (id: number) => useInboxMutation(id, () => api.post(`admin/inbox/conversations/${id}/read`))
 export const useAssign = (id: number) => useInboxMutation(id, (staffId: number | null) => api.post(`admin/inbox/conversations/${id}/assign`, { staff_id: staffId }))
 export const useSetStatus = (id: number) => useInboxMutation(id, (action: 'close' | 'reopen') => api.post(`admin/inbox/conversations/${id}/${action}`))
