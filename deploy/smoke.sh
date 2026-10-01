@@ -53,8 +53,16 @@ check "TLS verified (api)" 0 "$(curl -s -o /dev/null -w '%{ssl_verify_result}' "
 check "TLS verified (admin)" 0 "$(curl -s -o /dev/null -w '%{ssl_verify_result}' https://admin.bhabaghure.com.bd/)"
 
 echo "── Wallet stays closed"
-check "wallet from outside the allow-list" '403|401' "$(get wallet https://wallet.bhabaghure.com.bd/)"
-check "wallet API from outside the allow-list" '403|401' "$(get wallet_api https://wallet.bhabaghure.com.bd/api/v1/wallet/auth/me)"
+# On a machine on the wallet's allow-list the page itself opens (its sign-in is the lock there, since basic auth went on
+# 2026-10-02): then the outside view can't be seen from here, and deploy.sh checks it from the server, never on the list.
+wallet_code=$(get wallet https://wallet.bhabaghure.com.bd/)
+if [[ $wallet_code == 200 ]]; then
+  check "wallet sign-in page (this machine is on its allow-list)" 200 "$wallet_code"
+  note "This machine is on the wallet's allow-list, so 'closed to outsiders' is checked by deploy.sh from the server."
+else
+  check "wallet from outside the allow-list" 403 "$wallet_code"
+fi
+check "wallet API without a session" '403|401' "$(get wallet_api https://wallet.bhabaghure.com.bd/api/v1/wallet/auth/me)"
 check "wallet API absent on the API host" 404 "$(get wallet_on_api "$API/api/v1/wallet/auth/me" -H 'X-Wallet-Request: 1')"
 
 echo "── Public API (live CMS data)"
