@@ -183,6 +183,23 @@ class InvoicePdfTest extends TestCase
         // A further page says whose it is and how many there are; the signatures close the last page.
         $this->assertPdfContains("{$invoice->invoice_number} · Page 2 of {$pdf['pages']}", array_column(array_filter($pdf['texts'], fn (array $text) => $text['page'] === 2), 'str'));
         $this->assertSame($pdf['pages'], $this->find($pdf, 'Customer Signature')['page']);
+
+        // At its foot, and only there (client, 2026-10-01): the thank-you, the block's last line, ends at the bottom of the
+        // text area (297 − 12 mm), and the signatures sit just above it — not straight after the last of the notes.
+        $last = collect($pdf['texts'])->where('page', $pdf['pages'])->reject(fn (array $text) => str_contains($text['str'], ' · Page '));
+        $this->assertEqualsWithDelta(283.0, $last->max('baselineMm'), 3.0, 'the thank-you at the foot of the last page');
+        $this->assertGreaterThan(240.0, $this->find($pdf, 'Customer Signature')['baselineMm']);
+        $this->assertSame(1, substr_count(implode('', array_column($pdf['texts'], 'str')), 'Customer Signature'), 'one signature block, on the last page');
+    }
+
+    #[Test]
+    public function a_one_page_invoice_keeps_its_signatures_at_the_foot(): void
+    {
+        $pdf = $this->inspect($this->renderPdf(true));
+
+        $this->assertSame(1, $pdf['pages']);
+        $this->assertGreaterThan(240.0, $this->find($pdf, 'Customer Signature')['baselineMm']);
+        $this->assertEqualsWithDelta(288.0, max(array_column($pdf['texts'], 'baselineMm')), 3.0, 'the thank-you at the foot (297 − 7 mm)');
     }
 
     private function renderPdf(bool $header, ?Invoice $invoice = null): string

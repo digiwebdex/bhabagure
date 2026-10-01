@@ -22,9 +22,10 @@ final class InvoiceView
 {
     /**
      * 5: English only (2026-09-19); 6: a smaller logo (2026-09-23); 7: notes of any length run on to further pages, and a
-     * line's detail prints under it (2026-10-01). A stored PDF from before is made again.
+     * line's detail prints under it (2026-10-01); 8: the signatures at the foot of the last page (2026-10-01). A stored
+     * PDF from before is made again.
      */
-    public const TEMPLATE_VERSION = '7';
+    public const TEMPLATE_VERSION = '8';
 
     /**
      * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on

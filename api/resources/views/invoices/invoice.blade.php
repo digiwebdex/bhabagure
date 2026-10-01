@@ -138,9 +138,10 @@
   .how-to-pay { display: flex; flex-direction: column; gap: 0.6mm; border: 0.25mm solid var(--line); border-radius: 2mm; padding: 2mm 3mm; break-inside: avoid; }
   .how-to-pay span.t { font-size: {{ $a5 ? '7pt' : '8.8pt' }}; line-height: 1.45; overflow-wrap: anywhere; }
 
-  {{-- On a one-page document both signatures sit at its foot; on a longer one they follow the last of the notes. The
-       terms, the signatures and the thank-you move to the next page together rather than leave the signatures there
-       on their own; a footer longer than a page still runs on, its signatures kept with the thank-you. --}}
+  {{-- The terms, both signatures and the thank-you sit at the foot of the last page, and only there (client,
+       2026-10-01). On one page the auto margin puts them there; on more, the PDF renderer moves them down to the foot
+       its data-last-page-foot-mm names (packages/pdf/src/render.mjs). They go to the next page together rather than
+       leave the signatures there on their own; a footer longer than a page still runs on, signatures with thank-you. --}}
   footer { margin-top: auto; padding-top: {{ $a5 ? '4mm' : '6mm' }}; display: flex; flex-direction: column; gap: 2.5mm; break-inside: avoid; }
   footer .terms { display: flex; flex-direction: column; gap: 0.6mm; }
   footer .terms span.t { font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; orphans: 2; widows: 2; }
@@ -288,7 +289,8 @@
     </section>
   @endif
 
-  <footer>
+  {{-- The bottom of the text area on a page after the first, for the PDF renderer (see the footer's styles). --}}
+  <footer data-last-page-foot-mm="{{ ($a5 ? 210 : 297) - $nextBottomMm }}">
     <div class="terms">
       @foreach ($terms as $term)
         <span class="t">· {{ $term }}</span>

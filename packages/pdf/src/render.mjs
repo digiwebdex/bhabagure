@@ -67,9 +67,60 @@ export async function renderPdf(inputHtml, outputPdf) {
     await page.route(/^https?:/, (route) => route.abort());
     await page.goto(pathToFileURL(resolve(prepared)).href, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
-    await page.pdf({ path: outputPdf, preferCSSPageSize: true, printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const options = { preferCSSPageSize: true, printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } };
+    writeFileSync(outputPdf, await atLastPageFoot(page, await page.pdf(options), options));
   } finally {
     await browser.close();
+  }
+}
+
+/** Below a line's baseline: its descent and half its leading, with a little to spare. */
+const BASELINE_TO_BOTTOM_MM = 2;
+
+/**
+ * An invoice's or quotation's closing block — the terms, both signature lines and the thank-you — sits at the foot of the
+ * last page (client, 2026-10-01; docs/phase-9-accounts.md §5). On one page the print view's own layout puts it there.
+ * On more, it follows straight after the last of the content, so it is moved down by what is left of that page and the
+ * document printed again; never at the cost of another page. The block says where the foot is:
+ * `data-last-page-foot-mm`, the bottom of the text area of a page after the first, in mm from the top of the paper.
+ */
+async function atLastPageFoot(page, pdf, options) {
+  const footMm = await page.evaluate(() => Number(document.querySelector('[data-last-page-foot-mm]')?.getAttribute('data-last-page-foot-mm') ?? 0));
+  if (!(footMm > 0)) return pdf;
+  const before = await lastPageText(pdf, footMm);
+  if (before.pages < 2 || before.lowestMm === null) return pdf;
+
+  // Down by what is left under the block's last line; a little less if that turns out to need another page.
+  for (const spare of [0, 3]) {
+    const room = footMm - before.lowestMm - BASELINE_TO_BOTTOM_MM - spare;
+    if (room <= 1) return pdf;
+    await page.evaluate((mm) => {
+      document.querySelector('[data-last-page-foot-mm]').style.marginTop = `${mm}mm`;
+    }, room);
+    const moved = await page.pdf(options);
+    if ((await lastPageText(moved, footMm)).pages === before.pages) return moved;
+  }
+  return pdf;
+}
+
+const PT_TO_MM = 25.4 / 72;
+
+/** The page count, and the baseline of the lowest line of text on the last page above `footMm` (mm from the top). */
+async function lastPageText(pdf, footMm) {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const task = getDocument({ data: new Uint8Array(pdf), useSystemFonts: false, isEvalSupported: false });
+  try {
+    const doc = await task.promise;
+    const last = await doc.getPage(doc.numPages);
+    const height = last.getViewport({ scale: 1 }).height;
+    const baselines = (await last.getTextContent()).items
+      .filter((item) => 'str' in item && item.str.trim() !== '')
+      .map((item) => (height - item.transform[5]) * PT_TO_MM)
+      // Not the page count in the bottom margin.
+      .filter((mm) => mm <= footMm);
+    return { pages: doc.numPages, lowestMm: baselines.length > 0 ? Math.max(...baselines) : null };
+  } finally {
+    await task.destroy();
   }
 }
 

@@ -77,8 +77,14 @@ An invoice staff write themselves, beside the ones a booking issues.
   under the figures and runs on to as many pages as it needs: whole lines only, never a lone line or heading at the
   foot of a page, and long links wrapped at the margin. Every page keeps clear of the paper's edge. From page 2 the foot
   says "INV-0001 · Page 2 of 3", and with the header off the pad's letterhead area stays blank on every sheet. Table rows
-  are never split and the column headings repeat. The terms, signatures and thank-you move to the last page together,
-  and a voided document is marked VOID on every page. A one-page invoice prints exactly as before.
+  are never split and the column headings repeat. A voided document is marked VOID on every page. A one-page invoice
+  prints exactly as before.
+- **Signatures at the foot of the last page (client, 2026-10-01).** The closing block — the terms, both signature lines
+  and the thank-you — appears once, at the bottom of the last page, however little of the notes reached that page;
+  earlier pages carry none of it. On one page the print view's layout puts it there. On more, the PDF renderer
+  (`packages/pdf/src/render.mjs`) finds the last line on the last page, moves the block down by the room left under
+  it, and prints again — and keeps the first print if moving it would ever need another page. The PDF only: a browser's
+  own Print of the invoice web page keeps the block straight after the notes.
 - **Every invoice belongs to someone.** The invoices table insists on a customer or a B2B client, so what is owed can
   always be traced; a name and number typed into the builder find or make that customer record.
 - **Payment** on a row takes money against the invoice through the same endpoint the Payments screen uses — one payment,
