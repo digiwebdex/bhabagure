@@ -76,7 +76,7 @@ and authorised signature lines. It is the shared view, so booking invoices and q
 | `customer.bhabaghure.com.bd` | Customer portal | the same Next.js server, chosen by host name |
 | `admin.bhabaghure.com.bd` | Staff admin | static files, `admin/dist` |
 | `api.bhabaghure.com.bd` | Laravel API for all of the above | PHP-FPM, its own master (`bhabaghure-php`); also on 127.0.0.1:3341, loopback only |
-| `wallet.bhabaghure.com.bd` | Super admin wallet | static `wallet/dist` and the wallet API, behind the office IP allow-list and basic auth |
+| `wallet.bhabaghure.com.bd` | Super admin wallet | static `wallet/dist` and the wallet API, behind the IP allow-list and its own sign-in |
 
 - **Server:** the shared VPS, `root@187.77.144.38`. Other clients' sites run on it, so follow the rules in §3.
 - **Code:** `/var/www/Bhabagure`, a git checkout of `main` from the public repository `digiwebdex/bhabagure`.
@@ -96,7 +96,6 @@ and authorised signature lines. It is the shared view, so booking invoices and q
 | `WALLET_KEY` | `api/.env` | **Yes, offline, held by the super admin.** It encrypts the wallet's authenticator secret and evidence files. |
 | `DB_PASSWORD`, `WALLET_DB_PASSWORD`, `JWT_SECRET`, `REVALIDATE_SECRET` | `api/.env` (`REVALIDATE_SECRET` also in `web/.env.production.local`) | No. They were generated on the server and can be regenerated. |
 | SendGrid, SSLCommerz, WaSender, bulksmsbd, AWS keys | `api/.env`, once set | The providers' dashboards are the source; rotate there. |
-| Wallet basic-auth password | `/etc/nginx/bhabaghure-wallet/htpasswd` | The super admin sets it themselves. |
 | Backup decryption key | not on this server | The server admin holds it. |
 | Cloudflare, domain registrar, SSH root | the client and the server admin | Change the root password that was shared during the build. |
 
@@ -131,8 +130,9 @@ Built and deployed, but switched off until the account or decision exists:
       (no channel was on). Claim it in Admin → Bookings and call the customer.
 - [ ] **Passport OCR** (optional): an AWS IAM user limited to `textract:DetectDocumentText` →
       `PASSPORT_OCR_PROVIDER=textract`. Without it, customers type passport details by hand.
-- [ ] **Wallet front door:** `/etc/nginx/bhabaghure-wallet/allow.conf` with the office's public address, and the
-      `htpasswd` file; then `deploy/deploy.sh --install-nginx` (§12). Until then the wallet answers 403 to everyone.
+- [ ] **Wallet front door:** `/etc/nginx/bhabaghure-wallet/allow*.conf` with the office's public address; then
+      `deploy/deploy.sh --install-nginx` (§12). Until then the wallet answers 403 to everyone. (2026-10-02: the
+      developer's provider addresses are in `allow-added-2026-10-02.conf`; the office's still to add.)
 - [ ] **Attendance:** install the agent on the office PC and run `agent.exe test` against the device
       (`agent/README.md`).
 - [x] **Uploaded files in the nightly backup:** added to the backup manifest on 2026-09-15, approved (§8.2).
@@ -730,11 +730,11 @@ The super admin wallet keeps its own books, apart from the company's, and MySQL 
 - **Opening the wallet** (once, as root):
   1. `mkdir -p /etc/nginx/bhabaghure-wallet` and put one `allow <office public IP>;` line per office address in
      `/etc/nginx/bhabaghure-wallet/allow.conf`. The addresses stay out of the public repository.
-  2. Basic auth, typed by you so the password passes through nobody else:
-     `printf 'owner:%s\n' "$(openssl passwd -apr1)" > /etc/nginx/bhabaghure-wallet/htpasswd && chown root:www-data /etc/nginx/bhabaghure-wallet/htpasswd && chmod 0640 /etc/nginx/bhabaghure-wallet/htpasswd`
-  3. `/var/www/Bhabagure/deploy/deploy.sh --install-nginx`: it runs `nginx -t` with the new files and reloads nginx (never a restart).
-  4. From the office: https://wallet.bhabaghure.com.bd → basic auth → the super admin's email and password → scan the
-     QR code with an authenticator app → enter the first code. That enrolls it.
+  2. `/var/www/Bhabagure/deploy/deploy.sh --install-nginx`: it runs `nginx -t` with the new files and reloads nginx (never a restart).
+  3. From the office: https://wallet.bhabaghure.com.bd → the super admin's email and password → scan the QR code with
+     an authenticator app → enter the first code. That enrolls it. A forgotten password is reset with the page's
+     "Forgot your password?" link, which is the admin panel's own reset (the wallet uses the same staff password).
+     (Until 2026-10-02 a browser basic-auth box came first; the owner had it taken out because it can't offer a reset.)
 - **Lost phone:** `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan wallet:reset-authenticator <email>`,
   then sign in again to enroll a new one.
 

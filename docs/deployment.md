@@ -1,7 +1,7 @@
 # Deployment notes
 
 **Status (2026-09-15): live on every host** — the website, `customer.`, `admin.`, `api.` and `www.`; `wallet.` answers
-403 until its allow-list and basic auth exist (§7.6). Deployed with `deploy.sh` (§7.2). Day-to-day operation (settings,
+403 until its allow-list exists (§7.6). Deployed with `deploy.sh` (§7.2). Day-to-day operation (settings,
 units, schedules, rollback, backups, the WhatsApp ban runbook) is `docs/handover.md`. Certificate: Let's Encrypt by
 HTTP-01, re-issued on 2026-09-14 18:09 UTC to cover all six hosts including `api.`; the DNS-01 wildcard replaces it
 once a Cloudflare token exists (§7.5). DNS hosts and the shared-server rules are in
@@ -209,7 +209,7 @@ Without the worker nothing is sent: the admin shows the messages as waiting, and
 | `www.` | 301 → apex |
 | `admin.` | nginx, static `admin/dist` |
 | `api.` | nginx → `/run/bhabaghure-php/php-fpm.sock`; also on **127.0.0.1:3341** (loopback only) for the website's server-side content fetches (`API_INTERNAL_URL`), so they never leave the box |
-| `wallet.` | 404 until Phase 7; then an IP allow-list and basic auth in front of its own sign-in |
+| `wallet.` | 404 until Phase 7; then an IP allow-list in front of its own sign-in |
 | anything else | `000-catch-all.conf`: 444 on :80, TLS handshake refused on :443 |
 
 All hosts are behind Cloudflare (**SSL mode Full (strict)**); every block sets the real visitor IP from
@@ -323,23 +323,21 @@ passed.
 
 ### 7.6 Super admin wallet (Phase 7 step 5)
 
-The wallet (docs/phase-7-hr-attendance-bonus-wallet.md §8) is served on `wallet.bhabaghure.com.bd` behind three doors:
-the office IP allow-list, basic auth, then its own sign-in (the super admin's password and an authenticator code).
-`deploy.sh` builds `wallet/dist` and runs the wallet migrations once the database exists. Four one-time steps, in
-order, each run by a person on the server:
+The wallet (docs/phase-7-hr-attendance-bonus-wallet.md §8) is served on `wallet.bhabaghure.com.bd` behind two doors:
+the IP allow-list, then its own sign-in (the super admin's password and an authenticator code). Until 2026-10-02 a
+browser basic-auth box stood between them; the owner had it taken out, since it can't offer "Forgot password?" and the
+wallet's own page does. `deploy.sh` builds `wallet/dist` and runs the wallet migrations once the database exists. Three
+one-time steps, in order, each run by a person on the server:
 
 1. **Database and user** (approved 2026-09-15): `/var/www/Bhabagure/deploy/wallet-database.sh`. It creates
    `bhabaghure_wallet` and `bhabaghure_wallet@127.0.0.1` with rights on that database only, checks that the company user
    has no grant that reaches it, and writes `WALLET_DB_*`, `WALLET_KEY`, `WALLET_HOST` and `WALLET_COOKIE_SECURE` into
    `api/.env` without printing the password or key. Then `deploy.sh`.
-2. **The allow-list.** Put one `allow <address>;` line per office public address in
-   `/etc/nginx/bhabaghure-wallet/allow.conf` (0644, root). The addresses stay out of this public repository. Until the
-   file exists every request gets 403.
-3. **Basic auth.** Run it yourself, so the password never passes through anyone else's terminal:
-   `printf 'owner:%s\n' "$(openssl passwd -apr1)" > /etc/nginx/bhabaghure-wallet/htpasswd`, then
-   `chown root:www-data /etc/nginx/bhabaghure-wallet/htpasswd && chmod 0640 /etc/nginx/bhabaghure-wallet/htpasswd`.
-4. **nginx:** `deploy.sh --install-nginx`. It runs `nginx -t` with the new files, then reloads nginx (never restarts it);
-   the nginx file itself is already installed, so the reload is what makes the allow-list and basic auth take effect.
+2. **The allow-list.** Put one `allow <address>;` line per office public address in a file matching
+   `/etc/nginx/bhabaghure-wallet/allow*.conf` (0644, root). The addresses stay out of this public repository. Until such
+   a file exists every request gets 403.
+3. **nginx:** `deploy.sh --install-nginx`. It runs `nginx -t` with the new files, then reloads nginx (never restarts it);
+   the nginx file itself is already installed, so the reload is what makes the allow-list take effect.
    Before 2026-09-15 this mode skipped the reload when the file was unchanged.
 
 At the first wallet sign-in the page shows a QR code for an authenticator app; the first accepted code enrolls it. For a
@@ -349,4 +347,4 @@ again to enroll a new one.
 | Change | Why | Undo |
 |---|---|---|
 | MySQL database `bhabaghure_wallet`, user `bhabaghure_wallet@127.0.0.1` (wallet-database.sh) | wallet isolation enforced by MySQL | `DROP DATABASE bhabaghure_wallet; DROP USER 'bhabaghure_wallet'@'127.0.0.1';` and remove the `WALLET_*` lines |
-| `/etc/nginx/bhabaghure-wallet/allow.conf` and `htpasswd` | the front door | remove the directory; the wallet then answers 403 to everyone |
+| `/etc/nginx/bhabaghure-wallet/allow*.conf` | the front door | remove the directory; the wallet then answers 403 to everyone |

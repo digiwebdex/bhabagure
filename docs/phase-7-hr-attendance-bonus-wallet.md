@@ -2,8 +2,8 @@
 
 **Status (2026-09-15): steps 1–5 built and live, with automatic commission from the client's rules (§12 step 4). Waiting:
 - the My commission layout check, because the design copy here is still the 2026-09-13 one;
-- the wallet, which opens once its allow-list and basic auth are in place on the server (§12, docs/deployment.md
-  §7.6). Its database exists.
+- the wallet, which opens once its allow-list is in place on the server (§12, docs/deployment.md §7.6). Its database
+  exists.
 
 Operations: docs/handover.md.**
 
@@ -849,7 +849,10 @@ come from the client's message, and the layout check against the design is still
 - the database and its own user are created by script, on the VPS and locally, with the password written into
   `api/.env` unprinted;
 - sign-in is the super admin's staff login plus an authenticator app code;
-- the front door is an office IP allow-list plus basic auth.
+- the front door is an office IP allow-list plus basic auth. **Changed 2026-10-02 (the owner):** basic auth taken out —
+  the browser's box can't offer "Forgot password?" — so the wallet opens on its own sign-in page, redesigned with the
+  two locks, show/hide password, "Forgot your password?" (the admin panel's reset), a step bar, a phone-friendly
+  authenticator setup and the session notes. The allow-list, the password and the authenticator code still guard it.
 
 **Isolation:**
 - **MySQL:** `bhabaghure_wallet` and `bhabaghure_wallet@127.0.0.1` have rights on each other only. The company user has
@@ -893,7 +896,7 @@ loading states rather than empty lists.
 **Deploy:** `deploy.sh` builds `wallet/dist` and runs the wallet migrations when its database is configured. The health
 check fails the deploy if the wallet answers 200 from the server itself (outside the allow-list), or if its API answers
 on the API host. The nginx wallet block is: Cloudflare real IP, `include /etc/nginx/bhabaghure-wallet/allow*.conf; deny
-all;`, basic auth, the static app with a strict CSP, and `/api/v1/wallet/` to PHP-FPM. The one-time server steps are in
+all;`, the static app with a strict CSP, and `/api/v1/wallet/` to PHP-FPM (basic auth removed 2026-10-02). The one-time server steps are in
 docs/deployment.md §7.6.
 
 **Tests:**

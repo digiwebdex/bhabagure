@@ -29,11 +29,21 @@ let secret = ''
 async function signIn(page: Page, email: string) {
   await page.goto('/')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password())
+  await page.getByLabel('Password', { exact: true }).fill(password())
   await page.getByRole('button', { name: 'Continue' }).click()
 }
 
 test('the super admin sets up an authenticator app, opens the wallet, and an admin is refused', async ({ page }) => {
+  // The sign-in page (2026-10-02): "Forgot password?" goes to the admin panel's reset, and the password can be shown.
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Reset it on the admin panel' })).toHaveAttribute('href', /\/forgot-password$/)
+  const passwordBox = page.getByLabel('Password', { exact: true })
+  await passwordBox.fill('typed')
+  await page.getByRole('button', { name: 'Show password' }).click()
+  await expect(passwordBox).toHaveAttribute('type', 'text')
+  await page.getByRole('button', { name: 'Hide password' }).click()
+  await expect(passwordBox).toHaveAttribute('type', 'password')
+
   await signIn(page, 'admin@e2e.test')
   await expect(page.getByRole('alert')).toContainText('That email and password don’t open the wallet.', { timeout: 15_000 })
 
@@ -103,5 +113,6 @@ test('cash in with a saved reference, a deal with its advance and a payment, and
   await expect(history.getByText('Reversed', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Sign out' }).click()
-  await expect(page.getByRole('heading', { name: 'Open the wallet' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Open the wallet', exact: true })).toBeVisible()
+  await expect(page.getByText('Signed out of the wallet.')).toBeVisible()
 })

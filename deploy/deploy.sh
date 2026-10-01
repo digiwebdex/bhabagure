@@ -79,7 +79,7 @@ install_nginx() {
   say "Install $NGINX_DST"
   nginx -t -q 2>/dev/null || die "nginx -t fails BEFORE any change (another site's config?). Not touching nginx."
   if [[ -f $NGINX_DST ]] && cmp -s "$NGINX_SRC" "$NGINX_DST" && [[ -L $NGINX_LINK ]]; then
-    # Still reload: the files it includes may have changed (the wallet's allow-list and basic auth, docs/deployment.md §7.6).
+    # Still reload: the files it includes may have changed (the wallet's allow-list, docs/deployment.md §7.6).
     # nginx -t passed just above, with those files.
     systemctl reload nginx
     note "already installed and identical; nginx -t passed and nginx was reloaded (not restarted) for the files it includes."
@@ -368,7 +368,7 @@ health() {
     [[ $code == 200 ]] || die "the API health check failed: tail $API/storage/logs/laravel-*.log; journalctl -u bhabaghure-php -n 50"
     # The wallet is closed to everyone outside its allow-list — this server included — and absent from the API host.
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "wallet.$SITE_HOST:443:127.0.0.1" "https://wallet.$SITE_HOST/") || true
-    note "wallet from this server               HTTP $code (403 or 401 expected: allow-list, then basic auth)"
+    note "wallet from this server               HTTP $code (403 expected: this server isn't on the allow-list)"
     [[ $code == 200 ]] && die "the wallet answered 200 to a request from outside its allow-list. Check /etc/nginx/bhabaghure-wallet/ now."
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/api/v1/wallet/auth/me") || true
     note "wallet API on the API host            HTTP $code (404 expected)"

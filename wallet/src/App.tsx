@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { SIGNED_OUT_EVENT } from './lib/api'
 import { useMe } from './lib/queries'
-import { SignIn } from './SignIn'
+import { SignIn, type SignInNotice } from './SignIn'
 import { WalletScreen } from './WalletScreen'
 import { Pending, Shell } from './ui'
 
@@ -21,10 +21,15 @@ export default function App() {
 function Gate() {
   const client = useQueryClient()
   const me = useMe()
+  // What the sign-in says when it comes back: the person signed out, or the session ran out under them.
+  const [notice, setNotice] = useState<SignInNotice>(null)
 
   // A session that ends (idle, signed out elsewhere) returns to sign-in and forgets every figure on the page.
   useEffect(() => {
-    const onSignedOut = () => client.resetQueries()
+    const onSignedOut = () => {
+      setNotice('session_ended')
+      void client.resetQueries()
+    }
     window.addEventListener(SIGNED_OUT_EVENT, onSignedOut)
     return () => window.removeEventListener(SIGNED_OUT_EVENT, onSignedOut)
   }, [client])
@@ -35,7 +40,25 @@ function Gate() {
         <Pending />
       </Shell>
     )
-  if (me.isError || !me.data) return <SignIn onSignedIn={() => void client.invalidateQueries({ queryKey: ['me'] })} />
+  if (me.isError || !me.data)
+    return (
+      <SignIn
+        key={notice ?? 'first'}
+        notice={notice}
+        onSignedIn={() => {
+          setNotice(null)
+          void client.invalidateQueries({ queryKey: ['me'] })
+        }}
+      />
+    )
 
-  return <WalletScreen me={me.data} onSignedOut={() => client.resetQueries()} />
+  return (
+    <WalletScreen
+      me={me.data}
+      onSignedOut={() => {
+        setNotice('signed_out')
+        void client.resetQueries()
+      }}
+    />
+  )
 }
