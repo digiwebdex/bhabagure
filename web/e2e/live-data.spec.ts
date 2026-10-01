@@ -186,6 +186,53 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('the footer shows an icon for each social link in site settings, opening in a new tab, and none for a link left empty', async ({ page, request }) => {
+    const password = 'e2e-website-settings-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'web.settings@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token}`, Accept: 'application/json' };
+    const contact = (await (await request.get(`${E2E_API_URL}/api/v1/admin/settings`, { headers })).json()).data.contact;
+    const saveContact = (links: Record<string, string>) => request.put(`${E2E_API_URL}/api/v1/admin/settings/contact`, { headers, data: { value: { ...contact, ...links } } });
+    const icons = page.getByTestId('footer-social').getByRole('link');
+    const iconsOn = async (path: string) => {
+      await page.goto(path);
+      return icons.evaluateAll((links) => links.map((a) => [a.getAttribute('aria-label'), a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel')]));
+    };
+    const tab = ['_blank', 'noopener noreferrer'];
+
+    try {
+      const saved = await saveContact({
+        facebook: 'https://www.facebook.com/bhabaghureholidays',
+        instagram: 'https://www.instagram.com/bhabaghureholidays',
+        tiktok: 'https://www.tiktok.com/@bhabaghure',
+        linkedin: 'https://www.linkedin.com/company/bhabaghure',
+        youtube: '',
+      });
+      expect(saved.status()).toBe(200);
+
+      // YouTube is left empty: no icon. WhatsApp is the main number's chat.
+      await expect
+        .poll(() => iconsOn('/en'), { timeout: 20_000 })
+        .toEqual([
+          ['Facebook (opens in a new tab)', 'https://www.facebook.com/bhabaghureholidays', ...tab],
+          ['Instagram (opens in a new tab)', 'https://www.instagram.com/bhabaghureholidays', ...tab],
+          ['TikTok (opens in a new tab)', 'https://www.tiktok.com/@bhabaghure', ...tab],
+          ['LinkedIn (opens in a new tab)', 'https://www.linkedin.com/company/bhabaghure', ...tab],
+          ['WhatsApp (opens in a new tab)', `https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`, ...tab],
+        ]);
+      await expect(page.locator('footer').getByRole('list', { name: 'Follow us' })).toBeVisible();
+
+      // Emptying a link in the admin takes its icon off at once, in both languages.
+      expect((await saveContact({ facebook: 'https://www.facebook.com/bhabaghureholidays', instagram: 'https://www.instagram.com/bhabaghureholidays', tiktok: '', linkedin: '', youtube: 'https://www.youtube.com/@bhabaghure' })).status()).toBe(200);
+      await expect
+        .poll(async () => (await iconsOn('/')).map(([label]) => label), { timeout: 20_000 })
+        .toEqual(['Facebook (নতুন ট্যাবে খুলবে)', 'Instagram (নতুন ট্যাবে খুলবে)', 'YouTube (নতুন ট্যাবে খুলবে)', 'WhatsApp (নতুন ট্যাবে খুলবে)']);
+      await expect(page.locator('footer').getByRole('list', { name: 'আমাদের ফলো করুন' })).toBeVisible();
+    } finally {
+      await saveContact({});
+    }
+  });
+
   test('a visa service published in the CMS appears in the Visa section, on its own page and in the Visa tab', async ({ page, request }) => {
     const password = 'e2e-visa-editor-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'visa.editor@e2e.test'], ['employee_code' => 'E2E-VISA', 'name' => 'Visa editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

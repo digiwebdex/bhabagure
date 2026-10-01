@@ -1,11 +1,13 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 
+import { FacebookGlyph, InstagramGlyph, LinkedInGlyph, TikTokGlyph, YouTubeGlyph } from '@/components/brand/SocialGlyphs';
+import { WhatsAppGlyph } from '@/components/brand/WhatsAppGlyph';
 import { Link } from '@/i18n/navigation';
 import type { AppLocale } from '@/i18n/routing';
 import type { SiteViews } from '@/lib/content/views';
 import { formattersFor } from '@/lib/formatters';
-import { displayPhone, teamPath, telUrl } from '@/lib/links';
+import { displayPhone, teamPath, telUrl, whatsappUrl } from '@/lib/links';
 
 const LINKS = [
   ['/#packages', 'packages'],
@@ -24,10 +26,39 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
   const f = formattersFor(locale);
   // A year is an identifier: localized digits, never thousands grouping.
   const year = f.digits(String(new Date().getFullYear()));
+  // The company's social links (client, 2026-10-02), from Site settings → Contact, and WhatsApp from the main number;
+  // a link left empty shows no icon.
+  const contact = settings.contact;
+  const social = [
+    { name: 'Facebook', href: contact.facebook, Glyph: FacebookGlyph },
+    { name: 'Instagram', href: contact.instagram, Glyph: InstagramGlyph },
+    { name: 'TikTok', href: contact.tiktok, Glyph: TikTokGlyph },
+    { name: 'LinkedIn', href: contact.linkedin, Glyph: LinkedInGlyph },
+    { name: 'YouTube', href: contact.youtube, Glyph: YouTubeGlyph },
+    { name: 'WhatsApp', href: contact.whatsapp ? whatsappUrl(contact.whatsapp) : null, Glyph: WhatsAppGlyph },
+  ].filter((item): item is typeof item & { href: string } => typeof item.href === 'string' && item.href.trim() !== '');
 
   return (
     <footer className="bg-navy-abyss px-5 py-6 text-center text-13 text-white opacity-85">
       <Image src="/brand/logo-wordmark-light.png" alt={settings.brand} width={852} height={378} className="mx-auto mb-2.5 block h-logo-footer w-auto" />
+      {social.length > 0 ? (
+        <ul aria-label={t('footer.social')} className="mx-auto mb-3.5 flex list-none flex-wrap justify-center gap-2.5 p-0" data-testid="footer-social">
+          {social.map(({ name, href, Glyph }) => (
+            <li key={name}>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t('footer.socialLink', { name })}
+                title={name}
+                className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-white/8 text-white transition duration-200 ease-lift hover:-translate-y-0.5 hover:border-orange hover:bg-orange hover:text-white motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              >
+                <Glyph className="size-4.5" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <nav aria-label={t('footer.explore')} className="mb-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
         {LINKS.filter(([href]) => !emptySections.some((id) => href === `/#${id}`)).map(([href, key]) => (
           <Link key={href} href={href} className="text-white hover:text-orange-light">

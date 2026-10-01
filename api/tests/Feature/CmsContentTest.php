@@ -153,4 +153,25 @@ class CmsContentTest extends TestCase
 
         $this->getJson('/api/v1/public/settings')->assertJsonPath('data.hours', ['opens' => 10, 'closes' => 20]);
     }
+
+    #[Test]
+    public function the_footers_social_links_are_saved_with_the_contact_details_and_served_to_the_website(): void
+    {
+        $this->seed(ContentSeeder::class);
+        $admin = $this->staff('admin');
+        $contact = $this->getJson('/api/v1/public/settings')->json('data.contact');
+
+        // A link is a full https address; one left empty is saved as null, and the footer shows no icon for it.
+        $this->actingAsApi($admin)->putJson('/api/v1/admin/settings/contact', ['value' => ['tiktok' => 'tiktok.com/@bhabaghure', 'linkedin' => 'http://www.linkedin.com/company/bhabaghure'] + $contact])
+            ->assertUnprocessable()->assertJsonValidationErrors(['value.tiktok', 'value.linkedin']);
+        $this->actingAsApi($admin)->putJson('/api/v1/admin/settings/contact', ['value' => [
+            'tiktok' => 'https://www.tiktok.com/@bhabaghure', 'linkedin' => 'https://www.linkedin.com/company/bhabaghure', 'youtube' => '',
+        ] + $contact])->assertOk();
+
+        $this->getJson('/api/v1/public/settings')
+            ->assertJsonPath('data.contact.tiktok', 'https://www.tiktok.com/@bhabaghure')
+            ->assertJsonPath('data.contact.linkedin', 'https://www.linkedin.com/company/bhabaghure')
+            ->assertJsonPath('data.contact.youtube', null)
+            ->assertJsonPath('data.contact.facebook', 'https://www.facebook.com/bhabaghureholidays');
+    }
 }

@@ -506,6 +506,8 @@
     "licence": "Civil Aviation registration no. {licence}",
     "explore": "Explore",
     "reach": "Get in touch",
+    "social": "Follow us",
+    "socialLink": "{name} (opens in a new tab)",
     "payWith": "Pay with Visa, Mastercard, American Express, bKash, Nagad, Rocket, Upay and bank cards — through SSLCommerz"
   },
   "booking": {

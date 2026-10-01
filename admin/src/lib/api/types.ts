@@ -346,6 +346,10 @@ export type SiteSettings = {
     email: string
     facebook: string | null
     instagram: string | null
+    /** The website footer's other social links (2026-10-02); empty shows no icon. */
+    tiktok?: string | null
+    linkedin?: string | null
+    youtube?: string | null
     website: string | null
   }
   address?: string

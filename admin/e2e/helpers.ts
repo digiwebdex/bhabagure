@@ -63,6 +63,11 @@ export async function staffApi(page: Page, role: 'admin' | 'sales_agent') {
       expect(response.status(), `${path}: ${await response.text()}`).toBeLessThan(300)
       return (await response.json()) as T
     },
+    put: async <T>(path: string, data?: unknown): Promise<T> => {
+      const response = await page.request.put(`${E2E_API_URL}/api/v1/${path}`, { headers, data })
+      expect(response.status(), `${path}: ${await response.text()}`).toBeLessThan(300)
+      return (await response.json()) as T
+    },
     /** Multipart, with the e2e photo as the receipt a money movement carries. */
     postWithReceipt: async <T>(path: string, fields: Record<string, string | number>, fileField = 'evidence'): Promise<T> => {
       const response = await page.request.post(`${E2E_API_URL}/api/v1/${path}`, {

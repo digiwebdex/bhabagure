@@ -48,8 +48,17 @@ export function SettingsPage() {
                 hint={t('settings.notificationsWhatsappHint')}
                 placeholder="+8801XXXXXXXXX"
               />
-              <TextInput label="Facebook" type="url" value={value.facebook} onChange={(facebook) => set({ ...value, facebook: facebook || null })} error={error('value.facebook')} />
-              <TextInput label="Instagram" type="url" value={value.instagram} onChange={(instagram) => set({ ...value, instagram: instagram || null })} error={error('value.instagram')} />
+              {/* The website footer's social icons (2026-10-02): an empty link shows no icon. */}
+              <p className="m-0 text-12 text-app-muted">{t('settings.socialHint')}</p>
+              <Pair>
+                <TextInput label="Facebook" type="url" value={value.facebook} onChange={(facebook) => set({ ...value, facebook: facebook || null })} error={error('value.facebook')} placeholder="https://www.facebook.com/…" />
+                <TextInput label="Instagram" type="url" value={value.instagram} onChange={(instagram) => set({ ...value, instagram: instagram || null })} error={error('value.instagram')} placeholder="https://www.instagram.com/…" />
+              </Pair>
+              <Pair>
+                <TextInput label="TikTok" type="url" value={value.tiktok} onChange={(tiktok) => set({ ...value, tiktok: tiktok || null })} error={error('value.tiktok')} placeholder="https://www.tiktok.com/@…" />
+                <TextInput label="LinkedIn" type="url" value={value.linkedin} onChange={(linkedin) => set({ ...value, linkedin: linkedin || null })} error={error('value.linkedin')} placeholder="https://www.linkedin.com/company/…" />
+              </Pair>
+              <TextInput label="YouTube" type="url" value={value.youtube} onChange={(youtube) => set({ ...value, youtube: youtube || null })} error={error('value.youtube')} placeholder="https://www.youtube.com/@…" />
               <TextInput label={t('settings.website')} type="url" value={value.website} onChange={(website) => set({ ...value, website: website || null })} error={error('value.website')} />
             </>
           )}
@@ -179,6 +188,16 @@ const MAX_BANKS = 3
 
 const emptyBank = (): BankAccount => ({ bankName: '', accountName: '', accountNumber: '', branch: '', routingNumber: '', transferType: 'NPSB' })
 
+/**
+ * A setting as text with its fields in name order: the API sends a saved value back in its own field order, and a field
+ * added on this screen (a social link the saved value didn't have yet) comes last, so the same value must still match.
+ */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_field, part: unknown) =>
+    part && typeof part === 'object' && !Array.isArray(part) ? Object.fromEntries(Object.entries(part).sort(([a], [b]) => a.localeCompare(b))) : part,
+  )
+}
+
 function SettingCard<K extends Key>({ settingKey, title, initial, children }: {
   settingKey: K
   title: string
@@ -189,7 +208,7 @@ function SettingCard<K extends Key>({ settingKey, title, initial, children }: {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [value, setValue] = useState(initial)
-  const dirty = JSON.stringify(value) !== JSON.stringify(initial)
+  const dirty = canonical(value) !== canonical(initial)
   const save = useMutation({
     mutationFn: () => api.put(`admin/settings/${settingKey}`, { value }),
     onSuccess: () => {

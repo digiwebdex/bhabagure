@@ -30,6 +30,10 @@ class SiteSettingController extends Controller
             'value.email' => ['required', 'email', 'max:190'],
             'value.facebook' => ['nullable', 'url:https', 'max:255'],
             'value.instagram' => ['nullable', 'url:https', 'max:255'],
+            // The footer's other social links (client, 2026-10-02); an empty one shows no icon.
+            'value.tiktok' => ['nullable', 'url:https', 'max:255'],
+            'value.linkedin' => ['nullable', 'url:https', 'max:255'],
+            'value.youtube' => ['nullable', 'url:https', 'max:255'],
             'value.website' => ['nullable', 'url:https', 'max:255'],
         ],
         'address' => ['value' => ['required', 'string', 'max:500']],

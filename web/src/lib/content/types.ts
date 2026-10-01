@@ -228,6 +228,10 @@ export interface SiteSettings {
     email: string;
     facebook: string;
     instagram: string;
+    /** The footer's other social links (2026-10-02); absent or empty shows no icon. */
+    tiktok?: string | null;
+    linkedin?: string | null;
+    youtube?: string | null;
     website: string;
   };
   address: string;
