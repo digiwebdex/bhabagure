@@ -9,6 +9,7 @@ use App\Models\QuotationLine;
 use App\Services\Quotations\QuotationRefused;
 use App\Services\Quotations\QuotationService;
 use App\Support\Money;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,10 +46,15 @@ class PortalQuotationController extends Controller
             ])->values()->all(),
             'discount' => Money::toNumber($quotation->discount_amount),
             'serviceCharge' => Money::toNumber($quotation->vat_amount),
-            'room' => $quotation->room_type,
+            // A custom quotation has no room choice (2026-10-02).
+            'room' => $quotation->is_custom ? null : $quotation->room_type,
             'durationDays' => $quotation->duration_days,
             'durationNights' => $quotation->duration_nights,
             'includesAirfare' => $quotation->includes_airfare,
+            // What the customer is meant to read: a custom quotation's details, and the note for them. Never the
+            // internal note.
+            'details' => $quotation->is_custom ? $quotation->package_details : null,
+            'note' => $quotation->notes,
         ]]);
     }
 
@@ -64,7 +70,7 @@ class PortalQuotationController extends Controller
         return response()->json(['data' => self::summary($quotation)]);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Builder<Quotation> */
+    /** @return Builder<Quotation> */
     private static function quotationsOf(Customer $customer)
     {
         return Quotation::query()->where('customer_id', $customer->id)->whereNotNull('sent_at')

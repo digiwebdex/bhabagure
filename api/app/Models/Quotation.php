@@ -37,18 +37,22 @@ class Quotation extends Model
     public const FILTERS = ['draft', 'sent', 'accepted', 'declined', 'withdrawn', 'converted', 'expired', 'expiring'];
 
     protected $fillable = [
-        'number', 'revision_of_id', 'customer_id', 'tour_package_id', 'departure_id', 'package_title_en', 'package_title_bn', 'package_code',
-        'duration_days', 'duration_nights', 'includes_airfare', 'travel_date', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'room_rates', 'fixed_price', 'unit_price',
+        'number', 'revision_of_id', 'customer_id', 'tour_package_id', 'departure_id', 'is_custom', 'package_title_en', 'package_title_bn', 'package_code',
+        'package_details', 'duration_days', 'duration_nights', 'includes_airfare', 'travel_date', 'pax_count', 'room_type', 'hotel_category', 'list_price', 'price_grid', 'room_rates', 'fixed_price', 'unit_price',
         'subtotal_amount', 'single_supplement_amount', 'addons_amount', 'discount_amount', 'vat_rate', 'vat_amount', 'total_amount',
-        'validity_days', 'valid_until', 'status', 'locale', 'notes', 'share_token', 'assigned_staff_id', 'created_by_staff_id',
+        'validity_days', 'valid_until', 'status', 'locale', 'notes', 'internal_note', 'share_token', 'assigned_staff_id', 'created_by_staff_id',
     ];
 
-    protected $hidden = ['share_token'];
+    /**
+     * Never in a serialized quotation: the customer's link token, and the internal note, which is for staff only
+     * (2026-10-02) — the admin's own resource names it field by field.
+     */
+    protected $hidden = ['share_token', 'internal_note'];
 
     protected function casts(): array
     {
         return [
-            'travel_date' => 'date', 'valid_until' => 'date', 'includes_airfare' => 'boolean',
+            'travel_date' => 'date', 'valid_until' => 'date', 'includes_airfare' => 'boolean', 'is_custom' => 'boolean',
             'list_price' => 'decimal:2', 'price_grid' => 'array', 'room_rates' => 'array', 'fixed_price' => 'boolean', 'unit_price' => 'decimal:2', 'subtotal_amount' => 'decimal:2', 'single_supplement_amount' => 'decimal:2',
             'addons_amount' => 'decimal:2', 'discount_amount' => 'decimal:2', 'vat_rate' => 'decimal:2', 'vat_amount' => 'decimal:2', 'total_amount' => 'decimal:2',
             'sent_at' => 'datetime', 'viewed_at' => 'datetime', 'expiry_reminded_at' => 'datetime', 'accepted_at' => 'datetime', 'declined_at' => 'datetime', 'withdrawn_at' => 'datetime', 'converted_at' => 'datetime',

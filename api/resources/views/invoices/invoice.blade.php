@@ -94,6 +94,8 @@
   .package .label { color: var(--blue); }
   .package strong { font-size: {{ $a5 ? '9pt' : '11pt' }}; font-weight: 600; line-height: 1.3; }
   .package span.detail { font-size: {{ $a5 ? '7.5pt' : '9pt' }}; color: var(--muted); line-height: 1.55; }
+  {{-- A custom quotation's details (2026-10-02), as typed: its lines kept. --}}
+  .package span.description { font-size: {{ $a5 ? '7.5pt' : '9pt' }}; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; margin-top: 0.8mm; }
 
   table { width: 100%; border-collapse: collapse; font-size: {{ $a5 ? '7.5pt' : '9pt' }}; }
   thead tr { background: var(--blue); color: #fff; }
@@ -210,6 +212,7 @@
       <span class="label">{{ $packageLabel ?? 'Package' }}</span>
       <strong>{{ $package['title'] }}@if ($package['code']) <span class="num" style="font-weight:400;color:var(--muted)">· {{ $package['code'] }}</span>@endif</strong>
       @if ($package['detail'])<span class="detail">{{ $package['detail'] }}</span>@endif
+      @if (! empty($package['description']))<span class="description">{{ $package['description'] }}</span>@endif
     </section>
   @endif
 

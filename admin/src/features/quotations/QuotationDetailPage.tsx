@@ -249,7 +249,7 @@ function EditorCard({ q }: { q: QuotationDetail }) {
           })
         }}
       >
-        {!q.inputs.package_slug ? <p className="m-0 text-13 text-amber">{t('quotations.packageGone')}</p> : null}
+        {!q.inputs.package_slug && !q.inputs.custom ? <p className="m-0 text-13 text-amber">{t('quotations.packageGone')}</p> : null}
         <QuotationFields draft={draft} options={options.data} fieldError={fieldError} />
         {draft.quote && draft.form ? <QuotationTotals quote={draft.quote} pax={draft.form.pax} /> : null}
         {save.error && !(save.error instanceof ApiError && save.error.status === 422) ? <ErrorNotice error={save.error} /> : null}
@@ -280,8 +280,13 @@ function PriceCard({ q }: { q: QuotationDetail }) {
         <Fact label={t('bookings.package')} value={q.package_title_en || q.package_title_bn || '—'} />
         <Fact label={t('newBooking.travelDate')} value={q.travel_date ? date(q.travel_date) : t('quotations.dateLater')} />
         <Fact label={t('quotations.travellers')} value={number(q.pax_count)} />
-        <Fact label={t('bookings.room')} value={t(`bookings.rooms.${q.room_type}`)} />
+        {q.is_custom ? null : <Fact label={t('bookings.room')} value={t(`bookings.rooms.${q.room_type}`)} />}
       </dl>
+      {q.is_custom && q.package_details ? (
+        <p className="m-0 rounded-10 bg-app-surface-2 px-3 py-2.5 text-13 leading-1.55 whitespace-pre-line" data-testid="custom-details">
+          {q.package_details}
+        </p>
+      ) : null}
       <table className="w-full border-collapse text-13">
         <tbody>
           {q.lines.map((line, index) => (
@@ -310,8 +315,31 @@ function PriceCard({ q }: { q: QuotationDetail }) {
           </span>
         </div>
       </div>
-      {q.notes ? <p className="m-0 text-13 whitespace-pre-line text-app-muted">{q.notes}</p> : null}
+      <QuotationNotes q={q} />
     </Card>
+  )
+}
+
+/** The note the customer reads on the quotation, and the one only staff see (2026-10-02). */
+function QuotationNotes({ q }: { q: QuotationDetail }) {
+  const { t } = useTranslation()
+  if (!q.notes && !q.internal_note) return null
+
+  return (
+    <div className="flex flex-col gap-2">
+      {q.notes ? (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-12 font-semibold text-app-muted">{t('quotations.customerNote')}</span>
+          <p className="m-0 text-13 whitespace-pre-line">{q.notes}</p>
+        </div>
+      ) : null}
+      {q.internal_note ? (
+        <div className="flex flex-col gap-0.5 rounded-10 border border-dashed border-amber/60 bg-orange-tint/40 px-3 py-2" data-testid="internal-note-view">
+          <span className="text-12 font-semibold text-amber">{t('quotations.internalNoteLabel')}</span>
+          <p className="m-0 text-13 whitespace-pre-line">{q.internal_note}</p>
+        </div>
+      ) : null}
+    </div>
   )
 }
 

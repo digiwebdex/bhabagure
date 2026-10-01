@@ -56,17 +56,27 @@ export type QuotationInputs = {
   vat_rate: number
   validity_days: number
   locale: 'bn' | 'en'
+  /** The note for the customer, printed on the quotation. */
   notes: string | null
+  /** Staff only: never printed, linked, shown in the portal or sent (2026-10-02). */
+  internal_note: string | null
+  /** A trip that isn't one of the packages: its title, details and lines at a price per person (2026-10-02). */
+  custom: QuotationCustom | null
 }
+
+export type QuotationCustom = { title: string; details: string | null; items: { title: string; unit_price: number }[] }
 
 export type QuotationDetail = QuotationRow & {
   package_code: string | null
+  is_custom: boolean
+  package_details: string | null
   duration_nights: number | null
   includes_airfare: boolean | null
   locale: 'bn' | 'en'
   notes: string | null
+  internal_note: string | null
   amounts: { list_price: number; unit_price: number; subtotal: number; single_supplement: number; addons: number; discount: number; vat_rate: number; vat: number; total: number }
-  lines: { kind: 'package' | 'single_supplement' | 'addon'; code: string | null; title_en: string; title_bn: string | null; quantity: number; unit_price: number; amount: number }[]
+  lines: { kind: 'package' | 'single_supplement' | 'twin_supplement' | 'addon' | 'custom'; code: string | null; title_en: string; title_bn: string | null; quantity: number; unit_price: number; amount: number }[]
   inputs: QuotationInputs
   created_by: { id: number; name: string } | null
   history: Partial<Record<'created_at' | 'sent_at' | 'accepted_at' | 'declined_at' | 'withdrawn_at' | 'converted_at', string>>
@@ -112,7 +122,7 @@ export function useQuotation(id: number) {
 }
 
 /** The body the API prices: the editor's inputs and the total it showed. */
-export type QuotationBody = Omit<QuotationInputs, 'package_slug'> & { package_slug: string; expected_total: number }
+export type QuotationBody = QuotationInputs & { expected_total: number }
 
 export const quotationActions = {
   create: (body: QuotationBody & { customer_id: number }) => api.post<Data<QuotationDetail>>('admin/quotations', body),

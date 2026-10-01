@@ -314,6 +314,11 @@ final class QuotationService
      */
     private function price(Quotation $quotation, QuotationInput $input): void
     {
+        if ($input->custom !== null) {
+            $this->priceCustom($quotation, $input);
+
+            return;
+        }
         $package = TourPackage::query()->published()->where('slug', $input->packageSlug)->firstOrFail();
         $addons = Addon::query()->where('is_active', true)->whereIn('code', $input->addonCodes)->orderBy('sort_order')->get();
         // A group tour quoted on one of its departures takes that date's price (docs/departure-prices.md).
@@ -338,9 +343,11 @@ final class QuotationService
         $quotation->fill([
             'tour_package_id' => $package->id,
             'departure_id' => $departure?->id,
+            'is_custom' => false,
             'package_title_en' => $package->title_en,
             'package_title_bn' => $package->title_bn,
             'package_code' => $package->code,
+            'package_details' => null,
             'duration_days' => $package->duration_days,
             'duration_nights' => $package->duration_nights,
             'includes_airfare' => $package->includes_airfare,
@@ -365,10 +372,67 @@ final class QuotationService
             'valid_until' => self::validUntil($input->validityDays),
             'locale' => $input->locale,
             'notes' => $input->notes,
+            'internal_note' => $input->internalNote,
         ])->save();
 
         $quotation->lines()->delete();
         foreach (BookingCreator::lineRows($package, $quote, $addons->all()) as $index => $line) {
+            $quotation->lines()->create($line + ['sort_order' => $index]);
+        }
+    }
+
+    /**
+     * A custom quotation (2026-10-02): no package — the title and details staff wrote, and their lines, each at a price
+     * per person for every traveller, then the discount, service charge and VAT. Priced exactly as a custom service
+     * booking (BookingCreator::customQuote), which is what it converts to. No room supplement, hotel category or add-on:
+     * anything like that is a line of its own.
+     *
+     * @throws PriceChanged
+     */
+    private function priceCustom(Quotation $quotation, QuotationInput $input): void
+    {
+        $quote = BookingCreator::customQuote($input->custom['items'], $input->pax, $input->discount, $input->vatRate);
+        if ((int) round($input->expectedTotal) !== $quote['total']) {
+            throw new PriceChanged($quote);
+        }
+
+        $quotation->fill([
+            'tour_package_id' => null,
+            'departure_id' => null,
+            'is_custom' => true,
+            // One title, in whichever language staff wrote it.
+            'package_title_en' => $input->custom['title'],
+            'package_title_bn' => $input->custom['title'],
+            'package_code' => null,
+            'package_details' => $input->custom['details'],
+            'duration_days' => null,
+            'duration_nights' => null,
+            'includes_airfare' => null,
+            'travel_date' => $input->travelDate,
+            'pax_count' => $input->pax,
+            'room_type' => 'twin',
+            'hotel_category' => null,
+            'list_price' => $quote['perPerson'],
+            'price_grid' => null,
+            'room_rates' => null,
+            'fixed_price' => false,
+            'unit_price' => $quote['perPerson'],
+            'subtotal_amount' => $quote['subtotal'],
+            'single_supplement_amount' => 0,
+            'addons_amount' => 0,
+            'discount_amount' => $quote['discount'],
+            'vat_rate' => $quote['chargePercent'],
+            'vat_amount' => $quote['serviceCharge'],
+            'total_amount' => $quote['total'],
+            'validity_days' => $input->validityDays,
+            'valid_until' => self::validUntil($input->validityDays),
+            'locale' => $input->locale,
+            'notes' => $input->notes,
+            'internal_note' => $input->internalNote,
+        ])->save();
+
+        $quotation->lines()->delete();
+        foreach ($quote['lines'] as $index => $line) {
             $quotation->lines()->create($line + ['sort_order' => $index]);
         }
     }

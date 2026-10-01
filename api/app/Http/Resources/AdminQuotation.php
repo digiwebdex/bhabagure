@@ -69,10 +69,14 @@ final class AdminQuotation
 
         return array_replace(self::row($quotation, $viewer), [
             'package_code' => $quotation->package_code,
+            'is_custom' => (bool) $quotation->is_custom,
+            'package_details' => $quotation->package_details,
             'duration_nights' => $quotation->duration_nights,
             'includes_airfare' => $quotation->includes_airfare,
             'locale' => $quotation->locale,
+            // The note printed for the customer, and the one only staff ever see (2026-10-02).
             'notes' => $quotation->notes,
+            'internal_note' => $quotation->internal_note,
             'amounts' => [
                 'list_price' => Money::toNumber($quotation->list_price),
                 'unit_price' => Money::toNumber($quotation->unit_price),
@@ -106,6 +110,14 @@ final class AdminQuotation
                 'validity_days' => $quotation->validity_days,
                 'locale' => $quotation->locale,
                 'notes' => $quotation->notes,
+                'internal_note' => $quotation->internal_note,
+                // A custom quotation's own title, details and lines, as the editor shows them again.
+                'custom' => $quotation->is_custom ? [
+                    'title' => $quotation->package_title_en,
+                    'details' => $quotation->package_details,
+                    'items' => $quotation->lines->where('kind', 'custom')->sortBy('sort_order')
+                        ->map(fn (QuotationLine $line) => ['title' => $line->title_en, 'unit_price' => Money::toNumber($line->unit_price)])->values(),
+                ] : null,
             ],
             'created_by' => $quotation->createdBy ? ['id' => $quotation->createdBy->id, 'name' => $quotation->createdBy->name] : null,
             'history' => array_filter([

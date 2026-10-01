@@ -181,6 +181,8 @@ final class BookingCreator
 
             return $this->persist($request, [
                 'tour_package_id' => $quotation->tour_package_id,
+                // A custom quotation (2026-10-02) becomes a custom service booking, its lines as they were quoted.
+                'is_custom' => (bool) $quotation->is_custom,
                 'package_title_en' => $quotation->package_title_en,
                 'package_title_bn' => $quotation->package_title_bn,
                 'duration_days' => $quotation->duration_days,

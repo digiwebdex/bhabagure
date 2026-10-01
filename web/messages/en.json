@@ -847,6 +847,7 @@
     "quotation": {
       "back": "My trips",
       "dateToBeFixed": "Date to be fixed",
+      "noteFromUs": "A note from us",
       "note": {
         "sent": "This price is honoured until {date}. Accept it here and our team will confirm your booking.",
         "expired": "This quotation expired on {date}. Contact us for a new price.",

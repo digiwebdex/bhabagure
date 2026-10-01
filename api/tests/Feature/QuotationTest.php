@@ -252,6 +252,76 @@ class QuotationTest extends TestCase
         $this->assertSame(0, preg_match('/[\x{0980}-\x{09FF}]/u', strip_tags($html)), 'no Bangla on the quotation');
     }
 
+    #[Test]
+    public function a_custom_quotation_is_priced_from_its_own_lines_prints_its_details_and_books_as_a_custom_service(): void
+    {
+        // Client, 2026-10-02 (docs/quotation-custom-and-notes.md): no package needed; a title, details and lines instead.
+        [$agent, $admin] = [$this->staff('sales_agent'), $this->staff('admin')];
+        $lead = $this->lead(['email' => 'rahim@example.test']);
+        $custom = [
+            'title' => 'Sajek Valley family weekend',
+            'details' => "Day 1: Dhaka to Khagrachari by AC bus\nDay 2: Sajek, Konglak hill",
+            'items' => [['title' => 'Resort, 2 nights', 'unit_price' => 6000], ['title' => 'Jeep and guide', 'unit_price' => 1500]],
+        ];
+        // 4 travellers × (6,000 + 1,500) = 30,000 − 1,000 discount = 29,000 + 2 % = 29,580.
+        $body = ['package_slug' => null, 'custom' => $custom, 'pax' => 4, 'discount' => 1000, 'expected_total' => 29580] + $this->payload($lead);
+
+        // A package or a custom trip, never neither and never both; a custom trip needs at least one line.
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', ['custom' => null] + $body)->assertUnprocessable()->assertJsonValidationErrors('package_slug');
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', ['package_slug' => self::MUSTANG] + $body)->assertUnprocessable()->assertJsonValidationErrors('package_slug');
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', ['custom' => ['items' => []] + $custom] + $body)->assertUnprocessable()->assertJsonValidationErrors('custom.items');
+        $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', ['expected_total' => 30000] + $body)->assertStatus(409)->assertJsonPath('quote.total', 29580);
+
+        $created = $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', $body)->assertCreated()
+            ->assertJsonPath('data.is_custom', true)->assertJsonPath('data.package_title_en', 'Sajek Valley family weekend')
+            ->assertJsonPath('data.package_details', $custom['details'])->assertJsonPath('data.total_amount', 29580)
+            ->assertJsonPath('data.inputs.package_slug', null)->assertJsonPath('data.inputs.custom.items.1.unit_price', 1500)->json('data');
+        $this->assertSame([['custom', 4, 6000, 24000], ['custom', 4, 1500, 6000]], array_map(fn ($l) => [$l['kind'], $l['quantity'], $l['unit_price'], $l['amount']], $created['lines']));
+        $id = $created['id'];
+
+        // The printed quotation: the title and its details, no room line for a trip without one.
+        $html = $this->actingAsApi($agent)->get("/api/v1/admin/quotations/{$id}/print?lang=en")->assertOk()->getContent();
+        $this->assertStringContainsString('Sajek Valley family weekend', $html);
+        $this->assertStringContainsString('Day 2: Sajek, Konglak hill', $html);
+        $this->assertStringNotContainsString('Twin sharing', $html);
+
+        // A revision starts from the same custom trip; the custom quotation books as a custom service.
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/quotations/{$id}/send")->assertOk();
+        $revision = $this->actingAsApi($agent)->postJson("/api/v1/admin/quotations/{$id}/revise")->assertCreated()->json('data');
+        $this->assertSame(['Sajek Valley family weekend', $custom['details'], 2], [$revision['inputs']['custom']['title'], $revision['inputs']['custom']['details'], count($revision['inputs']['custom']['items'])]);
+        $travellers = ['travellers' => array_map(fn ($n) => ['name' => "Traveller {$n}"], range(1, 4)), 'travel_date' => $this->travelDate()];
+        $bookingId = $this->actingAsApi($admin)->postJson("/api/v1/admin/quotations/{$id}/convert", $travellers)->assertCreated()->json('data.booking.id');
+        $booking = Booking::query()->with('lines')->findOrFail($bookingId);
+        $this->assertSame([true, null, 29580.0, 'Sajek Valley family weekend'], [$booking->is_custom, $booking->tour_package_id, (float) $booking->total_amount, $booking->package_title_en]);
+        $this->assertSame([['custom', 4, '6000.00'], ['custom', 4, '1500.00']], $booking->lines->map(fn ($l) => [$l->kind, $l->quantity, $l->unit_price])->all());
+    }
+
+    #[Test]
+    public function the_internal_note_stays_in_the_admin_and_the_customer_note_reaches_the_customer(): void
+    {
+        // Client, 2026-10-02: the internal note (costs, margins) never reaches the customer; `notes` is theirs.
+        $agent = $this->staff('sales_agent');
+        $lead = $this->lead(['email' => 'rahim@example.test']);
+        $secret = 'Vendor cost 61,000 per person, margin 14 percent';
+        $id = $this->actingAsApi($agent)->postJson('/api/v1/admin/quotations', ['notes' => 'Pay to Mutual Trust Bank, mention QT-0001.', 'internal_note' => $secret] + $this->payload($lead))
+            ->assertCreated()->assertJsonPath('data.internal_note', $secret)->assertJsonPath('data.inputs.internal_note', $secret)->json('data.id');
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/quotations/{$id}/send")->assertOk();
+        $quotation = Quotation::query()->findOrFail($id);
+
+        // The print view and the PDF made from it, the customer's link, the portal and the messages: the customer's note, never the internal one.
+        $printed = $this->actingAsApi($agent)->get("/api/v1/admin/quotations/{$id}/print?lang=en")->assertOk()->getContent();
+        $this->assertStringContainsString('Pay to Mutual Trust Bank, mention QT-0001.', $printed);
+        $this->assertStringNotContainsString('margin 14 percent', $printed);
+        $this->assertStringNotContainsString('margin 14 percent', app(QuotationPdf::class)->html($quotation, true, 'en', forPdf: true));
+        $link = $this->get("/api/v1/public/quotations/{$quotation->share_token}")->assertOk()->getContent();
+        $this->assertStringContainsString('Pay to Mutual Trust Bank', $link);
+        $this->assertStringNotContainsString('margin 14 percent', $link);
+        $portal = $this->actingAsApi($lead)->getJson("/api/v1/portal/quotations/{$quotation->number}")->assertOk()->assertJsonPath('data.note', 'Pay to Mutual Trust Bank, mention QT-0001.');
+        $this->assertStringNotContainsString('margin 14 percent', $portal->getContent());
+        $this->assertStringNotContainsString('margin 14 percent', json_encode(NotificationMessage::query()->get()->toArray()));
+        $this->assertStringNotContainsString('margin 14 percent', json_encode($quotation->toArray()), 'a serialized quotation never carries it');
+    }
+
     private function lead(array $attributes = []): Customer
     {
         return Customer::query()->create(['name' => 'Rahim Uddin', 'phone' => '8801711000321', 'stage' => 'lead', 'source' => 'facebook', ...$attributes]);

@@ -17,8 +17,8 @@ use App\Support\Payments\PaymentOptions;
  */
 final class QuotationView
 {
-    /** 3: English only (2026-09-19). */
-    public const TEMPLATE_VERSION = '3';
+    /** 3: English only (2026-09-19). 4: a custom quotation's details under the title (2026-10-02). */
+    public const TEMPLATE_VERSION = '4';
 
     public function __construct(private readonly InvoiceView $invoiceView) {}
 
@@ -55,7 +55,8 @@ final class QuotationView
                 : null,
             $quotation->includes_airfare === null ? null : ($quotation->includes_airfare ? 'Air ticket included' : 'Without air ticket'),
             $quotation->pax_count.' travellers',
-            match ($quotation->room_type) {
+            // A custom quotation has no room choice: anything like it is one of its own lines.
+            $quotation->is_custom ? null : match ($quotation->room_type) {
                 'single' => 'Single room',
                 'triple' => 'Triple sharing',
                 default => 'Twin sharing',
@@ -89,6 +90,8 @@ final class QuotationView
                 'title' => $quotation->package_title_en ?: $quotation->package_title_bn,
                 'code' => $quotation->package_code,
                 'detail' => implode(' · ', $packageDetail),
+                // A custom quotation's details, as staff wrote them (2026-10-02).
+                'description' => $quotation->is_custom ? $quotation->package_details : null,
             ],
             'items' => $quotation->lines->map(fn (QuotationLine $line) => [
                 'title' => $line->title_en ?: $line->title_bn,
@@ -110,6 +113,7 @@ final class QuotationView
             'hasDue' => false,
             'payments' => [],
             'paymentRows' => [],
+            // The note for the customer only. The internal note never reaches the print view, the PDF or the link.
             'note' => $quotation->notes,
             // Phase 8 §4.F: how the quoted total can be paid once it is booked.
             'howToPay' => PaymentOptions::lines(Money::toNumber($quotation->total_amount) ?? 0, $locale, currency: 'code'),

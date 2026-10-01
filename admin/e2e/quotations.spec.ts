@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 import { artisan } from '../../scripts/e2e-api.mjs'
-import { API_URL, FIRST_LOAD, quotationFor, signIn } from './helpers'
+import { API_URL, FIRST_LOAD, quotationFor, signIn, staffApi } from './helpers'
 
 const MUSTANG = 'nepal-mustang-adventure-tour-8-days-7-nights'
 
@@ -74,6 +74,53 @@ test('a sales agent quotes a website lead at the website price, sends it, and bo
   await expect(booked.getByRole('link', { name: reference! })).toBeVisible()
   await expect(booked.getByRole('link', { name: `Convert to booking — ${number}` })).toHaveCount(0)
   await expect(booked.getByRole('button', { name: new RegExp(`^Convert to booking — ${number} \\(Booked as ${reference}\\)$`) })).toBeDisabled()
+})
+
+test('a custom package is quoted from its own lines, and its internal note never reaches the customer’s quotation', async ({ page }) => {
+  // Client, 2026-10-02 (docs/quotation-custom-and-notes.md).
+  const phone = `0171${String(Date.now()).slice(-7)}`
+  const name = `Custom Lead ${phone.slice(-4)}`
+  const enquiry = await page.request.post(`${API_URL}/api/v1/public/inquiries`, { headers: { Accept: 'application/json' }, data: { name, phone, message: 'A weekend in Sajek for four?', locale: 'en' } })
+  expect(enquiry.status()).toBe(202)
+
+  await signIn(page, 'sales_agent')
+  await page.goto('/quotations')
+  await page.getByLabel('Customer', { exact: true }).fill(name)
+  await page.getByRole('button', { name: new RegExp(`^${name}`) }).click(FIRST_LOAD)
+  await page.getByLabel('Package', { exact: true }).selectOption({ label: '★ Custom package (not on the website)' })
+  const custom = page.getByTestId('custom-package')
+  await custom.getByLabel('Package title').fill('Sajek Valley family weekend')
+  await custom.getByLabel('Package details').fill('Day 1: Dhaka to Khagrachari by AC bus\nDay 2: Sajek, Konglak hill')
+  await custom.getByLabel('Item 1', { exact: true }).fill('Resort, 2 nights')
+  await custom.getByLabel('Price per person (BDT)').fill('6000')
+  await custom.getByRole('button', { name: '+ Add item' }).click()
+  await custom.getByLabel('Item 2', { exact: true }).fill('Jeep and guide')
+  await custom.getByLabel('Price per person (BDT)').nth(1).fill('1500')
+  await page.getByLabel('Travellers', { exact: true }).selectOption('4')
+  // No room choice for a trip that isn't a package; 4 × (6,000 + 1,500) = 30,000 + 2 % = 30,600.
+  await expect(page.getByLabel('Room', { exact: true })).toHaveCount(0)
+  await expect(page.getByTestId('quotation-total')).toHaveText('BDT 30,600')
+  await page.getByLabel('Note for the customer').fill('Pay to Mutual Trust Bank and quote the number.')
+  await page.getByLabel('Internal note · staff only').fill('Resort costs 4,800 per person, margin 20 percent')
+  await page.getByRole('button', { name: 'Save draft' }).click()
+
+  // The draft opens with the custom trip and both notes as entered.
+  await expect(page).toHaveURL(/\/quotations\/\d+$/, FIRST_LOAD)
+  const id = Number(new URL(page.url()).pathname.split('/').pop())
+  await expect(page.getByTestId('custom-package').getByLabel('Package title')).toHaveValue('Sajek Valley family weekend', FIRST_LOAD)
+  await expect(page.getByLabel('Internal note · staff only')).toHaveValue('Resort costs 4,800 per person, margin 20 percent')
+  await page.getByTestId('quotation-actions').getByRole('button', { name: 'Send quote' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Yes, continue' }).click()
+
+  // Sent: staff still see the internal note, marked as theirs; the customer's link shows the trip and their note only.
+  await expect(page.getByTestId('internal-note-view')).toContainText('margin 20 percent', FIRST_LOAD)
+  await expect(page.getByTestId('custom-details')).toContainText('Day 2: Sajek, Konglak hill')
+  const api = await staffApi(page, 'sales_agent')
+  const { data } = await api.get<{ data: { public_url: string } }>(`admin/quotations/${id}`)
+  const link = await (await page.request.get(data.public_url)).text()
+  expect(link).toContain('Sajek Valley family weekend')
+  expect(link).toContain('Pay to Mutual Trust Bank and quote the number.')
+  expect(link).not.toContain('margin 20 percent')
 })
 
 test('the Quotations badge counts quotations expiring within 48 hours, opens that list, and drops when one is withdrawn', async ({ page }) => {

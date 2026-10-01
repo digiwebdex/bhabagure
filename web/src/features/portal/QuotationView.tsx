@@ -64,6 +64,11 @@ export function QuotationView({ number }: { number: string }) {
         <p className={`m-0 rounded-12 px-3.5 py-3 text-14 ${quotation.status === 'sent' ? 'bg-blue-tint text-blue' : quotation.status === 'accepted' ? 'bg-green-tint text-green' : 'bg-slate-tint text-app-muted'}`}>
           {t(`note.${quotation.status}`, { date: f.date(quotation.validUntil) })}
         </p>
+        {quotation.details ? (
+          <p className="m-0 text-14 leading-1.6 whitespace-pre-line" data-testid="quotation-details">
+            {quotation.details}
+          </p>
+        ) : null}
       </Card>
 
       <Card>
@@ -97,6 +102,12 @@ export function QuotationView({ number }: { number: string }) {
             <dd className="font-display">{f.bdt(quotation.total)}</dd>
           </div>
         </dl>
+        {quotation.note ? (
+          <div className="flex flex-col gap-1 rounded-12 bg-app-surface-2 px-3.5 py-3" data-testid="quotation-note">
+            <span className="text-12 font-semibold text-app-muted">{t('noteFromUs')}</span>
+            <p className="m-0 text-14 leading-1.6 whitespace-pre-line">{quotation.note}</p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <a href={quotation.url} target="_blank" rel="noopener noreferrer" className={buttonClass('outlineInk', 'sm')}>
             {t('view')}

@@ -271,7 +271,14 @@ class QuotationController extends Controller
 
         return $request->validate([
             'customer_id' => $creating ? ['required', 'integer'] : ['prohibited'],
-            'package_slug' => ['required', 'string', Rule::exists('tour_packages', 'slug')->where('status', 'published')],
+            // A package, or a custom trip with its own title, details and lines (2026-10-02) — one or the other.
+            'package_slug' => ['nullable', 'required_without:custom', 'prohibits:custom', 'string', Rule::exists('tour_packages', 'slug')->where('status', 'published')],
+            'custom' => ['nullable', 'array'],
+            'custom.title' => ['required_with:custom', 'string', 'max:160'],
+            'custom.details' => ['nullable', 'string', 'max:5000'],
+            'custom.items' => ['required_with:custom', 'array', 'min:1', 'max:30'],
+            'custom.items.*.title' => ['required', 'string', 'max:160'],
+            'custom.items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'travel_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Dhaka')->toDateString()],
             'pax' => ['required', 'integer', 'min:1', "max:{$max}"],
             'room' => ['required', Rule::in(['twin', 'triple', 'single'])],
@@ -282,7 +289,9 @@ class QuotationController extends Controller
             'vat_rate' => ['required', 'numeric', Rule::in(BookingFormOptions::vatRates())],
             'validity_days' => ['required', 'integer', Rule::in(Quotation::VALIDITY_DAYS)],
             'locale' => ['required', Rule::in(['bn', 'en'])],
+            // The customer's note, printed on the quotation; the internal one never leaves the admin.
             'notes' => ['nullable', 'string', 'max:2000'],
+            'internal_note' => ['nullable', 'string', 'max:2000'],
             'expected_total' => ['required', 'numeric', 'min:0'],
         ]);
     }
@@ -290,8 +299,10 @@ class QuotationController extends Controller
     /** @param array<string, mixed> $data */
     private function input(array $data): QuotationInput
     {
+        $custom = $data['custom'] ?? null;
+
         return new QuotationInput(
-            packageSlug: $data['package_slug'],
+            packageSlug: $data['package_slug'] ?? null,
             travelDate: $data['travel_date'] ?? null,
             pax: (int) $data['pax'],
             room: $data['room'],
@@ -303,6 +314,12 @@ class QuotationController extends Controller
             notes: $data['notes'] ?? null,
             expectedTotal: $data['expected_total'],
             hotelCategory: $data['hotel_category'] ?? null,
+            custom: $custom === null ? null : [
+                'title' => trim($custom['title']),
+                'details' => trim((string) ($custom['details'] ?? '')) ?: null,
+                'items' => array_map(fn (array $item) => ['title' => trim($item['title']), 'unitPrice' => (float) $item['unit_price']], array_values($custom['items'])),
+            ],
+            internalNote: trim((string) ($data['internal_note'] ?? '')) ?: null,
         );
     }
 

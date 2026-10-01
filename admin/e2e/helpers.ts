@@ -53,6 +53,11 @@ export async function staffApi(page: Page, role: 'admin' | 'sales_agent') {
   const headers = { Accept: 'application/json', Authorization: `Bearer ${((await login.json()) as { access_token: string }).access_token}` }
 
   return {
+    get: async <T>(path: string): Promise<T> => {
+      const response = await page.request.get(`${E2E_API_URL}/api/v1/${path}`, { headers })
+      expect(response.status(), `${path}: ${await response.text()}`).toBeLessThan(300)
+      return (await response.json()) as T
+    },
     post: async <T>(path: string, data?: unknown): Promise<T> => {
       const response = await page.request.post(`${E2E_API_URL}/api/v1/${path}`, { headers, data })
       expect(response.status(), `${path}: ${await response.text()}`).toBeLessThan(300)

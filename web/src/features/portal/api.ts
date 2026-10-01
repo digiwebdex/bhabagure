@@ -60,10 +60,15 @@ export type QuotationDetail = QuotationSummary & {
   lines: { kind: string; title: string; quantity: number; unitPrice: number; amount: number }[];
   discount: number;
   serviceCharge: number;
-  room: string;
+  /** Null for a custom quotation, which has no room choice (2026-10-02). */
+  room: string | null;
   durationDays: number | null;
   durationNights: number | null;
   includesAirfare: boolean | null;
+  /** A custom quotation's details, as the office wrote them. */
+  details: string | null;
+  /** The office's note for the customer (never its internal note). */
+  note: string | null;
 };
 
 export type DocumentKind = 'passport_scan' | 'photo' | 'visa' | 'insurance';
