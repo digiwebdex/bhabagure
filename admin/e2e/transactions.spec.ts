@@ -4,10 +4,10 @@ import { FIRST_LOAD, PHOTO, signIn } from './helpers'
 
 /**
  * docs/phase-9-accounts.md §7: Transactions — the cash book with the account it is read for, money written in by hand,
- * VAT handed over, and the tick that says somebody has checked an entry. Nothing here is ever edited: a mistake is
- * corrected with a reversing entry, and the balance follows both ways.
+ * VAT handed over, and the tick that says somebody has checked an entry. Edit and Delete (docs/transaction-edits.md)
+ * never overwrite: each adds a reversing entry, and the balance follows every time.
  */
-test('an admin records a cash out with its receipt, checks it off, reverses it, and the balance follows', async ({ page }) => {
+test('an admin records a cash out with its receipt, checks it off, edits it, deletes it, and the balance follows', async ({ page }) => {
   await signIn(page, 'admin')
   await page.getByRole('navigation').getByRole('link', { name: /Transactions$/ }).click()
   await expect(page.getByRole('heading', { name: 'Transactions', level: 1 })).toBeVisible(FIRST_LOAD)
@@ -40,13 +40,37 @@ test('an admin records a cash out with its receipt, checks it off, reverses it, 
   await row.getByRole('button', { name: /^Mark #\d+ as checked$/ }).click()
   await expect(row.getByRole('button', { name: /^Take back the check on #\d+$/ })).toBeVisible()
 
+  // Edit: it was really 30,000 of electricity. The list shows the corrected entry, saying it was edited and how.
   await row.getByRole('button', { name: /^Actions — #\d+$/ }).click()
-  await page.getByRole('menuitem', { name: 'Reverse…' }).click()
-  const dialog = page.getByRole('dialog', { name: /^Reverse/ })
+  await page.getByRole('menuitem', { name: 'Edit' }).click()
+  const edit = page.getByRole('dialog', { name: /^Edit entry #\d+$/ })
+  await expect(edit.getByLabel('Amount')).toHaveValue('35000')
+  await edit.getByLabel('Category').selectOption('utilities')
+  await edit.getByLabel('Amount').fill('30000')
+  await edit.getByLabel('Reason for the change (optional)').fill('Wrong bill entered')
+  await edit.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Entry updated')).toBeVisible()
+  const rows = page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: description })
+  await expect(rows).toHaveCount(1)
+  await expect(rows).toContainText('− BDT 30,000', FIRST_LOAD)
+  await expect(rows).toContainText('Utilities & internet')
+  await expect(rows).toContainText(/Edited by .*Amount: BDT 35,000 → BDT 30,000/)
+
+  // The history shows what was there before: the original, and the entry that cancelled it.
+  await page.getByLabel('Show edits and deletions').check()
+  await expect(rows).toHaveCount(2, FIRST_LOAD)
+  await expect(page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: /Cancels #\d+/ }).first()).toBeVisible()
+  await page.getByLabel('Show edits and deletions').uncheck()
+
+  // Delete: out of the list, and the company balance is back where it started.
+  await expect(rows).toHaveCount(1, FIRST_LOAD)
+  await rows.getByRole('button', { name: /^Actions — #\d+$/ }).click()
+  await page.getByRole('menuitem', { name: 'Delete' }).click()
+  const dialog = page.getByRole('dialog', { name: /^Delete entry #\d+/ })
   await dialog.getByLabel('Reason').fill('Posted twice')
-  await dialog.getByRole('button', { name: 'Reverse…' }).click()
-  await expect(page.getByText('Reversing entry added')).toBeVisible()
-  await expect(page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: /Reversal of #\d+/ }).first()).toBeVisible()
+  await dialog.getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByText('Entry deleted')).toBeVisible()
+  await expect(rows).toHaveCount(0, FIRST_LOAD)
   await expect(picker.locator('option').first()).toHaveText(before, { timeout: 10_000 })
 })
 

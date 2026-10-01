@@ -17,6 +17,11 @@ export function todayInDhaka(): string {
   return dhaka(new Date().toISOString()).date
 }
 
+/** The Dhaka calendar date (YYYY-MM-DD) of an instant the API sent, e.g. a cash-book entry's occurred_at. */
+export function dateInDhaka(iso: string): string {
+  return dhaka(iso).date
+}
+
 /**
  * The shared formatter for the staff panel, which is English only (2026-09-16). Amounts carry the code, "BDT 1,53,000":
  * the taka sign stays on what customers read — the website, the portal and printed invoices.

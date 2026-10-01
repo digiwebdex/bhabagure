@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\PayslipMail;
+use App\Models\Account;
 use App\Models\AttendanceDevice;
 use App\Models\AttendanceDeviceUser;
 use App\Models\AttendancePunch;
@@ -216,6 +217,10 @@ class PayrollTest extends TestCase
             ->assertOk();
         $entry = $item->fresh()->transaction;
         $this->assertSame('2026-10-01 12:00', $entry->occurred_at->timezone('Asia/Dhaka')->format('Y-m-d H:i'));
+        // A salary paid from Payroll is not edited in the cash book (it would come loose from its month): deleted there
+        // and paid again from Payroll (docs/transaction-edits.md).
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$entry->id}/edit", ['occurred_on' => '2026-10-01', 'account' => Account::NAGAD, 'amount' => 1, 'description' => 'Salary', 'category' => 'salaries'])
+            ->assertStatus(409)->assertJsonPath('code', 'payroll');
         $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$entry->id}/reverse", ['reason' => 'Sent to the wrong number'])->assertCreated();
 
         $this->assertNull($item->fresh()->paid_at);

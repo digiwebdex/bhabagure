@@ -128,7 +128,7 @@ Also built in:
 | Icon | Bookings | Customers & leads | Quotations | Ledger rows |
 |---|---|---|---|---|
 | ◉ View | open the booking page | open the customer profile | open the quotation | open the linked booking or entry |
-| ✎ Edit | booking page (draft quote) | customer form | quotation editor (a revision once sent) | disabled: entries are never edited |
+| ✎ Edit | booking page (draft quote) | customer form | quotation editor (a revision once sent) | Edit: a reversing entry and the corrected one (docs/transaction-edits.md, 2026-10-01) |
 | ✆ WhatsApp | `wa.me` in the staff member's own WhatsApp (Phase 4 decision, unlogged); the logged send stays on the booking page | same | same, with the quote reference | the linked customer, if any |
 | ✉ SMS | the device's `sms:` link, unlogged. System SMS stays a fallback only, never a per-row send | same | same | same |
 | @ Email | `mailto:` | same | same | same |

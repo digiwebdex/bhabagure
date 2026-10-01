@@ -24,6 +24,8 @@ use App\Services\Coupons\CouponRefused;
 use App\Services\Coupons\CouponService;
 use App\Services\Invoices\InvoiceIssuer;
 use App\Services\Invoices\InvoicePdf;
+use App\Services\Ledger\CashBookCorrections;
+use App\Services\Ledger\CorrectionRefused;
 use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
 use App\Services\Ledger\PaymentExceedsBalance;
@@ -278,16 +280,17 @@ class BookingController extends Controller
         return $this->detail($request, $booking->fresh());
     }
 
-    public function reversePayment(Request $request, int $transactionId, LedgerService $ledger): JsonResponse
+    /** Delete on a booking's payment: the same as on the cash book (docs/transaction-edits.md), transactions.edit. */
+    public function reversePayment(Request $request, int $transactionId, CashBookCorrections $corrections): JsonResponse
     {
         $payment = Transaction::query()->findOrFail($transactionId);
-        $booking = $this->find($request, (int) $payment->booking_id, 'transactions.create_manual');
+        $booking = $this->find($request, (int) $payment->booking_id, 'transactions.edit');
         $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']]);
 
         try {
-            DB::transaction(fn () => $ledger->reversePayment($payment, $data['reason'], $request->user('staff')));
-        } catch (LogicException $e) {
-            return response()->json(['message' => $e->getMessage(), 'code' => 'not_allowed'], 409);
+            $corrections->delete($payment, trim($data['reason']), $request->user('staff'));
+        } catch (CorrectionRefused $e) {
+            return response()->json(['message' => __("payments.correction_refused.{$e->reason}"), 'code' => $e->reason], 409);
         }
 
         return $this->detail($request, $booking->fresh());

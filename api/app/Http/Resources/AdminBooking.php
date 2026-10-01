@@ -177,7 +177,8 @@ final class AdminBooking
                 'confirm' => $booking->status === BookingStatus::Inquiry && (float) $booking->paid_amount > 0 && $can('bookings.update'),
                 'complete' => $booking->status === BookingStatus::Confirmed && $can('bookings.update'),
                 'cancel' => $open && $can('bookings.update'),
-                'reverse_payment' => $can('transactions.create_manual'),
+                // Delete on a payment (docs/transaction-edits.md).
+                'reverse_payment' => $can('transactions.edit'),
                 'send_whatsapp' => $can('notifications.send') && $booking->customer?->whatsapp_opted_out_at === null,
                 'toggle_whatsapp_opt_out' => $viewer->can('customers.manage'),
                 'claim' => $booking->assigned_staff_id === null && $booking->status === BookingStatus::Inquiry && $viewer->can('bookings.update'),

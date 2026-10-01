@@ -51,7 +51,9 @@ class PaymentsBooksTest extends TestCase
             'description' => 'Office rent · September', 'reference' => 'Office rent', 'evidence' => UploadedFile::fake()->image('receipt.jpg', 600, 800),
         ], ['Accept' => 'application/json'])->assertCreated()
             ->assertJsonPath('data.direction', 'out')->assertJsonPath('data.amount', 35000)->assertJsonPath('data.has_evidence', true)
-            ->assertJsonPath('data.actions.reverse', true)->assertJsonMissingPath('data.evidence_path')->json('data');
+            // Recording is the accountant's; editing and deleting need transactions.edit (docs/transaction-edits.md).
+            ->assertJsonPath('data.actions.delete', false)->assertJsonPath('data.delete_blocked', 'permission')
+            ->assertJsonMissingPath('data.evidence_path')->json('data');
 
         $this->assertSame([[Account::OFFICE_RENT, '35000.00', '0.00'], [Account::CASH, '0.00', '35000.00']], $this->journalLines(Transaction::query()->findOrFail($entry['id'])));
         $this->assertSame(-3500000, app(LedgerService::class)->moneyBalances()[Account::CASH]);
@@ -69,18 +71,22 @@ class PaymentsBooksTest extends TestCase
         $this->actingAsApi($accountant)->postJson('/api/v1/admin/cash-entries', ['direction' => 'in', 'amount' => 100, 'method' => 'cash', 'category' => 'office_rent', 'description' => 'Wrong way'])
             ->assertUnprocessable()->assertJsonValidationErrors(['category', 'evidence']);
 
-        // ✕ is a reversing entry, once; a reversal isn't reversed.
-        $reversal = $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$entry['id']}/reverse", ['reason' => 'Paid twice by mistake'])->assertCreated()
+        // Delete is a reversing entry, once; a reversal isn't reversed. Not the accountant's to do (2026-10-01).
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$entry['id']}/reverse", ['reason' => 'Paid twice by mistake'])->assertForbidden();
+        $admin = $this->staff('admin');
+        $reversal = $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$entry['id']}/reverse", ['reason' => 'Paid twice by mistake'])->assertCreated()
             ->assertJsonPath('data.direction', 'in')->assertJsonPath('data.reverses_id', $entry['id'])->json('data');
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$entry['id']}/reverse", ['reason' => 'Again'])->assertStatus(409)->assertJsonPath('code', 'not_reversible');
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$reversal['id']}/reverse", ['reason' => 'Undo the undo'])->assertStatus(409);
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$entry['id']}/reverse", ['reason' => 'Again'])->assertStatus(409)->assertJsonPath('code', 'reversed');
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$reversal['id']}/reverse", ['reason' => 'Undo the undo'])->assertStatus(409)->assertJsonPath('code', 'is_reversal');
         $this->assertSame(0, app(LedgerService::class)->moneyBalances()[Account::CASH]);
         $this->assertSame(2, Transaction::query()->count());
 
-        $rows = $this->actingAsApi($accountant)->getJson('/api/v1/admin/cash-book')->assertOk()->json('data');
+        // Deleted: out of the list as it stands, both entries still there with "Show edits and deletions".
+        $this->actingAsApi($accountant)->getJson('/api/v1/admin/cash-book')->assertOk()->assertJsonPath('meta.total', 0);
+        $rows = $this->actingAsApi($admin)->getJson('/api/v1/admin/cash-book?history=1')->assertOk()->json('data');
         $original = collect($rows)->firstWhere('id', $entry['id']);
-        $this->assertSame([$reversal['id'], false, 'reversed'], [$original['reversed_by']['id'], $original['actions']['reverse'], $original['reverse_blocked']]);
-        $this->actingAsApi($accountant)->getJson('/api/v1/admin/cash-book?direction=out&category=office_rent')->assertJsonPath('meta.total', 1);
+        $this->assertSame([$reversal['id'], false, 'reversed', 'delete'], [$original['reversed_by']['id'], $original['actions']['delete'], $original['delete_blocked'], $original['correction']['kind']]);
+        $this->actingAsApi($accountant)->getJson('/api/v1/admin/cash-book?direction=out&category=office_rent&history=1')->assertJsonPath('meta.total', 1);
     }
 
     #[Test]
@@ -187,8 +193,10 @@ class PaymentsBooksTest extends TestCase
 
         // Void only once nothing is paid: reverse both payments, then void — the receivable goes back to zero.
         $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/void", ['reason' => 'Tour cancelled'])->assertStatus(409)->assertJsonPath('code', 'has_payments');
+        // Deleting a payment needs transactions.edit (2026-10-01): an admin's.
+        $admin = $this->staff('admin');
         foreach (Transaction::query()->where('invoice_id', $invoice->id)->pluck('id') as $id) {
-            $this->actingAsApi($accountant)->postJson("/api/v1/admin/cash-book/{$id}/reverse", ['reason' => 'Tour cancelled, refunded'])->assertCreated();
+            $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$id}/reverse", ['reason' => 'Tour cancelled, refunded'])->assertCreated();
         }
         $this->actingAsApi($accountant)->postJson("/api/v1/admin/deals/{$deal['id']}/void", ['reason' => 'Tour cancelled'])->assertOk()->assertJsonPath('data.status', 'void');
         $receivable = DB::table('journal_lines')->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')->where('accounts.code', Account::RECEIVABLE)

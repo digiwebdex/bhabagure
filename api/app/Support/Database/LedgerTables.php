@@ -20,6 +20,8 @@ final class LedgerTables
 {
     public const TABLES = [
         'transactions',
+        // Edit and Delete on the cash book (docs/transaction-edits.md): which reversal and replacement each one made.
+        'transaction_corrections',
         'bonus_transactions',
         'audit_logs',
         'journal_entries',

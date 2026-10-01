@@ -143,12 +143,21 @@ final class LedgerService
         bool $allowOverpayment = false,
         ?\DateTimeInterface $occurredAt = null,
         ?string $evidencePath = null,
+        ?Account $into = null,
     ): Transaction {
         $this->assertInTransaction();
         $amountPaisa = self::paisa($amount);
         $chargePaisa = self::paisa($onlineCharge);
         $gatewayFeePaisa = self::paisa($gatewayFee);
         $account = self::METHOD_ACCOUNTS[$method] ?? throw new InvalidArgumentException("Unknown payment method {$method}");
+        // The account the money actually landed in, when staff named one other than the method's own (an edit on the cash
+        // book, docs/transaction-edits.md): a float somebody holds, or a second bank account.
+        if ($into !== null) {
+            if (! $into->isMoney()) {
+                throw new InvalidArgumentException("Account {$into->code} doesn't hold money.");
+            }
+            $account = $into->code;
+        }
         if ($amountPaisa <= 0 || $chargePaisa < 0 || $gatewayFeePaisa < 0 || $gatewayFeePaisa > $amountPaisa + $chargePaisa) {
             throw new InvalidArgumentException('A payment amount must be positive, and fees can\'t exceed it.');
         }
@@ -164,7 +173,7 @@ final class LedgerService
             'method' => $method, 'booking_id' => $booking->id, 'invoice_id' => $invoice->id, 'customer_id' => $booking->customer_id,
             'client_id' => $booking->client_id, 'occurred_at' => self::instant($occurredAt), 'recorded_by_staff_id' => $staff?->id,
             'reference_label' => $referenceLabel,
-        ];
+        ] + ($into === null ? [] : ['money_account_id' => self::moneyAccountId($account)]);
         $payment = Transaction::query()->create($common + [
             'direction' => TransactionDirection::In, 'amount' => self::amount($amountPaisa), 'category' => self::CATEGORY_PAYMENT,
             'external_ref' => $externalRef, 'description' => $description, 'evidence_path' => $evidencePath,
@@ -335,8 +344,11 @@ final class LedgerService
      * A mistake is corrected by an opposite entry in the cash book and the journal — never by editing. Reversible: an
      * original staff-recorded customer payment (booking or deal) and a manual entry. Not an online payment (refunded
      * through the gateway), its charge or fee lines, or a reversal.
+     *
+     * $on dates the reversal (cash book and journal); today when null. An edit or a delete on the cash book passes the
+     * entry's own date, so the month it belongs to shows the corrected figure (docs/transaction-edits.md).
      */
-    public function reversePayment(Transaction $payment, string $reason, Staff $staff): Transaction
+    public function reversePayment(Transaction $payment, string $reason, Staff $staff, ?\DateTimeInterface $on = null): Transaction
     {
         $this->assertInTransaction();
         if (! self::reversible($payment)) {
@@ -356,7 +368,7 @@ final class LedgerService
             'business_line' => $payment->business_line, 'method' => $payment->method, 'money_account_id' => $payment->money_account_id,
             'booking_id' => $payment->booking_id,
             'invoice_id' => $payment->invoice_id, 'customer_id' => $payment->customer_id, 'client_id' => $payment->client_id,
-            'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $payment->id,
+            'occurred_at' => self::instant($on), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $payment->id,
             'description' => "Reversal of #{$payment->id}: {$reason}",
         ]);
 
@@ -370,13 +382,13 @@ final class LedgerService
                     'business_line' => $charge->business_line, 'method' => $charge->method, 'money_account_id' => $charge->money_account_id,
                     'booking_id' => $charge->booking_id,
                     'invoice_id' => $charge->invoice_id, 'customer_id' => $charge->customer_id, 'client_id' => $charge->client_id,
-                    'occurred_at' => now(), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $charge->id,
+                    'occurred_at' => self::instant($on), 'recorded_by_staff_id' => $staff->id, 'reverses_transaction_id' => $charge->id,
                     'description' => "Reversal of #{$charge->id}: {$reason}",
                 ]));
         }
 
         $entry = JournalEntry::query()->where('source_type', $payment->getMorphClass())->where('source_id', $payment->id)->firstOrFail();
-        $this->reverse($entry, "Reversal of #{$payment->id}: {$reason}", $staff, $reversal);
+        $this->reverse($entry, "Reversal of #{$payment->id}: {$reason}", $staff, $reversal, $on);
         if ($booking) {
             $this->syncPaid($booking);
         } elseif ($invoice) {
@@ -679,13 +691,13 @@ final class LedgerService
         return $entry;
     }
 
-    private function reverse(JournalEntry $entry, string $description, ?Staff $staff, ?Model $source = null): JournalEntry
+    private function reverse(JournalEntry $entry, string $description, ?Staff $staff, ?Model $source = null, ?\DateTimeInterface $on = null): JournalEntry
     {
         $lines = $entry->lines()->with('account')->get()
             ->map(fn ($line) => [$line->account->code, self::paisa($line->credit), self::paisa($line->debit)])
             ->all();
 
-        return $this->post($source ?? $entry->source, $description, $entry->booking_id, $staff, $lines, $entry->id);
+        return $this->post($source ?? $entry->source, $description, $entry->booking_id, $staff, $lines, $entry->id, $on);
     }
 
     /**

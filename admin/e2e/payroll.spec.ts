@@ -111,17 +111,19 @@ test('the staff member finds the paid month under My payslips, and has no Salary
   await expect(page.getByText("You don't have access to this screen")).toBeVisible(FIRST_LOAD)
 })
 
-test('reversing the salary cash-out in the cash book leaves the month unpaid again', async ({ page }) => {
+test('deleting the salary cash-out in the cash book leaves the month unpaid again', async ({ page }) => {
   await signIn(page, 'admin')
   await page.goto('/transactions')
   const entry = page.getByTestId('cash-book-table').locator('tbody tr').filter({ hasText: `Salary ${month.value} · ${PERSON}` })
   await expect(entry).toContainText('− BDT 30,346', FIRST_LOAD)
   await entry.getByRole('button', { name: /^Actions — #\d+$/ }).click()
-  await page.getByRole('menuitem', { name: 'Reverse…' }).click()
+  // Not edited here: it would come loose from its month (docs/transaction-edits.md). Deleted, then paid again from Payroll.
+  await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeDisabled()
+  await page.getByRole('menuitem', { name: 'Delete' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Reason').fill('Sent to the wrong bKash number')
-  await dialog.getByRole('button', { name: 'Reverse…' }).click()
-  await expect(page.getByText('Reversing entry added')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByText('Entry deleted')).toBeVisible()
 
   await page.goto(`/payroll?month=${month.value}`)
   const row = page.getByTestId('payroll-table').locator('tbody tr').filter({ hasText: PERSON })

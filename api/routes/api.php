@@ -495,7 +495,10 @@ Route::prefix('v1')->group(function () {
                 Route::get('payments/options', 'options');
                 Route::get('cash-book', 'cashBook');
                 Route::get('cash-book/{id}/evidence', 'evidence')->whereNumber('id');
+                // Delete and Edit (docs/transaction-edits.md): both add entries — a reversing one, and for an edit the
+                // corrected one — and never change or remove a row. transactions.edit, checked in the controller.
                 Route::post('cash-book/{id}/reverse', 'reverse')->whereNumber('id');
+                Route::post('cash-book/{id}/edit', 'edit')->whereNumber('id');
                 Route::post('cash-entries', 'store')->middleware('throttle:media-upload');
                 Route::post('opening-balances', 'storeOpeningBalance');
                 // Money moved between the company's own accounts — cash banked, a float handed over (§6).

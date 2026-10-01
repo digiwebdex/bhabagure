@@ -19,19 +19,20 @@ import {
   type CashEntry,
 } from '../payments/api'
 import { PERIODS, periodRange, type Period } from './periods'
-import { CashEntryDialog, ReverseDialog, TransferDialog, VatPaymentDialog } from './TransactionDialogs'
+import { CashEntryDialog, DeleteEntryDialog, EditEntryDialog, TransferDialog, VatPaymentDialog } from './TransactionDialogs'
 import { ReviewCard } from './ReviewCard'
 
-type Dialog = { kind: 'in' | 'out' | 'transfer' | 'vat' } | { kind: 'reverse'; entry: CashEntry } | null
+type Dialog = { kind: 'in' | 'out' | 'transfer' | 'vat' } | { kind: 'edit' | 'delete'; entry: CashEntry } | null
 
-const blank: CashBookFilters = { direction: 'all', account: '', category: '', from: '', to: '', search: '', staff_id: '', approved: 'all', page: 1 }
+const blank: CashBookFilters = { direction: 'all', account: '', category: '', from: '', to: '', search: '', staff_id: '', approved: 'all', history: false, page: 1 }
 
 /**
  * Transactions (docs/phase-9-accounts.md §7): the cash book, the account it is read for, and the four ways money is
  * written in by hand. It replaced the Payments screen — one cash book, in one place.
  *
- * Nothing here edits an entry. A mistake is corrected with a reversing entry, and the tick only records that somebody
- * has checked one; that is what makes the figures above it worth reading.
+ * Edit and Delete (client, 2026-10-01; docs/transaction-edits.md) never overwrite anything: the entry is cancelled by a
+ * reversing one on its own date and, for an edit, the corrected one recorded. The list shows the book as it stands;
+ * "Show edits and deletions" shows what was there before. The tick only records that somebody has checked an entry.
  */
 export function TransactionsPage() {
   const { t } = useTranslation()
@@ -159,6 +160,10 @@ export function TransactionsPage() {
               {t('payments.search')}
               <input type="search" value={filters.search} onChange={(event) => set({ search: event.target.value })} className={controlClass()} />
             </label>
+            <label className="flex items-center gap-2 pb-2 text-13">
+              <input type="checkbox" checked={filters.history} onChange={(event) => set({ history: event.target.checked })} />
+              {t('transactions.showHistory')}
+            </label>
           </span>
         </div>
 
@@ -206,11 +211,7 @@ export function TransactionsPage() {
                         ) : entry.invoice?.number ? (
                           <span className="font-display text-12 text-app-muted">{entry.invoice.number}</span>
                         ) : null}
-                        {entry.reverses_id || entry.reversed_by ? (
-                          <span className="text-11 font-semibold text-red">
-                            {entry.reverses_id ? t('payments.reversalOf', { id: entry.reverses_id }) : t('payments.reversedBy', { id: entry.reversed_by!.id })}
-                          </span>
-                        ) : null}
+                        <CorrectionNote entry={entry} />
                       </span>
                     </td>
                     <td className="p-3 align-top whitespace-nowrap">{entry.account?.name ?? t(`bookings.methods.${entry.method}`)}</td>
@@ -240,12 +241,7 @@ export function TransactionsPage() {
                             ✓
                           </button>
                         ) : null}
-                        <RowMenu
-                          entry={entry}
-                          onEvidence={() => void openEvidence(entry)}
-                          onReverse={() => setOpen({ kind: 'reverse', entry })}
-                          reverseHint={t(`payments.reverseBlocked.${entry.reverse_blocked ?? 'permission'}`)}
-                        />
+                        <RowMenu entry={entry} onEvidence={() => void openEvidence(entry)} onEdit={() => setOpen({ kind: 'edit', entry })} onDelete={() => setOpen({ kind: 'delete', entry })} />
                       </span>
                     </td>
                   </tr>
@@ -271,7 +267,8 @@ export function TransactionsPage() {
       {open?.kind === 'in' || open?.kind === 'out' ? <CashEntryDialog direction={open.kind} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'transfer' && balance ? <TransferDialog accounts={balance.accounts} onClose={() => setOpen(null)} /> : null}
       {open?.kind === 'vat' ? <VatPaymentDialog onClose={() => setOpen(null)} /> : null}
-      {open?.kind === 'reverse' ? <ReverseDialog entry={open.entry} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'edit' ? <EditEntryDialog entry={open.entry} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'delete' ? <DeleteEntryDialog entry={open.entry} onClose={() => setOpen(null)} /> : null}
       {options.isError ? <ErrorNotice error={options.error} /> : null}
     </>
   )
@@ -316,8 +313,49 @@ function MoreMenu({ onVat }: { onVat: () => void }) {
   )
 }
 
-/** What else a row can do. Editing is never one of them: the cash book is append-only. */
-function RowMenu({ entry, onEvidence, onReverse, reverseHint }: { entry: CashEntry; onEvidence: () => void; onReverse: () => void; reverseHint: string }) {
+/**
+ * Under the description: what happened to the entry. An edit's corrected entry says it was edited (by whom, what
+ * changed); with "Show edits and deletions", an edited or deleted entry says so and the entry that cancelled it says
+ * which one it cancels. Reversals from before Edit and Delete existed read as they always did.
+ */
+function CorrectionNote({ entry }: { entry: CashEntry }) {
+  const { t } = useTranslation()
+  const { bdt, date } = useFormat()
+  const changed = (field: string, value: unknown) =>
+    field === 'amount' && typeof value === 'number' ? bdt(value) : field === 'date' && typeof value === 'string' ? date(value) : field === 'category' && typeof value === 'string' ? t(`payments.category.${value}`, { defaultValue: value }) : String(value ?? '—')
+
+  if (entry.edited) {
+    const summary = Object.entries(entry.edited.changes)
+      .map(([field, [before, after]]) => `${t(`transactions.fields.${field}`, { defaultValue: field })}: ${changed(field, before)} → ${changed(field, after)}`)
+      .join(' · ')
+    return (
+      <span className="text-11 font-semibold text-amber" title={[summary, entry.edited.reason].filter(Boolean).join('\n')}>
+        {t('transactions.editedBy', { by: entry.edited.by ?? '' })}
+        <span className="block font-normal text-app-muted">{summary}</span>
+      </span>
+    )
+  }
+  if (entry.correction) {
+    return (
+      <span className="text-11 font-semibold text-red" title={entry.correction.reason ?? undefined}>
+        {entry.correction.kind === 'edit'
+          ? t('transactions.wasEdited', { id: entry.correction.replacement_id, by: entry.correction.by ?? '' })
+          : t('transactions.wasDeleted', { by: entry.correction.by ?? '', reason: entry.correction.reason ?? '' })}
+      </span>
+    )
+  }
+  if (entry.reverses_id || entry.reversed_by) {
+    return (
+      <span className="text-11 font-semibold text-red">
+        {entry.reverses_id ? t('transactions.cancels', { id: entry.reverses_id }) : t('payments.reversedBy', { id: entry.reversed_by!.id })}
+      </span>
+    )
+  }
+  return null
+}
+
+/** What else a row can do: open its booking or receipt, and — with transactions.edit — edit or delete it. */
+function RowMenu({ entry, onEvidence, onEdit, onDelete }: { entry: CashEntry; onEvidence: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -364,17 +402,26 @@ function RowMenu({ entry, onEvidence, onReverse, reverseHint }: { entry: CashEnt
           >
             {t('transactions.viewAttachments')}
           </button>
-          {/* Editing and deleting are what the client's books offer here. Ours never do, and the row says why. */}
-          <span className="px-3.5 py-1.75 text-left text-12 text-app-muted">{t('payments.neverEdited')}</span>
+          {/* Unavailable ones stay in the menu, greyed, saying why (docs/transaction-edits.md). */}
           <button
             type="button"
             role="menuitem"
-            disabled={!entry.actions.reverse}
-            title={entry.actions.reverse ? undefined : reverseHint}
-            className="cursor-pointer border-0 bg-transparent px-3.5 py-1.75 text-left text-13 text-red hover:bg-app-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => { setOpen(false); onReverse() }}
+            disabled={!entry.actions.edit}
+            title={entry.actions.edit ? undefined : t(`transactions.blocked.${entry.edit_blocked ?? 'permission'}`)}
+            className="cursor-pointer border-0 bg-transparent px-3.5 py-1.75 text-left text-13 hover:bg-app-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => { setOpen(false); onEdit() }}
           >
-            {t('payments.reverse')}
+            {t('transactions.editEntry')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!entry.actions.delete}
+            title={entry.actions.delete ? undefined : t(`transactions.blocked.${entry.delete_blocked ?? 'permission'}`)}
+            className="cursor-pointer border-0 bg-transparent px-3.5 py-1.75 text-left text-13 text-red hover:bg-app-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => { setOpen(false); onDelete() }}
+          >
+            {t('transactions.deleteEntry')}
           </button>
         </div>
       ) : null}

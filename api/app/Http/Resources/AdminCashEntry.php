@@ -5,17 +5,25 @@ namespace App\Http\Resources;
 use App\Models\Invoice;
 use App\Models\Staff;
 use App\Models\Transaction;
+use App\Services\Ledger\CashBookCorrections;
 use App\Services\Ledger\LedgerService;
 use App\Support\Money;
 
 /** Cash-book rows for the admin (docs/phase-5-admin-core.md §4.6). Amounts are numbers; evidence is a flag, never a path. */
 final class AdminCashEntry
 {
-    public const RELATIONS = ['booking:id,reference,customer_id', 'invoice:id,invoice_number,kind,title', 'customer:id,name,phone,email', 'client:id,name,contact_phone,contact_email', 'recordedBy:id,name', 'reversal:id,reverses_transaction_id,occurred_at', 'moneyAccount:id,code,name_en', 'approval.approvedBy:id,name'];
+    public const RELATIONS = [
+        'booking:id,reference,customer_id', 'invoice:id,invoice_number,kind,title', 'customer:id,name,phone,email', 'client:id,name,contact_phone,contact_email',
+        'recordedBy:id,name', 'reversal:id,reverses_transaction_id,occurred_at', 'moneyAccount:id,code,name_en', 'approval.approvedBy:id,name',
+        // Edit and Delete (docs/transaction-edits.md): what replaced or cancelled it, and what Edit must leave alone.
+        'correction.staff:id,name', 'replaces.staff:id,name', 'payrollItem:id,transaction_id', 'bonusWithdrawal:id,cash_transaction_id',
+    ];
 
     /** @return array<string, mixed> */
     public static function row(Transaction $entry, Staff $viewer): array
     {
+        $deleteBlocked = CashBookCorrections::deleteBlocked($entry);
+        $editBlocked = CashBookCorrections::editBlocked($entry);
         $party = $entry->customer
             ? ['type' => 'customer', 'id' => $entry->customer->id, 'name' => $entry->customer->name, 'phone' => $entry->customer->phone, 'email' => $entry->customer->email]
             : ($entry->client ? ['type' => 'client', 'id' => $entry->client->id, 'name' => $entry->client->name, 'phone' => $entry->client->contact_phone, 'email' => $entry->client->contact_email] : null);
@@ -46,20 +54,31 @@ final class AdminCashEntry
             ] : null,
             'reverses_id' => $entry->reverses_transaction_id,
             'reversed_by' => $entry->reversal ? ['id' => $entry->reversal->id, 'occurred_at' => $entry->reversal->occurred_at->toIso8601String()] : null,
+            // An edit's corrected entry: what it replaced, who changed what, and why (docs/transaction-edits.md).
+            'edited' => $entry->replaces ? [
+                'from_id' => $entry->replaces->original_transaction_id,
+                'at' => $entry->replaces->created_at?->toIso8601String(),
+                'by' => $entry->replaces->staff?->name,
+                'changes' => $entry->replaces->changes,
+                'reason' => $entry->replaces->reason,
+            ] : null,
+            // An entry that was edited or deleted (seen with "Show edits and deletions").
+            'correction' => $entry->correction ? [
+                'kind' => $entry->correction->kind,
+                'replacement_id' => $entry->correction->replacement_transaction_id,
+                'at' => $entry->correction->created_at?->toIso8601String(),
+                'by' => $entry->correction->staff?->name,
+                'reason' => $entry->correction->reason,
+            ] : null,
             'has_evidence' => $entry->evidence_path !== null,
             'actions' => [
-                'reverse' => $viewer->can('transactions.create_manual') && $entry->reversal === null && LedgerService::reversible($entry),
+                'edit' => $viewer->can('transactions.edit') && $editBlocked === null,
+                'delete' => $viewer->can('transactions.edit') && $deleteBlocked === null,
                 'approve' => $viewer->can('transactions.approve'),
             ],
-            // Why ✕ is unavailable, for its tooltip.
-            'reverse_blocked' => match (true) {
-                $entry->reverses_transaction_id !== null => 'is_reversal',
-                $entry->reversal !== null => 'reversed',
-                $entry->method === 'sslcommerz' => 'online',
-                ! LedgerService::reversible($entry) => 'fee_line',
-                ! $viewer->can('transactions.create_manual') => 'permission',
-                default => null,
-            },
+            // Why Edit or Delete is unavailable, for its tooltip.
+            'edit_blocked' => $editBlocked ?? ($viewer->can('transactions.edit') ? null : 'permission'),
+            'delete_blocked' => $deleteBlocked ?? ($viewer->can('transactions.edit') ? null : 'permission'),
         ];
     }
 

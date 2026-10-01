@@ -11,6 +11,8 @@ use App\Models\PaymentAttempt;
 use App\Models\Transaction;
 use App\Models\TransactionApproval;
 use App\Services\AuditLogger;
+use App\Services\Ledger\CashBookCorrections;
+use App\Services\Ledger\CorrectionRefused;
 use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
 use App\Services\Ledger\PaymentFigures;
@@ -78,10 +80,16 @@ class PaymentsController extends Controller
             'account' => ['nullable', Rule::exists('accounts', 'code')->where('is_money', true)],
             'staff_id' => ['nullable', 'integer'],
             'approved' => ['nullable', 'boolean'],
+            // Edited and deleted entries, with the reversing entries that cancelled them (docs/transaction-edits.md).
+            'history' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $page = self::filtered($filters)
+            // By default the book reads as it stands: an entry that was edited or deleted, and the entry that cancelled
+            // it, are out of the list (they add up to nothing). An edit's corrected entry stays.
+            ->when(! filter_var($filters['history'] ?? false, FILTER_VALIDATE_BOOLEAN), fn (Builder $query) => $query
+                ->whereNull('reverses_transaction_id')->whereDoesntHave('reversal'))
             ->when($filters['account'] ?? null, function (Builder $query, string $code) {
                 $id = LedgerService::moneyAccountId($code);
                 // Entries from before the account was recorded fall back to the one their method has always meant.
@@ -153,26 +161,63 @@ class PaymentsController extends Controller
         return response()->json(['data' => AdminCashEntry::row($entry->load(AdminCashEntry::RELATIONS), $staff)], Response::HTTP_CREATED);
     }
 
-    /** ✕ on a cash-book row: an opposite entry with a reason, where reversal is allowed. */
-    public function reverse(Request $request, int $id, LedgerService $ledger, AuditLogger $audit): JsonResponse
+    /**
+     * Delete on a cash-book row (client, 2026-10-01; docs/transaction-edits.md): the entry is cancelled by a reversing
+     * entry on its own date, with the reason, and leaves the list; "Show edits and deletions" still shows both.
+     */
+    public function reverse(Request $request, int $id, CashBookCorrections $corrections): JsonResponse
     {
         $staff = $request->user('staff');
-        abort_unless($staff->can('transactions.create_manual'), 403, __('auth.forbidden'));
+        abort_unless($staff->can('transactions.edit'), 403, __('auth.forbidden'));
         $entry = Transaction::query()->findOrFail($id);
-        $reason = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']])['reason'];
+        $reason = trim($request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']])['reason']);
 
         try {
-            $reversal = DB::transaction(function () use ($ledger, $audit, $entry, $reason, $staff) {
-                $reversal = $ledger->reversePayment($entry, $reason, $staff);
-                $audit->record('cash.reversed', $staff, $entry, ['reversal' => $reversal->id, 'reason' => $reason]);
-
-                return $reversal;
-            });
-        } catch (LogicException $e) {
-            return response()->json(['message' => __('payments.not_reversible'), 'code' => 'not_reversible'], Response::HTTP_CONFLICT);
+            $reversal = $corrections->delete($entry, $reason, $staff);
+        } catch (CorrectionRefused $e) {
+            return self::refused($e);
         }
 
         return response()->json(['data' => AdminCashEntry::row($reversal->load(AdminCashEntry::RELATIONS), $staff)], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Edit on a cash-book row (docs/transaction-edits.md): the entry is cancelled on its own date and the corrected one
+     * recorded, keeping its receipt and its booking or invoice. A customer payment keeps its category.
+     */
+    public function edit(Request $request, int $id, CashBookCorrections $corrections): JsonResponse
+    {
+        $staff = $request->user('staff');
+        abort_unless($staff->can('transactions.edit'), 403, __('auth.forbidden'));
+        $entry = Transaction::query()->findOrFail($id);
+        // An entry that can't be edited says so first, rather than asking for fields it would refuse anyway.
+        if (($blocked = CashBookCorrections::editBlocked($entry)) !== null) {
+            return self::refused(new CorrectionRefused($blocked));
+        }
+        $payment = $entry->category === LedgerService::CATEGORY_PAYMENT;
+        $data = $request->validate([
+            'occurred_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
+            'account' => ['required', Rule::exists('accounts', 'code')->where('is_money', true)],
+            'category' => $payment ? ['nullable'] : ['required', Rule::in(CashCategories::forDirection($entry->direction->value))],
+            'business_line' => ['nullable', Rule::in(CashCategories::BUSINESS_LINES)],
+            'description' => $payment ? ['nullable', 'string', 'max:300'] : ['required', 'string', 'min:3', 'max:300'],
+            'reference' => ['nullable', 'string', 'max:120'],
+            'amount' => ['required', 'numeric', 'min:1', 'max:9999999999', 'decimal:0,2'],
+            'reason' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        try {
+            $replacement = $corrections->edit($entry, $data, $staff);
+        } catch (CorrectionRefused $e) {
+            return self::refused($e);
+        }
+
+        return response()->json(['data' => AdminCashEntry::row($replacement->load(AdminCashEntry::RELATIONS), $staff)], Response::HTTP_CREATED);
+    }
+
+    private static function refused(CorrectionRefused $e): JsonResponse
+    {
+        return response()->json(['message' => __("payments.correction_refused.{$e->reason}"), 'code' => $e->reason], Response::HTTP_CONFLICT);
     }
 
     public function evidence(int $id): StreamedResponse

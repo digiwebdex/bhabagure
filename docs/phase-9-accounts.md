@@ -166,9 +166,10 @@ review queue moved across and shows only when something needs checking.
 
 Three things theirs has that ours will not:
 
-- **Edit** and **Delete** on a posted entry. The cash book is append-only, in the database as well as the code, and
-  that is what makes every figure above it worth reading. A mistake is corrected with a reversing entry, and the row
-  says so where the Edit would have been.
+- **Edit** and **Delete** on a posted entry — added on 2026-10-01 at the client's request, without giving up the rule
+  behind this point: the cash book is append-only, in the database as well as the code, and that is what makes every
+  figure above it worth reading. Edit and Delete each add a reversing entry on the entry's own date, and Edit then
+  records the corrected entry; nothing is overwritten. See docs/transaction-edits.md.
 - Because of that, the **approval tick** is a record of its own (`transaction_approvals`), not a column on the entry:
   ticking one off changes not a single column of it. It needs `transactions.approve`, which the admin holds and the
   accountant does not — whoever records money should not be the one who says it has been checked.

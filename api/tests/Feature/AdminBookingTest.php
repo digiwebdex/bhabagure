@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Account;
 use App\Models\Booking;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\Transaction;
 use App\Services\Booking\BookingCreator;
 use App\Services\Booking\BookingRequest;
+use App\Services\Ledger\LedgerService;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -107,13 +109,46 @@ class AdminBookingTest extends TestCase
 
         $this->actingAsApi($admin)->postJson("/api/v1/admin/bookings/{$id}/confirm")->assertOk()->assertJsonPath('data.status', 'confirmed');
 
+        // Deleting a payment needs transactions.edit (2026-10-01; docs/transaction-edits.md): not the accountant's.
         $paymentId = Transaction::query()->where('booking_id', $id)->value('id');
-        $this->actingAsApi($accountant)->postJson("/api/v1/admin/transactions/{$paymentId}/reverse", ['reason' => 'Wrong customer'])
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/transactions/{$paymentId}/reverse", ['reason' => 'Wrong customer'])->assertForbidden();
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/transactions/{$paymentId}/reverse", ['reason' => 'Wrong customer'])
             ->assertOk()->assertJsonPath('data.paid_amount', 0)->assertJsonPath('data.payment_status', 'unpaid');
 
         // No route updates or deletes a ledger row.
         $this->actingAsApi($admin)->putJson("/api/v1/admin/transactions/{$paymentId}", ['amount' => 1])->assertNotFound();
         $this->actingAsApi($admin)->deleteJson("/api/v1/admin/transactions/{$paymentId}")->assertNotFound();
+    }
+
+    #[Test]
+    public function an_admin_edits_a_booking_payment_and_what_is_owed_follows(): void
+    {
+        // docs/transaction-edits.md (client, 2026-10-01).
+        $accountant = $this->staff('accountant');
+        $admin = $this->staff('admin');
+        $id = $this->booking->id;
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/invoice")->assertOk();
+        $this->actingAsApi($accountant)->postJson("/api/v1/admin/bookings/{$id}/payments", ['amount' => 50000, 'method' => 'bkash', 'reference' => 'BK5K', 'evidence' => $this->receipt()])->assertOk();
+        $paymentId = Transaction::query()->where('booking_id', $id)->value('id');
+        $today = now('Asia/Dhaka')->toDateString();
+
+        // It was 60,000, paid into the bank: the booking and its invoice follow, and so do the accounts.
+        $edited = $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$paymentId}/edit", ['occurred_on' => $today, 'account' => Account::BANK, 'amount' => 60000, 'reference' => 'BK5K'])
+            ->assertCreated()->assertJsonPath('data.booking.id', $id)->assertJsonPath('data.category', 'customer_payment')
+            ->assertJsonPath('data.account.code', Account::BANK)->assertJsonPath('data.reference', 'BK5K')->assertJsonPath('data.has_evidence', true)->json('data');
+        $this->actingAsApi($admin)->getJson("/api/v1/admin/bookings/{$id}")->assertJsonPath('data.paid_amount', 60000)->assertJsonPath('data.payment_status', 'partial')
+            ->assertJsonPath('data.invoices.0.payment_status', 'partial');
+        $balances = app(LedgerService::class)->moneyBalances();
+        $this->assertSame([0, 6000000], [$balances[Account::BKASH], $balances[Account::BANK]]);
+
+        // Never more than the booking comes to; refused, nothing changes.
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/cash-book/{$edited['id']}/edit", ['occurred_on' => $today, 'account' => Account::BANK, 'amount' => 153817, 'reference' => 'BK5K'])
+            ->assertUnprocessable()->assertJsonValidationErrors('amount');
+        $this->actingAsApi($admin)->getJson("/api/v1/admin/bookings/{$id}")->assertJsonPath('data.paid_amount', 60000);
+
+        // Deleted on the booking page: nothing paid.
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/transactions/{$edited['id']}/reverse", ['reason' => 'Bounced'])->assertOk()
+            ->assertJsonPath('data.paid_amount', 0)->assertJsonPath('data.payment_status', 'unpaid');
     }
 
     #[Test]

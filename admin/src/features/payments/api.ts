@@ -35,11 +35,34 @@ export type CashEntry = {
   account: { code: string; name: string | null } | null
   /** Who has checked it, if anyone. The entry itself is never touched to record this. */
   approved: { at: string; by: string | null; note: string | null } | null
-  actions: { reverse: boolean; approve: boolean }
-  reverse_blocked: 'is_reversal' | 'reversed' | 'online' | 'fee_line' | 'permission' | null
+  /** An edit's corrected entry: what it replaced, and what changed (docs/transaction-edits.md). */
+  edited: { from_id: number; at: string | null; by: string | null; changes: Record<string, [unknown, unknown]>; reason: string | null } | null
+  /** An entry that was edited or deleted (in the list with "Show edits and deletions"). */
+  correction: { kind: 'edit' | 'delete'; replacement_id: number | null; at: string | null; by: string | null; reason: string | null } | null
+  actions: { edit: boolean; delete: boolean; approve: boolean }
+  edit_blocked: CorrectionBlocked | null
+  delete_blocked: CorrectionBlocked | null
 }
 
-export type CashBookFilters = { direction: 'all' | 'in' | 'out'; account: string; category: string; from: string; to: string; search: string; staff_id: string; approved: 'all' | 'yes' | 'no'; page: number }
+/** Why Edit or Delete is unavailable (CashBookCorrections in the API). */
+export type CorrectionBlocked = 'is_reversal' | 'reversed' | 'online' | 'vat' | 'fee_line' | 'payroll' | 'bonus' | 'charge' | 'permission'
+
+/** What an edit sends (POST cash-book/{id}/edit). A customer payment keeps its category. */
+export type CashEntryEdit = { occurred_on: string; account: string; category?: string; business_line?: string | null; description: string; reference: string | null; amount: number; reason?: string }
+
+export type CashBookFilters = {
+  direction: 'all' | 'in' | 'out'
+  account: string
+  category: string
+  from: string
+  to: string
+  search: string
+  staff_id: string
+  approved: 'all' | 'yes' | 'no'
+  /** Edited and deleted entries, with the entries that cancelled them. */
+  history: boolean
+  page: number
+}
 
 export type PaymentOptions = {
   methods: string[]
@@ -95,6 +118,7 @@ export function useCashBook(filters: CashBookFilters) {
   if (filters.direction !== 'all') params.set('direction', filters.direction)
   for (const key of ['account', 'category', 'from', 'to', 'staff_id'] as const) if (filters[key]) params.set(key, filters[key])
   if (filters.approved !== 'all') params.set('approved', filters.approved === 'yes' ? '1' : '0')
+  if (filters.history) params.set('history', '1')
   if (filters.search.trim()) params.set('search', filters.search.trim())
   return useQuery({
     queryKey: ['payments', 'cash-book', params.toString()],
@@ -128,7 +152,10 @@ export function usePaymentsMutation<TVariables, TResult>(send: (variables: TVari
 export const paymentActions = {
   /** Manual cash in / out; multipart when a receipt is attached. */
   createEntry: (form: FormData) => api.post<Data<CashEntry>>('admin/cash-entries', form),
+  /** Delete: the entry is cancelled by a reversing one on its own date (docs/transaction-edits.md). */
   reverse: (id: number, reason: string) => api.post<Data<CashEntry>>(`admin/cash-book/${id}/reverse`, { reason }),
+  /** Edit: the entry is cancelled and the corrected one recorded; answers with the corrected entry. */
+  edit: (id: number, body: CashEntryEdit) => api.post<Data<CashEntry>>(`admin/cash-book/${id}/edit`, body),
   review: (id: number, note: string) => api.post<null>(`admin/payment-attempts/${id}/review`, { note }),
   openingBalance: (body: { account: string; amount: number; as_of: string; note: string | null }) => api.post<Data<Balance>>('admin/opening-balances', body),
   /** Money moved between the company's own money accounts: no total changes, so it is a journal entry, not a cash entry. */

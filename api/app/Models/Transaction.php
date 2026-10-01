@@ -50,6 +50,29 @@ class Transaction extends Model
         return $this->hasOne(self::class, 'reverses_transaction_id');
     }
 
+    /** The edit or delete that cancelled this entry, if one did (docs/transaction-edits.md). */
+    public function correction(): HasOne
+    {
+        return $this->hasOne(TransactionCorrection::class, 'original_transaction_id');
+    }
+
+    /** For a corrected entry: the edit that recorded it in place of another. */
+    public function replaces(): HasOne
+    {
+        return $this->hasOne(TransactionCorrection::class, 'replacement_transaction_id');
+    }
+
+    /** A salary paid from Payroll, or a bonus paid out: edited there, not in the cash book. */
+    public function payrollItem(): HasOne
+    {
+        return $this->hasOne(PayrollItem::class, 'transaction_id');
+    }
+
+    public function bonusWithdrawal(): HasOne
+    {
+        return $this->hasOne(BonusWithdrawal::class, 'cash_transaction_id');
+    }
+
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
