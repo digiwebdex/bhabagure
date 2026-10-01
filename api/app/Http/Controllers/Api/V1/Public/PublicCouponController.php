@@ -48,12 +48,15 @@ class PublicCouponController extends Controller
             'passport_numbers' => ['array', 'max:20'],
             'passport_numbers.*' => ['string', 'max:20'],
             'locale' => ['required', Rule::in(['bn', 'en'])],
+            // A group tour is priced on its departure's own price (docs/departure-prices.md).
+            'travel_date' => ['nullable', 'date_format:Y-m-d'],
         ]);
         $locale = $data['locale'];
+        $travelDate = $data['travel_date'] ?? null;
 
         $package = TourPackage::query()->published()->where('slug', $data['package_slug'])->firstOrFail();
         $addons = Addon::query()->where('is_active', true)->whereIn('code', $data['addons'] ?? [])->orderBy('sort_order')->get()->all();
-        $quote = $creator->packageQuote($package, $data['pax'], $data['room'], $data['hotel_category'] ?? null, $addons);
+        $quote = $creator->packageQuote($package, $data['pax'], $data['room'], $data['hotel_category'] ?? null, $addons, travelDate: $travelDate);
         $subtotal = BookingCreator::eligibleAmount($quote['lines']);
 
         try {
@@ -69,7 +72,7 @@ class PublicCouponController extends Controller
         }
 
         $coupon = $offer['coupon'];
-        $final = $creator->packageQuote($package, $data['pax'], $data['room'], $data['hotel_category'] ?? null, $addons, $offer['discount']);
+        $final = $creator->packageQuote($package, $data['pax'], $data['room'], $data['hotel_category'] ?? null, $addons, $offer['discount'], $travelDate);
 
         return response()->json(['data' => [
             'valid' => true,

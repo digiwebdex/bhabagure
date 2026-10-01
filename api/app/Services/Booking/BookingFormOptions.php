@@ -38,6 +38,8 @@ final class BookingFormOptions
                     'departures' => $package->departures->map(fn (PackageDeparture $departure) => [
                         'date' => $departure->departs_on->toDateString(),
                         'seats_left' => $departure->seats_total === null ? null : DepartureSeats::available($departure),
+                        // A group tour on this date is priced from this (docs/departure-prices.md); null: list_price.
+                        'price' => $package->isGroupTour() ? Money::toNumber($departure->price) : null,
                     ])->values(),
                 ])->values(),
             'addons' => Addon::query()->where('is_active', true)->orderBy('sort_order')->get()

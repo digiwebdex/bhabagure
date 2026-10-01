@@ -52,7 +52,9 @@ function GroupTourDate({ pkg, error }: { pkg: PackageView; error?: string }) {
         {t('departureFixed')}
         <p className="flex flex-col rounded-10 border border-input bg-paper-alt p-3 text-15 text-ink">
           <strong className="font-semibold">{f.date(only.departsOn)}</strong>
-          <span className="text-12 text-muted">{seats(only)}</span>
+          <span className="text-12 text-muted">
+            {t('departurePrice', { price: f.bdt(only.price) })} · {seats(only)}
+          </span>
         </p>
         {error ? (
           <span role="alert" className="text-12 font-semibold text-red">
@@ -69,9 +71,10 @@ function GroupTourDate({ pkg, error }: { pkg: PackageView; error?: string }) {
         <option value="" disabled>
           {t('departurePick')}
         </option>
+        {/* Each date at its own price (docs/departure-prices.md): picking another one re-prices the booking. */}
         {pkg.departures.map((d) => (
           <option key={d.departsOn} value={d.departsOn} disabled={!hasRoom(d, booking.pax)}>
-            {f.date(d.departsOn)} · {seats(d)}
+            {f.date(d.departsOn)} · {t('departurePrice', { price: f.bdt(d.price) })} · {seats(d)}
           </option>
         ))}
       </select>

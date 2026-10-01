@@ -139,6 +139,9 @@ final class AdminContent
             'returns_on' => $departure->returns_on?->toDateString(),
             'seats_total' => $departure->seats_total,
             'seats_booked' => (int) ($departure->booked_pax ?? 0),
+            // Its own price per person, null for the package's; the one the website's card shows (docs/departure-prices.md).
+            'price' => Money::toNumber($departure->price),
+            'is_featured' => $departure->is_featured,
             'is_guaranteed' => $departure->is_guaranteed,
             'status' => $departure->status,
             'group_leader_staff_id' => $departure->group_leader_staff_id,

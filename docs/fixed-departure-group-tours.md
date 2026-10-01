@@ -1,6 +1,10 @@
 # Fixed-departure group tours (2026-09-27)
 
 > **Updated 2026-09-28 (docs/room-rates.md):** every package now has room rates. Triple sharing is the base price; **Twin (+%)** replaced the "Triple (−%)" discount below, and single keeps its own +%.
+>
+> **Updated 2026-10-01 (docs/departure-prices.md):** each departure can have its own price per person, and one is
+> featured on the card; the card, the package page and the booking form start on it, and every booking is priced on
+> the date it travels. "One fixed price" below now means one price per date.
 
 **Asked:** as on the old website, some trips are **Group Tours** on a **Fixed Departure**, others **Customized Trips**.
 For a group tour the agency fixes the trip: the price stays the same, and the customer only picks the room —

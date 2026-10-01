@@ -175,7 +175,8 @@
     "addItem": "Add item",
     "removeItem": "Remove item {{n}}",
     "travelDateOptional": "Travel date (optional)",
-    "customPerPerson": "All items, per person ({{n}} travellers)"
+    "customPerPerson": "All items, per person ({{n}} travellers)",
+    "seatsLeft": "{{seats}} seats left"
   },
   "sources": {
     "walk_in": "Walk-in",
@@ -574,7 +575,17 @@
       "closed": "Closed",
       "departed": "Departed",
       "cancelled": "Cancelled"
-    }
+    },
+    "price": "Price per person on this date",
+    "priceHint": "Blank: the package’s price ({{price}}). Twin and single add the package’s percentages, as on any date.",
+    "pricePerPerson": "{{price}} per person",
+    "packagePrice": "Package price · {{price}} per person",
+    "featureLabel": "Shown on the website’s card",
+    "featureHint": "The date whose day and price the package card shows, and that the booking form starts on. Customers can still pick any date.",
+    "featureAuto": "Automatic: the next date with seats",
+    "featureOn": "Show {{date}} on the card",
+    "featureSaved": "Saved: the website’s card follows.",
+    "onCard": "On the card"
   },
   "seo": {
     "titleBn": "Meta title (Bangla)",

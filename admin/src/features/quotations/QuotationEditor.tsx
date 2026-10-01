@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { NumberInput, SelectInput, TextArea, TextInput } from '../../components/ui/fields'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
+import { priceOn } from '../bookings/api'
 import type { QuotationBody, QuotationInputs, QuotationOptions } from './api'
 
 export type QuotationForm = Omit<QuotationInputs, 'package_slug' | 'travel_date' | 'notes'> & { package_slug: string; travel_date: string; notes: string }
@@ -47,7 +48,7 @@ export function useQuotationForm(options: QuotationOptions | undefined, initial:
     if (!options || !current || !pkg) return null
     try {
       const addons = options.addons.filter((addon) => current.addons.includes(addon.code))
-      return quoteBooking({ listPrice: pkg.list_price, pax: current.pax, room: current.room, addons, config: options.config, discount: current.discount, chargePercent: current.vat_rate, grid: pkg.price_grid, hotelCategory: pkg.fixed_price ? null : gridCategory(pkg.price_grid, current.hotel_category), rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
+      return quoteBooking({ listPrice: priceOn(pkg, current.travel_date || null), pax: current.pax, room: current.room, addons, config: options.config, discount: current.discount, chargePercent: current.vat_rate, grid: pkg.price_grid, hotelCategory: pkg.fixed_price ? null : gridCategory(pkg.price_grid, current.hotel_category), rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
     } catch {
       return null
     }
@@ -87,7 +88,11 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
           onChange={(travel_date) => set({ travel_date })}
           options={[
             { value: '', label: t('quotations.dateLater') },
-            ...pkg.departures.map((d) => ({ value: d.date, label: d.seats_left === null ? date(d.date) : t('newBooking.departureSeats', { date: date(d.date), seats: number(d.seats_left) }) })),
+            // Each date with a group tour's price on it (docs/departure-prices.md) and its seats.
+            ...pkg.departures.map((d) => ({
+              value: d.date,
+              label: [date(d.date), pkg.fixed_price ? bdt(priceOn(pkg, d.date)) : null, d.seats_left === null ? null : t('newBooking.seatsLeft', { seats: number(d.seats_left) })].filter(Boolean).join(' · '),
+            })),
           ]}
           error={fieldError('travel_date')}
         />
@@ -127,7 +132,7 @@ export function QuotationFields({ draft, options, fieldError }: { draft: Draft; 
             const price = (() => {
               if (!pkg) return null
               try {
-                const priced = quoteBooking({ listPrice: pkg.list_price, pax: form.pax, room: value, addons: [], config: options.config, grid: pkg.price_grid, hotelCategory: pkg.fixed_price ? null : gridCategory(pkg.price_grid, form.hotel_category), rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
+                const priced = quoteBooking({ listPrice: priceOn(pkg, form.travel_date || null), pax: form.pax, room: value, addons: [], config: options.config, grid: pkg.price_grid, hotelCategory: pkg.fixed_price ? null : gridCategory(pkg.price_grid, form.hotel_category), rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
                 return Math.round((priced.subtotal + priced.singleSupplement) / form.pax)
               } catch {
                 return null

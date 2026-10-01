@@ -9,6 +9,7 @@ import { buttonClass } from '@/components/ui/button';
 import { Stepper } from '@/components/ui/Stepper';
 import { DownloadButton } from '@/features/downloads/DownloadButton';
 import type { PackageView } from '@/lib/content/views';
+import { shownDeparture } from '@/lib/departures';
 import { basePrice, roomPercent, roomPricesFor } from '@/lib/package-price';
 import { whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
@@ -274,11 +275,16 @@ function GroupTourPrices({ pkg, pax }: { pkg: PackageView; pax: number }) {
   const t = useTranslations('detail');
   const tb = useTranslations('booking');
   const f = useFormatters();
+  // Dates priced differently (docs/departure-prices.md): each says its price, and the rooms are priced for the date the
+  // card shows (pkg.listPrice is that date's price).
+  const shown = shownDeparture(pkg.departures);
+  const varies = new Set(pkg.departures.map((d) => d.price)).size > 1;
 
   return (
     <div className="grid-auto-fit-250 grid gap-3.5" data-testid="group-tour-prices">
       <div className="flex flex-col gap-2 rounded-16 border border-hairline bg-white p-4">
         <h4 className="text-15 font-bold">{t('roomsHeading')}</h4>
+        {varies && shown ? <p className="-mt-1 text-12 text-muted">{t('roomsForDate', { date: f.date(shown.departsOn) })}</p> : null}
         <RoomPriceList pkg={pkg} pax={pax} category={null} />
       </div>
       <div className="flex flex-col gap-2 rounded-16 border border-hairline bg-white p-4">
@@ -289,7 +295,10 @@ function GroupTourPrices({ pkg, pax }: { pkg: PackageView; pax: number }) {
           <ul className="flex flex-col">
             {pkg.departures.map((d) => (
               <li key={d.departsOn} className="flex items-baseline justify-between gap-3 border-b border-hairline py-2 text-14 last:border-b-0">
-                <span className="font-semibold">{f.date(d.departsOn)}</span>
+                <span className="flex flex-col">
+                  <span className="font-semibold">{f.date(d.departsOn)}</span>
+                  {varies ? <span className="text-12 text-muted">{tb('departurePrice', { price: f.bdt(d.price) })}</span> : null}
+                </span>
                 <span className={d.seatsLeft === 0 ? 'font-semibold text-red' : 'text-muted'}>
                   {d.seatsLeft === 0 ? tb('soldOut') : tb('seatsLeft', { seats: d.seatsLeft, seatsText: f.number(d.seatsLeft) })}
                 </span>

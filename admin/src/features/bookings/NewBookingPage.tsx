@@ -12,7 +12,7 @@ import { Card, CardTitle, Chips, Loading, PageHeader } from '../../components/ui
 import { api, ApiError } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
-import type { BookingDetail, BookingFormOptions as Options } from './api'
+import { priceOn, type BookingDetail, type BookingFormOptions as Options } from './api'
 
 type CustomerHit = { id: number; name: string; phone: string }
 
@@ -59,6 +59,9 @@ export function NewBookingPage() {
   })
 
   const pkg = options.data?.packages.find((p) => p.slug === slug)
+  // A departure as the list offers it: its date, a group tour's price on that date (docs/departure-prices.md), its seats.
+  const departureLabel = (d: Options['packages'][number]['departures'][number]) =>
+    [date(d.date), pkg?.fixed_price ? bdt(priceOn(pkg, d.date)) : null, d.seats_left === null ? null : t('newBooking.seatsLeft', { seats: number(d.seats_left) })].filter(Boolean).join(' · ')
   // A group tour has one fixed price and is booked on its departures only (docs/fixed-departure-group-tours.md).
   const groupTour = pkg?.fixed_price ?? false
   // A package priced by hotel category is booked in one of its categories; basic/3-star until another is picked.
@@ -76,7 +79,7 @@ export function NewBookingPage() {
   const packageQuote = (() => {
     if (!pkg || !options.data) return null
     try {
-      return quoteBooking({ listPrice: pkg.list_price, pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category, rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
+      return quoteBooking({ listPrice: priceOn(pkg, travelDate), pax, room, addons: chosenAddons, config: options.data.config, grid: pkg.price_grid, hotelCategory: category, rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
     } catch {
       return null
     }
@@ -86,7 +89,7 @@ export function NewBookingPage() {
   const roomPrice = (value: RoomType): number | null => {
     if (!pkg || !options.data) return null
     try {
-      const priced = quoteBooking({ listPrice: pkg.list_price, pax, room: value, addons: [], config: options.data.config, grid: pkg.price_grid, hotelCategory: category, rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
+      const priced = quoteBooking({ listPrice: priceOn(pkg, travelDate), pax, room: value, addons: [], config: options.data.config, grid: pkg.price_grid, hotelCategory: category, rooms: pkg.room_rates, fixedPrice: pkg.fixed_price })
       return Math.round((priced.subtotal + priced.singleSupplement) / pax)
     } catch {
       return null
@@ -238,7 +241,7 @@ export function NewBookingPage() {
               label={t('newBooking.departure')}
               value={travelDate}
               onChange={setTravelDate}
-              options={[{ value: '', label: t('common.choose') }, ...pkg.departures.map((d) => ({ value: d.date, label: d.seats_left === null ? date(d.date) : t('newBooking.departureSeats', { date: date(d.date), seats: number(d.seats_left) }) }))]}
+              options={[{ value: '', label: t('common.choose') }, ...pkg.departures.map((d) => ({ value: d.date, label: departureLabel(d) }))]}
               error={fieldError('travel_date')}
             />
           ) : groupTour ? (

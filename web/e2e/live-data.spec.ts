@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { formatDate } from '@bhabaghure/format';
+
 import { API_DIR, artisan, E2E_API_URL } from '../../scripts/e2e-api.mjs';
 
 /** Behaviour that only exists on live data: real form submissions, account rules and CMS-driven refreshes. */
@@ -722,8 +724,8 @@ test.describe('CMS to website', () => {
       await expect(dialog).toContainText('Group Tour · Fixed Departure — the price is fixed; only the room changes it.');
       const dates = dialog.getByTestId('group-tour-date');
       await dialog.getByLabel('Travellers').fill('2');
-      await dialog.getByRole('button', { name: 'Next step →' }).click();
-      await expect(dialog.getByText('Choose one of the departure dates.')).toBeVisible();
+      // It starts on the date the card shows (docs/departure-prices.md): none featured, the soonest with seats.
+      await expect(dates).toHaveValue(soon);
       // Three travellers fit only the first departure, which is then the one taken.
       await dialog.getByLabel('Travellers').fill('3');
       await expect(dates.locator(`option[value="${later}"]`)).toHaveAttribute('disabled');
@@ -749,6 +751,68 @@ test.describe('CMS to website', () => {
       artisan(
         'tinker',
         `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'customized']); $p->departures()->update(['status' => 'cancelled']); echo 'ok';`,
+      );
+      await refresh();
+    }
+  });
+
+  test('a group tour shows the featured date and its price, and the booking form re-prices on another date (docs/departure-prices.md)', async ({ page, request }) => {
+    const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages', 'departures'] } });
+    const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+    const [soon, later] = [day(41), day(71)];
+    // 27,000 per person in triple sharing; the later date at its own 30,000 and featured on the card.
+    artisan(
+      'tinker',
+      `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'group_fixed', 'single_supplement_percent' => 50, 'twin_supplement_percent' => 0]); ` +
+        `$p->departures()->create(['departs_on' => '${soon}', 'seats_total' => 12, 'status' => 'scheduled']); $p->departures()->create(['departs_on' => '${later}', 'seats_total' => 12, 'status' => 'scheduled', 'price' => 30000, 'is_featured' => true]); echo 'ok';`,
+    );
+    try {
+      expect((await refresh()).status()).toBe(200);
+      // The card: the featured date and its price, not the soonest date.
+      const card = page.locator('#packages article').filter({ hasText: 'THAILAND BUDGET ESCAPE' });
+      await expect.poll(async () => {
+        await page.goto('/en');
+        return card.innerText();
+      }, { timeout: 20_000 }).toContain(`departs ${formatDate(later, 'en')}`);
+      await expect(card.locator('.text-price')).toHaveText('৳ 30,000');
+
+      // The package: each date with its price; the rooms priced for the featured date.
+      await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
+      const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
+      const prices = detail.getByTestId('group-tour-prices');
+      await expect(prices).toContainText(`For the departure on ${formatDate(later, 'en')}`);
+      await expect(prices.getByRole('listitem').filter({ hasText: 'Triple sharing' })).toContainText('৳ 30,000');
+      await expect(prices.getByRole('listitem').filter({ hasText: formatDate(soon, 'en') })).toContainText('from ৳ 27,000 per person');
+      await expect(prices.getByRole('listitem').filter({ hasText: formatDate(later, 'en') })).toContainText('from ৳ 30,000 per person');
+
+      // The booking form starts on the featured date and its price; another date re-prices it.
+      await detail.getByRole('button', { name: 'Book now' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Book online' });
+      const dates = dialog.getByTestId('group-tour-date');
+      await dialog.getByLabel('Travellers').fill('2');
+      await expect(dates).toHaveValue(later);
+      await expect(dates.locator(`option[value="${soon}"]`)).toContainText('from ৳ 27,000 per person');
+      await expect(dialog.getByLabel('Room')).toContainText('Triple sharing · ৳ 30,000 per person');
+      await dates.selectOption(soon);
+      await expect(dialog.getByLabel('Room')).toContainText('Triple sharing · ৳ 27,000 per person');
+      await dates.selectOption(later);
+      await dialog.getByLabel('Room').selectOption({ label: 'Triple sharing · ৳ 30,000 per person' });
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      const lead = dialog.locator('section').nth(0);
+      await lead.getByLabel('Name (as on passport)').fill('NASIR UDDIN');
+      await lead.getByLabel('WhatsApp number').fill(uniquePhone());
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      // 30,000 × 2 = 60,000 + 2% = 61,200, and the API charges exactly that.
+      await expect(dialog.getByTestId('booking-total')).toHaveText('৳ 61,200');
+      await dialog.getByRole('checkbox').check();
+      await dialog.getByRole('button', { name: 'Next step →' }).click();
+      await dialog.getByRole('button', { name: 'Pay ৳ 61,200 with SSLCommerz →' }).click();
+      await expect(page.locator('body')).toContainText('BDT 61,200.00');
+    } finally {
+      artisan(
+        'tinker',
+        `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'customized']); $p->departures()->update(['status' => 'cancelled', 'is_featured' => false]); echo 'ok';`,
       );
       await refresh();
     }

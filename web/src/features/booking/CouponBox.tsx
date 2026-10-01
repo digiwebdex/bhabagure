@@ -14,7 +14,7 @@ import { applyCoupon, removeCoupon } from './coupon';
  * The coupon row under the price breakdown (docs/coupons.md §2.7): a code and Apply; applied, the saving and Remove;
  * refused, the API's reason. The discount is always the API's — this box never works one out.
  */
-export function CouponBox({ hotelCategory }: { hotelCategory: string | null }) {
+export function CouponBox({ hotelCategory, travelDate }: { hotelCategory: string | null; travelDate: string }) {
   const t = useTranslations('booking.coupon');
   const locale = useLocale() as 'bn' | 'en';
   const f = useFormatters();
@@ -49,7 +49,7 @@ export function CouponBox({ hotelCategory }: { hotelCategory: string | null }) {
       return;
     }
     setEmpty(false);
-    void applyCoupon(code, hotelCategory, locale, messages);
+    void applyCoupon(code, hotelCategory, travelDate, locale, messages);
   };
   const refused = booking.couponCheck.status === 'refused' ? booking.couponCheck.message : null;
 

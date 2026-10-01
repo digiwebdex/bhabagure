@@ -185,6 +185,8 @@ export type CouponCheckPayload = {
   pax: number;
   room: string;
   hotel_category: string | null;
+  /** A group tour's departure: it is priced on that date's own price (docs/departure-prices.md). */
+  travel_date: string | null;
   addons: string[];
   phone: string | null;
   passport_numbers: string[];

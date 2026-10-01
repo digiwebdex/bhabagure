@@ -129,6 +129,10 @@ export type Departure = {
   returns_on: string | null
   seats_total: number
   seats_booked: number
+  /** A group tour's price per person on this date; null: the package's (docs/departure-prices.md). */
+  price: number | null
+  /** The one the website's card shows and the booking form starts on. */
+  is_featured: boolean
   is_guaranteed: boolean
   status: 'scheduled' | 'closed' | 'departed' | 'cancelled'
   group_leader_staff_id: number | null

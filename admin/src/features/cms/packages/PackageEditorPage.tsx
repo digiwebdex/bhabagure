@@ -304,7 +304,17 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
 
           <Card>
             <CardTitle title="Group departures" />
-            {pkg ? <DeparturesPanel packageId={pkg.id} durationDays={form.duration_days} /> : <p className="m-0 text-13 text-app-muted">{t('packages.saveToContinue')}</p>}
+            {pkg ? (
+              <DeparturesPanel
+                packageId={pkg.id}
+                durationDays={form.duration_days}
+                // A group tour's dates each have a price and one shows on the card (docs/departure-prices.md).
+                groupTour={form.trip_type === 'group_fixed'}
+                packagePrice={form.sale_price ?? (form.regular_price || null)}
+              />
+            ) : (
+              <p className="m-0 text-13 text-app-muted">{t('packages.saveToContinue')}</p>
+            )}
           </Card>
 
           {pkg ? (

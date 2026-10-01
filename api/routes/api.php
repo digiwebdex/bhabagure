@@ -280,6 +280,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('packages/{packageId}/departures', 'index')->whereNumber('packageId');
                 Route::post('packages/{packageId}/departures', 'store')->whereNumber('packageId');
                 Route::put('departures/{id}', 'update')->whereNumber('id');
+                // "Show on the card" (docs/departure-prices.md).
+                Route::post('departures/{id}/feature', 'feature')->whereNumber('id');
                 Route::delete('departures/{id}', 'destroy')->whereNumber('id');
             });
 

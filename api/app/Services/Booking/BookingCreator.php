@@ -85,7 +85,7 @@ final class BookingCreator
                 'package_title_en' => $package->title_en,
                 'package_title_bn' => $package->title_bn,
                 'duration_days' => $package->duration_days,
-                'list_price' => $this->listPrice($package),
+                'list_price' => $this->listPrice($package, $request->travelDate),
                 // The chosen hotel category and its grid row as priced, kept like list_price (Phase 8 §4.D).
                 'hotel_category' => $quote['hotelCategory'],
                 'price_grid' => PriceGrid::rowFor($package->price_grid, $quote['hotelCategory']),
@@ -371,19 +371,19 @@ final class BookingCreator
      */
     public function quote(TourPackage $package, BookingRequest $request, array $addons, int $discount = 0): array
     {
-        return $this->packageQuote($package, $request->pax, $request->room, $request->hotelCategory, $addons, $discount);
+        return $this->packageQuote($package, $request->pax, $request->room, $request->hotelCategory, $addons, $discount, $request->travelDate);
     }
 
     /**
      * @param  list<Addon>  $addons
      * @return array<string, mixed>
      */
-    public function packageQuote(TourPackage $package, int $pax, string $room, ?string $hotelCategory, array $addons, int $discount = 0): array
+    public function packageQuote(TourPackage $package, int $pax, string $room, ?string $hotelCategory, array $addons, int $discount = 0, ?string $travelDate = null): array
     {
         self::assertHotelCategory($package, $hotelCategory);
 
         return PricingService::quoteBooking(
-            $this->listPrice($package),
+            $this->listPrice($package, $travelDate),
             $pax,
             $room,
             array_map(fn (Addon $addon) => ['code' => $addon->code, 'price' => Money::toNumber($addon->price), 'unit' => $addon->unit], $addons),
@@ -410,8 +410,20 @@ final class BookingCreator
         }
     }
 
-    public function listPrice(TourPackage $package): int|float
+    /**
+     * The price per person a booking is priced from: the package's sale price, else its regular price — or, for a group
+     * tour on one of its departures, that departure's own price when it has one (docs/departure-prices.md).
+     */
+    public function listPrice(TourPackage $package, ?string $travelDate = null): int|float
     {
+        if ($package->isGroupTour() && $travelDate !== null) {
+            $price = PackageDeparture::query()->where('tour_package_id', $package->id)->where('status', 'scheduled')
+                ->whereDate('departs_on', $travelDate)->value('price');
+            if ($price !== null) {
+                return Money::toNumber($price);
+            }
+        }
+
         return Money::toNumber($package->sale_price ?? $package->regular_price);
     }
 

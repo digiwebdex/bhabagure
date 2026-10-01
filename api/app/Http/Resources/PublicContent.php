@@ -213,6 +213,10 @@ final class PublicContent
             'seatsTotal' => $departure->seats_total,
             'seatsBooked' => min($departure->seats_total, (int) $departure->booked_pax + (int) $departure->held_seats),
             'isGuaranteed' => $departure->is_guaranteed,
+            // A group tour's price per person on this date (null: the package's), and whether its card shows this date
+            // (docs/departure-prices.md).
+            'price' => Money::toNumber($departure->price),
+            'featured' => $departure->is_featured,
         ];
     }
 

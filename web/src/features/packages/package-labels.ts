@@ -1,4 +1,5 @@
 import type { PackageView } from '@/lib/content/views';
+import { shownDeparture } from '@/lib/departures';
 import type { Formatters } from '@/lib/formatters';
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
@@ -25,8 +26,9 @@ export function packageLabels(pkg: LabelSource, t: Translate, f: Formatters) {
       ? `${t('customizedTrip')} · ${t('minPax', { countText: f.number(pkg.minPax) })}`
       : t('customizedTrip');
 
-  // A group tour names its next departure that still has seats; a customized trip how its dates work.
-  const next = pkg.groupTour ? pkg.departures?.find((d) => d.seatsLeft > 0) : undefined;
+  // A group tour names the departure it is shown on — the featured one while it has seats, else the next with seats
+  // (docs/departure-prices.md); a customized trip how its dates work.
+  const next = pkg.groupTour && pkg.departures ? shownDeparture(pkg.departures) : undefined;
   const mode = pkg.groupTour
     ? next
       ? t('departsOn', { date: f.date(next.departsOn) })

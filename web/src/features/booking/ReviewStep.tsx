@@ -53,7 +53,7 @@ export function ReviewStep({ pkg, quote, hotelCategory, termsError }: { pkg: Pac
       </dl>
 
       <PriceBreakdown lines={lines} total={online.total} totalLabel={online.charge > 0 || quote.discount > 0 ? t('totalToPay') : t('total')} />
-      <CouponBox hotelCategory={hotelCategory} />
+      <CouponBox hotelCategory={hotelCategory} travelDate={date} />
 
       <label
         className={`-mx-2.5 -my-2 flex items-start gap-2.5 rounded-10 border-chip px-2.5 py-2 text-13 leading-1.5 text-muted ${termsError ? 'border-orange-bright' : 'border-transparent'}`}

@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PackageDeparture extends Model
 {
-    protected $fillable = ['tour_package_id', 'departs_on', 'returns_on', 'seats_total', 'is_guaranteed', 'status', 'group_leader_staff_id', 'notes'];
+    protected $fillable = ['tour_package_id', 'departs_on', 'returns_on', 'seats_total', 'price', 'is_featured', 'is_guaranteed', 'status', 'group_leader_staff_id', 'notes'];
 
     protected function casts(): array
     {
-        return ['departs_on' => 'date', 'returns_on' => 'date', 'is_guaranteed' => 'boolean', 'seats_total' => 'integer'];
+        return ['departs_on' => 'date', 'returns_on' => 'date', 'is_guaranteed' => 'boolean', 'is_featured' => 'boolean', 'seats_total' => 'integer', 'price' => 'decimal:2'];
     }
 
     public function package(): BelongsTo

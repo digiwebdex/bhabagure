@@ -316,7 +316,8 @@ final class QuotationService
     {
         $package = TourPackage::query()->published()->where('slug', $input->packageSlug)->firstOrFail();
         $addons = Addon::query()->where('is_active', true)->whereIn('code', $input->addonCodes)->orderBy('sort_order')->get();
-        $listPrice = $this->bookings->listPrice($package);
+        // A group tour quoted on one of its departures takes that date's price (docs/departure-prices.md).
+        $listPrice = $this->bookings->listPrice($package, $input->travelDate);
         BookingCreator::assertHotelCategory($package, $input->hotelCategory);
         $quote = PricingService::quoteBooking(
             $listPrice, $input->pax, $input->room,

@@ -5,6 +5,7 @@
 import { gridCategories, listPrice, savingPercent, type HotelCategory, type PriceGrid, type RoomRates } from '@bhabaghure/pricing';
 
 import type { AppLocale } from '@/i18n/routing';
+import { shownDeparture } from '@/lib/departures';
 
 import type { BlogCategory, ContentBundle, ContentImage, Localized, TourPackage } from './types';
 
@@ -44,7 +45,10 @@ export interface PackageView {
   durationNights: number | null;
   regularPrice: number;
   salePrice: number | null;
-  /** With a grid, the price for basic/3-star and two travellers (the API keeps regularPrice at it). */
+  /**
+   * With a grid, the price for basic/3-star and two travellers (the API keeps regularPrice at it). A group tour: the
+   * price on the departure it is shown on (shownDeparture), so its card and page agree (docs/departure-prices.md).
+   */
   listPrice: number;
   savingPercent: number;
   priceGrid: PriceGrid | null;
@@ -72,6 +76,10 @@ export interface PackageDepartureView {
   departsOn: string;
   seatsLeft: number;
   seatsTotal: number;
+  /** The price per person on this date — its own, else the package's (docs/departure-prices.md). */
+  price: number;
+  /** Staff chose it for the card ("Show on the card"); see shownDeparture(). */
+  featured: boolean;
 }
 
 export interface DepartureView {
@@ -210,6 +218,14 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     // A group tour has one fixed price: its hotel-category grid, if it kept one, is not used.
     const groupTour = p.groupTour === true;
     const grid = groupTour ? null : (p.priceGrid ?? null);
+    // Each departure at its own price, else the package's (docs/departure-prices.md); the tour is shown, and priced on
+    // its card and page, on the departure staff featured while it has seats, else the next one with seats.
+    const departures: PackageDepartureView[] = groupTour
+      ? bundle.departures
+          .filter((d): d is typeof d & { departsOn: string } => d.packageCode === p.code && d.departsOn !== null)
+          .map((d) => ({ departsOn: d.departsOn, seatsTotal: d.seatsTotal, seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked), price: d.price ?? listPrice(p), featured: d.featured === true }))
+          .sort((a, b) => a.departsOn.localeCompare(b.departsOn))
+      : [];
     return {
       code: p.code,
       slug: p.slug,
@@ -222,7 +238,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       durationNights: p.durationNights,
       regularPrice: p.regularPrice,
       salePrice: p.salePrice,
-      listPrice: listPrice(p),
+      listPrice: groupTour ? (shownDeparture(departures)?.price ?? listPrice(p)) : listPrice(p),
       savingPercent: savingPercent(p),
       priceGrid: grid,
       hotelCategories: gridCategories(grid),
@@ -237,12 +253,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       departureMode: p.departureMode,
       groupTour,
       roomRates: p.roomRates ?? null,
-      departures: groupTour
-        ? bundle.departures
-            .filter((d): d is typeof d & { departsOn: string } => d.packageCode === p.code && d.departsOn !== null)
-            .map((d) => ({ departsOn: d.departsOn, seatsTotal: d.seatsTotal, seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked) }))
-            .sort((a, b) => a.departsOn.localeCompare(b.departsOn))
-        : [],
+      departures,
       itinerary: p.itinerary.map((d) => ({ day: d.day, title: pick(d.title, locale), body: pick(d.body, locale) })),
       includes: p.includes.map((x) => pick(x, locale)),
       excludes: p.excludes.map((x) => pick(x, locale)),
@@ -266,7 +277,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       seatsTotal: d.seatsTotal,
       seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked),
       isGuaranteed: d.isGuaranteed,
-      listPrice: view.listPrice,
+      // A group tour's date at its own price (docs/departure-prices.md); a customized trip at the package's.
+      listPrice: view.groupTour ? (d.price ?? listPrice(pkg)) : view.listPrice,
     }];
   });
 

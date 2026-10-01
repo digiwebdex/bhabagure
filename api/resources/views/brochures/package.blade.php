@@ -96,7 +96,7 @@
 
   @if ($groupTour)
   <section>
-    <h2>{{ $l('রুম অনুযায়ী মূল্য (জনপ্রতি)', 'Price per person by room') }}</h2>
+    <h2>{{ $l('রুম অনুযায়ী মূল্য (জনপ্রতি)', 'Price per person by room') }}@if ($groupTour['pricedOn'] ?? null) <span class="muted" style="font-weight:400">· {{ $l('ডিপার্চার', 'departure') }} <span class="num">{{ $date($groupTour['pricedOn']) }}</span></span>@endif</h2>
     <table>
       <tbody>
         <tr><td>{{ $l('ট্রিপল শেয়ারিং', 'Triple sharing') }}</td><td class="num chosen">{{ $money($groupTour['rooms']['triple']) }}</td></tr>
@@ -105,7 +105,8 @@
       </tbody>
     </table>
     <h2 style="margin-top:3mm">{{ $l('ডিপার্চারের তারিখ', 'Departure dates') }}</h2>
-    <p style="margin:0">@forelse ($groupTour['departures'] as $i => $day){{ $i > 0 ? ' · ' : '' }}<span class="num">{{ $date($day) }}</span>@empty<span class="muted">{{ $l('পরবর্তী তারিখ শিগগিরই জানানো হবে — আমাদের জিজ্ঞাসা করুন।', 'The next dates will be announced soon — ask us.') }}</span>@endforelse</p>
+    {{-- Each date with its own price per person when the prices differ by date (docs/departure-prices.md). --}}
+    <p style="margin:0">@forelse ($groupTour['departures'] as $i => $day){{ $i > 0 ? ' · ' : '' }}<span class="num">{{ $date($day['date']) }}</span>@if ($groupTour['pricedOn'] ?? null) <span class="num muted">({{ $money($day['price']) }})</span>@endif @empty<span class="muted">{{ $l('পরবর্তী তারিখ শিগগিরই জানানো হবে — আমাদের জিজ্ঞাসা করুন।', 'The next dates will be announced soon — ask us.') }}</span>@endforelse</p>
     <p class="small muted" style="margin:1.5mm 0 0">
       {{ $l('গ্রুপ ট্যুরের মূল্য নির্ধারিত; দলের আকারে বদলায় না।', 'A group tour’s price is fixed; it does not change with the group size.') }}
       {{ $l('সার্ভিস চার্জ ও ভ্যাট', 'Service charge and VAT') }} {{ $percent($config->serviceChargePercent) }}. {{ $l('মূল্য', 'Prices as of') }} {{ $date($asOf) }}{{ $l(' তারিখ অনুযায়ী; বুকিংয়ের সময়ের মূল্যই চূড়ান্ত।', '; the price at booking is final.') }}

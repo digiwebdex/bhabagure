@@ -181,7 +181,7 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
         }
         // Priced differently now, perhaps because the coupon's terms changed: check it again for the new discount.
         if (result.reason === 'price_changed' && couponCode) {
-          void applyCoupon(couponCode, hotelCategory, locale, { unavailable: t('coupon.unavailable'), rateLimited: t('coupon.rateLimited') });
+          void applyCoupon(couponCode, hotelCategory, bookingDate(pkg, booking.date, booking.pax), locale, { unavailable: t('coupon.unavailable'), rateLimited: t('coupon.rateLimited') });
         }
         setBusy(false);
         setFailure(result);

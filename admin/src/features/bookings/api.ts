@@ -8,9 +8,30 @@ import type { DocumentSlot } from '../documents/api'
 import type { NotificationGroup } from '../notifications/api'
 import type { Voucher } from '../vouchers/api'
 
+/**
+ * What a package costs one traveller on `date` before rooms and add-ons (docs/departure-prices.md): a group tour on one of
+ * its departures takes that date's own price; anything else, and a group tour with no date yet, its list price. The
+ * API prices the save the same way (BookingCreator::listPrice).
+ */
+export function priceOn(pkg: BookingFormOptions['packages'][number], date: string | null): number {
+  if (!pkg.fixed_price || !date) return pkg.list_price
+  return pkg.departures.find((departure) => departure.date === date)?.price ?? pkg.list_price
+}
+
 /** api/app/Services/Booking/BookingFormOptions.php — what the staff booking form and the quotation editor price with. */
 export type BookingFormOptions = {
-  packages: { slug: string; title_en: string; title_bn: string | null; duration_days: number | null; list_price: number; price_grid: PriceGrid | null; room_rates: RoomRates; fixed_price: boolean; departures: { date: string; seats_left: number | null }[] }[]
+  packages: {
+    slug: string
+    title_en: string
+    title_bn: string | null
+    duration_days: number | null
+    list_price: number
+    price_grid: PriceGrid | null
+    room_rates: RoomRates
+    fixed_price: boolean
+    /** `price`: a group tour's own price per person on that date, null for list_price (docs/departure-prices.md). */
+    departures: { date: string; seats_left: number | null; price: number | null }[]
+  }[]
   addons: { code: string; name_en: string; name_bn: string | null; price: number; unit: 'per_person' | 'per_booking' }[]
   config: { slabs: { minPax: number; discountPercent: number }[]; singleRoomSupplementPercent: number; serviceChargePercent: number; maxTravellers: number; onlinePaymentChargePercent: number }
   sources: string[]

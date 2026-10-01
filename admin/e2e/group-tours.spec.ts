@@ -61,3 +61,51 @@ test('a package marked as a group tour is booked at the office on its departures
     artisan('tinker', `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${KATHMANDU}')->firstOrFail(); $p->update(['trip_type' => 'customized', 'single_supplement_percent' => 15, 'twin_supplement_percent' => 0]); $p->departures()->update(['status' => 'cancelled']); echo 'ok';`)
   }
 })
+
+test("a group tour's dates each have a price, one is shown on the card, and the office prices by the date", async ({ page }) => {
+  // docs/departure-prices.md (client, 2026-10-01).
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10)
+  const [first, second] = [day(50), day(60)]
+  artisan('tinker', `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${KATHMANDU}')->firstOrFail(); $p->update(['trip_type' => 'group_fixed', 'single_supplement_percent' => 50, 'twin_supplement_percent' => 0]); $p->departures()->create(['departs_on' => '${first}', 'seats_total' => 10, 'status' => 'scheduled']); $p->departures()->create(['departs_on' => '${second}', 'seats_total' => 10, 'status' => 'scheduled']); echo 'ok';`)
+
+  try {
+    await signIn(page, 'admin')
+    await page.goto('/packages')
+    await page.getByRole('link', { name: /Kathmandu–Pokhara Tour/ }).click()
+    // Scheduled ones only: an earlier test leaves a cancelled departure in the list.
+    const rows = page.locator('li').filter({ has: page.getByRole('radio') }).filter({ hasText: 'Scheduled' })
+    await expect(rows).toHaveCount(2, FIRST_LOAD)
+    await expect(rows.first()).toContainText('Package price · BDT 13,800 per person')
+
+    // The second date at its own price.
+    await rows.nth(1).getByRole('button').click()
+    const dialog = page.getByRole('dialog', { name: 'Edit departure' })
+    await dialog.getByLabel('Price per person on this date').fill('15000')
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(rows.nth(1)).toContainText('BDT 15,000 per person')
+
+    // Shown on the card; "Automatic" takes it off again; shown once more.
+    const card = page.getByRole('radiogroup', { name: 'Shown on the website’s card' })
+    await expect(card.getByRole('radio', { name: /Automatic/ })).toBeChecked()
+    await rows.nth(1).getByRole('radio').check()
+    await expect(rows.nth(1)).toContainText('On the card')
+    await card.getByRole('radio', { name: /Automatic/ }).check()
+    await expect(rows.nth(1)).not.toContainText('On the card')
+    await rows.nth(1).getByRole('radio').check()
+    await expect(rows.nth(1)).toContainText('On the card')
+
+    // The office: each date at its price. Two in triple sharing, 2% service charge.
+    await page.goto('/bookings/new')
+    await page.getByLabel('Travellers', { exact: true }).fill('2')
+    await page.getByLabel('Package', { exact: true }).selectOption(KATHMANDU, FIRST_LOAD)
+    const departure = page.getByLabel('Departure', { exact: true })
+    await expect(departure.locator('option', { hasText: 'BDT 15,000' })).toHaveCount(1)
+    await departure.selectOption(first)
+    await page.getByLabel('Room', { exact: true }).selectOption({ label: 'Triple sharing · BDT 13,800' })
+    await expect(page.getByTestId('new-booking-total')).toHaveText('BDT 28,152')
+    await departure.selectOption(second)
+    await expect(page.getByTestId('new-booking-total')).toHaveText('BDT 30,600')
+  } finally {
+    artisan('tinker', `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${KATHMANDU}')->firstOrFail(); $p->update(['trip_type' => 'customized', 'single_supplement_percent' => 15, 'twin_supplement_percent' => 0]); $p->departures()->update(['status' => 'cancelled', 'is_featured' => false]); echo 'ok';`)
+  }
+})

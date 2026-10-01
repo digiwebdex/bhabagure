@@ -82,6 +82,10 @@ export interface Departure {
   seatsTotal: number;
   seatsBooked: number;
   isGuaranteed: boolean;
+  /** A group tour's price per person on this date; null or absent: the package's (docs/departure-prices.md). */
+  price?: number | null;
+  /** The departure the tour's card shows ("Show on the card"). */
+  featured?: boolean;
 }
 
 export interface BlogCategory {

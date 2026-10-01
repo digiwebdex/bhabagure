@@ -13,6 +13,7 @@ import { useFormatters } from '@/lib/use-formatters';
 import { useBooking, type BookingStep } from '@/state/booking';
 
 import { couponDiscountFor, useCouponSync } from './coupon';
+import { bookingDate, pricedOn } from './departures';
 import { PackageStep } from './PackageStep';
 import { PaymentStep } from './PaymentStep';
 import { ReviewStep } from './ReviewStep';
@@ -34,13 +35,17 @@ export function BookingModal() {
   const f = useFormatters();
   const booking = useBooking();
 
-  const pkg = packages.find((p) => p.slug === booking.packageSlug) ?? packages[0];
+  const chosen = packages.find((p) => p.slug === booking.packageSlug) ?? packages[0];
+  // A group tour is priced on the departure it travels on (docs/departure-prices.md): the one picked, else the one its
+  // card showed. Every price below — rooms, total, coupon — reads it from `pkg`.
+  const travelDate = bookingDate(chosen, booking.date, booking.pax);
+  const pkg = chosen ? pricedOn(chosen, travelDate) : undefined;
   const selectedAddons = addons.filter((a) => booking.addons.includes(a.code));
   // A grid package is quoted in the chosen hotel category, or its default until one is chosen.
   const hotelCategory = pkg && pkg.hotelCategories.length > 0 ? (booking.hotelCategory && pkg.hotelCategories.includes(booking.hotelCategory) ? booking.hotelCategory : defaultHotelCategory(pkg.priceGrid)) : null;
   // A coupon's discount as the API worked it out, while its answer still describes this booking (docs/coupons.md).
-  const couponOff = couponDiscountFor(booking, hotelCategory);
-  useCouponSync(hotelCategory, locale, { unavailable: t('coupon.unavailable'), rateLimited: t('coupon.rateLimited') });
+  const couponOff = couponDiscountFor(booking, hotelCategory, travelDate);
+  useCouponSync(hotelCategory, travelDate, locale, { unavailable: t('coupon.unavailable'), rateLimited: t('coupon.rateLimited') });
   const quote = useMemo(
     () =>
       pkg
