@@ -8,4 +8,6 @@ export const PORT = 3100;
 export const SITE_URL = `http://localhost:${PORT}`;
 export const TEST_DOMAIN = 'e2e.example.com';
 export const PORTAL_URL = `http://customer.${TEST_DOMAIN}:${PORT}`;
+/** The website on a host of the portal's domain, as bhabaghure.com.bd is to customer.bhabaghure.com.bd: they share a sign-in. */
+export const SHARED_SITE_URL = `http://www.${TEST_DOMAIN}:${PORT}`;
 export const BROWSER_API_URL = `http://api.${TEST_DOMAIN}:${E2E_API_PORT}`;

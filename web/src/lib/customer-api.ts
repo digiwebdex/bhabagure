@@ -15,8 +15,15 @@ import { useCustomerSession, type SessionCustomer } from '@/state/customer-sessi
 
 const base = () => process.env.NEXT_PUBLIC_API_URL ?? '';
 
-/** Not a credential: only tells the website whether a restore is worth a request (the cookie itself is unreadable). */
+/**
+ * Not a credential: only tells a page whether a restore is worth a request (the refresh cookie itself is unreadable). A
+ * cookie on the domain the website and the portal share (2026-10-02), so a sign-in on customer.bhabaghure.com.bd is
+ * seen on bhabaghure.com.bd too; before, it sat in each host's own storage and the website kept showing "Sign in".
+ */
 const HINT_KEY = 'bh-customer-session';
+
+/** As long as the refresh cookie lasts (AUTH_REFRESH_TTL_DAYS); every restore writes it again. */
+const HINT_DAYS = 14;
 
 type TokenBody = { access_token: string; customer: SessionCustomer };
 
@@ -216,9 +223,24 @@ function establish(body: TokenBody) {
   useCustomerSession.getState().establish(body.access_token, body.customer);
 }
 
+/**
+ * The domain the website and the portal share: the portal's host without its first label (customer.bhabaghure.com.bd →
+ * bhabaghure.com.bd), when this page is on it or under it. Elsewhere (localhost) the hint stays on this host.
+ */
+function sharedDomain(): string | null {
+  try {
+    const parent = new URL(process.env.NEXT_PUBLIC_PORTAL_URL ?? '').hostname.split('.').slice(1).join('.');
+    const here = window.location.hostname;
+    return parent.includes('.') && (here === parent || here.endsWith(`.${parent}`)) ? parent : null;
+  } catch {
+    return null;
+  }
+}
+
 function readHint(): boolean {
   try {
-    return localStorage.getItem(HINT_KEY) === '1';
+    // Before 2026-10-02 the hint lived in this host's own storage: still honoured, and moved on the next write.
+    return document.cookie.split('; ').includes(`${HINT_KEY}=1`) || localStorage.getItem(HINT_KEY) === '1';
   } catch {
     return false;
   }
@@ -226,9 +248,17 @@ function readHint(): boolean {
 
 function writeHint(signedIn: boolean) {
   try {
-    if (signedIn) localStorage.setItem(HINT_KEY, '1');
-    else localStorage.removeItem(HINT_KEY);
+    const domain = sharedDomain();
+    const attributes = `; Path=/; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+    if (signedIn) {
+      document.cookie = `${HINT_KEY}=1; Max-Age=${HINT_DAYS * 86_400}${domain ? `; Domain=${domain}` : ''}${attributes}`;
+    } else {
+      // Both the shared cookie and one this host may hold alone.
+      if (domain) document.cookie = `${HINT_KEY}=; Max-Age=0; Domain=${domain}${attributes}`;
+      document.cookie = `${HINT_KEY}=; Max-Age=0${attributes}`;
+    }
+    localStorage.removeItem(HINT_KEY);
   } catch {
-    // Private mode: the website header just won't know about the session until the portal is opened.
+    // Cookies blocked: the website header just won't know about the session until the portal is opened.
   }
 }

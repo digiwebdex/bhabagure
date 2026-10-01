@@ -738,6 +738,8 @@
     "tabsLabel": "My account",
     "offline": "You’re offline. Your account needs a connection — call {phone} if you need us now.",
     "signOut": "Sign out",
+    "backToSite": "Back to website",
+    "logoHome": "Bhabaghure Holidays: the website",
     "checkingSession": "Opening your account…",
     "signInTitle": "Sign in to your account",
     "signInSubtitle": "Your trips, documents and payments in one place. We send a one-time code to your mobile — no password needed.",

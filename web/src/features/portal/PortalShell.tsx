@@ -63,6 +63,9 @@ export function PortalShell({ tab, contact, languageToggle, children }: PortalSh
   }, []);
 
   const phone = f.digits(displayPhone(contact.phone));
+  // The website's home in the page's language (2026-10-02): the logo and "Back to website" lead there, and the website
+  // knows the customer is signed in (the shared hint in customer-api.ts).
+  const siteHome = `${(process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')}${locale === 'en' ? '/en' : '/'}`;
 
   return (
     <div className="flex min-h-dvh flex-col bg-app-bg text-app-text">
@@ -75,10 +78,19 @@ export function PortalShell({ tab, contact, languageToggle, children }: PortalSh
       <header className="bg-ink-deep text-white">
         <div className="mx-auto flex max-w-portal flex-wrap items-center justify-between gap-x-fluid-12-24 gap-y-3 px-fluid-16-22 py-3.5">
           <div className="flex min-w-0 items-center gap-3">
-            <Image src="/brand/logo-wordmark-light.png" alt={tc('brand')} width={852} height={378} priority className="block h-logo-footer w-auto shrink-0" />
+            <a href={siteHome} title={t('backToSite')} className="block shrink-0 leading-none transition-opacity hover:opacity-82">
+              <Image src="/brand/logo-wordmark-light.png" alt={t('logoHome')} width={852} height={378} priority className="block h-logo-footer w-auto" />
+            </a>
             <span className="font-display text-10 font-bold tracking-[0.16em] whitespace-nowrap text-orange uppercase">{tc('myAccount')}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={siteHome}
+              className="flex items-center gap-1.5 rounded-pill border border-white/25 px-3.5 py-1.75 text-13 font-semibold whitespace-nowrap text-white hover:border-orange hover:text-orange"
+            >
+              <span aria-hidden>←</span>
+              {t('backToSite')}
+            </a>
             {languageToggle}
             {status === 'signedIn' && customer ? (
               <>

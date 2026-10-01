@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 import { E2E_API_URL, E2E_CHANNEL, E2E_REVALIDATE_SECRET, e2eApiServer, isMainProcess, resetE2eDatabase, writeE2eEnv } from '../scripts/e2e-api.mjs';
 
-import { BROWSER_API_URL, PORT, PORTAL_URL, SITE_URL, TEST_DOMAIN } from './e2e/hosts';
+import { BROWSER_API_URL, PORT, PORTAL_URL, SHARED_SITE_URL, SITE_URL, TEST_DOMAIN } from './e2e/hosts';
 
 /**
  * End-to-end checks of the website and the customer portal on live data: a local-only API on the bhabaghure_e2e database
@@ -19,7 +19,7 @@ import { BROWSER_API_URL, PORT, PORTAL_URL, SITE_URL, TEST_DOMAIN } from './e2e/
  * the portal runs at customer.e2e.example.com and calls the API at api.e2e.example.com. Nothing leaves the machine.
  */
 if (isMainProcess()) {
-  writeE2eEnv({ origins: [SITE_URL, PORTAL_URL], webUrl: SITE_URL, portalUrl: PORTAL_URL });
+  writeE2eEnv({ origins: [SITE_URL, PORTAL_URL, SHARED_SITE_URL], webUrl: SITE_URL, portalUrl: PORTAL_URL });
   resetE2eDatabase();
 }
 

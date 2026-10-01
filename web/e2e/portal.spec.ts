@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { API_DIR, artisan, E2E_API_URL } from '../../scripts/e2e-api.mjs';
 
-import { PORTAL_URL } from './hosts';
+import { PORTAL_URL, SHARED_SITE_URL, SITE_URL } from './hosts';
 
 /**
  * The customer portal on live data (docs/phase-6-customer-portal.md §6): sign-in by code, trips, paying the balance and
@@ -62,6 +62,23 @@ async function signIn(page: Page, phone: string, path = '/en') {
 }
 
 test.describe('customer portal', () => {
+  test('the logo and "Back to website" lead home, and the website knows the customer is signed in (2026-10-02)', async ({ page, request }) => {
+    const phone = uniquePhone();
+    await book(request, phone, 'NUSRAT JAHAN');
+    await signIn(page, phone);
+    await expect(page.getByRole('navigation', { name: 'My account' })).toBeVisible();
+
+    // The portal's way back: the logo and the link, both to the website's home in the page's language.
+    await expect(page.getByRole('link', { name: 'Back to website', exact: true })).toHaveAttribute('href', `${SITE_URL}/en`);
+    await expect(page.getByRole('link', { name: 'Bhabaghure Holidays: the website' })).toHaveAttribute('href', `${SITE_URL}/en`);
+
+    // The website on the portal's own domain shows the account instead of "Sign in": the sign-in carried across.
+    await page.goto(`${SHARED_SITE_URL}/en`);
+    const header = page.locator('header').first();
+    await expect(header.getByRole('link', { name: 'My account' })).toBeVisible({ timeout: 15_000 });
+    await expect(header.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
+  });
+
   test('signs in with a code, pays the balance online and comes back to the portal still signed in', async ({ page, request }) => {
     const phone = uniquePhone();
     const reference = await book(request, phone, 'RAIHAN KABIR');
