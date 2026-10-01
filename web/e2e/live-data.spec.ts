@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { formatDate } from '@bhabaghure/format';
+import { formatDateRange } from '@bhabaghure/format';
 
 import { API_DIR, artisan, E2E_API_URL } from '../../scripts/e2e-api.mjs';
 
@@ -714,7 +714,8 @@ test.describe('CMS to website', () => {
       await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
       const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
       const prices = detail.getByTestId('group-tour-prices');
-      await expect(prices.getByRole('listitem')).toHaveText([/^Triple sharing৳ 27,000$/, /^Twin sharing৳ 27,000$/, /^Single \(\+50%\)৳ 40,500$/, /12 seats left$/, /2 seats left$/]);
+      await expect(prices.getByRole('listitem')).toHaveText([/^Triple sharing৳ 27,000$/, /^Twin sharing৳ 27,000$/, /^Single \(\+50%\)৳ 40,500$/]);
+      await expect(prices.getByRole('radio')).toHaveText([/12 seats left$/, /2 seats left$/]);
       await expect(detail.getByRole('button', { name: /^4 people/ })).toHaveCount(0);
 
       // Booking: no calendar; the 2-seat departure can't take 3 travellers.
@@ -756,47 +757,58 @@ test.describe('CMS to website', () => {
     }
   });
 
-  test('a group tour shows the featured date and its price, and the booking form re-prices on another date (docs/departure-prices.md)', async ({ page, request }) => {
+  test('a group tour shows the featured date and its price, the package page and the booking form re-price on another date (docs/departure-prices.md)', async ({ page, request }) => {
     const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
     const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages', 'departures'] } });
     const day = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
     const [soon, later] = [day(41), day(71)];
+    // Each trip's dates, from its return day (client, 2026-10-01).
+    const [soonDates, laterDates] = [formatDateRange(soon, day(46), 'en'), formatDateRange(later, day(76), 'en')];
     // 27,000 per person in triple sharing; the later date at its own 30,000 and featured on the card.
     artisan(
       'tinker',
       `--execute=$p = App\\Models\\TourPackage::query()->where('slug', '${thai}')->firstOrFail(); $p->update(['trip_type' => 'group_fixed', 'single_supplement_percent' => 50, 'twin_supplement_percent' => 0]); ` +
-        `$p->departures()->create(['departs_on' => '${soon}', 'seats_total' => 12, 'status' => 'scheduled']); $p->departures()->create(['departs_on' => '${later}', 'seats_total' => 12, 'status' => 'scheduled', 'price' => 30000, 'is_featured' => true]); echo 'ok';`,
+        `$p->departures()->create(['departs_on' => '${soon}', 'returns_on' => '${day(46)}', 'seats_total' => 12, 'status' => 'scheduled']); ` +
+        `$p->departures()->create(['departs_on' => '${later}', 'returns_on' => '${day(76)}', 'seats_total' => 12, 'status' => 'scheduled', 'price' => 30000, 'is_featured' => true]); echo 'ok';`,
     );
     try {
       expect((await refresh()).status()).toBe(200);
-      // The card: the featured date and its price, not the soonest date.
+      // The card: the featured trip's dates and its price, not the soonest.
       const card = page.locator('#packages article').filter({ hasText: 'THAILAND BUDGET ESCAPE' });
       await expect.poll(async () => {
         await page.goto('/en');
         return card.innerText();
-      }, { timeout: 20_000 }).toContain(`departs ${formatDate(later, 'en')}`);
+      }, { timeout: 20_000 }).toContain(laterDates);
       await expect(card.locator('.text-price')).toHaveText('৳ 30,000');
 
-      // The package: each date with its price; the rooms priced for the featured date.
+      // The package: the featured date chosen and the rooms priced for it; each date a choice at its own price.
       await card.getByRole('link', { name: /THAILAND BUDGET ESCAPE/ }).click();
       const detail = page.getByRole('dialog', { name: /THAILAND BUDGET ESCAPE/ });
       const prices = detail.getByTestId('group-tour-prices');
-      await expect(prices).toContainText(`For the departure on ${formatDate(later, 'en')}`);
+      const choice = (dates: string) => prices.getByRole('radio').filter({ hasText: dates });
+      await expect(prices).toContainText(`For the departure of ${laterDates}.`);
       await expect(prices.getByRole('listitem').filter({ hasText: 'Triple sharing' })).toContainText('৳ 30,000');
-      await expect(prices.getByRole('listitem').filter({ hasText: formatDate(soon, 'en') })).toContainText('from ৳ 27,000 per person');
-      await expect(prices.getByRole('listitem').filter({ hasText: formatDate(later, 'en') })).toContainText('from ৳ 30,000 per person');
+      await expect(choice(laterDates)).toHaveAttribute('aria-checked', 'true');
+      await expect(choice(laterDates)).toContainText('from ৳ 30,000 per person');
+      await expect(choice(soonDates)).toContainText('from ৳ 27,000 per person');
 
-      // The booking form starts on the featured date and its price; another date re-prices it.
+      // Picking the other date prices the page for it, and Book starts on it.
+      await choice(soonDates).click();
+      await expect(choice(soonDates)).toHaveAttribute('aria-checked', 'true');
+      await expect(prices).toContainText(`For the departure of ${soonDates}.`);
+      await expect(prices.getByRole('listitem').filter({ hasText: 'Triple sharing' })).toContainText('৳ 27,000');
+      await expect(detail.locator('.text-34')).toHaveText('৳ 27,000');
       await detail.getByRole('button', { name: 'Book now' }).click();
       const dialog = page.getByRole('dialog', { name: 'Book online' });
       const dates = dialog.getByTestId('group-tour-date');
       await dialog.getByLabel('Travellers').fill('2');
-      await expect(dates).toHaveValue(later);
-      await expect(dates.locator(`option[value="${soon}"]`)).toContainText('from ৳ 27,000 per person');
-      await expect(dialog.getByLabel('Room')).toContainText('Triple sharing · ৳ 30,000 per person');
-      await dates.selectOption(soon);
+      await expect(dates).toHaveValue(soon);
+      await expect(dates.locator(`option[value="${soon}"]`)).toContainText(`${soonDates} · from ৳ 27,000 per person`);
       await expect(dialog.getByLabel('Room')).toContainText('Triple sharing · ৳ 27,000 per person');
+
+      // In the booking form another date re-prices it too.
       await dates.selectOption(later);
+      await expect(dialog.getByLabel('Room')).toContainText('Triple sharing · ৳ 30,000 per person');
       await dialog.getByLabel('Room').selectOption({ label: 'Triple sharing · ৳ 30,000 per person' });
       await dialog.getByRole('button', { name: 'Next step →' }).click();
       const lead = dialog.locator('section').nth(0);

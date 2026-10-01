@@ -17,6 +17,13 @@
    keep their any-date calendar and group-size prices: their departures have no price and no "Feature on card".
 4. **The featured date first.** Book on a card opens the booking form on the date and price the card showed.
 
+**Asked again, the same day** (a written request: a "default departure" per package, the card's date range and price,
+the date switchable on the package page). Everything else was already built; the client's answers on the rest:
+5. **The trip's dates.** The card, the package page and the booking form show a departure as "20–26 October 2026"
+   when it has a return date, else by its start as before.
+6. **Dates to pick on the package page.** Each date is a choice there; picking one prices the page for it, and Book
+   starts on it.
+
 ## How it works
 
 **Admin → Packages → a group tour → Group departures:**
@@ -29,16 +36,20 @@
   Choosing one takes the mark off the others: one date a package. The chosen date carries an "On the card" badge.
 
 **Website:**
-- **The card** names the shown date ("departs 10 December 2026") and shows its price. The shown date is the featured
-  one while it has seats, else the next date with seats.
-- **The package page:**
-  - lists each date with its price when the prices differ;
-  - prices the rooms for the shown date ("For the departure on …").
+- **The card** names the shown departure by the trip's dates ("20–26 October 2026", from its return date; "departs
+  10 December 2026" when staff gave none) and shows its price. The shown date is the featured one while it has seats,
+  else the next date with seats.
+- **The package page** (and the package window opened from a card):
+  - each date is a choice with its trip dates, its price and the seats left; a sold-out date can't be picked;
+  - the shown date is chosen first; picking another one prices the rooms ("For the departure of …"), the price at the
+    top and the departure line for that date;
+  - Book starts the booking form on the date chosen there.
 - **The booking form:**
-  - starts on the shown date;
-  - lists every date with its price and seats left ("15 October 2026 · from ৳ 75,000 per person · 12 seats left");
+  - starts on the shown date, or the one chosen on the package page;
+  - lists every date with its trip dates, price and seats left ("20–26 October 2026 · from ৳ 75,000 per person ·
+    4 seats left");
   - picking another date re-prices the rooms, the total and any coupon.
-  If the shown date has too few seats for the travellers entered, the form starts on the next date with room.
+  If that date has too few seats for the travellers entered, the form starts on the next date with room.
 - **Upcoming departures** (home page) shows each date at its own price.
 
 **Office:**
@@ -59,8 +70,10 @@
   (`POST /public/coupons/check` takes `travel_date`) and quotations (`QuotationService`). A group tour on a departure
   with a price takes that price. Bookings and quotations keep the price they were priced with (`list_price`).
 - Office booking options (`GET admin/bookings/options`): each departure's `price`.
-- Website: `shownDeparture()` (web/src/lib/departures.ts) picks the shown date. A group tour's `listPrice` in the views
-  is that date's price. `pricedOn()` prices the booking form on the chosen date.
+- Website: `shownDeparture()` (web/src/lib/departures.ts) picks the shown date, `pickedDeparture()` the package page's
+  (the date picked there, kept per package in `useSiteUi().detailDeparture`, else the shown one). A group tour's
+  `listPrice` in the views is the shown date's price. `pricedOn()` prices the package page and the booking form on the
+  chosen date. Trip dates: `f.dateRange()` (`formatDateRange` in @bhabaghure/format) from `returnsOn`.
 
 ## Tests
 
@@ -70,7 +83,7 @@
   - the brochure.
 - `admin/e2e/group-tours.spec.ts`: a date's price and the card radio in the editor; the New booking total for each date.
 - `web/e2e/live-data.spec.ts` "a group tour shows the featured date…":
-  - the card's date and price;
-  - the package page's prices;
-  - the booking form starting on the featured date and re-pricing on another;
-  - the gateway charging the featured date's total.
+  - the card's trip dates and price;
+  - the package page: the featured date chosen, each date's price, another date picked re-pricing the page;
+  - the booking form starting on the date picked there and re-pricing on another;
+  - the gateway charging the chosen date's total.

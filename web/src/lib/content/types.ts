@@ -79,6 +79,8 @@ export interface Departure {
   packageCode: string;
   dateLabel: Localized | null;
   departsOn: string | null;
+  /** The day the group comes back, when staff gave it: the card and package page show the trip's dates (2026-10-01). */
+  returnsOn?: string | null;
   seatsTotal: number;
   seatsBooked: number;
   isGuaranteed: boolean;

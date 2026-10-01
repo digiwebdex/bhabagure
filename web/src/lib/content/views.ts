@@ -74,6 +74,8 @@ export interface PackageView {
 
 export interface PackageDepartureView {
   departsOn: string;
+  /** Null when staff gave no return date: the date alone is shown. */
+  returnsOn: string | null;
   seatsLeft: number;
   seatsTotal: number;
   /** The price per person on this date — its own, else the package's (docs/departure-prices.md). */
@@ -223,7 +225,14 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     const departures: PackageDepartureView[] = groupTour
       ? bundle.departures
           .filter((d): d is typeof d & { departsOn: string } => d.packageCode === p.code && d.departsOn !== null)
-          .map((d) => ({ departsOn: d.departsOn, seatsTotal: d.seatsTotal, seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked), price: d.price ?? listPrice(p), featured: d.featured === true }))
+          .map((d) => ({
+            departsOn: d.departsOn,
+            returnsOn: d.returnsOn ?? null,
+            seatsTotal: d.seatsTotal,
+            seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked),
+            price: d.price ?? listPrice(p),
+            featured: d.featured === true,
+          }))
           .sort((a, b) => a.departsOn.localeCompare(b.departsOn))
       : [];
     return {

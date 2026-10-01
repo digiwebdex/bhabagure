@@ -581,7 +581,7 @@
     "pricePerPerson": "{{price}} per person",
     "packagePrice": "Package price · {{price}} per person",
     "featureLabel": "Shown on the website’s card",
-    "featureHint": "The date whose day and price the package card shows, and that the booking form starts on. Customers can still pick any date.",
+    "featureHint": "The date whose dates and price the package card shows, and that the package page and the booking form start on. Customers can still pick any other date.",
     "featureAuto": "Automatic: the next date with seats",
     "featureOn": "Show {{date}} on the card",
     "featureSaved": "Saved: the website’s card follows.",
