@@ -59,7 +59,7 @@ class InvoiceBuilderController extends Controller
                 default => $q->where('status', Invoice::ISSUED)->where('payment_status', $state),
             });
 
-        $page = (clone $query)->latest('id')->paginate(25);
+        $page = (clone $query)->newestFirst()->paginate(25);
         $counts = Invoice::query()->selectRaw('
             COUNT(*) AS total,
             SUM(status = ?) AS draft,

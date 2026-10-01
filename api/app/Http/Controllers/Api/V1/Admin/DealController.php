@@ -42,7 +42,7 @@ class DealController extends Controller
             ->when($state === 'void', fn (Builder $q) => $q->where('status', Invoice::VOID))
             ->when($search, fn (Builder $q) => $q->where(fn (Builder $inner) => $inner->where('billed_name', 'like', "%{$search}%")
                 ->orWhere('title', 'like', "%{$search}%")->orWhere('invoice_number', 'like', "%{$search}%")))
-            ->latest('id')->paginate(20);
+            ->newestFirst()->paginate(20);
 
         return response()->json([
             'data' => collect($deals->items())->map(AdminCashEntry::deal(...)),

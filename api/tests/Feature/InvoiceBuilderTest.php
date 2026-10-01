@@ -11,6 +11,7 @@ use App\Models\Staff;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Ledger\AccountBooks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\SendsNotifications;
@@ -216,6 +217,37 @@ class InvoiceBuilderTest extends TestCase
         $this->actingAsApi($agent)->getJson('/api/v1/admin/invoices')->assertForbidden();
         $accountant = $this->staff('accountant', ['email' => 'inv.acc@example.test', 'phone' => '8801711000903']);
         $this->actingAsApi($accountant)->getJson('/api/v1/admin/invoices')->assertOk();
+    }
+
+    #[Test]
+    public function the_lists_run_newest_first_by_each_invoices_own_date(): void
+    {
+        // 2026-10-02: invoices carried across from the old books, dated 17–27 Sep, were listed above 1 Oct's.
+        $this->travelTo(Carbon::parse('2026-10-02 01:00', 'Asia/Dhaka'));
+        $staff = $this->admin();
+        $customer = $this->party();
+        $make = function (string $title, ?string $issuedOn) use ($staff, $customer) {
+            $id = $this->actingAsApi($staff)->postJson('/api/v1/admin/invoices', [
+                'customer_id' => $customer->id, 'title' => $title, 'lines' => [['title' => $title, 'quantity' => 1, 'unit_price' => 5000]],
+            ])->assertCreated()->json('data.id');
+            if ($issuedOn !== null) {
+                // Dated before it is issued, as an invoice entered late or carried across is.
+                Invoice::query()->findOrFail($id)->forceFill(['issued_on' => $issuedOn])->save();
+                $this->actingAsApi($staff)->postJson("/api/v1/admin/invoices/{$id}/issue")->assertOk();
+            }
+
+            return $id;
+        };
+
+        // A draft started just after midnight in Dhaka (still 1 Oct in UTC) counts as 2 Oct.
+        $draft = $make('Started today', null);
+        $september30 = $make('Thirtieth', '2026-09-30');
+        $october1 = $make('First', '2026-10-01');
+        $late = $make('Carried across', '2026-09-17');
+
+        $order = [$draft, $october1, $september30, $late];
+        $this->assertSame($order, array_column($this->actingAsApi($staff)->getJson('/api/v1/admin/invoices')->assertOk()->json('data'), 'id'));
+        $this->assertSame($order, array_column($this->actingAsApi($staff)->getJson('/api/v1/admin/deals?state=all')->assertOk()->json('data'), 'id'));
     }
 
     #[Test]

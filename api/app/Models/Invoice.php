@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Exceptions\InvoiceFrozen;
 use App\Support\WriteScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -104,6 +105,16 @@ class Invoice extends Model
                 throw InvoiceFrozen::delete($invoice);
             }
         });
+    }
+
+    /**
+     * Newest first by the invoice's own date (2026-10-02): one entered late, or carried across from the old books, sits
+     * among the invoices of its day instead of at the top. A draft has no date yet, so it counts as the Dhaka day it was
+     * started.
+     */
+    public function scopeNewestFirst(Builder $query): Builder
+    {
+        return $query->orderByRaw("COALESCE(issued_on, DATE(CONVERT_TZ(created_at, '+00:00', '+06:00'))) DESC")->orderByDesc('id');
     }
 
     public function isIssued(): bool
