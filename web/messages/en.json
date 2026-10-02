@@ -816,7 +816,16 @@
       "noneInFilter": "No bookings to show here.",
       "due": "Due",
       "total": "Total",
-      "details": "Details"
+      "details": "Details",
+      "more": {
+        "title": "Book another trip",
+        "subtitle": "Our tours on the website, at the same prices. Booking opens there.",
+        "allPackages": "All packages on the website",
+        "from": "From",
+        "perPerson": "per person",
+        "book": "Book",
+        "bookLabel": "Book {title} on the website"
+      }
     },
     "trip": {
       "back": "My trips",

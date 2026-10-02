@@ -1,3 +1,4 @@
+import { MorePackages } from '@/features/portal/MorePackages';
 import { PortalPage, portalMetadata } from '@/features/portal/PortalPage';
 import { TripsView } from '@/features/portal/TripsView';
 import type { AppLocale } from '@/i18n/routing';
@@ -13,6 +14,7 @@ export default async function PortalHome({ params }: PageProps<'/[locale]/portal
   return (
     <PortalPage locale={locale as AppLocale} tab="trips" pathname="/">
       <TripsView />
+      <MorePackages locale={locale as AppLocale} />
     </PortalPage>
   );
 }

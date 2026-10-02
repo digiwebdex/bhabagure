@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 import { defaultHotelCategory, type HotelCategory } from '@bhabaghure/pricing';
 
@@ -342,7 +342,7 @@ function GroupTourPrices({ pkg, pax, departure }: { pkg: PackageView; pax: numbe
 }
 
 /** Footer row: hint, WhatsApp enquiry and Book. */
-export function PackageDetailActions({ pkg, onBeforeBook }: { pkg: PackageView; onBeforeBook?: () => void }) {
+export function PackageDetailActions({ pkg, onBeforeBook, bookFromLink = false }: { pkg: PackageView; onBeforeBook?: () => void; bookFromLink?: boolean }) {
   const t = useTranslations('detail');
   const tp = useTranslations('packages');
   const td = useTranslations('download');
@@ -354,6 +354,25 @@ export function PackageDetailActions({ pkg, onBeforeBook }: { pkg: PackageView; 
   const departure = usePickedDeparture(pkg);
   // The brochure highlights what is chosen here; the API picks basic/3-star when no category was picked.
   const query = new URLSearchParams({ pax: String(pax), locale, ...(pkg.priceGrid && detailCategory ? { hotel_category: detailCategory } : {}) });
+  const book = () => {
+    onBeforeBook?.();
+    // The booking starts in the hotel category chosen here, and a group tour on the departure shown here.
+    const date = departure ? departure.departsOn : useTripSearch.getState().date;
+    startBooking({ packageSlug: pkg.slug, pax, date, maxPax: pricing.maxTravellers, hotelCategory: detailCategory });
+  };
+
+  // The package's own page, reached by a "Book" link (the customer portal's "Book another trip", 2026-10-03): the
+  // booking form opens at once, and the address loses `book=1` so a reload or a shared link shows just the page.
+  const bookedFromLink = useRef(false);
+  useEffect(() => {
+    if (!bookFromLink || bookedFromLink.current) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('book')) return;
+    bookedFromLink.current = true;
+    url.searchParams.delete('book');
+    window.history.replaceState(window.history.state, '', url);
+    book();
+  });
 
   return (
     <>
@@ -376,12 +395,7 @@ export function PackageDetailActions({ pkg, onBeforeBook }: { pkg: PackageView; 
         </a>
         <button
           type="button"
-          onClick={() => {
-            onBeforeBook?.();
-            // The booking starts in the hotel category chosen here, and a group tour on the departure shown here.
-            const date = departure ? departure.departsOn : useTripSearch.getState().date;
-            startBooking({ packageSlug: pkg.slug, pax, date, maxPax: pricing.maxTravellers, hotelCategory: detailCategory });
-          }}
+          onClick={book}
           className={buttonClass('cta', 'lg', 'shadow-cta')}
         >
           {tp('book')}

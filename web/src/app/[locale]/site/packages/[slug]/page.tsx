@@ -57,7 +57,7 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
         <PackageDetailHeading pkg={pkg} as="h1" />
         <PackageDetailBody pkg={pkg} />
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-16 border border-hairline bg-paper-soft px-fluid-18-28 py-4">
-          <PackageDetailActions pkg={pkg} />
+          <PackageDetailActions pkg={pkg} bookFromLink />
         </div>
         {/* Travellers' reviews of this package (docs/customer-reviews.md), and a form with it already chosen. */}
         <section id="package-reviews" className="flex flex-col gap-4">

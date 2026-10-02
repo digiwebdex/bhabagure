@@ -79,6 +79,31 @@ test.describe('customer portal', () => {
     await expect(header.getByRole('button', { name: 'Sign in' })).toHaveCount(0);
   });
 
+  test('"Book another trip" lists the website’s packages under the bookings, and Book opens the website’s booking form (2026-10-03)', async ({ page, request }) => {
+    const phone = uniquePhone();
+    await book(request, phone, 'TANIA SULTANA');
+    await signIn(page, phone);
+
+    const more = page.getByTestId('more-packages');
+    await expect(more.getByRole('heading', { name: 'Book another trip' })).toBeVisible();
+    // Under the customer's own bookings.
+    const bookingsTop = (await page.getByRole('heading', { name: 'My bookings' }).boundingBox())!.y;
+    expect((await more.boundingBox())!.y).toBeGreaterThan(bookingsTop);
+
+    const card = more.locator('article').filter({ hasText: /Nepal Mustang/i });
+    await expect(card).toContainText('৳ 75,000'); // as the website's own card prices it
+    await expect(card.getByRole('link', { name: /Nepal Mustang/i }).first()).toHaveAttribute('href', `${SITE_URL}/en/packages/nepal-mustang-adventure-tour-8-days-7-nights`);
+    await expect(more.getByRole('link', { name: 'All packages on the website →' })).toHaveAttribute('href', `${SITE_URL}/en#packages`);
+
+    // Book: the package's page on the website with its booking form open; the address drops book=1.
+    await card.getByRole('link', { name: /^Book .* on the website$/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Book online' })).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(`${SITE_URL}/en/packages/nepal-mustang-adventure-tour-8-days-7-nights`);
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: /Nepal Mustang/i })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Book online' })).toHaveCount(0);
+  });
+
   test('signs in with a code, pays the balance online and comes back to the portal still signed in', async ({ page, request }) => {
     const phone = uniquePhone();
     const reference = await book(request, phone, 'RAIHAN KABIR');

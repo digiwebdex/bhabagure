@@ -249,3 +249,17 @@ Two gaps from the first cut were closed rather than deferred:
   production.
 - **Admin e2e:** `portal-queues.spec.ts` (including recording, opening and voiding an e-ticket), and both new tables in
   the row-actions matrix.
+
+## 9. Back to the website, and booking another trip (2026-10-02, 2026-10-03)
+
+- **Back to the website (2026-10-02):** the logo and a "← Back to website" / "ওয়েবসাইটে ফিরুন" button in the portal's
+  header lead to the website's home in the page's language. The website shows "My account" for a customer signed in
+  to the portal (a sign-in hint cookie on the shared domain, `web/src/lib/customer-api.ts`).
+- **Book another trip (2026-10-03, client):** under "My bookings" on My trips, every package published on the website,
+  in the website's order, at the price its website card shows (two travellers, `basePrice`)
+  (`web/src/features/portal/MorePackages.tsx`). A card opens the package's page on the website. **Book** opens that
+  page with the website's booking form already open (`?book=1`, read once by `PackageDetailActions` and then dropped
+  from the address), so a booking made from the portal is the same as any other: same prices, dates and payment.
+  "All packages on the website" leads to the website's package list.
+- Client decisions: under the bookings (not a new tab); booking happens in the website's form; all published packages.
+- Tests: website e2e `portal.spec.ts` (both).
