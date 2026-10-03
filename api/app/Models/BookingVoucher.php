@@ -4,17 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** A supplier's confirmation voucher or contract for an upcoming booking (docs/booking-vouchers.md). */
 class BookingVoucher extends Model
 {
-    protected $fillable = ['title', 'booking_id', 'service_date', 'disk', 'path', 'mime', 'bytes', 'original_name', 'uploaded_by_staff_id'];
+    protected $fillable = ['title', 'booking_id', 'service_date', 'disk', 'path', 'mime', 'bytes', 'original_name', 'file_uploaded_at', 'uploaded_by_staff_id'];
 
     protected $hidden = ['disk', 'path'];
 
     protected function casts(): array
     {
-        return ['service_date' => 'date', 'bytes' => 'integer', 'archived_at' => 'datetime'];
+        return ['service_date' => 'date', 'bytes' => 'integer', 'archived_at' => 'datetime', 'file_uploaded_at' => 'datetime'];
+    }
+
+    /** The files it had before staff replaced them, newest first (docs/booking-vouchers.md §6). */
+    public function earlierFiles(): HasMany
+    {
+        return $this->hasMany(BookingVoucherFile::class)->latest('id');
     }
 
     public function booking(): BelongsTo

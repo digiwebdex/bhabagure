@@ -65,3 +65,41 @@ first; admin and tour operator upload and archive, sales agent and accountant vi
 - **Admin e2e** `vouchers.spec.ts`: upload a PDF linked to a booking and a JPG, upcoming order, open in a new tab,
   download with its own name and bytes, the booking's card, archive with a reason and find it under Archived; a sales
   agent sees the list without the upload button.
+
+## 6. Editing a voucher (2026-10-03)
+
+**Asked:** an Edit action in the list (Upcoming, Past and Archived views) that opens a window holding the voucher's
+details: title, booking, service date, and an optional new file (PDF, JPG or PNG) that replaces the attached one.
+
+**Decided with the client (2026-10-03), all the recommended answers:**
+
+- A replaced file is **kept**, not deleted: it moves to "Earlier files" in the edit window, where it still opens and
+  downloads. This follows the rule above that nothing a supplier confirmed is lost, and a wrong replacement can be undone
+  by uploading the earlier file again.
+- The booking is chosen in a **search box with a list**: click to see the newest bookings, or type a number, customer
+  name or phone. The upload window uses the same box. A number typed in full still works, and emptying the box unlinks
+  the booking.
+- **PNG** is accepted alongside PDF and JPG, on upload and on replace; the limit stays 10 MB.
+
+**How it is built:**
+
+- `PUT /admin/vouchers/{id}` (`vouchers.manage`): multipart, so the screen posts with `_method=PUT`. Title is required;
+  booking and date may be emptied; `file` is optional. `BookingVouchers::update` locks the row, refuses an archived
+  voucher (409 `voucher_archived`), moves the current file to `booking_voucher_files` and audits `voucher.updated` with
+  what changed (title, booking, date, file name from → to). The new file is stored and encrypted before the transaction
+  and removed again if it fails.
+- `booking_voucher_files`: each earlier file's encrypted path, type, size and name, who uploaded it and when, and who
+  replaced it (`created_at` is when). `booking_vouchers.file_uploaded_at` says when the current file arrived.
+- `GET /admin/vouchers/{id}/earlier-files/{fileId}` (view or manage) shows or downloads an earlier file, like the
+  current one.
+- `GET /admin/vouchers/bookings?search=` (manage) is the booking box's list: up to 10 bookings this staff member may see,
+  newest first. It is its own route because a tour operator manages vouchers without the bookings list permission.
+- Downloads keep brackets in file names ("Untitled design (1).pdf"); before, they became underscores.
+- Admin: `EditVoucherDialog` and `BookingFinder` (`admin/src/features/vouchers/`), an ✎ Edit action beside Archive on
+  every voucher not archived (disabled with a note for staff who may only read). Saving closes the window, shows
+  "Voucher updated" and refreshes the list and the booking page.
+
+**Tests:** API `BookingVouchersTest` (edit with and without a file; the earlier file kept, encrypted and opened by a
+sales agent; unlinking; validation; audit; archived refused; read-only roles refused; the booking box's search). Admin
+e2e `vouchers.spec.ts`: edit with the booking picked from the list by customer name, a PNG replacing the PDF, the row
+updated without a reload, the earlier PDF downloaded byte for byte, then the booking unlinked.

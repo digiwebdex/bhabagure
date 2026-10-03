@@ -23,7 +23,33 @@ export type Voucher = {
   archived_at: string | null
   archived_by: string | null
   archive_reason: string | null
+  /** When the current file arrived: the upload, or the latest replacement. */
+  file_uploaded_at: string
+  /** Files it had before staff replaced them, newest first; kept and still opened (docs/booking-vouchers.md §6). */
+  earlier_files: EarlierVoucherFile[]
 }
+
+export type EarlierVoucherFile = {
+  id: number
+  mime: string
+  bytes: number
+  original_name: string
+  uploaded_by: string | null
+  uploaded_at: string | null
+  replaced_by: string | null
+  replaced_at: string
+}
+
+/** A choice in the booking box: GET admin/vouchers/bookings. */
+export type VoucherBookingHit = { id: number; reference: string; customer: string | null; title: string | null; travel_start: string | null }
+
+/** "PDF", "JPG", "PNG" for the list's badge. */
+export function fileKind(mime: string): 'PDF' | 'PNG' | 'JPG' {
+  return mime === 'application/pdf' ? 'PDF' : mime === 'image/png' ? 'PNG' : 'JPG'
+}
+
+/** What the file inputs take: PDF, JPG or PNG (PNG from 2026-10-03). */
+export const VOUCHER_ACCEPT = 'application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png'
 
 export type VoucherFilters = { view: VoucherView; search: string; page: number }
 
@@ -69,6 +95,33 @@ export const useUploadVoucher = () =>
     return upload<Data<Voucher>>('admin/vouchers', body, () => undefined)
   })
 
+export type VoucherEdit = { id: number; title: string; booking_reference: string; service_date: string; file: File | null }
+
+/**
+ * Edits a voucher: title, booking (empty unlinks it), service date, and a new file when one is chosen; the old file is
+ * kept as an earlier file. Multipart, so it posts with _method=PUT.
+ */
+export const useUpdateVoucher = () =>
+  useVoucherMutation(({ id, file, ...fields }: VoucherEdit) => {
+    const body = new FormData()
+    body.append('_method', 'PUT')
+    for (const [key, value] of Object.entries(fields)) body.append(key, value.trim())
+    if (file) body.append('file', file)
+    return upload<Data<Voucher>>(`admin/vouchers/${id}`, body, () => undefined)
+  })
+
+/** The booking box: bookings this staff member may see, by number, customer name or phone; the newest when empty. */
+export function useVoucherBookings(search: string, enabled: boolean) {
+  const term = search.trim()
+  return useQuery({
+    queryKey: ['voucher-bookings', term],
+    queryFn: ({ signal }) => api.get<Data<VoucherBookingHit[]>>(`admin/vouchers/bookings?${new URLSearchParams(term ? { search: term } : {})}`, signal),
+    enabled,
+    placeholderData: (previous) => previous,
+    staleTime: 30_000,
+  })
+}
+
 export const useArchiveVoucher = () => useVoucherMutation(({ id, reason }: { id: number; reason: string }) => api.post<Data<Voucher>>(`admin/vouchers/${id}/archive`, { reason }))
 
 /**
@@ -79,12 +132,14 @@ export const useArchiveVoucher = () => useVoucherMutation(({ id, reason }: { id:
 export function useVoucherFile() {
   const { t } = useTranslation()
   const toast = useToast()
+  // The voucher's file, or one of its earlier files.
+  const path = (voucher: Voucher, earlier?: EarlierVoucherFile) => (earlier ? `admin/vouchers/${voucher.id}/earlier-files/${earlier.id}` : `admin/vouchers/${voucher.id}/file`)
   return {
-    open: async (voucher: Voucher) => {
+    open: async (voucher: Voucher, earlier?: EarlierVoucherFile) => {
       // Opened before the request so the browser treats it as the click, not a pop-up.
       const tab = window.open('', '_blank')
       try {
-        const url = URL.createObjectURL(await fetchDocument(`admin/vouchers/${voucher.id}/file`))
+        const url = URL.createObjectURL(await fetchDocument(path(voucher, earlier)))
         if (tab) tab.location.href = url
         else window.open(url, '_blank', 'noopener')
         setTimeout(() => URL.revokeObjectURL(url), 60_000)
@@ -93,12 +148,12 @@ export function useVoucherFile() {
         toast(t('vouchers.openFailed'), 'error')
       }
     },
-    download: async (voucher: Voucher) => {
+    download: async (voucher: Voucher, earlier?: EarlierVoucherFile) => {
       try {
-        const url = URL.createObjectURL(await fetchDocument(`admin/vouchers/${voucher.id}/file?download=1`))
+        const url = URL.createObjectURL(await fetchDocument(`${path(voucher, earlier)}?download=1`))
         const link = document.createElement('a')
         link.href = url
-        link.download = voucher.original_name
+        link.download = (earlier ?? voucher).original_name
         document.body.append(link)
         link.click()
         link.remove()

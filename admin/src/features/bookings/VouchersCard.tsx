@@ -5,7 +5,7 @@ import { Link } from 'react-router'
 import { buttonClass } from '../../components/ui/button'
 import { Badge, Card, CardTitle } from '../../components/ui/layout'
 import { useFormat } from '../../lib/useFormat'
-import { fileSize, useVoucherFile } from '../vouchers/api'
+import { fileKind, fileSize, useVoucherFile } from '../vouchers/api'
 import { UploadVoucherDialog } from '../vouchers/VoucherDialogs'
 import type { BookingDetail } from './api'
 
@@ -40,7 +40,7 @@ export function VouchersCard({ booking }: { booking: BookingDetail }) {
             <li key={voucher.id} className="flex flex-col gap-0.5 rounded-10 bg-app-surface-2 px-3 py-2 text-13">
               <span className="flex flex-wrap items-center gap-1.5 font-medium">
                 {voucher.title}
-                <Badge tone={voucher.mime === 'application/pdf' ? 'red' : 'blue'}>{voucher.mime === 'application/pdf' ? 'PDF' : 'JPG'}</Badge>
+                <Badge tone={voucher.mime === 'application/pdf' ? 'red' : 'blue'}>{fileKind(voucher.mime)}</Badge>
               </span>
               <span className="text-12 text-app-muted">
                 {[voucher.service_date ? date(voucher.service_date) : t('vouchers.noDate'), fileSize(voucher.bytes), voucher.uploaded_by].filter(Boolean).join(' · ')}

@@ -9,8 +9,8 @@ import { controlClass } from '../../components/ui/controls'
 import { ErrorNotice } from '../../components/ui/feedback'
 import { Badge, Card, Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { useFormat } from '../../lib/useFormat'
-import { fileSize, useVoucherFile, useVouchers, VOUCHER_VIEWS, type Voucher, type VoucherFilters, type VoucherView } from './api'
-import { ArchiveVoucherDialog, UploadVoucherDialog } from './VoucherDialogs'
+import { fileKind, fileSize, useVoucherFile, useVouchers, VOUCHER_VIEWS, type Voucher, type VoucherFilters, type VoucherView } from './api'
+import { ArchiveVoucherDialog, EditVoucherDialog, UploadVoucherDialog } from './VoucherDialogs'
 
 /** Filters live in the URL, so a filtered list can be shared or reopened. */
 function readFilters(params: URLSearchParams): VoucherFilters {
@@ -38,6 +38,7 @@ export function VouchersPage() {
   const manage = can('vouchers.manage')
   const [uploading, setUploading] = useState(false)
   const [archiving, setArchiving] = useState<Voucher | null>(null)
+  const [editing, setEditing] = useState<Voucher | null>(null)
   const counts = list.data?.meta.counts
 
   const set = (patch: Partial<VoucherFilters>) => {
@@ -53,7 +54,10 @@ export function VouchersPage() {
     { key: 'open', icon: '👁', label: t('vouchers.open'), tone: 'blue', onSelect: () => void file.open(voucher) },
     { key: 'download', icon: '⬇', label: t('vouchers.download'), tone: 'green', onSelect: () => void file.download(voucher) },
     ...(voucher.archived_at === null
-      ? [{ key: 'archive', icon: '✕', label: t('vouchers.archive'), tone: 'red' as const, disabledReason: manage ? undefined : t('vouchers.noManagePermission'), onSelect: () => setArchiving(voucher) }]
+      ? [
+          { key: 'edit', icon: '✎', label: t('vouchers.edit'), tone: 'blue' as const, disabledReason: manage ? undefined : t('vouchers.noEditPermission'), onSelect: () => setEditing(voucher) },
+          { key: 'archive', icon: '✕', label: t('vouchers.archive'), tone: 'red' as const, disabledReason: manage ? undefined : t('vouchers.noManagePermission'), onSelect: () => setArchiving(voucher) },
+        ]
       : []),
   ]
 
@@ -67,7 +71,7 @@ export function VouchersPage() {
             {voucher.title}
           </button>
           <span className="text-12 text-app-muted">
-            <Badge tone={voucher.mime === 'application/pdf' ? 'red' : 'blue'}>{voucher.mime === 'application/pdf' ? 'PDF' : 'JPG'}</Badge> {voucher.original_name} · {fileSize(voucher.bytes)}
+            <Badge tone={voucher.mime === 'application/pdf' ? 'red' : 'blue'}>{fileKind(voucher.mime)}</Badge> {voucher.original_name} · {fileSize(voucher.bytes)}
           </span>
         </div>
       ),
@@ -159,6 +163,7 @@ export function VouchersPage() {
 
       {uploading ? <UploadVoucherDialog onClose={() => setUploading(false)} /> : null}
       {archiving ? <ArchiveVoucherDialog voucher={archiving} onClose={() => setArchiving(null)} /> : null}
+      {editing ? <EditVoucherDialog voucher={editing} onClose={() => setEditing(null)} /> : null}
     </>
   )
 }

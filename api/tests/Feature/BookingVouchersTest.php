@@ -52,9 +52,9 @@ class BookingVouchersTest extends TestCase
         $this->assertSame('attachment; filename="Hotel Himalaya voucher.pdf"', $download->headers->get('Content-Disposition'));
         $this->assertStringContainsString('no-store', (string) $download->headers->get('Cache-Control'));
 
-        // A JPG works too; anything else, a missing title, a too-large file or an unknown booking is refused.
+        // A JPG or a PNG (2026-10-03) works too; anything else, a missing title, a too-large file or an unknown booking is refused.
         $this->actingAsApi($operator)->post('/api/v1/admin/vouchers', ['title' => 'Bus contract', 'file' => UploadedFile::fake()->image('contract.jpg')], ['Accept' => 'application/json'])->assertCreated();
-        $this->actingAsApi($operator)->post('/api/v1/admin/vouchers', ['title' => '', 'file' => UploadedFile::fake()->image('a.png')], ['Accept' => 'application/json'])
+        $this->actingAsApi($operator)->post('/api/v1/admin/vouchers', ['title' => '', 'file' => UploadedFile::fake()->image('a.gif')], ['Accept' => 'application/json'])
             ->assertUnprocessable()->assertJsonValidationErrors(['title', 'file']);
         $this->actingAsApi($operator)->post('/api/v1/admin/vouchers', ['title' => 'Big', 'file' => UploadedFile::fake()->create('big.pdf', 10241, 'application/pdf')], ['Accept' => 'application/json'])
             ->assertUnprocessable()->assertJsonValidationErrors('file');
@@ -109,6 +109,77 @@ class BookingVouchersTest extends TestCase
             $this->actingAsApi($staff)->post('/api/v1/admin/vouchers', ['title' => 'X', 'file' => UploadedFile::fake()->image('x.jpg')], ['Accept' => 'application/json'])->assertForbidden();
             $this->actingAsApi($staff)->postJson("/api/v1/admin/vouchers/{$id}/archive", ['reason' => 'Not mine'])->assertForbidden();
         }
+    }
+
+    #[Test]
+    public function a_voucher_is_edited_and_a_replaced_file_is_kept_as_an_earlier_file_that_still_opens(): void
+    {
+        $operator = $this->staff('tour_operator');
+        $admin = $this->staff('admin');
+        $booking = $this->book();
+        $headers = ['Accept' => 'application/json'];
+        $id = $this->actingAsApi($admin)->post('/api/v1/admin/vouchers', [
+            'title' => 'Thailand trip hotel', 'file' => UploadedFile::fake()->createWithContent('Untitled design (1).pdf', "%PDF-1.4\nfirst\n%%EOF"),
+        ], $headers)->assertCreated()->json('data.id');
+        $firstPath = BookingVoucher::query()->findOrFail($id)->path;
+
+        // Title, booking and date, the file left as it is: no earlier file.
+        $date = now('Asia/Dhaka')->addDays(12)->toDateString();
+        $this->actingAsApi($operator)->post("/api/v1/admin/vouchers/{$id}", [
+            '_method' => 'PUT', 'title' => 'Thailand Trip Junaidul Haq Siddique 05 - 18 October', 'booking_reference' => strtolower($booking->reference), 'service_date' => $date,
+        ], $headers)->assertOk()
+            ->assertJsonPath('data.title', 'Thailand Trip Junaidul Haq Siddique 05 - 18 October')->assertJsonPath('data.booking.reference', $booking->reference)
+            ->assertJsonPath('data.service_date', $date)->assertJsonPath('data.original_name', 'Untitled design (1).pdf')->assertJsonPath('data.earlier_files', []);
+
+        // A new file (a PNG): it is the voucher's file now; the first one is kept, still encrypted, and still opens.
+        $png = UploadedFile::fake()->image('Revised voucher.png');
+        $edited = $this->actingAsApi($operator)->post("/api/v1/admin/vouchers/{$id}", [
+            '_method' => 'PUT', 'title' => 'Thailand Trip Junaidul Haq Siddique 05 - 18 October', 'booking_reference' => $booking->reference, 'service_date' => $date, 'file' => $png,
+        ], $headers)->assertOk()
+            ->assertJsonPath('data.original_name', 'Revised voucher.png')->assertJsonPath('data.mime', 'image/png')
+            ->assertJsonPath('data.earlier_files.0.original_name', 'Untitled design (1).pdf')
+            ->assertJsonPath('data.earlier_files.0.uploaded_by', $admin->name)->assertJsonPath('data.earlier_files.0.replaced_by', $operator->name)->json('data');
+        $this->assertNotSame($firstPath, BookingVoucher::query()->findOrFail($id)->path);
+        Storage::disk('local')->assertExists($firstPath);
+        $this->assertSame((string) file_get_contents($png->getRealPath()), $this->actingAsApi($operator)->get("/api/v1/admin/vouchers/{$id}/file")->assertOk()->getContent());
+        $earlier = $edited['earlier_files'][0]['id'];
+        $this->assertSame("%PDF-1.4\nfirst\n%%EOF", $this->actingAsApi($this->staff('sales_agent'))->get("/api/v1/admin/vouchers/{$id}/earlier-files/{$earlier}")->assertOk()->getContent());
+        $this->assertSame('attachment; filename="Untitled design (1).pdf"', $this->actingAsApi($operator)->get("/api/v1/admin/vouchers/{$id}/earlier-files/{$earlier}?download=1")->headers->get('Content-Disposition'));
+        // Another voucher's number doesn't open it.
+        $other = $this->actingAsApi($admin)->post('/api/v1/admin/vouchers', ['title' => 'Other', 'file' => UploadedFile::fake()->image('o.jpg')], $headers)->json('data.id');
+        $this->actingAsApi($operator)->get("/api/v1/admin/vouchers/{$other}/earlier-files/{$earlier}", $headers)->assertNotFound();
+
+        // Unlinking the booking and clearing the date; a missing title, an unknown booking or a wrong file is refused.
+        $this->actingAsApi($operator)->post("/api/v1/admin/vouchers/{$id}", ['_method' => 'PUT', 'title' => 'Thailand hotel', 'booking_reference' => '', 'service_date' => ''], $headers)
+            ->assertOk()->assertJsonPath('data.booking', null)->assertJsonPath('data.service_date', null)->assertJsonCount(1, 'data.earlier_files');
+        $this->actingAsApi($operator)->post("/api/v1/admin/vouchers/{$id}", ['_method' => 'PUT', 'title' => '', 'file' => UploadedFile::fake()->image('x.gif')], $headers)
+            ->assertUnprocessable()->assertJsonValidationErrors(['title', 'file']);
+        $this->actingAsApi($operator)->post("/api/v1/admin/vouchers/{$id}", ['_method' => 'PUT', 'title' => 'Thailand hotel', 'booking_reference' => 'BH-0000-999'], $headers)
+            ->assertUnprocessable()->assertJsonValidationErrors(['booking_reference' => 'No booking has that number.']);
+
+        $this->assertSame(['voucher.uploaded', 'voucher.updated', 'voucher.updated', 'voucher.updated'], AuditLog::query()->where('auditable_type', 'booking_voucher')->where('auditable_id', $id)->orderBy('id')->pluck('action')->all());
+        $this->assertEquals(['from' => 'Untitled design (1).pdf', 'to' => 'Revised voucher.png'], AuditLog::query()->where('action', 'voucher.updated')->orderBy('id')->skip(1)->first()->changes['file']);
+
+        // Archived: no more edits. Sales and accounts may not edit.
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/vouchers/{$id}/archive", ['reason' => 'Trip moved'])->assertOk();
+        $this->actingAsApi($operator)->post("/api/v1/admin/vouchers/{$id}", ['_method' => 'PUT', 'title' => 'Again'], $headers)->assertStatus(409)->assertJsonPath('code', 'voucher_archived');
+        $this->actingAsApi($this->staff('sales_agent'))->post("/api/v1/admin/vouchers/{$other}", ['_method' => 'PUT', 'title' => 'Mine now'], $headers)->assertForbidden();
+    }
+
+    #[Test]
+    public function the_booking_box_finds_bookings_by_number_or_customer(): void
+    {
+        $booking = $this->book();
+
+        $this->actingAsApi($this->staff('tour_operator'))->getJson('/api/v1/admin/vouchers/bookings?search=tanvir')->assertOk()
+            ->assertJsonPath('data.0.reference', $booking->reference)->assertJsonPath('data.0.customer', 'Tanvir Hasan')
+            ->assertJsonPath('data.0.travel_start', $booking->travel_start->toDateString());
+        $this->actingAsApi($this->staff('tour_operator'))->getJson('/api/v1/admin/vouchers/bookings?search='.substr($booking->reference, -3))->assertOk()->assertJsonPath('data.0.id', $booking->id);
+        $this->actingAsApi($this->staff('tour_operator'))->getJson('/api/v1/admin/vouchers/bookings?search=nobody-like-this')->assertOk()->assertJsonCount(0, 'data');
+        // A click on the empty box: the newest bookings, with or without an empty search.
+        $this->actingAsApi($this->staff('tour_operator'))->getJson('/api/v1/admin/vouchers/bookings')->assertOk()->assertJsonPath('data.0.reference', $booking->reference);
+        $this->actingAsApi($this->staff('tour_operator'))->getJson('/api/v1/admin/vouchers/bookings?search=')->assertOk()->assertJsonPath('data.0.reference', $booking->reference);
+        $this->actingAsApi($this->staff('sales_agent'))->getJson('/api/v1/admin/vouchers/bookings')->assertForbidden();
     }
 
     #[Test]

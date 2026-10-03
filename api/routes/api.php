@@ -608,8 +608,12 @@ Route::prefix('v1')->group(function () {
         Route::middleware('permission:vouchers.view|vouchers.manage,staff')->controller(BookingVoucherController::class)->group(function () {
             Route::get('vouchers', 'index');
             Route::get('vouchers/{id}/file', 'file')->whereNumber('id');
+            Route::get('vouchers/{id}/earlier-files/{fileId}', 'earlierFile')->whereNumber(['id', 'fileId']);
             Route::middleware('permission:vouchers.manage,staff')->group(function () {
                 Route::post('vouchers', 'store');
+                // Editing (2026-10-03): multipart when a new file comes, so the screen posts with _method=PUT.
+                Route::put('vouchers/{id}', 'update')->whereNumber('id');
+                Route::get('vouchers/bookings', 'bookings');
                 Route::post('vouchers/{id}/archive', 'archive')->whereNumber('id');
             });
         });

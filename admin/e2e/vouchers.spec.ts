@@ -76,3 +76,76 @@ test('a sales agent reads and downloads vouchers but can’t upload or archive t
   await expect(page.getByRole('heading', { name: 'Confirmation vouchers', level: 1 })).toBeVisible(FIRST_LOAD)
   await expect(page.getByRole('button', { name: '+ Upload voucher' })).toHaveCount(0)
 })
+
+/** A 1×1 PNG: vouchers take PNG from 2026-10-03. */
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+
+test('a voucher is edited: title, booking from the list, date and a new file, with the replaced file kept under Earlier files (§6)', async ({ page }) => {
+  const customer = `Junaidul Haq ${Date.now() % 100000}`
+  const { reference } = await websiteBooking(page, customer, undefined, { minimal: true })
+  const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10)
+
+  await signIn(page, 'admin')
+  await page.goto('/vouchers')
+  await expect(page.getByRole('heading', { name: 'Confirmation vouchers', level: 1 })).toBeVisible(FIRST_LOAD)
+  await page.getByRole('button', { name: '+ Upload voucher' }).first().click()
+  let dialog = page.getByRole('dialog', { name: 'Upload a confirmation voucher' })
+  const firstTitle = `Thailand trip draft ${Date.now()}`
+  await dialog.getByLabel('Title').fill(firstTitle)
+  await dialog.getByLabel('Service date (optional)').fill(inDays(30))
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'Untitled design (1).pdf', mimeType: 'application/pdf', buffer: PDF })
+  await dialog.getByRole('button', { name: 'Upload', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  const table = page.getByTestId('vouchers-table')
+  let row = table.locator('tbody tr').filter({ hasText: firstTitle })
+  await row.getByRole('button', { name: /^Edit/ }).click()
+  dialog = page.getByRole('dialog', { name: 'Edit voucher' })
+  await expect(dialog.getByLabel('Title')).toHaveValue(firstTitle)
+  await expect(dialog.getByTestId('voucher-current-file')).toContainText('Untitled design (1).pdf')
+  await expect(dialog.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+
+  // A click on the empty booking box lists the newest bookings straight away; typing the customer's name narrows it.
+  const newTitle = `Thailand Trip ${customer} 05 - 18 October`
+  await dialog.getByLabel('Title').fill(newTitle)
+  await dialog.getByLabel('Booking number (optional)').click()
+  await expect(dialog.getByTestId('voucher-booking-options').getByRole('option', { name: new RegExp(reference) })).toBeVisible()
+  await expect(dialog.getByTestId('voucher-booking-options').getByRole('alert')).toHaveCount(0)
+  await dialog.getByLabel('Booking number (optional)').fill(customer.split(' ').slice(0, 2).join(' '))
+  await dialog.getByTestId('voucher-booking-options').getByRole('option', { name: new RegExp(reference) }).click()
+  await expect(dialog.getByLabel('Booking number (optional)')).toHaveValue(reference)
+  await expect(dialog).toContainText(customer)
+  await dialog.getByLabel('Service date (optional)').fill(inDays(20))
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'Revised voucher.png', mimeType: 'image/png', buffer: PNG })
+  await expect(dialog).toContainText('This file will replace “Untitled design (1).pdf”')
+  await dialog.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Voucher updated')).toBeVisible()
+  await expect(dialog).toBeHidden()
+
+  // The row shows the new title, booking and file without a reload.
+  row = table.locator('tbody tr').filter({ hasText: newTitle })
+  await expect(row).toContainText(reference)
+  await expect(row).toContainText('PNG')
+  await expect(row).toContainText('Revised voucher.png')
+  await expect(table).not.toContainText(firstTitle)
+
+  // The replaced PDF is kept under Earlier files and still downloads as it was.
+  await row.getByRole('button', { name: /^Edit/ }).click()
+  dialog = page.getByRole('dialog', { name: 'Edit voucher' })
+  await expect(dialog.getByLabel('Service date (optional)')).toHaveValue(inDays(20))
+  const earlier = dialog.getByTestId('voucher-earlier-files')
+  await expect(earlier).toContainText('Untitled design (1).pdf')
+  await expect(earlier).toContainText('replaced by')
+  const downloading = page.waitForEvent('download')
+  await earlier.getByRole('button', { name: 'Download' }).click()
+  const download = await downloading
+  expect(download.suggestedFilename()).toBe('Untitled design (1).pdf')
+  expect(readFileSync((await download.path())!)).toEqual(PDF)
+
+  // Emptying the booking box unlinks it.
+  await dialog.getByLabel('Booking number (optional)').fill('')
+  await dialog.getByLabel('Title').click()
+  await dialog.getByRole('button', { name: 'Save changes' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(row).not.toContainText(reference)
+})
