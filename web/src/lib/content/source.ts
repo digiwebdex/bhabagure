@@ -2,6 +2,7 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import { withFeatures } from './features';
 import type { ContentBundle } from './types';
 
 /**
@@ -18,8 +19,9 @@ import type { ContentBundle } from './types';
  */
 export const loadContent = cache(async (): Promise<ContentBundle> => {
   const source = process.env.CONTENT_SOURCE;
-  if (source === 'seed') return loadSeed(process.env.CONTENT_DEMO === '1');
-  if (source === 'api') return loadFromApi();
+  // Features switched off in Site settings are left out here, once, for every page and the sitemap.
+  if (source === 'seed') return withFeatures(await loadSeed(process.env.CONTENT_DEMO === '1'));
+  if (source === 'api') return withFeatures(await loadFromApi());
   throw new Error('CONTENT_SOURCE must be "api" or "seed" — see web/.env.example');
 });
 

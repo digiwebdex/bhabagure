@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Review;
 use App\Services\Reviews\ReviewSubmissions;
 use App\Support\Phone;
+use App\Support\WebsiteFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,10 @@ class PublicReviewController extends Controller
 {
     public function store(Request $request, ReviewSubmissions $reviews): JsonResponse
     {
+        // Reviews switched off for the website (docs/website-features.md): the form is hidden, and nothing new comes in.
+        if (! WebsiteFeatures::enabled('reviews')) {
+            return response()->json(['message' => __('forms.reviews_off'), 'code' => 'reviews_off'], Response::HTTP_CONFLICT);
+        }
         if (filled($request->input('company'))) {
             return $this->received();
         }

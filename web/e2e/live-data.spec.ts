@@ -186,6 +186,64 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('a website feature switched off in Site settings leaves the public website, and comes back whole when switched on (docs/website-features.md)', async ({ page, request }) => {
+    const password = 'e2e-website-settings-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'web.settings@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token}`, Accept: 'application/json' };
+    const allOn = { blog: true, team: true, reviews: true, gallery: true, visas: true, creator: true, partners: true, offers: true, tourPhotos: true };
+    const save = (off: Partial<typeof allOn>) => request.put(`${E2E_API_URL}/api/v1/admin/settings/features`, { headers, data: { value: { ...allOn, ...off } } });
+    const posts = (await (await request.get(`${E2E_API_URL}/api/v1/public/posts`)).json()).data.posts as { slug: string; status: string }[];
+    const post = posts.find((p) => p.status === 'published')!.slug;
+    const pkg = 'nepal-mustang-adventure-tour-8-days-7-nights';
+    const status = async (path: string) => (await page.goto(path))!.status();
+
+    try {
+      expect((await save({ blog: false, team: false, reviews: false })).status()).toBe(200);
+      await expect
+        .poll(async () => {
+          await page.goto('/en');
+          return page.locator('#blog').count();
+        }, { timeout: 20_000 })
+        .toBe(0);
+      // Home: no Blog (newsletter card with it) and no Reviews; About keeps its story, without the people.
+      await expect(page.locator('#reviews')).toHaveCount(0);
+      await expect(page.locator('#about')).toBeVisible();
+      await expect(page.locator('#about').getByRole('link', { name: /team/i })).toHaveCount(0);
+      // No menu or footer link leads to them.
+      await expect(page.locator('a[href$="#blog"]')).toHaveCount(0);
+      await expect(page.locator('a[href$="/ourteam"]')).toHaveCount(0);
+      // Their pages are gone, the package page has no reviews or review form, and the sitemap leaves them out.
+      expect(await status('/en/ourteam')).toBe(404);
+      expect(await status(`/en/blog/${post}`)).toBe(404);
+      expect(await status(`/en/packages/${pkg}`)).toBe(200);
+      await expect(page.locator('#package-reviews')).toHaveCount(0);
+      const sitemap = await (await page.request.get('/sitemap.xml')).text();
+      expect(sitemap).not.toContain('/ourteam');
+      expect(sitemap).not.toContain(`/blog/${post}`);
+      expect(sitemap).toContain(`/packages/${pkg}`);
+      // Off is not delete: the posts are all still there.
+      expect((await (await request.get(`${E2E_API_URL}/api/v1/public/posts`)).json()).data.posts).toHaveLength(posts.length);
+    } finally {
+      expect((await save({})).status()).toBe(200);
+    }
+
+    // Switched on again: everything is back where it was.
+    await expect
+      .poll(async () => {
+        await page.goto('/en');
+        return page.locator('#blog').count();
+      }, { timeout: 20_000 })
+      .toBe(1);
+    await expect(page.locator('#reviews')).toBeVisible();
+    await expect(page.locator('#about').getByRole('link', { name: /team/i })).toBeVisible();
+    expect(await status('/en/ourteam')).toBe(200);
+    expect(await status(`/en/blog/${post}`)).toBe(200);
+    expect(await status(`/en/packages/${pkg}`)).toBe(200);
+    await expect(page.locator('#package-reviews')).toBeVisible();
+    expect(await (await page.request.get('/sitemap.xml')).text()).toContain('/ourteam');
+  });
+
   test('the footer shows an icon for each social link in site settings, opening in a new tab, and none for a link left empty', async ({ page, request }) => {
     const password = 'e2e-website-settings-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

@@ -9,6 +9,7 @@ use App\Models\SiteSetting;
 use App\Services\AuditLogger;
 use App\Services\Customers\LoginCodes;
 use App\Support\Payments\PaymentOptions;
+use App\Support\WebsiteFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -67,6 +68,13 @@ class SiteSettingController extends Controller
             'value' => ['required', 'array'],
             'value.verifyPhone' => ['required', 'boolean'],
         ],
+        // Which website features the public sees (docs/website-features.md): every switch, each true or false.
+        'features' => [
+            'value' => ['required', 'array'],
+            'value.blog' => ['required', 'boolean'], 'value.team' => ['required', 'boolean'], 'value.reviews' => ['required', 'boolean'],
+            'value.gallery' => ['required', 'boolean'], 'value.visas' => ['required', 'boolean'], 'value.creator' => ['required', 'boolean'],
+            'value.partners' => ['required', 'boolean'], 'value.offers' => ['required', 'boolean'], 'value.tourPhotos' => ['required', 'boolean'],
+        ],
     ];
 
     public function __construct(private readonly AuditLogger $audit) {}
@@ -93,6 +101,7 @@ class SiteSettingController extends Controller
                 SiteSettingKeys::PAYMENT => self::paymentValue($validated['value']),
                 // Only the known field, as a true boolean (a form may send "1").
                 SiteSettingKeys::BOOKING => ['verifyPhone' => filter_var($validated['value']['verifyPhone'], FILTER_VALIDATE_BOOLEAN)],
+                SiteSettingKeys::FEATURES => collect(WebsiteFeatures::KEYS)->mapWithKeys(fn (string $feature) => [$feature => filter_var($validated['value'][$feature], FILTER_VALIDATE_BOOLEAN)])->all(),
                 default => $validated['value'],
             },
             'updated_by_staff_id' => $request->user('staff')->id,

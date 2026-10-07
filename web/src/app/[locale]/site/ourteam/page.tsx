@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { SiteChrome } from '@/features/SiteChrome';
 import { TeamPageContent } from '@/features/team/TeamPageContent';
 import type { AppLocale } from '@/i18n/routing';
 import { getSiteViews, siteUrl } from '@/lib/content';
+import { featureOn } from '@/lib/content/features';
 import { localizedPath, teamPath } from '@/lib/links';
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/site/ourteam'>): Promise<Metadata> {
@@ -26,6 +28,8 @@ export default async function TeamPage({ params }: PageProps<'/[locale]/site/our
   const locale = param as AppLocale;
   setRequestLocale(locale);
   const views = await getSiteViews(locale);
+  // Team switched off in Site settings (docs/website-features.md): no page, as for any address that isn't one.
+  if (!featureOn(views.settings, 'team')) notFound();
 
   return (
     <SiteChrome locale={locale} views={views} pathname={teamPath} pageSections={['contact']}>

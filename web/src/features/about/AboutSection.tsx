@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { Link } from '@/i18n/navigation';
 import type { AppLocale } from '@/i18n/routing';
+import { featureOn } from '@/lib/content/features';
 import type { SiteViews } from '@/lib/content/views';
 import { formattersFor } from '@/lib/formatters';
 import { teamPath } from '@/lib/links';
@@ -31,13 +32,15 @@ export async function AboutSection({ locale, team, stats, settings }: AboutSecti
   const paragraphs = (t.raw('about.paras') as string[]).map((_, i) => t(`about.paras.${i}`, { licence }));
   const facts = aboutFacts(t, f, stats, settings);
   const leads = team.slice(0, LEADS);
+  // Team switched off in Site settings (docs/website-features.md): the story and its figures stay, the people go.
+  const showTeam = featureOn(settings, 'team');
 
   return (
     <section id="about" className="border-t border-hairline-soft bg-white">
       <div className="mx-auto flex max-w-site flex-col gap-8 px-section-x py-section-y">
         <SectionHeading heading={t('sections.about.heading')} lede={t('sections.about.lede')} />
         {/* The story and its figures fill the wider column; the two leads stand beside them, and under them on a phone. */}
-        <div className="grid items-start gap-fluid-20-32 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className={`grid items-start gap-fluid-20-32 ${showTeam ? 'lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]' : ''}`}>
           <div className="flex min-w-0 flex-col gap-5">
             <div data-reveal className="flex flex-col gap-3.5">
               {paragraphs.map((text) => (
@@ -58,15 +61,17 @@ export async function AboutSection({ locale, team, stats, settings }: AboutSecti
             </dl>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h3 className="text-19 font-bold tracking-heading">{t('about.team')}</h3>
-              <Link href={teamPath} className="text-14 font-semibold whitespace-nowrap hover:text-orange">
-                {t('about.seeTeam')}
-              </Link>
+          {showTeam ? (
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="text-19 font-bold tracking-heading">{t('about.team')}</h3>
+                <Link href={teamPath} className="text-14 font-semibold whitespace-nowrap hover:text-orange">
+                  {t('about.seeTeam')}
+                </Link>
+              </div>
+              <TeamGrid locale={locale} team={leads} />
             </div>
-            <TeamGrid locale={locale} team={leads} />
-          </div>
+          ) : null}
         </div>
       </div>
     </section>

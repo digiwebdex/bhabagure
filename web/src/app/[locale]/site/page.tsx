@@ -23,6 +23,7 @@ import { VisaSection } from '@/features/visa/VisaSection';
 import { WhyUsSection } from '@/features/why-us/WhyUsSection';
 import type { AppLocale } from '@/i18n/routing';
 import { getSiteViews, siteUrl } from '@/lib/content';
+import { featureOn } from '@/lib/content/features';
 import { jsonLd, travelAgency } from '@/lib/structured-data';
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/site'>): Promise<Metadata> {
@@ -66,13 +67,14 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <VisaSection locale={locale} views={views} />
       <WhyUsSection locale={locale} stats={views.stats} settings={views.settings} />
       <StepsSection locale={locale} />
-      <ReviewsSection locale={locale} reviews={views.reviews} />
+      {/* These two show even when empty ("be the first", the newsletter card), so a switch-off is checked here. */}
+      {featureOn(views.settings, 'reviews') ? <ReviewsSection locale={locale} reviews={views.reviews} /> : null}
       <TourPhotosSection locale={locale} photos={views.tourPhotos} />
       <FaqSection locale={locale} singleRoomSupplementPercent={views.pricing.singleRoomSupplementPercent} />
       <GallerySection locale={locale} items={views.gallery} facebook={views.settings.contact.facebook} />
       <AboutSection locale={locale} team={views.team} stats={views.stats} settings={views.settings} />
       <CreatorSection locale={locale} creator={views.creator} />
-      <BlogSection locale={locale} posts={views.posts} categories={views.categories} />
+      {featureOn(views.settings, 'blog') ? <BlogSection locale={locale} posts={views.posts} categories={views.categories} /> : null}
       <ContactSection locale={locale} settings={views.settings} />
       <PartnersSection locale={locale} partners={views.partners} />
     </SiteChrome>

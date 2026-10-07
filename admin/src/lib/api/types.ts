@@ -369,7 +369,13 @@ export type SiteSettings = {
   }
   /** The website booking form's checks (docs/booking-phone-verification.md). */
   booking?: { verifyPhone: boolean }
+  /** Which website features the public sees (docs/website-features.md); absent until first saved, which means all on. */
+  features?: Record<WebsiteFeature, boolean>
 }
+
+/** The website features Site settings can switch off for the public, in the order the Website menu lists them. */
+export const WEBSITE_FEATURES = ['blog', 'team', 'reviews', 'gallery', 'visas', 'creator', 'partners', 'offers', 'tourPhotos'] as const
+export type WebsiteFeature = (typeof WEBSITE_FEATURES)[number]
 
 /** Beside the booking check's switch: when a one-time code last reached a customer, and when one last couldn't be sent. */
 export type CodeDelivery = { lastSentAt: string | null; lastFailedAt: string | null }

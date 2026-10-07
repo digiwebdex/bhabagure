@@ -26,8 +26,14 @@ final class SiteSettingKeys
      */
     public const HERO = 'hero';
 
+    /**
+     * Which website features the public sees (docs/website-features.md): `{ blog, team, … }` booleans. Served in the
+     * public settings with every feature filled in (App\Support\WebsiteFeatures).
+     */
+    public const FEATURES = 'features';
+
     /** The keys Admin → Site settings edits. */
-    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING];
+    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING, self::FEATURES];
 
     /** Edited on the Pricing screen, served by GET /public/pricing. */
     public const PRICING = 'pricing';

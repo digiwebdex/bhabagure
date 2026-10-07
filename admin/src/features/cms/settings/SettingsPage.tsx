@@ -7,7 +7,7 @@ import { ErrorNotice, useToast } from '../../../components/ui/feedback'
 import { NumberInput, Pair, Switch, TextArea, TextInput } from '../../../components/ui/fields'
 import { Card, CardTitle, Loading, PageHeader } from '../../../components/ui/layout'
 import { api, ApiError } from '../../../lib/api/client'
-import type { BankAccount, CodeDelivery, Data, SiteSettings } from '../../../lib/api/types'
+import { WEBSITE_FEATURES, type BankAccount, type CodeDelivery, type Data, type SiteSettings, type WebsiteFeature } from '../../../lib/api/types'
 import { useFormat } from '../../../lib/useFormat'
 import { HeroVideoCard } from './HeroVideoCard'
 
@@ -161,6 +161,19 @@ export function SettingsPage() {
             </>
           )}
         </SettingCard>
+        {/* docs/website-features.md: what the public website shows. Off hides a feature there and nothing else. */}
+        <SettingCard settingKey="features" title={t('settings.features.title')} initial={{ ...allFeaturesOn(), ...data.features }}>
+          {(value, set) => (
+            <>
+              <p className="m-0 text-12 text-app-muted">{t('settings.features.hint')}</p>
+              <div className="flex flex-col gap-3" data-testid="website-features">
+                {WEBSITE_FEATURES.map((feature) => (
+                  <Switch key={feature} label={t(`settings.features.${feature}`)} checked={value[feature]} onChange={(on) => set({ ...value, [feature]: on })} />
+                ))}
+              </div>
+            </>
+          )}
+        </SettingCard>
       </div>
     </>
   )
@@ -185,6 +198,9 @@ function CodeDeliveryNote({ codes }: { codes: CodeDelivery }) {
 
 /** The API keeps up to three accounts (PaymentOptions::MAX_BANKS). */
 const MAX_BANKS = 3
+
+/** Every website feature on: what the website shows before the switches are first saved. */
+const allFeaturesOn = () => Object.fromEntries(WEBSITE_FEATURES.map((feature) => [feature, true])) as Record<WebsiteFeature, boolean>
 
 const emptyBank = (): BankAccount => ({ bankName: '', accountName: '', accountNumber: '', branch: '', routingNumber: '', transferType: 'NPSB' })
 

@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { FacebookGlyph, InstagramGlyph, LinkedInGlyph, TikTokGlyph, YouTubeGlyph } from '@/components/brand/SocialGlyphs';
 import { WhatsAppGlyph } from '@/components/brand/WhatsAppGlyph';
 import { Link } from '@/i18n/navigation';
+import { featureOn } from '@/lib/content/features';
 import type { AppLocale } from '@/i18n/routing';
 import type { SiteViews } from '@/lib/content/views';
 import { formattersFor } from '@/lib/formatters';
@@ -60,7 +61,7 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
         </ul>
       ) : null}
       <nav aria-label={t('footer.explore')} className="mb-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
-        {LINKS.filter(([href]) => !emptySections.some((id) => href === `/#${id}`)).map(([href, key]) => (
+        {LINKS.filter(([href]) => !emptySections.some((id) => href === `/#${id}`) && (href !== teamPath || featureOn(settings, 'team'))).map(([href, key]) => (
           <Link key={href} href={href} className="text-white hover:text-orange-light">
             {t(`nav.${key}`)}
           </Link>

@@ -240,7 +240,12 @@ export interface SiteSettings {
   stats: { topReelViewsThousands: number; banglaSupportPercent: number };
   /** The hero video staff chose in Site settings (docs/hero-video.md); absent or null: the one the site ships with. */
   hero?: { videoUrl: string; posterUrl: string | null } | null;
+  /** Which website features the public sees (docs/website-features.md); absent (an older API, the seed): all on. */
+  features?: Partial<Record<WebsiteFeature, boolean>>;
 }
+
+/** The website features Admin → Site settings can switch off for the public (docs/website-features.md). */
+export type WebsiteFeature = 'blog' | 'team' | 'reviews' | 'gallery' | 'visas' | 'creator' | 'partners' | 'offers' | 'tourPhotos';
 
 export interface ContentBundle {
   destinations: Destination[];

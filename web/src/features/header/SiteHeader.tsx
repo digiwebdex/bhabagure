@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { featureOn } from '@/lib/content/features';
 import { restoreSession } from '@/lib/customer-api';
 import { useBooking } from '@/state/booking';
 import { initialsOf } from '@/lib/initials';
@@ -62,9 +63,12 @@ const SHEET_NAV: NavItem[] = [
 export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
   const t = useTranslations('nav');
   const common = useTranslations('common');
-  const { packages, pricing, departures, gallery, visas } = useSiteContent();
-  // Sections that render nothing without CMS content get no link, so the menu never points at a missing anchor.
-  const shown = (item: NavItem) => item.kind !== 'section' || !emptySections({ departures, gallery, visas }).includes(item.id);
+  const { packages, pricing, departures, gallery, visas, settings } = useSiteContent();
+  // Sections that render nothing without CMS content get no link, so the menu never points at a missing anchor; nor do
+  // features switched off in Site settings (the team page among them).
+  const hidden = emptySections({ departures, gallery, visas, settings });
+  const shown = (item: NavItem) =>
+    item.kind === 'section' ? !hidden.includes(item.id) : item.kind !== 'page' || item.href !== teamPath || featureOn(settings, 'team');
   const menuOpen = useSiteUi((state) => state.menuOpen);
   const toggleMenu = useSiteUi((state) => state.toggleMenu);
   const closeMenu = useSiteUi((state) => state.closeMenu);

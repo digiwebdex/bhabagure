@@ -1,4 +1,6 @@
 import type { AppLocale } from '@/i18n/routing';
+import { featureOn } from '@/lib/content/features';
+import type { SiteSettings } from '@/lib/content/types';
 
 /** Public path for a locale: Bangla unprefixed, English under /en (matches src/proxy.ts). */
 export function localizedPath(locale: AppLocale, path: string): string {
@@ -44,11 +46,15 @@ export function facebookVideoEmbedUrl(url: string, width: number, height: number
   return `https://www.facebook.com/plugins/video.php?${query}`;
 }
 
-/** Home sections that render nothing until the CMS has content for them, so nothing may link to their anchors. */
-export function emptySections(content: { departures: readonly unknown[]; gallery: readonly unknown[]; visas: readonly unknown[] }): string[] {
+/**
+ * Home sections that render nothing until the CMS has content for them, or that staff switched off in Site settings
+ * (docs/website-features.md), so nothing may link to their anchors.
+ */
+export function emptySections(content: { departures: readonly unknown[]; gallery: readonly unknown[]; visas: readonly unknown[]; settings?: Pick<SiteSettings, 'features'> }): string[] {
   return [
     ...(content.departures.length === 0 ? ['departures'] : []),
     ...(content.gallery.length === 0 ? ['gallery'] : []),
     ...(content.visas.length === 0 ? ['visa'] : []),
+    ...(content.settings && !featureOn(content.settings, 'blog') ? ['blog'] : []),
   ];
 }

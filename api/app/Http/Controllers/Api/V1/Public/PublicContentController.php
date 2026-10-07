@@ -25,6 +25,7 @@ use App\Services\Media\HeroVideo;
 use App\Support\CreatorProfile;
 use App\Support\Money;
 use App\Support\Payments\PaymentOptions;
+use App\Support\WebsiteFeatures;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
@@ -183,7 +184,11 @@ class PublicContentController extends Controller
         // The hero video as the page plays it: its URLs, never the stored paths (docs/hero-video.md).
         $hero = HeroVideo::present();
 
-        return $this->data((object) ($settings->all() + ['hero' => $hero === null ? null : ['videoUrl' => $hero['videoUrl'], 'posterUrl' => $hero['posterUrl']]]));
+        return $this->data((object) ($settings->all() + [
+            'hero' => $hero === null ? null : ['videoUrl' => $hero['videoUrl'], 'posterUrl' => $hero['posterUrl']],
+            // Every feature, on unless switched off in Site settings (docs/website-features.md).
+            'features' => WebsiteFeatures::all(),
+        ]));
     }
 
     private function publishedPackages(): Builder

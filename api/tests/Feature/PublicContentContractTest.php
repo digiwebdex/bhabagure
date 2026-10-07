@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\PackageDeparture;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Support\WebsiteFeatures;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -95,7 +96,9 @@ class PublicContentContractTest extends TestCase
         // onlineCheckout comes from the server's SSLCommerz configuration, not the seed (the test environment's fake gateway: on);
         // verifyPhone from Site settings → Website booking, off until staff switch it on (docs/booking-phone-verification.md).
         $this->assertEquals($this->seedFile('pricing.json') + ['onlineCheckout' => true, 'verifyPhone' => false], $this->getJson('/api/v1/public/pricing')->json('data'));
-        $this->assertEquals($this->seedFile('settings.json'), $this->getJson('/api/v1/public/settings')->json('data'));
+        // features is filled in by the API, every one on until switched off in Site settings (docs/website-features.md).
+        $features = array_fill_keys(WebsiteFeatures::KEYS, true);
+        $this->assertEquals($this->seedFile('settings.json') + ['features' => $features], $this->getJson('/api/v1/public/settings')->json('data'));
     }
 
     /**

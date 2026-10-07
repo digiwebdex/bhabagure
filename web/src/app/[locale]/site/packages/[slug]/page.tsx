@@ -10,6 +10,7 @@ import { SiteChrome } from '@/features/SiteChrome';
 import { Link } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { getSiteViews, siteUrl } from '@/lib/content';
+import { featureOn } from '@/lib/content/features';
 import { localizedPath, packagePath } from '@/lib/links';
 import { jsonLd, touristTrip } from '@/lib/structured-data';
 
@@ -59,14 +60,17 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-16 border border-hairline bg-paper-soft px-fluid-18-28 py-4">
           <PackageDetailActions pkg={pkg} bookFromLink />
         </div>
-        {/* Travellers' reviews of this package (docs/customer-reviews.md), and a form with it already chosen. */}
-        <section id="package-reviews" className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-fluid-20-26 font-bold tracking-heading">{tr('packageHeading')}</h2>
-            <ReviewForm packageSlug={pkg.slug} variant="outlineInk" />
-          </div>
-          {reviews.length > 0 ? <ReviewCards reviews={reviews} /> : <p className="text-14 text-muted">{tr('packageNone')}</p>}
-        </section>
+        {/* Travellers' reviews of this package (docs/customer-reviews.md), and a form with it already chosen; none of it
+            while Reviews is switched off in Site settings (docs/website-features.md). */}
+        {featureOn(views.settings, 'reviews') ? (
+          <section id="package-reviews" className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-fluid-20-26 font-bold tracking-heading">{tr('packageHeading')}</h2>
+              <ReviewForm packageSlug={pkg.slug} variant="outlineInk" />
+            </div>
+            {reviews.length > 0 ? <ReviewCards reviews={reviews} /> : <p className="text-14 text-muted">{tr('packageNone')}</p>}
+          </section>
+        ) : null}
       </article>
     </SiteChrome>
   );
