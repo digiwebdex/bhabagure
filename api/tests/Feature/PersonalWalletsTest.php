@@ -43,7 +43,7 @@ class PersonalWalletsTest extends TestCase
         $this->wallet('GET', 'members', session: $mine)->assertForbidden();
         $this->wallet('POST', 'members', ['staff_id' => $other->id], $mine)->assertForbidden();
         $listed = collect($this->wallet('GET', 'members', session: $boss)->json('data'))->firstWhere('staff_id', $agent->id);
-        $this->assertSame([true, true], [$listed['has_wallet'], $listed['authenticator_set']]);
+        $this->assertTrue($listed['has_wallet']);
 
         // Taken away: their session ends at once and the password no longer opens it.
         $this->wallet('POST', "members/{$agent->id}/revoke", session: $boss)->assertOk();
@@ -51,10 +51,9 @@ class PersonalWalletsTest extends TestCase
         $this->wallet('POST', 'auth/password', ['email' => $agent->email, 'password' => 'correct-horse-battery'])->assertUnauthorized();
         $this->wallet('POST', "members/{$owner->id}/revoke", session: $boss)->assertNotFound();
 
-        // Given back, it opens again; a reset authenticator is set up again at the next sign-in.
+        // Given back, it opens again.
         $this->wallet('POST', 'members', ['staff_id' => $agent->id], $boss)->assertOk();
-        $this->wallet('POST', "members/{$agent->id}/reset-authenticator", session: $boss)->assertOk();
-        $this->wallet('POST', 'auth/password', ['email' => $agent->email, 'password' => 'correct-horse-battery'])->assertOk()->assertJsonPath('data.enrolled', false);
+        $this->wallet('POST', 'auth/password', ['email' => $agent->email, 'password' => 'correct-horse-battery'])->assertOk()->assertJsonPath('data.signed_in', true);
     }
 
     #[Test]
@@ -102,7 +101,7 @@ class PersonalWalletsTest extends TestCase
         $this->wallet('POST', "transactions/{$agentEntry}/reverse", ['reason' => 'Trying'], $boss)->assertNotFound();
         // Access shows who has a wallet, never what is in it.
         $this->assertSame(
-            ['staff_id', 'name', 'email', 'super_admin', 'has_wallet', 'granted_at', 'authenticator_set'],
+            ['staff_id', 'name', 'email', 'super_admin', 'has_wallet', 'granted_at'],
             array_keys(collect($this->wallet('GET', 'members', session: $boss)->json('data'))->firstWhere('staff_id', $agent->id)),
         );
     }

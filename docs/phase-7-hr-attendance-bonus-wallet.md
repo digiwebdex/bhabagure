@@ -853,6 +853,9 @@ come from the client's message, and the layout check against the design is still
   the browser's box can't offer "Forgot password?" — so the wallet opens on its own sign-in page, redesigned with the
   two locks, show/hide password, "Forgot your password?" (the admin panel's reset), a step bar, a phone-friendly
   authenticator setup and the session notes. The allow-list, the password and the authenticator code still guard it.
+  **Changed 2026-10-09 (the owner), docs/personal-wallets.md:** the allow-list and then the authenticator code were
+  taken out; the staff password alone opens a wallet, from anywhere, with sign-in rate limits. The Session and
+  Authenticator notes below describe the wallet before that day.
 
 **Isolation:**
 - **MySQL:** `bhabaghure_wallet` and `bhabaghure_wallet@127.0.0.1` have rights on each other only. The company user has

@@ -5,7 +5,6 @@ use App\Http\Middleware\EnsurePortalAccess;
 use App\Http\Middleware\EnsureStaffCanWork;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetRequestLocale;
-use App\Wallet\Console\ResetWalletAuthenticator;
 use App\Wallet\Http\Middleware\OnlyOnWalletHost;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -29,7 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::prefix('api/v1/wallet')->middleware(['api', OnlyOnWalletHost::class])->group(__DIR__.'/../routes/wallet.php');
         },
     )
-    ->withCommands([ResetWalletAuthenticator::class])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [SetRequestLocale::class]);
         // Every response, API or not (share pages, short links, /up).

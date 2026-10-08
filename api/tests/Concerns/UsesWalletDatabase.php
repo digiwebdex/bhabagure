@@ -2,7 +2,6 @@
 
 namespace Tests\Concerns;
 
-use App\Wallet\Support\Totp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Testing\TestResponse;
@@ -37,20 +36,11 @@ trait UsesWalletDatabase
         return $request->json($method, "/api/v1/wallet/{$uri}", $data, $headers);
     }
 
-    /** Signs a staff member in (enrolling their authenticator on the first call) and returns the session cookie. */
+    /** Signs a staff member in with their password (no authenticator code since 2026-10-09) and returns the session cookie. */
     protected function walletSignIn(string $email, string $password = 'correct-horse-battery'): string
     {
-        $step = $this->wallet('POST', 'auth/password', ['email' => $email, 'password' => $password])->assertOk();
-        // Each person enrolls their own authenticator (docs/personal-wallets.md).
-        $secret = $step->json('data.enrollment.secret') ?? $this->walletSecrets[$email];
-        $this->walletSecrets[$email] = $secret;
-        // Each sign-in uses a later time step: a code is accepted once.
-        $this->travel(31)->seconds();
-        $response = $this->wallet('POST', 'auth/code', ['challenge' => $step->json('data.challenge'), 'code' => Totp::code($secret, Totp::step(now()->getTimestamp()))])->assertOk();
+        $response = $this->wallet('POST', 'auth/password', ['email' => $email, 'password' => $password])->assertOk();
 
         return (string) $response->getCookie('bh_wallet', false)?->getValue();
     }
-
-    /** @var array<string, string> each person's authenticator secret, by email */
-    private array $walletSecrets = [];
 }

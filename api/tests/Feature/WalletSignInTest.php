@@ -3,17 +3,14 @@
 namespace Tests\Feature;
 
 use App\Wallet\Models\AuditLog;
-use App\Wallet\Models\Authenticator;
 use App\Wallet\Models\Session;
-use App\Wallet\Support\Totp;
-use Illuminate\Contracts\Encryption\DecryptException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Concerns\UsesWalletDatabase;
 use Tests\TestCase;
 
 /**
- * docs/phase-7-hr-attendance-bonus-wallet.md §8: the wallet opens with the super admin's password and an authenticator
- * code — enrolled on first use — in a session of its own, only on its own host, only from its own page.
+ * docs/phase-7-hr-attendance-bonus-wallet.md §8, docs/personal-wallets.md: a wallet opens with its owner's staff password
+ * (no authenticator code since 2026-10-09) in a session of its own, only on its own host, only from its own page.
  */
 class WalletSignInTest extends TestCase
 {
@@ -22,41 +19,26 @@ class WalletSignInTest extends TestCase
     protected $connectionsToTransact = [null, 'wallet'];
 
     #[Test]
-    public function the_super_admin_enrolls_an_authenticator_on_first_sign_in_and_each_code_works_once(): void
+    public function the_password_opens_a_wallet_session_of_its_own_and_sign_out_ends_it(): void
     {
         $owner = $this->staff('super_admin');
 
-        $first = $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery'])->assertOk()
-            ->assertJsonPath('data.enrolled', false);
-        $secret = $first->json('data.enrollment.secret');
-        $this->assertStringStartsWith('otpauth://totp/', $first->json('data.enrollment.uri'));
-        // The secret is stored encrypted with WALLET_KEY, not in the clear and not with APP_KEY.
-        $stored = Authenticator::query()->where('staff_id', $owner->id)->sole();
-        $this->assertStringNotContainsString($secret, $stored->getRawOriginal('secret'));
-        $this->assertSame($secret, $stored->plainSecret());
-        $this->expectsNoAppKeyDecryption($stored->getRawOriginal('secret'));
-
-        // A wrong code is refused and counted; the right one enrolls the app and opens a session.
-        $this->wallet('POST', 'auth/code', ['challenge' => $first->json('data.challenge'), 'code' => '000000'])->assertUnauthorized()->assertJsonPath('code', 'invalid_code');
-        $this->assertSame(1, Session::query()->where('kind', 'challenge')->value('failed_codes'));
-        $code = Totp::code($secret, Totp::step(now()->getTimestamp()));
-        $signedIn = $this->wallet('POST', 'auth/code', ['challenge' => $first->json('data.challenge'), 'code' => $code])->assertOk();
+        // No authenticator code since 2026-10-09 (docs/personal-wallets.md): the password opens the session.
+        $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'wrong'])->assertUnauthorized()->assertJsonPath('code', 'invalid_credentials');
+        $signedIn = $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery'])->assertOk()
+            ->assertJsonPath('data.signed_in', true);
         $cookie = $signedIn->getCookie('bh_wallet', false);
         $this->assertTrue($cookie->isHttpOnly());
         $this->assertSame('strict', $cookie->getSameSite());
         $this->assertSame('/api/v1/wallet', $cookie->getPath());
-        $this->assertNotNull($stored->fresh()->confirmed_at);
+        // Only its hash is stored.
+        $this->assertSame(hash('sha256', $cookie->getValue()), Session::query()->sole()->token_hash);
         $this->wallet('GET', 'auth/me', session: $cookie->getValue())->assertOk()->assertJsonPath('data.email', $owner->email);
-
-        // Enrolled now: no secret is shown again, and the same code can't be used twice.
-        $second = $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery'])->assertOk()
-            ->assertJsonPath('data.enrolled', true)->assertJsonPath('data.enrollment', null);
-        $this->wallet('POST', 'auth/code', ['challenge' => $second->json('data.challenge'), 'code' => $code])->assertUnauthorized()->assertJsonPath('code', 'invalid_code');
 
         // Sign-out ends the session.
         $this->wallet('POST', 'auth/sign-out', session: $cookie->getValue())->assertOk();
         $this->wallet('GET', 'summary', session: $cookie->getValue())->assertUnauthorized()->assertJsonPath('code', 'signed_out');
-        $this->assertSame(['sign_in_refused', 'authenticator_enrolled', 'signed_in', 'sign_in_refused', 'signed_out'], AuditLog::query()->orderBy('id')->pluck('action')->all());
+        $this->assertSame(['sign_in_refused', 'signed_in', 'signed_out'], AuditLog::query()->orderBy('id')->pluck('action')->all());
     }
 
     #[Test]
@@ -105,15 +87,5 @@ class WalletSignInTest extends TestCase
         $this->app['env'] = 'production';
         $this->withCredentials()->withUnencryptedCookie('bh_wallet', $session)->getJson('/api/v1/wallet/summary', ['X-Wallet-Request' => '1'])->assertNotFound();
         $this->app['env'] = 'testing';
-    }
-
-    private function expectsNoAppKeyDecryption(string $payload): void
-    {
-        try {
-            decrypt($payload, false);
-            $this->fail('The authenticator secret opened with APP_KEY.');
-        } catch (DecryptException) {
-            $this->addToAssertionCount(1);
-        }
     }
 }

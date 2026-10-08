@@ -6,8 +6,8 @@ use Illuminate\Encryption\Encrypter;
 use RuntimeException;
 
 /**
- * Encryption with WALLET_KEY, never APP_KEY (docs/phase-7-hr-attendance-bonus-wallet.md §8): the authenticator secret
- * and evidence files. Company-side code, holding only APP_KEY, can't decrypt either.
+ * Encryption with WALLET_KEY, never APP_KEY (docs/phase-7-hr-attendance-bonus-wallet.md §8): the evidence files.
+ * Company-side code, holding only APP_KEY, can't decrypt them.
  */
 final class WalletCrypt
 {

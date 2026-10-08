@@ -93,7 +93,7 @@ and authorised signature lines. It is the shared view, so booking invoices and q
 | Secret | Where it lives | Keep a copy? |
 |---|---|---|
 | `APP_KEY` | `api/.env` | **Yes, offline.** It encrypts passport numbers, NID numbers, payout accounts and every uploaded passport scan, e-ticket and staff document. Lost = unreadable. |
-| `WALLET_KEY` | `api/.env` | **Yes, offline, held by the super admin.** It encrypts the wallet's authenticator secret and evidence files. |
+| `WALLET_KEY` | `api/.env` | **Yes, offline, held by the super admin.** It encrypts the wallet's evidence files. |
 | `DB_PASSWORD`, `WALLET_DB_PASSWORD`, `JWT_SECRET`, `REVALIDATE_SECRET` | `api/.env` (`REVALIDATE_SECRET` also in `web/.env.production.local`) | No. They were generated on the server and can be regenerated. |
 | SendGrid, SSLCommerz, WaSender, bulksmsbd, AWS keys | `api/.env`, once set | The providers' dashboards are the source; rotate there. |
 | Backup decryption key | not on this server | The server admin holds it. |
@@ -297,7 +297,6 @@ applies.
 | `WALLET_HOST` | `wallet.bhabaghure.com.bd` | The only host the wallet API answers on |
 | `WALLET_COOKIE_SECURE` | `true` | |
 | `WALLET_IDLE_MINUTES` / `WALLET_ABSOLUTE_MINUTES` | unset → `30` / `720` | Wallet sign-out after idling, and at the latest |
-| `WALLET_ISSUER` | unset → `Bhabaghure wallet` | The name shown in the authenticator app |
 
 **Laravel's own, unused by Bhabaghure:** the framework reads further variables with safe defaults — `AWS_*` (S3),
 `MEMCACHED_*`, `DYNAMODB_*`, `SQS_*`, `BEANSTALKD_*`, `POSTMARK_*`, `RESEND_API_KEY`, `SLACK_*`, `PAPERTRAIL_*`, `DB_URL`,
@@ -539,7 +538,7 @@ To check last night's run: `grep bhabaghure /var/log/backup/backup.log | tail -3
 - **The settings files:** `api/.env`, `web/.env.production.local`, `admin/.env.production.local`.
   - Keep them in the client's password manager.
   - Without `APP_KEY`, restored passport numbers and encrypted files can't be read.
-  - Without `WALLET_KEY`, the wallet's evidence can't be read. Its authenticator can simply be enrolled again.
+  - Without `WALLET_KEY`, the wallet's evidence can't be read.
 
 ### 8.3 Restoring
 
@@ -722,21 +721,15 @@ The super admin wallet keeps its own books, apart from the company's, and MySQL 
 - **Settings** in `api/.env`: `WALLET_DB_*`, `WALLET_KEY`, `WALLET_HOST=wallet.bhabaghure.com.bd`,
   `WALLET_COOKIE_SECURE=true` (§2.1). No company screen, report or export reads it; a test enforces that.
 - **Migrations** run from `api/database/migrations/wallet` on every deploy (`migrate --database=wallet`).
-- **Encryption:** the authenticator secret and evidence files are encrypted with `WALLET_KEY`, not `APP_KEY`. Keep an
+- **Encryption:** the evidence files are encrypted with `WALLET_KEY`, not `APP_KEY`. Keep an
   offline copy of `WALLET_KEY` with the super admin (§0).
 - **Backups:** the nightly server backup dumps it as `mysql-bhabaghure_wallet` from 2026-09-16 (§8). Evidence files are
   in `api/storage/app/private/wallet/evidence`, covered by the storage entry. Restoring either needs the same
   `WALLET_KEY`.
-- **Opening the wallet** (once, as root):
-  1. `mkdir -p /etc/nginx/bhabaghure-wallet` and put one `allow <office public IP>;` line per office address in
-     `/etc/nginx/bhabaghure-wallet/allow.conf`. The addresses stay out of the public repository.
-  2. `/var/www/Bhabagure/deploy/deploy.sh --install-nginx`: it runs `nginx -t` with the new files and reloads nginx (never a restart).
-  3. From the office: https://wallet.bhabaghure.com.bd → the super admin's email and password → scan the QR code with
-     an authenticator app → enter the first code. That enrolls it. A forgotten password is reset with the page's
-     "Forgot your password?" link, which is the admin panel's own reset (the wallet uses the same staff password).
-     (Until 2026-10-02 a browser basic-auth box came first; the owner had it taken out because it can't offer a reset.)
-- **Lost phone:** `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan wallet:reset-authenticator <email>`,
-  then sign in again to enroll a new one.
+- **Opening a wallet** (docs/personal-wallets.md, since 2026-10-09): from anywhere, https://wallet.bhabaghure.com.bd →
+  the staff email and password. There is no IP allow-list and no authenticator code any more. The super admin gives
+  other staff a wallet in its Access tab. A forgotten password is reset with the page's "Forgot your password?" link,
+  which is the admin panel's own reset (the wallet uses the same staff password).
 
 ## 13. WhatsApp configuration and checks
 

@@ -4,32 +4,20 @@ namespace App\Wallet\Http\Controllers;
 
 use App\Models\Staff;
 use App\Wallet\Services\WalletAuth;
-use App\Wallet\Services\WalletRefused;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 
-/** Wallet sign-in: password, then the authenticator code (enrolling the app the first time); sign-out; who is signed in. */
+/** Wallet sign-in with the staff password (no authenticator code since 2026-10-09); sign-out; who is signed in. */
 final class AuthController extends WalletController
 {
     public function password(Request $request, WalletAuth $auth): JsonResponse
     {
         $data = $request->validate(['email' => ['required', 'string', 'max:190'], 'password' => ['required', 'string', 'max:200']]);
 
-        return $this->attempt(fn () => response()->json(['data' => $auth->password($data['email'], $data['password'], $request)]));
-    }
-
-    public function code(Request $request, WalletAuth $auth): JsonResponse
-    {
-        $data = $request->validate(['challenge' => ['required', 'string', 'size:64'], 'code' => ['required', 'string', 'max:10']]);
-
-        try {
-            $token = $auth->code($data['challenge'], $data['code'], $request);
-        } catch (WalletRefused $e) {
-            return response()->json(['message' => __("wallet.{$e->reason}"), 'code' => $e->reason], $e->status);
-        }
-
-        return response()->json(['data' => ['signed_in' => true]])->withCookie(self::cookie($token, (int) config('wallet.session.absolute_minutes')));
+        // The password alone opens the session (docs/personal-wallets.md: no authenticator code since 2026-10-09).
+        return $this->attempt(fn () => response()->json(['data' => ['signed_in' => true]])
+            ->withCookie(self::cookie($auth->password($data['email'], $data['password'], $request), (int) config('wallet.session.absolute_minutes'))));
     }
 
     public function signOut(Request $request, WalletAuth $auth): JsonResponse

@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Route;
  */
 Route::prefix('auth')->controller(AuthController::class)->group(function () {
     Route::post('password', 'password')->middleware('throttle:wallet-sign-in');
-    Route::post('code', 'code')->middleware('throttle:wallet-sign-in');
     Route::post('sign-out', 'signOut');
     Route::get('me', 'me')->middleware(AuthenticateWallet::class);
 });
@@ -40,5 +39,4 @@ Route::middleware([AuthenticateWallet::class, 'throttle:wallet'])->prefix('membe
     Route::get('/', 'index');
     Route::post('/', 'grant');
     Route::post('{staffId}/revoke', 'revoke')->whereNumber('staffId');
-    Route::post('{staffId}/reset-authenticator', 'resetAuthenticator')->whereNumber('staffId');
 });

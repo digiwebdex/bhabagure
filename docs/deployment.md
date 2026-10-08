@@ -340,9 +340,8 @@ one-time steps, in order, each run by a person on the server:
    the nginx file itself is already installed, so the reload is what makes the allow-list take effect.
    Before 2026-09-15 this mode skipped the reload when the file was unchanged.
 
-At the first wallet sign-in the page shows a QR code for an authenticator app; the first accepted code enrolls it. For a
-lost phone: `cd /var/www/Bhabagure/api && sudo -u www-data php artisan wallet:reset-authenticator <email>`, then sign in
-again to enroll a new one.
+**Since 2026-10-09** (docs/personal-wallets.md) the allow-list and the authenticator code are both gone: steps 2 and the
+allow-list files are no longer needed, and the staff email and password alone open a wallet.
 
 | Change | Why | Undo |
 |---|---|---|

@@ -17,15 +17,10 @@ return [
         // Signed out after this long without a request, and after this long in all.
         'idle_minutes' => (int) env('WALLET_IDLE_MINUTES', 30),
         'absolute_minutes' => (int) env('WALLET_ABSOLUTE_MINUTES', 720),
-        // Between the password and the authenticator code.
-        'challenge_minutes' => 5,
     ],
 
     'evidence' => [
         'disk' => 'local',
         'directory' => 'wallet/evidence',
     ],
-
-    // The name the authenticator app shows.
-    'issuer' => env('WALLET_ISSUER', 'Bhabaghure wallet'),
 ];

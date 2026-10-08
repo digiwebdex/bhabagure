@@ -5,17 +5,15 @@ namespace App\Wallet\Http\Controllers;
 use App\Enums\StaffStatus;
 use App\Models\Staff;
 use App\Wallet\Models\AuditLog;
-use App\Wallet\Models\Authenticator;
 use App\Wallet\Models\Member;
 use App\Wallet\Models\Session;
-use App\Wallet\Services\WalletAuth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Access (docs/personal-wallets.md): the super admin gives a personal wallet to the staff they choose, takes it away, or
- * resets someone's authenticator after a lost phone. Nobody — the super admin included — sees anyone else's wallet:
+ * Access (docs/personal-wallets.md): the super admin gives a personal wallet to the staff they choose, or takes it
+ * away. Nobody — the super admin included — sees anyone else's wallet:
  * this screen shows who has one, never what is in it.
  */
 final class MemberController extends WalletController
@@ -24,10 +22,9 @@ final class MemberController extends WalletController
     {
         $this->superAdminOnly($request);
         $members = Member::query()->get()->keyBy('staff_id');
-        $enrolled = Authenticator::query()->whereNotNull('confirmed_at')->pluck('staff_id')->flip();
 
         $staff = Staff::query()->where('status', StaffStatus::Active->value)->orderBy('name')->get()
-            ->map(function (Staff $person) use ($members, $enrolled) {
+            ->map(function (Staff $person) use ($members) {
                 $member = $members->get($person->id);
 
                 return [
@@ -38,7 +35,6 @@ final class MemberController extends WalletController
                     // The super admin always has one; anyone else while the access stands.
                     'has_wallet' => $person->isSuperAdmin() || ($member !== null && $member->revoked_at === null),
                     'granted_at' => $member?->revoked_at === null ? $member?->granted_at?->toIso8601String() : null,
-                    'authenticator_set' => $enrolled->has($person->id),
                 ];
             })->values();
 
@@ -73,20 +69,6 @@ final class MemberController extends WalletController
             Session::query()->where('staff_id', $member->staff_id)->whereNull('revoked_at')->update(['revoked_at' => now()]);
             AuditLog::record('wallet_revoked', $by->id, $member, ['staff_id' => $member->staff_id]);
         });
-
-        return $this->index($request);
-    }
-
-    /** After a lost or new phone: the person sets the authenticator up again at their next sign-in. */
-    public function resetAuthenticator(Request $request, int $staffId, WalletAuth $auth): JsonResponse
-    {
-        $by = $this->superAdminOnly($request);
-        $person = Staff::query()->findOrFail($staffId);
-        if (! WalletAuth::allowed($person)) {
-            abort(404);
-        }
-        $auth->resetAuthenticator($person);
-        AuditLog::record('authenticator_reset_by_super_admin', $by->id, null, ['staff_id' => $person->id]);
 
         return $this->index($request);
     }
