@@ -16,6 +16,7 @@ use App\Models\TeamMember;
 use App\Models\TourPhoto;
 use App\Services\AuditLogger;
 use App\Services\Media\ImageUploader;
+use App\Support\Brand;
 use App\Support\CreatorProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,7 +79,9 @@ class MediaController extends Controller
             || TourPhoto::query()->where('media_id', $media->id)->exists()
             || ReviewPhoto::query()->where('media_id', $media->id)->exists()
             // The travel host's photos and covers live in a site setting, not a column (docs/travel-host.md).
-            || in_array($media->id, CreatorProfile::mediaIds(SiteSetting::get(CreatorProfile::KEY)), true);
+            || in_array($media->id, CreatorProfile::mediaIds(SiteSetting::get(CreatorProfile::KEY)), true)
+            // So are the logos and browser icon (docs/brand-logo.md).
+            || in_array($media->id, Brand::mediaIds(), true);
 
         if ($inUse) {
             return response()->json(['message' => __('media.in_use'), 'code' => 'media_in_use'], 409);

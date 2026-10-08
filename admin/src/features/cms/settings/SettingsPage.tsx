@@ -8,7 +8,9 @@ import { NumberInput, Pair, Switch, TextArea, TextInput } from '../../../compone
 import { Card, CardTitle, Loading, PageHeader } from '../../../components/ui/layout'
 import { api, ApiError } from '../../../lib/api/client'
 import { WEBSITE_FEATURES, type BankAccount, type CodeDelivery, type Data, type SiteSettings, type WebsiteFeature } from '../../../lib/api/types'
+import { BRAND_LOGOS_KEY, ORIGINAL_LIGHT_LOGO, useBrandLogos } from '../../../lib/brand'
 import { useFormat } from '../../../lib/useFormat'
+import { MediaPicker } from '../media/media'
 import { HeroVideoCard } from './HeroVideoCard'
 
 type Key = keyof SiteSettings
@@ -161,6 +163,10 @@ export function SettingsPage() {
             </>
           )}
         </SettingCard>
+        {/* docs/brand-logo.md: the logos and browser icon everywhere — website, portal, admin and PDFs. */}
+        <SettingCard settingKey="brand" title={t('settings.brand.title')} initial={{ logo: null, logoLight: null, icon: null, ...data.brand }}>
+          {(value, set, error) => <BrandSlots value={value} set={set} error={error} />}
+        </SettingCard>
         {/* docs/website-features.md: what the public website shows. Off hides a feature there and nothing else. */}
         <SettingCard settingKey="features" title={t('settings.features.title')} initial={{ ...allFeaturesOn(), ...data.features }}>
           {(value, set) => (
@@ -197,6 +203,67 @@ function CodeDeliveryNote({ codes }: { codes: CodeDelivery }) {
 }
 
 /** The API keeps up to three accounts (PaymentOptions::MAX_BANKS). */
+type BrandValue = NonNullable<SiteSettings['brand']>
+type BrandSlot = keyof BrandValue
+
+/** Each slot, the background it is shown on, and the file that ships with the site. */
+const BRAND_SLOTS: { slot: BrandSlot; background: string; original: string; previewClass: string }[] = [
+  { slot: 'logo', background: 'bg-white', original: '/brand/logo-wordmark.png', previewClass: 'h-12 w-auto max-w-full' },
+  { slot: 'logoLight', background: 'bg-app-nav', original: ORIGINAL_LIGHT_LOGO, previewClass: 'h-12 w-auto max-w-full' },
+  { slot: 'icon', background: 'bg-white', original: '/icon.png', previewClass: 'size-12' },
+]
+
+/** Brand card body: a preview of each logo on its own background, a media-library picker, and "Use the original". */
+function BrandSlots({ value, set, error }: { value: BrandValue; set: (value: BrandValue) => void; error: (field: string) => string | undefined }) {
+  const { t } = useTranslation()
+  const current = useBrandLogos()
+  // Images picked here before saving; afterwards the saved URLs come from the public settings.
+  const [picked, setPicked] = useState<Partial<Record<BrandSlot, string>>>({})
+  const [picking, setPicking] = useState<BrandSlot | null>(null)
+
+  return (
+    <>
+      <p className="m-0 text-12 text-app-muted">{t('settings.brand.hint')}</p>
+      <div className="flex flex-col gap-4" data-testid="brand-slots">
+        {BRAND_SLOTS.map(({ slot, background, original, previewClass }) => {
+          const src = value[slot] === null ? original : (picked[slot] ?? current?.[slot] ?? original)
+          return (
+            <div key={slot} className="flex flex-col gap-2" data-testid={`brand-${slot}`}>
+              <span className="text-13 font-semibold">{t(`settings.brand.${slot}`)}</span>
+              <span className="text-12 text-app-muted">{t(`settings.brand.${slot}Hint`)}</span>
+              <div className={`flex min-h-16 items-center rounded-12 border border-app-line px-4 py-3 ${background}`}>
+                <img src={src} alt={t(`settings.brand.${slot}`)} className={`block ${previewClass}`} />
+              </div>
+              <span className="text-12 text-app-muted">{value[slot] === null ? t('settings.brand.usingOriginal') : t('settings.brand.usingChosen')}</span>
+              {error(`value.${slot}`) ? <span className="text-12 font-semibold text-red">{error(`value.${slot}`)}</span> : null}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setPicking(slot)}>
+                  {t('settings.brand.choose')}
+                </button>
+                {value[slot] !== null ? (
+                  <button type="button" className={buttonClass('outline', 'sm')} onClick={() => set({ ...value, [slot]: null })}>
+                    {t('settings.brand.useOriginal')}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <MediaPicker
+        open={picking !== null}
+        onClose={() => setPicking(null)}
+        title={picking ? t(`settings.brand.${picking}`) : undefined}
+        onPick={(media) => {
+          if (!picking) return
+          setPicked((previous) => ({ ...previous, [picking]: media.variants.card?.url ?? media.url ?? undefined }))
+          set({ ...value, [picking]: media.id })
+        }}
+      />
+    </>
+  )
+}
+
 const MAX_BANKS = 3
 
 /** Every website feature on: what the website shows before the switches are first saved. */
@@ -229,6 +296,8 @@ function SettingCard<K extends Key>({ settingKey, title, initial, children }: {
     mutationFn: () => api.put(`admin/settings/${settingKey}`, { value }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['settings'] })
+      // The sidebar, the sign-in page and the tab icon read the logos from the public settings.
+      if (settingKey === 'brand') void queryClient.invalidateQueries({ queryKey: BRAND_LOGOS_KEY })
       toast(t('common.saved'))
     },
   })

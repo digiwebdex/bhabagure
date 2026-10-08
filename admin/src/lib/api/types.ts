@@ -369,6 +369,8 @@ export type SiteSettings = {
   }
   /** The website booking form's checks (docs/booking-phone-verification.md). */
   booking?: { verifyPhone: boolean }
+  /** The logos and browser icon (docs/brand-logo.md): media-library ids, null for the original. */
+  brand?: { logo: number | null; logoLight: number | null; icon: number | null }
   /** Which website features the public sees (docs/website-features.md); absent until first saved, which means all on. */
   features?: Record<WebsiteFeature, boolean>
 }

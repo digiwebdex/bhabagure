@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { getTranslations } from 'next-intl/server';
 
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { FacebookGlyph, InstagramGlyph, LinkedInGlyph, TikTokGlyph, YouTubeGlyph } from '@/components/brand/SocialGlyphs';
 import { WhatsAppGlyph } from '@/components/brand/WhatsAppGlyph';
 import { Link } from '@/i18n/navigation';
@@ -41,7 +42,7 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
 
   return (
     <footer className="bg-navy-abyss px-5 py-6 text-center text-13 text-white opacity-85">
-      <Image src="/brand/logo-wordmark-light.png" alt={settings.brand} width={852} height={378} className="mx-auto mb-2.5 block h-logo-footer w-auto" />
+      <BrandLogo src={settings.logos?.logoLight} tone="dark" alt={settings.brand} className="mx-auto mb-2.5 block h-logo-footer w-auto" />
       {social.length > 0 ? (
         <ul aria-label={t('footer.social')} className="mx-auto mb-3.5 flex list-none flex-wrap justify-center gap-2.5 p-0" data-testid="footer-social">
           {social.map(({ name, href, Glyph }) => (

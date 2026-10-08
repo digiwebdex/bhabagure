@@ -35,4 +35,5 @@ return [
     'price_option_amount_or_estimate' => 'Give each price option either an amount per person or an estimate in words — one of the two.',
     'hotel_category_required' => 'Choose the hotel category.',
     'group_tour_departure' => 'Choose one of this group tour’s departure dates.',
+    'brand_icon_square' => 'The browser icon must be a square image, at least 180 × 180 pixels (512 × 512 is best).',
 ];

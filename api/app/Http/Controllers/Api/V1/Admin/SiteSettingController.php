@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Api\V1\Public\SiteSettingKeys;
 use App\Http\Controllers\Controller;
 use App\Jobs\RevalidateWebsite;
+use App\Models\Media;
 use App\Models\SiteSetting;
 use App\Services\AuditLogger;
 use App\Services\Customers\LoginCodes;
+use App\Support\Brand;
 use App\Support\Payments\PaymentOptions;
 use App\Support\WebsiteFeatures;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /** Company details, contact channels, opening hours and the website's social stats. */
 class SiteSettingController extends Controller
@@ -68,6 +71,13 @@ class SiteSettingController extends Controller
             'value' => ['required', 'array'],
             'value.verifyPhone' => ['required', 'boolean'],
         ],
+        // The logos and browser icon (docs/brand-logo.md): media-library images, null for the original. The icon is square.
+        'brand' => [
+            'value' => ['present', 'array'],
+            'value.logo' => ['nullable', 'integer', 'exists:media,id'],
+            'value.logoLight' => ['nullable', 'integer', 'exists:media,id'],
+            'value.icon' => ['nullable', 'integer', 'exists:media,id'],
+        ],
         // Which website features the public sees (docs/website-features.md): every switch, each true or false.
         'features' => [
             'value' => ['required', 'array'],
@@ -96,11 +106,19 @@ class SiteSettingController extends Controller
         abort_unless(in_array($key, SiteSettingKeys::STAFF_EDITABLE, true), 404);
 
         $validated = $request->validate(self::RULES[$key]);
+        // The browser and phone icon must be square, and big enough for a phone's home screen.
+        if ($key === SiteSettingKeys::BRAND && isset($validated['value']['icon'])) {
+            $icon = Media::query()->findOrFail((int) $validated['value']['icon']);
+            if ($icon->width !== $icon->height || $icon->width < 180) {
+                throw ValidationException::withMessages(['value.icon' => __('cms.brand_icon_square')]);
+            }
+        }
         $setting = SiteSetting::query()->updateOrCreate(['key' => $key], [
             'value' => match ($key) {
                 SiteSettingKeys::PAYMENT => self::paymentValue($validated['value']),
                 // Only the known field, as a true boolean (a form may send "1").
                 SiteSettingKeys::BOOKING => ['verifyPhone' => filter_var($validated['value']['verifyPhone'], FILTER_VALIDATE_BOOLEAN)],
+                SiteSettingKeys::BRAND => collect(Brand::SLOTS)->mapWithKeys(fn (string $slot) => [$slot => isset($validated['value'][$slot]) ? (int) $validated['value'][$slot] : null])->all(),
                 SiteSettingKeys::FEATURES => collect(WebsiteFeatures::KEYS)->mapWithKeys(fn (string $feature) => [$feature => filter_var($validated['value'][$feature], FILTER_VALIDATE_BOOLEAN)])->all(),
                 default => $validated['value'],
             },

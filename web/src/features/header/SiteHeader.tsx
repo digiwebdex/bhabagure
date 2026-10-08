@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
@@ -238,7 +238,6 @@ export function SiteHeader({ pathname, pageSections = [] }: SiteHeaderProps) {
 }
 
 function HeaderLogo({ alt }: { alt: string }) {
-  return (
-    <Image src="/brand/logo-wordmark.png" alt={alt} width={852} height={378} priority className="block h-logo-header w-auto" />
-  );
+  const { settings } = useSiteContent();
+  return <BrandLogo src={settings.logos?.logo} tone="light" alt={alt} priority className="block h-logo-header w-auto" />;
 }

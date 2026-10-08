@@ -3,6 +3,7 @@
 namespace App\Services\Invoices;
 
 use App\Models\Invoice;
+use App\Support\Brand;
 use App\Support\Payments\PaymentOptions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -33,7 +34,7 @@ class InvoicePdf
     {
         $key = sha1(implode('|', [
             InvoiceView::TEMPLATE_VERSION, $invoice->id, $invoice->invoice_number, $invoice->status, $invoice->paid_amount,
-            $invoice->payment_status, $invoice->updated_at?->getTimestamp(), (int) $header, $locale, (int) $maskPassports, $size, PaymentOptions::fingerprint(),
+            $invoice->payment_status, $invoice->updated_at?->getTimestamp(), (int) $header, $locale, (int) $maskPassports, $size, PaymentOptions::fingerprint(), Brand::fingerprint(),
         ]));
         $path = "invoices/{$invoice->id}/{$key}.pdf";
         $disk = Storage::disk('local');

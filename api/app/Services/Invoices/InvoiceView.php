@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Services\Ledger\LedgerService;
 use App\Support\AmountInWords;
 use App\Support\Barcode\Code128;
+use App\Support\Brand;
 use App\Support\Money;
 use App\Support\Numerals;
 use App\Support\Payments\PaymentOptions;
@@ -213,6 +214,11 @@ final class InvoiceView
 
     private function logoDataUri(): ?string
     {
+        // The logo chosen in Site settings → Brand (docs/brand-logo.md), or the one that ships with the site.
+        $chosen = Brand::documentLogo();
+        if ($chosen !== null) {
+            return $chosen;
+        }
         $path = config('bhabaghure.invoices.logo_path');
 
         return is_string($path) && is_file($path) ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($path)) : null;

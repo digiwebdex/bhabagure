@@ -32,8 +32,14 @@ final class SiteSettingKeys
      */
     public const FEATURES = 'features';
 
+    /**
+     * The logos and browser icon (docs/brand-logo.md): `{ logo, logoLight, icon }` media ids, null for the original.
+     * Served in the public settings as URLs (App\Support\Brand).
+     */
+    public const BRAND = 'brand';
+
     /** The keys Admin → Site settings edits. */
-    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING, self::FEATURES];
+    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING, self::FEATURES, self::BRAND];
 
     /** Edited on the Pricing screen, served by GET /public/pricing. */
     public const PRICING = 'pricing';

@@ -6,6 +6,7 @@ import { buttonClass } from '../components/ui/button'
 import { HeaderToolsContext } from '../components/ui/layout'
 import { useFormat } from '../lib/useFormat'
 import { useTheme } from '../lib/useTheme'
+import { ORIGINAL_LIGHT_LOGO, useBrandLogos } from '../lib/brand'
 import { useAuth, useStaff } from './auth'
 import { HeaderSearch } from './HeaderSearch'
 import { badgeHref, useNavCounts } from './navCounts'
@@ -90,6 +91,7 @@ function SidebarContent() {
   const { theme, toggle } = useTheme()
   const { can, signOut } = useAuth()
   const staff = useStaff()
+  const brand = useBrandLogos()
   const counts = useNavCounts(NAV_GROUPS.some((group) => group.items.some((item) => item.badge && can(...item.permissions))))
 
   const controlClass = 'flex cursor-pointer items-center gap-2 rounded-10 border border-white/15 bg-transparent px-3 py-2 text-left text-13 text-inherit'
@@ -103,7 +105,7 @@ function SidebarContent() {
   return (
     <>
       <div className="flex flex-col gap-1.75 px-2 pt-1 pb-5">
-        <img src="/brand/logo-wordmark-light.png" alt={t('shell.brand')} className="block h-auto w-full max-w-sidebar-logo" />
+        <img src={brand?.logoLight ?? ORIGINAL_LIGHT_LOGO} alt={t('shell.brand')} className="block h-auto w-full max-w-sidebar-logo" />
         <span className="pl-0.5 font-display text-10 tracking-eyebrow-wide text-orange uppercase">
           {t(`roles.${staff.is_super_admin ? 'super_admin' : (staff.role ?? 'staff')}`, { defaultValue: staff.role_name_en ?? '' })}
         </span>

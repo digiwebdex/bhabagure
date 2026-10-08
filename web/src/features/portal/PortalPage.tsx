@@ -25,6 +25,7 @@ export async function PortalPage({ locale, tab, pathname, children }: { locale: 
     <PortalShell
       tab={tab}
       contact={{ phone: settings.contact.phone, whatsapp: settings.contact.whatsapp, opens: settings.hours.opens, closes: settings.hours.closes }}
+      logo={settings.logos?.logoLight ?? null}
       languageToggle={<LanguageToggle locale={locale} pathname={pathname} />}
     >
       {children}

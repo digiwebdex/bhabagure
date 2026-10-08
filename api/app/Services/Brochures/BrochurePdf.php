@@ -8,6 +8,7 @@ use App\Models\TourPackage;
 use App\Models\VisaService;
 use App\Services\Invoices\InvoicePdf;
 use App\Services\Invoices\InvoiceView;
+use App\Support\Brand;
 use App\Support\Money;
 use App\Support\Pricing\PriceGrid;
 use App\Support\Pricing\PricingConfig;
@@ -121,7 +122,7 @@ class BrochurePdf
         $config = PricingConfig::current();
         $key = sha1(implode('|', [self::TEMPLATE_VERSION, 'package', $package->id, $package->updated_at?->getTimestamp(), $category, $pax, $locale,
             json_encode($config->slabs), $config->singleRoomSupplementPercent, $config->serviceChargePercent, now('Asia/Dhaka')->toDateString(),
-            $package->isGroupTour() ? json_encode(self::upcomingDepartures($package)) : '']));
+            $package->isGroupTour() ? json_encode(self::upcomingDepartures($package)) : '', Brand::fingerprint()]));
 
         return $this->stored("brochures/packages/{$package->id}/{$key}.pdf", fn () => $this->packageHtml($package, $category, $pax, $locale, forPdf: true));
     }
@@ -139,7 +140,7 @@ class BrochurePdf
 
     public function visaPdf(VisaService $visa, string $locale): string
     {
-        $key = sha1(implode('|', [self::TEMPLATE_VERSION, 'visa', $visa->id, $visa->updated_at?->getTimestamp(), $locale, now('Asia/Dhaka')->toDateString()]));
+        $key = sha1(implode('|', [self::TEMPLATE_VERSION, 'visa', $visa->id, $visa->updated_at?->getTimestamp(), $locale, now('Asia/Dhaka')->toDateString(), Brand::fingerprint()]));
 
         return $this->stored("brochures/visas/{$visa->id}/{$key}.pdf", fn () => $this->visaHtml($visa, $locale, forPdf: true));
     }

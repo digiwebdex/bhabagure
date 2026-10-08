@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Link } from '@/i18n/navigation';
 import { restoreSession, signOut } from '@/lib/customer-api';
 import { initialsOf } from '@/lib/initials';
@@ -28,6 +28,8 @@ export type PortalContact = { phone: string; whatsapp: string; opens: number; cl
 interface PortalShellProps {
   tab: PortalTab;
   contact: PortalContact;
+  /** The light logo chosen in Site settings (docs/brand-logo.md); null: the original. */
+  logo?: string | null;
   /** The server-rendered language toggle for this page. */
   languageToggle: ReactNode;
   children: ReactNode;
@@ -38,7 +40,7 @@ interface PortalShellProps {
  * The session is restored from the refresh cookie on load; without one the page is the sign-in screen. Private pages
  * aren't cached for offline use (docs/phase-6-customer-portal.md §2 #10): offline, the portal says so.
  */
-export function PortalShell({ tab, contact, languageToggle, children }: PortalShellProps) {
+export function PortalShell({ tab, contact, logo = null, languageToggle, children }: PortalShellProps) {
   const t = useTranslations('portal');
   const tc = useTranslations('common');
   const locale = useLocale();
@@ -79,7 +81,7 @@ export function PortalShell({ tab, contact, languageToggle, children }: PortalSh
         <div className="mx-auto flex max-w-portal flex-wrap items-center justify-between gap-x-fluid-12-24 gap-y-3 px-fluid-16-22 py-3.5">
           <div className="flex min-w-0 items-center gap-3">
             <a href={siteHome} title={t('backToSite')} className="block shrink-0 leading-none transition-opacity hover:opacity-82">
-              <Image src="/brand/logo-wordmark-light.png" alt={t('logoHome')} width={852} height={378} priority className="block h-logo-footer w-auto" />
+              <BrandLogo src={logo} tone="dark" alt={t('logoHome')} priority className="block h-logo-footer w-auto" />
             </a>
             <span className="font-display text-10 font-bold tracking-[0.16em] whitespace-nowrap text-orange uppercase">{tc('myAccount')}</span>
           </div>

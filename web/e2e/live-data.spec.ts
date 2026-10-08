@@ -186,6 +186,41 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('logos and the browser icon chosen in Site settings replace the originals on the website, and the originals come back (docs/brand-logo.md)', async ({ page, request }) => {
+    const password = 'e2e-website-settings-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'web.settings@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token}`, Accept: 'application/json' };
+    const upload = async (file: string) =>
+      (await (await request.post(`${E2E_API_URL}/api/v1/admin/media`, { headers, multipart: { file: { name: 'logo.png', mimeType: 'image/png', buffer: readFileSync(resolve(API_DIR, '..', 'web', 'public', 'brand', file)) } } })).json()).data.id as number;
+    const save = (value: Record<string, number | null>) => request.put(`${E2E_API_URL}/api/v1/admin/settings/brand`, { headers, data: { value: { logo: null, logoLight: null, icon: null, ...value } } });
+    const header = page.locator('header').first().getByRole('img').first();
+    const footer = page.locator('footer').getByRole('img').first();
+
+    try {
+      expect((await save({ logo: await upload('logo-wordmark.png'), logoLight: await upload('logo-wordmark-light.png'), icon: await upload('icon.png') })).status()).toBe(200);
+      await expect
+        .poll(async () => {
+          await page.goto('/en');
+          return header.getAttribute('src');
+        }, { timeout: 20_000 })
+        .toMatch(/-card\.webp$/);
+      await expect(footer).toHaveAttribute('src', /-card\.webp$/);
+      await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute('href', /-thumb\.webp$/);
+    } finally {
+      expect((await save({})).status()).toBe(200);
+    }
+
+    await expect
+      .poll(async () => {
+        await page.goto('/en');
+        return (await header.getAttribute('src')) ?? '';
+      }, { timeout: 20_000 })
+      .toContain('logo-wordmark.png');
+    await expect(footer).toHaveAttribute('src', /logo-wordmark-light\.png/);
+    await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute('href', /\/brand\/icon\.png/);
+  });
+
   test('booking terms published in the admin replace the built-in draft on the website at once (docs/legal-pages.md)', async ({ page, request }) => {
     const password = 'e2e-website-settings-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

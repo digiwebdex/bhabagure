@@ -98,7 +98,9 @@ class PublicContentContractTest extends TestCase
         $this->assertEquals($this->seedFile('pricing.json') + ['onlineCheckout' => true, 'verifyPhone' => false], $this->getJson('/api/v1/public/pricing')->json('data'));
         // features is filled in by the API, every one on until switched off in Site settings (docs/website-features.md).
         $features = array_fill_keys(WebsiteFeatures::KEYS, true);
-        $this->assertEquals($this->seedFile('settings.json') + ['features' => $features], $this->getJson('/api/v1/public/settings')->json('data'));
+        // logos likewise: the logos chosen in Site settings, none until then (docs/brand-logo.md).
+        $brand = ['logo' => null, 'logoLight' => null, 'icon' => null];
+        $this->assertEquals($this->seedFile('settings.json') + ['features' => $features, 'logos' => $brand], $this->getJson('/api/v1/public/settings')->json('data'));
     }
 
     /**

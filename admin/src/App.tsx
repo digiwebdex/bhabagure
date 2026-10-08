@@ -5,6 +5,7 @@ import { AuthProvider } from './app/auth'
 import { NAV_COUNTS_KEY } from './app/navCounts'
 import { router } from './app/router'
 import { ToastProvider } from './components/ui/feedback'
+import { BrandFavicon } from './components/BrandFavicon'
 import { ApiError } from './lib/api/client'
 
 const queryClient: QueryClient = new QueryClient({
@@ -25,6 +26,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <AuthProvider>
+          <BrandFavicon />
           <RouterProvider router={router} />
         </AuthProvider>
       </ToastProvider>

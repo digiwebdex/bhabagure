@@ -240,6 +240,8 @@ export interface SiteSettings {
   stats: { topReelViewsThousands: number; banglaSupportPercent: number };
   /** The hero video staff chose in Site settings (docs/hero-video.md); absent or null: the one the site ships with. */
   hero?: { videoUrl: string; posterUrl: string | null } | null;
+  /** Logos and browser icon chosen in Site settings (docs/brand-logo.md); absent or null: the original files. */
+  logos?: { logo: string | null; logoLight: string | null; icon: string | null };
   /** Which website features the public sees (docs/website-features.md); absent (an older API, the seed): all on. */
   features?: Partial<Record<WebsiteFeature, boolean>>;
 }

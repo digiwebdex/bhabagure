@@ -22,20 +22,20 @@ test('a website feature is switched off and on again in Site settings, and its a
   try {
     await blog.click()
     await card.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(card.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Saved', exact: true })).toBeVisible(FIRST_LOAD)
     expect(await publicFeatures(page.request)).toMatchObject({ blog: false, team: true, reviews: true })
 
     // The Blog screen still works while the public website hides the blog.
     await page.goto('/posts')
     await expect(page.getByRole('heading', { name: 'Blog', level: 1 })).toBeVisible(FIRST_LOAD)
     await expect(page.getByRole('link', { name: '+ New post' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Destinations \d+ posts?$/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Destinations \d+ posts?$/ })).toBeVisible(FIRST_LOAD)
 
     await page.goto('/settings')
     await expect(blog).toHaveAttribute('aria-checked', 'false', FIRST_LOAD)
     await blog.click()
     await card.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(card.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Saved', exact: true })).toBeVisible(FIRST_LOAD)
     expect((await publicFeatures(page.request)).blog).toBe(true)
   } finally {
     // Whatever happened above, later tests see the website whole.

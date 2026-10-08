@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
@@ -10,9 +11,16 @@ import '@fontsource-variable/bricolage-grotesque/opsz.css';
 import '../globals.css';
 
 import { routing } from '@/i18n/routing';
+import { loadContent } from '@/lib/content/source';
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
+}
+
+/** The browser and home-screen icon: the one chosen in Site settings → Brand (docs/brand-logo.md), or the original. */
+export async function generateMetadata(): Promise<Metadata> {
+  const chosen = (await loadContent()).settings.logos?.icon;
+  return { icons: chosen ? { icon: chosen, apple: chosen } : { icon: '/brand/icon.png', apple: '/brand/apple-icon.png' } };
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps<'/[locale]'>) {
