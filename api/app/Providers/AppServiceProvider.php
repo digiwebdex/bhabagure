@@ -28,6 +28,7 @@ use App\Models\Inquiry;
 use App\Models\Invoice;
 use App\Models\InvoiceProduct;
 use App\Models\JournalEntry;
+use App\Models\LegalPageVersion;
 use App\Models\Media;
 use App\Models\NotificationMessage;
 use App\Models\NotificationTemplate;
@@ -178,6 +179,7 @@ class AppServiceProvider extends ServiceProvider
             'offer_banner' => OfferBanner::class,
             'tour_photo' => TourPhoto::class,
             'booking_voucher' => BookingVoucher::class,
+            'legal_page_version' => LegalPageVersion::class,
             'invoice_product' => InvoiceProduct::class,
             'conversation' => Conversation::class,
             'canned_reply' => CannedReply::class,

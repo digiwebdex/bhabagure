@@ -20,6 +20,7 @@ use App\Models\Staff;
 use App\Models\TourPackage;
 use App\Models\TravellerDocument;
 use App\Services\AuditLogger;
+use App\Services\Cms\LegalPages;
 use App\Services\Coupons\CouponCheck;
 use App\Services\Coupons\CouponRefused;
 use App\Services\Coupons\CouponService;
@@ -318,7 +319,8 @@ final class BookingCreator
             'assigned_staff_id' => $ownerId ?? $staff?->id,
             'locale' => $request->locale,
             'terms_accepted_at' => $request->termsAccepted ? now() : null,
-            'terms_version' => $request->termsAccepted ? config('bhabaghure.booking.terms_version') : null,
+            // The terms the customer accepted: the published version (docs/legal-pages.md), or the built-in draft's name.
+            'terms_version' => $request->termsAccepted ? LegalPages::termsVersion() : null,
             'access_token_hash' => Booking::hashAccessToken($accessToken),
             'idempotency_key' => $request->idempotencyKey,
             'phone_verified_at' => $verification === null ? null : now(),

@@ -1,19 +1,13 @@
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 
-import { LEGAL_STATUS, legalDocument } from '@/features/legal/documents';
-import { LegalPage } from '@/features/legal/LegalPage';
+import { LegalPage, legalMetadata } from '@/features/legal/LegalPage';
 import { SiteChrome } from '@/features/SiteChrome';
 import type { AppLocale } from '@/i18n/routing';
 import { getSiteViews } from '@/lib/content';
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/site/terms'>): Promise<Metadata> {
-  const { locale } = await params;
-  // Drafts pending the lawyer's review are kept out of search engines.
-  return {
-    title: legalDocument('terms', locale as AppLocale).title,
-    robots: LEGAL_STATUS === 'draft' ? { index: false, follow: true } : undefined,
-  };
+  return legalMetadata('terms', (await params).locale as AppLocale);
 }
 
 export default async function Page({ params }: PageProps<'/[locale]/site/terms'>) {

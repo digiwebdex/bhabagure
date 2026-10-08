@@ -66,7 +66,7 @@ check "wallet API without a session" '403|401' "$(get wallet_api https://wallet.
 check "wallet API absent on the API host" 404 "$(get wallet_on_api "$API/api/v1/wallet/auth/me" -H 'X-Wallet-Request: 1')"
 
 echo "── Public API (live CMS data)"
-for path in settings destinations packages departures posts team reviews gallery visas creator partners offers tour-photos pricing; do
+for path in settings destinations packages departures posts team reviews gallery visas creator partners offers tour-photos legal pricing; do
   check "GET /public/$path" 200 "$(get "p_$path" "$API/api/v1/public/$path" -H 'Accept: application/json')"
 done
 check "destinations listed" '[1-9][0-9]*' "$(json p_destinations "(d.data||d).length")"

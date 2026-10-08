@@ -3,7 +3,7 @@ import 'server-only';
 import { cache } from 'react';
 
 import { withFeatures } from './features';
-import type { ContentBundle } from './types';
+import type { ContentBundle, Localized } from './types';
 
 /**
  * Where content comes from.
@@ -23,6 +23,24 @@ export const loadContent = cache(async (): Promise<ContentBundle> => {
   if (source === 'seed') return withFeatures(await loadSeed(process.env.CONTENT_DEMO === '1'));
   if (source === 'api') return withFeatures(await loadFromApi());
   throw new Error('CONTENT_SOURCE must be "api" or "seed" — see web/.env.example');
+});
+
+/** A legal page as staff published it in the admin (docs/legal-pages.md); null until then. */
+export type PublishedLegalPage = { version: number; title: Localized; body: Localized; publishedAt: string };
+export type PublishedLegalPages = Partial<Record<'terms' | 'refund-policy' | 'privacy', PublishedLegalPage | null>>;
+
+/**
+ * The legal pages published in the admin. Each is null until staff publish it, and the page then shows its built-in
+ * draft; so does the seed. Refreshed by the `legal` tag when staff publish.
+ */
+export const loadLegalPages = cache(async (): Promise<PublishedLegalPages> => {
+  if (process.env.CONTENT_SOURCE !== 'api') return {};
+  const base = process.env.API_INTERNAL_URL || process.env.API_URL;
+  const res = await fetch(`${base}/api/v1/public/legal`, { next: { tags: ['legal'], revalidate: 3600 } });
+  // deploy.sh builds the website before the API serves the route: the drafts show until the refresh at the end.
+  if (res.status === 404) return {};
+  if (!res.ok) throw new Error(`GET legal → ${res.status}`);
+  return (await res.json()).data as PublishedLegalPages;
 });
 
 async function loadSeed(withDemo: boolean): Promise<ContentBundle> {

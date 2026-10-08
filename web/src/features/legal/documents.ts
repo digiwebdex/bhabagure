@@ -1,5 +1,6 @@
 /**
- * DRAFT legal pages — terms, privacy and refund policy (docs/phase-3-booking.md §7).
+ * DRAFT legal pages — terms, privacy and refund policy (docs/phase-3-booking.md §7). Shown only until staff publish the
+ * page in Admin → Website → Legal pages (docs/legal-pages.md); the admin's editor starts from this text.
  *
  * Written from what the site and invoice already say (21-day cancellation, non-refundable air-ticket and hotel
  * portions, visa processing fee, six-month passport validity, SSLCommerz card handling, passport scan storage).

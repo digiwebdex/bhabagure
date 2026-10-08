@@ -21,6 +21,7 @@ use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
 use App\Services\Booking\PhoneCheck;
+use App\Services\Cms\LegalPages;
 use App\Services\Media\HeroVideo;
 use App\Support\CreatorProfile;
 use App\Support\Money;
@@ -189,6 +190,24 @@ class PublicContentController extends Controller
             // Every feature, on unless switched off in Site settings (docs/website-features.md).
             'features' => WebsiteFeatures::all(),
         ]));
+    }
+
+    /**
+     * The legal pages' current versions (docs/legal-pages.md), each null until staff publish it: the website then shows
+     * its built-in draft.
+     */
+    public function legal(): JsonResponse
+    {
+        return $this->data(collect(LegalPages::SLUGS)->mapWithKeys(function (string $slug) {
+            $current = LegalPages::current($slug);
+
+            return [$slug => $current === null ? null : [
+                'version' => $current->version,
+                'title' => ['bn' => $current->title_bn, 'en' => $current->title_en ?? $current->title_bn],
+                'body' => ['bn' => $current->body_bn, 'en' => $current->body_en ?? $current->body_bn],
+                'publishedAt' => $current->created_at?->toIso8601String(),
+            ]];
+        })->all());
     }
 
     private function publishedPackages(): Builder

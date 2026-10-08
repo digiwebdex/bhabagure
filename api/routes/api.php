@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\Admin\InvoiceBuilderController;
 use App\Http\Controllers\Api\V1\Admin\InvoiceProductController;
 use App\Http\Controllers\Api\V1\Admin\JournalController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
+use App\Http\Controllers\Api\V1\Admin\LegalPageController;
 use App\Http\Controllers\Api\V1\Admin\MediaController;
 use App\Http\Controllers\Api\V1\Admin\MyAttendanceController;
 use App\Http\Controllers\Api\V1\Admin\MyCommissionController;
@@ -176,6 +177,7 @@ Route::prefix('v1')->group(function () {
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
+            Route::get('legal', 'legal');
         });
 
         Route::controller(PublicFormController::class)->middleware('throttle:public-forms')->group(function () {
@@ -685,6 +687,14 @@ Route::prefix('v1')->group(function () {
                 Route::delete('posts/{id}', 'destroy')->whereNumber('id');
                 Route::post('posts/{id}/publish', 'publish')->whereNumber('id');
                 Route::post('posts/{id}/unpublish', 'unpublish')->whereNumber('id');
+            });
+
+            // The booking terms, refund policy and privacy policy, published in versions (docs/legal-pages.md).
+            Route::controller(LegalPageController::class)->group(function () {
+                Route::get('legal-pages', 'index');
+                Route::get('legal-pages/{slug}', 'show');
+                Route::get('legal-pages/{slug}/versions/{version}', 'version')->whereNumber('version');
+                Route::post('legal-pages/{slug}', 'publish');
             });
 
             Route::controller(BlogCategoryController::class)->group(function () {

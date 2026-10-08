@@ -186,6 +186,46 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('booking terms published in the admin replace the built-in draft on the website at once (docs/legal-pages.md)', async ({ page, request }) => {
+    const password = 'e2e-website-settings-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'web.settings@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token}`, Accept: 'application/json' };
+    const stamp = Date.now();
+
+    const published = await request.post(`${E2E_API_URL}/api/v1/admin/legal-pages/terms`, {
+      headers,
+      data: { title_bn: 'আমাদের বুকিংয়ের শর্ত', title_en: 'Our booking terms', body_bn: `<h2>১. বাতিল</h2><p>নিজস্ব শর্ত ${stamp}</p>`, body_en: `<h2>1. Cancelling</h2><p>Our own terms ${stamp}</p>` },
+    });
+    expect(published.status()).toBe(201);
+
+    await expect
+      .poll(async () => {
+        await page.goto('/en/terms');
+        return page.getByTestId('legal-body').count();
+      }, { timeout: 20_000 })
+      .toBe(1);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Our booking terms');
+    await expect(page.getByTestId('legal-body')).toContainText(`Our own terms ${stamp}`);
+    await expect(page.getByTestId('legal-body').getByRole('heading', { level: 2 })).toHaveText('1. Cancelling');
+    // No draft banner, and search engines may index it now.
+    await expect(page.getByRole('note')).toHaveCount(0);
+    await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
+    await expect(page).toHaveTitle(/Our booking terms/);
+
+    await page.goto('/terms');
+    await expect(page.getByTestId('legal-body')).toContainText(`নিজস্ব শর্ত ${stamp}`);
+
+    // English left empty shows the Bangla on the English site.
+    await request.post(`${E2E_API_URL}/api/v1/admin/legal-pages/terms`, { headers, data: { title_bn: 'আমাদের বুকিংয়ের শর্ত', body_bn: `<p>শুধু বাংলা ${stamp}</p>` } });
+    await expect
+      .poll(async () => {
+        await page.goto('/en/terms');
+        return page.getByTestId('legal-body').innerText();
+      }, { timeout: 20_000 })
+      .toContain(`শুধু বাংলা ${stamp}`);
+  });
+
   test('a website feature switched off in Site settings leaves the public website, and comes back whole when switched on (docs/website-features.md)', async ({ page, request }) => {
     const password = 'e2e-website-settings-pass';
     artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.settings@e2e.test'], ['employee_code' => 'E2E-SET', 'name' => 'Settings editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);

@@ -49,6 +49,8 @@ const CreatorPage = page(() => import('../features/cms/creator/CreatorPage'), 'C
 const AirlinePartnersPage = page(() => import('../features/cms/partners/AirlinePartnersPage'), 'AirlinePartnersPage')
 const OfferBannersPage = page(() => import('../features/cms/offers/OfferBannersPage'), 'OfferBannersPage')
 const TourPhotosPage = page(() => import('../features/cms/tour-photos/TourPhotosPage'), 'TourPhotosPage')
+const LegalPagesPage = page(() => import('../features/cms/legal/LegalPagesPage'), 'LegalPagesPage')
+const LegalPageEditorPage = page(() => import('../features/cms/legal/LegalPagesPage'), 'LegalPageEditorPage')
 const VouchersPage = page(() => import('../features/vouchers/VouchersPage'), 'VouchersPage')
 const InboxPage = page(() => import('../features/inbox/InboxPage'), 'InboxPage')
 const InboxSettingsPage = page(() => import('../features/inbox/InboxSettingsPage'), 'InboxSettingsPage')
@@ -152,6 +154,8 @@ export const router = createBrowserRouter([
       { path: 'airline-partners', element: <Require permissions={cms}><AirlinePartnersPage /></Require> },
       { path: 'offer-banners', element: <Require permissions={cms}><OfferBannersPage /></Require> },
       { path: 'tour-photos', element: <Require permissions={cms}><TourPhotosPage /></Require> },
+      { path: 'legal-pages', element: <Require permissions={cms}><LegalPagesPage /></Require> },
+      { path: 'legal-pages/:slug', element: <Require permissions={cms}><LegalPageEditorPage /></Require> },
       { path: 'visas', element: <Require permissions={cms}><VisaServicesPage /></Require> },
       { path: 'media', element: <Require permissions={['packages.manage', 'cms.manage']}><MediaLibraryPage /></Require> },
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },

@@ -1061,6 +1061,7 @@
     "coupon": "Coupon discount ({code})"
   },
   "legal": {
+    "updated": "Last updated: {date}",
     "draftTitle": "Draft — pending review by the company’s lawyer",
     "draftNote": "This page is a draft and is not final. Items marked [CLIENT TO CONFIRM] are still to be decided. Contact us with any questions before booking."
   },
