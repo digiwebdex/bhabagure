@@ -111,7 +111,12 @@ check "CORS refuses another origin" '' "$(cors https://evil.example)"
 echo "── Website pages"
 check "package page (bn)" 200 "$(get w_pkg "$APEX/packages/$slug")"
 check "package page (en)" 200 "$(get w_pkg_en "$APEX/en/packages/$slug")"
-[[ -n $post ]] && check "blog post page" 200 "$(get w_post "$APEX/blog/$post")"
+# Blog switched off in Site settings → Website features (docs/website-features.md): its pages are "not found" by design.
+if [[ -n $post && $(json p_settings "(d.data.features||{}).blog!==false") == true ]]; then
+  check "blog post page" 200 "$(get w_post "$APEX/blog/$post")"
+elif [[ -n $post ]]; then
+  check "blog post page, Blog switched off on the website" 404 "$(get w_post "$APEX/blog/$post")"
+fi
 visa=$(json p_visas "((d.data||[])[0]||{}).slug||''")
 if [[ -n $visa ]]; then
   check "visa page /visa/{slug}" 200 "$(get w_visa "$APEX/visa/$visa")"
