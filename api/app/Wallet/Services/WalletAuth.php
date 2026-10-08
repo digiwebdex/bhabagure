@@ -6,6 +6,7 @@ use App\Enums\StaffStatus;
 use App\Models\Staff;
 use App\Wallet\Models\AuditLog;
 use App\Wallet\Models\Authenticator;
+use App\Wallet\Models\Member;
 use App\Wallet\Models\Session;
 use App\Wallet\Support\Totp;
 use Illuminate\Http\Request;
@@ -163,9 +164,12 @@ final class WalletAuth
         });
     }
 
-    /** The wallet is the super admin's alone, and only while their account is active. */
+    /**
+     * The super admin, and staff the super admin gave a wallet to (docs/personal-wallets.md), while their account is active.
+     * Revoking a wallet ends its sessions at the next request.
+     */
     public static function allowed(Staff $staff): bool
     {
-        return $staff->status === StaffStatus::Active && $staff->isSuperAdmin();
+        return $staff->status === StaffStatus::Active && ($staff->isSuperAdmin() || Member::hasAccess($staff->id));
     }
 }

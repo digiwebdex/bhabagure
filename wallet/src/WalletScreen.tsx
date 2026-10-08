@@ -1,36 +1,62 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Access } from './Access'
 import { Breakdown } from './Breakdown'
 import { CashForm } from './CashForm'
 import { Deals } from './Deals'
 import { History } from './History'
 import { useFormat } from './lib/format'
 import { actions, useSummary, type Me } from './lib/queries'
-import { Notice, Shell } from './ui'
+import { Chip, Notice, Shell } from './ui'
 
 /**
- * The prototype's one screen (_design/Super Admin Wallet.dc.html): the balance and totals, cash in or out, the breakdown
+ * The prototype's one screen (_design/Super Admin Wallet.dc.html), now each person's own (docs/personal-wallets.md): the balance and totals, cash in or out, the breakdown
  * by source, deals with advance and due, and the history — every figure from the wallet's own database.
  */
 export function WalletScreen({ me, onSignedOut }: { me: Me; onSignedOut: () => void }) {
+  const { t } = useTranslation()
+  // The super admin also has Access, where personal wallets are given (docs/personal-wallets.md).
+  const [tab, setTab] = useState<'wallet' | 'access'>('wallet')
+
+  return (
+    <Shell
+      actions={
+        <>
+          {me.super_admin ? (
+            <span role="tablist" aria-label={t('title')} className="flex gap-1.5">
+              {(['wallet', 'access'] as const).map((key) => (
+                <Chip key={key} on={tab === key} onClick={() => setTab(key)}>
+                  {t(`tabs.${key}`)}
+                </Chip>
+              ))}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="cursor-pointer rounded-pill border border-wallet-input bg-transparent px-3.5 py-1.75 text-13 font-semibold text-wallet-muted"
+            onClick={() => void actions.signOut().finally(onSignedOut)}
+            title={me.email}
+          >
+            {t('signOut')}
+          </button>
+        </>
+      }
+    >
+      {tab === 'access' && me.super_admin ? <Access me={me} /> : <Book />}
+    </Shell>
+  )
+}
+
+/** The person's own book: every figure from their wallet only. */
+function Book() {
   const { t } = useTranslation()
   const { bdt, number, date, month } = useFormat()
   const summary = useSummary()
   const data = summary.data
 
   return (
-    <Shell
-      actions={
-        <button
-          type="button"
-          className="cursor-pointer rounded-pill border border-wallet-input bg-transparent px-3.5 py-1.75 text-13 font-semibold text-wallet-muted"
-          onClick={() => void actions.signOut().finally(onSignedOut)}
-          title={me.email}
-        >
-          {t('signOut')}
-        </button>
-      }
-    >
+    <>
       <Notice tone="violet">{t('isolationNote')}</Notice>
 
       <section className="grid-auto-fit-210 grid gap-3.5" data-testid="wallet-kpis">
@@ -62,6 +88,6 @@ export function WalletScreen({ me, onSignedOut }: { me: Me; onSignedOut: () => v
           <History />
         </div>
       </div>
-    </Shell>
+    </>
   )
 }

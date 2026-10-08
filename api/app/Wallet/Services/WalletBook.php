@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * The wallet's book (docs/phase-7-hr-attendance-bonus-wallet.md §8): cash in and out with a source, a reference and
+ * One person's wallet book (docs/phase-7-hr-attendance-bonus-wallet.md §8; one per person since 2026-10-09,
+ * docs/personal-wallets.md — every read and write is limited to the signed-in owner's own rows): cash in and out with a source, a reference and
  * evidence; deals with an advance and payments against what is due; reversals instead of deletes. Balance = in − out.
  *
  * "Standing" entries are the ones that count in totals and breakdowns: not reversals, and not reversed.
@@ -23,11 +24,15 @@ final class WalletBook
 {
     public function __construct(private readonly EvidenceVault $vault) {}
 
-    /** @return array<string, mixed> */
-    public function summary(): array
+    /**
+     * One person's figures (docs/personal-wallets.md): only their own entries and deals.
+     *
+     * @return array<string, mixed>
+     */
+    public function summary(Staff $owner): array
     {
         $monthStart = CarbonImmutable::now('Asia/Dhaka')->startOfMonth()->toDateString();
-        $standing = fn () => self::standing(Transaction::query());
+        $standing = fn () => self::standing(Transaction::query()->ownedBy($owner->id));
         $sum = fn (Builder $query) => round((float) $query->sum('amount'), 2);
 
         $in = $sum($standing()->where('direction', Transaction::IN));
@@ -40,12 +45,12 @@ final class WalletBook
             'count_in' => $standing()->where('direction', Transaction::IN)->count(),
             'count_out' => $standing()->where('direction', Transaction::OUT)->count(),
             'month_in' => $sum($standing()->where('direction', Transaction::IN)->where('occurred_on', '>=', $monthStart)),
-            'last_entry_at' => Transaction::query()->max('created_at'),
+            'last_entry_at' => Transaction::query()->ownedBy($owner->id)->max('created_at'),
             'by_source' => $standing()->groupBy('source_name')
                 ->selectRaw("source_name, sum(case when direction = 'in' then amount else 0 end) as total_in, sum(case when direction = 'out' then amount else 0 end) as total_out")
                 ->orderByRaw('total_in desc')->get()
                 ->map(fn ($row) => ['name' => $row->source_name, 'in' => round((float) $row->total_in, 2), 'out' => round((float) $row->total_out, 2)])->all(),
-            'due_total' => round(Deal::query()->get()->sum(fn (Deal $deal) => self::due($deal)), 2),
+            'due_total' => round(Deal::query()->ownedBy($owner->id)->get()->sum(fn (Deal $deal) => self::due($deal)), 2),
         ];
     }
 
@@ -56,7 +61,8 @@ final class WalletBook
      */
     public function record(string $direction, float $amount, int $sourceId, string $reference, string $occurredOn, ?UploadedFile $evidence, Staff $by): Transaction
     {
-        $source = Source::query()->whereNull('archived_at')->find($sourceId) ?? throw new WalletRefused('source_unknown', 422);
+        // Only one of this person's own sources.
+        $source = Source::query()->ownedBy($by->id)->whereNull('archived_at')->find($sourceId) ?? throw new WalletRefused('source_unknown', 422);
 
         return $this->withEvidence($evidence, fn (?array $file) => DB::connection('wallet')->transaction(function () use ($direction, $amount, $source, $reference, $occurredOn, $file, $by) {
             $entry = Transaction::query()->create([
@@ -102,7 +108,7 @@ final class WalletBook
     public function recordPayment(Deal $deal, float $amount, string $reference, string $occurredOn, ?UploadedFile $evidence, Staff $by): Transaction
     {
         return $this->withEvidence($evidence, fn (?array $file) => DB::connection('wallet')->transaction(function () use ($deal, $amount, $reference, $occurredOn, $file, $by) {
-            $locked = Deal::query()->whereKey($deal->id)->lockForUpdate()->firstOrFail();
+            $locked = Deal::query()->ownedBy($by->id)->whereKey($deal->id)->lockForUpdate()->firstOrFail();
             if ($amount > self::due($locked)) {
                 throw new WalletRefused('payment_over_due', 422);
             }
@@ -124,7 +130,7 @@ final class WalletBook
     public function reverse(Transaction $entry, string $reason, Staff $by): Transaction
     {
         return DB::connection('wallet')->transaction(function () use ($entry, $reason, $by) {
-            $locked = Transaction::query()->whereKey($entry->id)->lockForUpdate()->firstOrFail();
+            $locked = Transaction::query()->ownedBy($by->id)->whereKey($entry->id)->lockForUpdate()->firstOrFail();
             if ($locked->kind === Transaction::REVERSAL) {
                 throw new WalletRefused('not_reversible');
             }

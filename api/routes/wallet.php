@@ -2,6 +2,7 @@
 
 use App\Wallet\Http\Controllers\AuthController;
 use App\Wallet\Http\Controllers\BookController;
+use App\Wallet\Http\Controllers\MemberController;
 use App\Wallet\Http\Middleware\AuthenticateWallet;
 use Illuminate\Support\Facades\Route;
 
@@ -32,4 +33,12 @@ Route::middleware([AuthenticateWallet::class, 'throttle:wallet'])->controller(Bo
     Route::post('presets', 'addPreset');
     // No PUT, PATCH or DELETE anywhere under /wallet (LedgerImmutabilityTest), even for a saved reference.
     Route::post('presets/{id}/remove', 'removePreset')->whereNumber('id');
+});
+
+// Access (docs/personal-wallets.md): who has a personal wallet. The super admin only, checked in the controller.
+Route::middleware([AuthenticateWallet::class, 'throttle:wallet'])->prefix('members')->controller(MemberController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::post('/', 'grant');
+    Route::post('{staffId}/revoke', 'revoke')->whereNumber('staffId');
+    Route::post('{staffId}/reset-authenticator', 'resetAuthenticator')->whereNumber('staffId');
 });

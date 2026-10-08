@@ -16,6 +16,9 @@ final class WalletServiceProvider extends ServiceProvider
         RateLimiter::for('wallet-sign-in', fn (Request $request) => [
             Limit::perMinute(6)->by('wallet-sign-in|'.$request->ip()),
             Limit::perMinute(10)->by('wallet-sign-in-email|'.mb_strtolower((string) $request->input('email', 'code'))),
+            // Open to the internet since 2026-10-09 (docs/personal-wallets.md): slow, steady guessing is capped too.
+            Limit::perHour(40)->by('wallet-sign-in-hour|'.$request->ip()),
+            Limit::perDay(60)->by('wallet-sign-in-day|'.mb_strtolower((string) $request->input('email', 'code'))),
         ]);
         RateLimiter::for('wallet', fn (Request $request) => Limit::perMinute(240)->by('wallet|'.$request->ip()));
     }

@@ -96,24 +96,21 @@ export function SignIn({ onSignedIn, notice = null }: { onSignedIn: () => void; 
   )
 }
 
-/** The wallet's two locks: the allowed address (passed, or this page wouldn't show) and the sign-in. */
+/**
+ * The wallet's two locks (docs/personal-wallets.md): your password, then the code from your phone. Since 2026-10-09 the
+ * wallet opens from anywhere, so there is no approved-address lock any more.
+ */
 function Locks() {
   const { t } = useTranslation()
-  const check = (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 fill-none stroke-current stroke-[2.5]">
-      <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
 
   return (
     <>
       {/* A phone: the locks as a line of chips above the form. */}
       <ol aria-label={t('signIn.locksEyebrow')} className="m-0 flex w-full max-w-[460px] list-none gap-1.5 p-0 sm:hidden">
-        <li className="flex min-h-8 flex-1 items-center justify-center gap-1 rounded-pill border border-wallet-in-soft/35 text-11 font-semibold text-wallet-in-soft">
-          {check}
-          {t('signIn.lockPlace')}
-        </li>
         <li className="flex min-h-8 flex-1 items-center justify-center rounded-pill border border-wallet-violet bg-wallet-purple-deep/30 text-11 font-bold text-wallet-lavender">
+          1 · {t('signIn.lockPassword')}
+        </li>
+        <li className="flex min-h-8 flex-1 items-center justify-center rounded-pill border border-wallet-line text-11 font-semibold text-wallet-muted">
           2 · {t('signIn.lockYou')}
         </li>
       </ol>
@@ -126,17 +123,17 @@ function Locks() {
         </div>
         <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
           <Lock
-            mark={<span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-wallet-in-soft/45 bg-wallet-in/12 text-wallet-in-soft">{check}</span>}
-            title={t('signIn.lockPlace')}
-            note={t('signIn.lockPlaceNote')}
-            state={<span className="text-12 font-semibold text-wallet-in-soft">{t('signIn.passed')}</span>}
+            current
+            mark={<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-wallet-violet font-display text-14 font-extrabold text-wallet-plum-deep">1</span>}
+            title={t('signIn.lockPassword')}
+            note={t('signIn.lockPasswordNote')}
+            state={<span className="text-12 font-semibold text-wallet-lilac">{t('signIn.now')}</span>}
           />
           <Lock
-            current
-            mark={<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-wallet-violet font-display text-14 font-extrabold text-wallet-plum-deep">2</span>}
+            mark={<span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-wallet-line font-display text-14 font-extrabold text-wallet-muted">2</span>}
             title={t('signIn.lockYou')}
             note={t('signIn.lockYouNote')}
-            state={<span className="text-12 font-semibold text-wallet-lilac">{t('signIn.now')}</span>}
+            state={null}
           />
         </ol>
         <p className="m-0 text-13 leading-1.6 text-wallet-muted">{t('signIn.sessionNote')}</p>

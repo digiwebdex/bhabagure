@@ -6,7 +6,18 @@ import { api, type Data } from './api'
 
 export type Direction = 'in' | 'out'
 
-export type Me = { name: string; email: string; locale: string }
+export type Me = { name: string; email: string; locale: string; super_admin: boolean }
+
+/** Who has a personal wallet (docs/personal-wallets.md): the super admin's Access screen. Never what is in one. */
+export type Member = {
+  staff_id: number
+  name: string
+  email: string
+  super_admin: boolean
+  has_wallet: boolean
+  granted_at: string | null
+  authenticator_set: boolean
+}
 
 export type Summary = {
   balance: number
@@ -60,6 +71,7 @@ export function useMe() {
 export const useSummary = () => useQuery({ queryKey: ['summary'], queryFn: ({ signal }) => api.get<Data<Summary>>('summary', signal).then((r) => r.data) })
 export const useSources = () => useQuery({ queryKey: ['sources'], queryFn: ({ signal }) => api.get<Data<Source[]>>('sources', signal).then((r) => r.data) })
 export const usePresets = () => useQuery({ queryKey: ['presets'], queryFn: ({ signal }) => api.get<Data<Preset[]>>('presets', signal).then((r) => r.data) })
+export const useMembers = () => useQuery({ queryKey: ['members'], queryFn: ({ signal }) => api.get<Data<Member[]>>('members', signal).then((r) => r.data) })
 export const useDeals = () => useQuery({ queryKey: ['deals'], queryFn: ({ signal }) => api.get<Data<Deal[]>>('deals', signal).then((r) => r.data) })
 
 export function useHistory(direction: Direction | 'all', page: number) {
@@ -93,4 +105,7 @@ export const actions = {
   archiveSource: (id: number) => api.post<Data<Source[]>>(`sources/${id}/archive`),
   addPreset: (body: { direction: Direction; label: string }) => api.post<Data<Preset[]>>('presets', body),
   removePreset: (id: number) => api.post<Data<Preset[]>>(`presets/${id}/remove`),
+  grant: (staffId: number) => api.post<Data<Member[]>>('members', { staff_id: staffId }),
+  revoke: (staffId: number) => api.post<Data<Member[]>>(`members/${staffId}/revoke`),
+  resetAuthenticator: (staffId: number) => api.post<Data<Member[]>>(`members/${staffId}/reset-authenticator`),
 }

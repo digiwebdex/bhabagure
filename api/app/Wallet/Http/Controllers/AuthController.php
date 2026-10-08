@@ -44,7 +44,8 @@ final class AuthController extends WalletController
         /** @var Staff $staff */
         $staff = $this->staff($request);
 
-        return response()->json(['data' => ['name' => $staff->name, 'email' => $staff->email, 'locale' => $staff->locale]]);
+        // The super admin also sees Access, where wallets are given (docs/personal-wallets.md).
+        return response()->json(['data' => ['name' => $staff->name, 'email' => $staff->email, 'locale' => $staff->locale, 'super_admin' => $staff->isSuperAdmin()]]);
     }
 
     /** HttpOnly, SameSite=Strict, sent only to the wallet API's own paths. */

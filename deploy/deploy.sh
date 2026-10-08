@@ -366,10 +366,13 @@ health() {
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/up") || true
     note "API through nginx (/up)            HTTP $code"
     [[ $code == 200 ]] || die "the API health check failed: tail $API/storage/logs/laravel-*.log; journalctl -u bhabaghure-php -n 50"
-    # The wallet is closed to everyone outside its allow-list — this server included — and absent from the API host.
+    # The wallet's sign-in page opens from anywhere (docs/personal-wallets.md, 2026-10-09); its API answers nothing without
+    # a wallet session, and nothing at all on the API host.
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "wallet.$SITE_HOST:443:127.0.0.1" "https://wallet.$SITE_HOST/") || true
-    note "wallet from this server               HTTP $code (403 expected: this server isn't on the allow-list)"
-    [[ $code == 200 ]] && die "the wallet answered 200 to a request from outside its allow-list. Check /etc/nginx/bhabaghure-wallet/ now."
+    note "wallet sign-in page                   HTTP $code"
+    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "wallet.$SITE_HOST:443:127.0.0.1" -H 'X-Wallet-Request: 1' -H "Origin: https://wallet.$SITE_HOST" "https://wallet.$SITE_HOST/api/v1/wallet/summary") || true
+    note "wallet API without a session          HTTP $code (401 expected)"
+    [[ $code == 401 ]] || die "the wallet API answered HTTP $code without a session."
     code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 --resolve "api.$SITE_HOST:443:127.0.0.1" "https://api.$SITE_HOST/api/v1/wallet/auth/me") || true
     note "wallet API on the API host            HTTP $code (404 expected)"
     [[ $code == 404 ]] || die "the wallet API answered on api.$SITE_HOST (HTTP $code)."

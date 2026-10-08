@@ -3,6 +3,7 @@
 namespace App\Wallet\Models;
 
 use App\Models\Concerns\AppendOnly;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -38,6 +39,12 @@ class Transaction extends WalletModel
     protected function casts(): array
     {
         return ['amount' => 'decimal:2', 'occurred_on' => 'date', 'created_at' => 'datetime'];
+    }
+
+    /** One person's book (docs/personal-wallets.md): only a wallet's owner ever writes to it, so its maker is its owner. */
+    public function scopeOwnedBy(Builder $query, int $staffId): Builder
+    {
+        return $query->where('created_by_staff_id', $staffId);
     }
 
     public function deal(): BelongsTo

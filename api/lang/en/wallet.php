@@ -13,6 +13,8 @@ return [
     'payment_over_due' => 'That is more than the deal still has due.',
     'not_reversible' => 'A reversal can’t itself be reversed.',
     'already_reversed' => 'This entry is already reversed.',
+    'staff_unknown' => 'Choose an active staff member.',
+    'super_admin_only' => 'Only the super admin decides who has a wallet.',
     'advance' => 'Advance',
     'due_payment' => 'Due payment',
 ];

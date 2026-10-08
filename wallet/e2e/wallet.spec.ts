@@ -59,7 +59,7 @@ test('the super admin sets up an authenticator app, opens the wallet, and an adm
   await page.getByLabel('6-digit code').fill(totp(secret))
   await page.getByRole('button', { name: 'Open the wallet' }).click()
   await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 0', { timeout: 15_000 })
-  await expect(page.getByText('Private · separate from company books')).toBeVisible()
+  await expect(page.getByText('Private · only you see it')).toBeVisible()
 })
 
 test('cash in with a saved reference, a deal with its advance and a payment, and a reversal with its reason', async ({ page }) => {
@@ -115,4 +115,39 @@ test('cash in with a saved reference, a deal with its advance and a payment, and
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Open the wallet', exact: true })).toBeVisible()
   await expect(page.getByText('Signed out of the wallet.')).toBeVisible()
+})
+
+test('the super admin gives a staff member their own wallet: empty, theirs alone, without Access; taken away, it closes at once', async ({ page, browser }) => {
+  // docs/personal-wallets.md. The owner (test 2 left BDT 80,000 in their wallet) opens Access.
+  await signIn(page, 'owner@e2e.test')
+  await page.getByLabel('6-digit code').fill(totp(secret, 1))
+  await page.getByRole('button', { name: 'Open the wallet' }).click()
+  await expect(page.getByTestId('wallet-balance')).toHaveText('BDT 80,000', { timeout: 15_000 })
+  await page.getByRole('button', { name: 'Access' }).click()
+  const admin = page.getByTestId('wallet-members').locator('li').filter({ hasText: 'admin@e2e.test' })
+  await expect(admin).toContainText('No wallet')
+  await admin.getByRole('button', { name: 'Give a wallet' }).click()
+  await expect(page.getByText('E2E Admin has a wallet now')).toBeVisible()
+  await expect(admin).toContainText('Not signed in yet')
+
+  // The staff member, on their own device: their own authenticator, an empty wallet, and no Access.
+  const theirs = await (await browser.newContext()).newPage()
+  await signIn(theirs, 'admin@e2e.test')
+  await expect(theirs.getByRole('heading', { name: 'Set up your authenticator app' })).toBeVisible({ timeout: 15_000 })
+  const theirSecret = (await theirs.getByTestId('enroll-secret').textContent()) ?? ''
+  await theirs.getByLabel('6-digit code').fill(totp(theirSecret))
+  await theirs.getByRole('button', { name: 'Open the wallet' }).click()
+  await expect(theirs.getByTestId('wallet-balance')).toHaveText('BDT 0', { timeout: 15_000 })
+  await expect(theirs.locator('main')).not.toContainText('Profit share')
+  await expect(theirs.locator('main')).not.toContainText('Software project')
+  await expect(theirs.getByRole('button', { name: 'Access' })).toHaveCount(0)
+
+  // Taken away: their next request finds them signed out.
+  await page.reload()
+  await page.getByRole('button', { name: 'Access' }).click()
+  await admin.getByRole('button', { name: 'Take it away' }).click()
+  await admin.getByRole('button', { name: 'Yes, continue' }).click()
+  await expect(page.getByText('E2E Admin’s wallet was taken away')).toBeVisible()
+  await theirs.reload()
+  await expect(theirs.getByRole('heading', { name: 'Open the wallet', exact: true })).toBeVisible({ timeout: 15_000 })
 })

@@ -12,23 +12,25 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 /**
  * The wallet screen's data (docs/phase-7-hr-attendance-bonus-wallet.md §8): summary and breakdown, cash in and out,
- * history with reversal, evidence, deals and their payments, sources and saved references.
+ * history with reversal, evidence, deals and their payments, sources and saved references. Everything is the signed-in
+ * person's own (docs/personal-wallets.md): another wallet's ids answer 404, for the super admin too.
  */
 final class BookController extends WalletController
 {
-    public function summary(WalletBook $book): JsonResponse
+    public function summary(Request $request, WalletBook $book): JsonResponse
     {
-        return response()->json(['data' => $book->summary()]);
+        return response()->json(['data' => $book->summary($this->staff($request))]);
     }
 
     public function history(Request $request): JsonResponse
     {
         $direction = $request->validate(['direction' => ['nullable', Rule::in(['all', 'in', 'out'])], 'page' => ['nullable', 'integer', 'min:1']])['direction'] ?? 'all';
-        $page = Transaction::query()->with(['deal:id,name', 'reversedBy:id,reverses_id'])
+        $page = Transaction::query()->ownedBy($this->staff($request)->id)->with(['deal:id,name', 'reversedBy:id,reverses_id'])
             ->when($direction !== 'all', fn ($query) => $query->where('direction', $direction))
             ->orderByDesc('occurred_on')->orderByDesc('id')->paginate(50);
 
@@ -56,15 +58,15 @@ final class BookController extends WalletController
 
     public function reverse(Request $request, int $id, WalletBook $book): JsonResponse
     {
-        $entry = Transaction::query()->findOrFail($id);
+        $entry = Transaction::query()->ownedBy($this->staff($request)->id)->findOrFail($id);
         $reason = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']])['reason'];
 
         return $this->attempt(fn () => response()->json(['data' => self::row($book->reverse($entry, $reason, $this->staff($request)))], 201));
     }
 
-    public function evidence(int $id, EvidenceVault $vault): Response
+    public function evidence(Request $request, int $id, EvidenceVault $vault): Response
     {
-        $entry = Transaction::query()->whereNotNull('evidence_path')->findOrFail($id);
+        $entry = Transaction::query()->ownedBy($this->staff($request)->id)->whereNotNull('evidence_path')->findOrFail($id);
         $bytes = $vault->read($entry->evidence_path);
         $extension = pathinfo((string) $entry->evidence_name, PATHINFO_EXTENSION) ?: 'bin';
 
@@ -77,9 +79,9 @@ final class BookController extends WalletController
         ]);
     }
 
-    public function deals(): JsonResponse
+    public function deals(Request $request): JsonResponse
     {
-        return response()->json(['data' => Deal::query()->with(['transactions' => fn ($query) => $query->with('reversedBy:id,reverses_id')->orderBy('id')])->latest('id')->get()
+        return response()->json(['data' => Deal::query()->ownedBy($this->staff($request)->id)->with(['transactions' => fn ($query) => $query->with('reversedBy:id,reverses_id')->orderBy('id')])->latest('id')->get()
             ->map(fn (Deal $deal) => self::dealRow($deal))->all()]);
     }
 
@@ -105,7 +107,7 @@ final class BookController extends WalletController
 
     public function recordPayment(Request $request, int $id, WalletBook $book): JsonResponse
     {
-        $deal = Deal::query()->findOrFail($id);
+        $deal = Deal::query()->ownedBy($this->staff($request)->id)->findOrFail($id);
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:1', 'max:999999999'],
             'reference' => ['nullable', 'string', 'max:300'],
@@ -121,50 +123,71 @@ final class BookController extends WalletController
         });
     }
 
-    public function sources(): JsonResponse
+    /** This person's sources; a new wallet starts with Personal and Other. */
+    public function sources(Request $request): JsonResponse
     {
-        return response()->json(['data' => Source::query()->active()->get(['id', 'name'])]);
+        $owner = $this->staff($request)->id;
+        Source::ensureDefaults($owner);
+
+        return response()->json(['data' => self::sourceList($owner)]);
     }
 
     public function addSource(Request $request): JsonResponse
     {
+        $owner = $this->staff($request)->id;
+        Source::ensureDefaults($owner);
         $name = trim($request->validate(['name' => ['required', 'string', 'min:2', 'max:120']])['name']);
-        $source = Source::query()->where('name', $name)->first();
+        $source = Source::query()->ownedBy($owner)->where('name', $name)->first();
         if ($source !== null && $source->archived_at === null) {
             return response()->json(['message' => __('wallet.source_exists'), 'code' => 'source_exists'], 409);
         }
-        $source ??= new Source(['name' => $name, 'sort_order' => 100]);
+        $source ??= new Source(['owner_staff_id' => $owner, 'name' => $name, 'sort_order' => 100]);
         $source->forceFill(['archived_at' => null])->save();
 
-        return response()->json(['data' => Source::query()->active()->get(['id', 'name'])], 201);
+        return response()->json(['data' => self::sourceList($owner)], 201);
     }
 
     /** Hidden from the form; entries already made keep its name. */
-    public function archiveSource(int $id): JsonResponse
+    public function archiveSource(Request $request, int $id): JsonResponse
     {
-        Source::query()->findOrFail($id)->forceFill(['archived_at' => now()])->save();
+        $owner = $this->staff($request)->id;
+        Source::query()->ownedBy($owner)->findOrFail($id)->forceFill(['archived_at' => now()])->save();
 
-        return response()->json(['data' => Source::query()->active()->get(['id', 'name'])]);
+        return response()->json(['data' => self::sourceList($owner)]);
     }
 
-    public function presets(): JsonResponse
+    public function presets(Request $request): JsonResponse
     {
-        return response()->json(['data' => ReferencePreset::query()->orderBy('id')->get(['id', 'direction', 'label'])]);
+        return response()->json(['data' => self::presetList($this->staff($request)->id)]);
     }
 
     public function addPreset(Request $request): JsonResponse
     {
+        $owner = $this->staff($request)->id;
         $data = $request->validate(['direction' => ['required', Rule::in([Transaction::IN, Transaction::OUT])], 'label' => ['required', 'string', 'min:2', 'max:120']]);
-        ReferencePreset::query()->firstOrCreate(['direction' => $data['direction'], 'label' => trim($data['label'])]);
+        ReferencePreset::query()->firstOrCreate(['owner_staff_id' => $owner, 'direction' => $data['direction'], 'label' => trim($data['label'])]);
 
-        return response()->json(['data' => ReferencePreset::query()->orderBy('id')->get(['id', 'direction', 'label'])], 201);
+        return response()->json(['data' => self::presetList($owner)], 201);
     }
 
-    public function removePreset(int $id): JsonResponse
+    public function removePreset(Request $request, int $id): JsonResponse
     {
-        ReferencePreset::query()->whereKey($id)->delete();
+        $owner = $this->staff($request)->id;
+        ReferencePreset::query()->ownedBy($owner)->whereKey($id)->delete();
 
-        return response()->json(['data' => ReferencePreset::query()->orderBy('id')->get(['id', 'direction', 'label'])]);
+        return response()->json(['data' => self::presetList($owner)]);
+    }
+
+    /** @return Collection<int, Source> */
+    private static function sourceList(int $owner)
+    {
+        return Source::query()->ownedBy($owner)->active()->get(['id', 'name']);
+    }
+
+    /** @return Collection<int, ReferencePreset> */
+    private static function presetList(int $owner)
+    {
+        return ReferencePreset::query()->ownedBy($owner)->orderBy('id')->get(['id', 'direction', 'label']);
     }
 
     /** @return array<string, mixed> */

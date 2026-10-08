@@ -1,24 +1,21 @@
 {
-  "title": "Super admin wallet",
-  "isolationBadge": "Private · separate from company books",
+  "title": "My wallet",
+  "isolationBadge": "Private · only you see it",
   "switchLanguage": "Switch language",
   "signOut": "Sign out",
   "loading": "Loading…",
-  "footNote": "Super admin wallet · private use · its own database, its own sign-in",
-  "isolationNote": "This account is fully separate. Cash in or out here never touches the Bhabaghure Holidays balance or any other business ledger — it is the super admin’s own cash record.",
+  "footNote": "Personal wallet · private use · its own database, its own sign-in",
+  "isolationNote": "This is your own private cash record. It is completely separate from the Bhabaghure Holidays books and from everyone else’s wallet: nobody else, the super admin included, can see what is in it.",
   "errors": {
     "network": "The wallet couldn’t be reached. Check the connection and try again."
   },
   "signIn": {
     "title": "Open the wallet",
     "locksEyebrow": "Two locks",
-    "locksTitle": "Only you can open the wallet",
-    "locksNote": "Each lock is checked in turn. You are already past the first.",
-    "lockPlace": "Approved place",
-    "lockPlaceNote": "This connection is on the wallet’s list of allowed addresses.",
-    "lockYou": "Your sign-in",
-    "lockYouNote": "Your admin email and password, then a code from the authenticator app on your phone.",
-    "passed": "Passed",
+    "locksTitle": "Only you can open your wallet",
+    "locksNote": "Two locks, one after the other: your password, then a code from your phone.",
+    "lockYou": "Your phone",
+    "lockYouNote": "A 6-digit code from the authenticator app on your phone.",
     "now": "Now",
     "sessionNote": "The wallet keeps its own session: signing in here doesn’t sign you in to the admin panel, or the other way round.",
     "stepPassword": "Step 1 of 2 · Password",
@@ -53,11 +50,13 @@
     "open": "Open the wallet",
     "stepOpen": "This step stays open for 5 minutes.",
     "startAgain": "Start again",
-    "lostPhone": "Lost your phone? The developer can reset the authenticator on the server; you then set it up again here.",
+    "lostPhone": "Lost or changed your phone? Ask the super admin to reset your authenticator in the wallet’s Access screen; you then set it up again here.",
     "notices": {
       "signed_out": "Signed out of the wallet.",
       "session_ended": "Your wallet session ended (30 minutes without activity, or 12 hours in all). Sign in again to carry on."
-    }
+    },
+    "lockPassword": "Your password",
+    "lockPasswordNote": "Your staff email and the same password as the admin panel."
   },
   "kpis": {
     "balance": "My balance",
@@ -153,5 +152,31 @@
     "previous": "Previous",
     "next": "Next",
     "pageOf": "Page {{page}} of {{last}}"
+  },
+  "tabs": {
+    "wallet": "My wallet",
+    "access": "Access"
+  },
+  "access": {
+    "title": "Who has a wallet",
+    "note": "Give a personal wallet to the staff you choose. Each wallet is its owner’s alone: this screen shows who has one, never what is in it.",
+    "you": "You",
+    "superAdmin": "Super admin · always has a wallet",
+    "hasWallet": "Has a wallet",
+    "noWallet": "No wallet",
+    "since": "since {{date}}",
+    "authenticatorSet": "Authenticator set up",
+    "authenticatorNotSet": "Not signed in yet",
+    "give": "Give a wallet",
+    "takeAway": "Take it away",
+    "resetAuthenticator": "Reset authenticator",
+    "confirmTakeAway": "Take {{name}}’s wallet away? They are signed out at once and can’t open it again. What they recorded stays, unseen by anyone, and comes back if you give the wallet back.",
+    "confirmReset": "Reset {{name}}’s authenticator? They set it up again with their phone the next time they sign in.",
+    "confirm": "Yes, continue",
+    "cancel": "Cancel",
+    "given": "{{name}} has a wallet now",
+    "taken": "{{name}}’s wallet was taken away",
+    "reset": "{{name}}’s authenticator was reset",
+    "empty": "No active staff."
   }
 }

@@ -41,8 +41,9 @@ trait UsesWalletDatabase
     protected function walletSignIn(string $email, string $password = 'correct-horse-battery'): string
     {
         $step = $this->wallet('POST', 'auth/password', ['email' => $email, 'password' => $password])->assertOk();
-        $secret = $step->json('data.enrollment.secret') ?? $this->walletSecret;
-        $this->walletSecret = $secret;
+        // Each person enrolls their own authenticator (docs/personal-wallets.md).
+        $secret = $step->json('data.enrollment.secret') ?? $this->walletSecrets[$email];
+        $this->walletSecrets[$email] = $secret;
         // Each sign-in uses a later time step: a code is accepted once.
         $this->travel(31)->seconds();
         $response = $this->wallet('POST', 'auth/code', ['challenge' => $step->json('data.challenge'), 'code' => Totp::code($secret, Totp::step(now()->getTimestamp()))])->assertOk();
@@ -50,5 +51,6 @@ trait UsesWalletDatabase
         return (string) $response->getCookie('bh_wallet', false)?->getValue();
     }
 
-    private ?string $walletSecret = null;
+    /** @var array<string, string> each person's authenticator secret, by email */
+    private array $walletSecrets = [];
 }
