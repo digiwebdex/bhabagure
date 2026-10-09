@@ -8,8 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * Money in or out of the wallet. Append-only (wallet_transactions is in LedgerTables): a mistake is undone by a reversal
- * the other way, with a reason, and each entry can be reversed once.
+ * Money in or out of the wallet. Append-only (wallet_transactions is in LedgerTables). Edit and Delete
+ * (docs/wallet-edits.md) cancel an entry with a reversal the other way, on the entry's own date; an edit then records
+ * the corrected entry, whose `replaces_id` points back at the one it corrects. Each entry is cancelled once at most.
  */
 class Transaction extends WalletModel
 {
@@ -33,7 +34,7 @@ class Transaction extends WalletModel
 
     protected $fillable = [
         'direction', 'amount', 'kind', 'source_id', 'source_name', 'deal_id', 'reference', 'occurred_on',
-        'evidence_path', 'evidence_mime', 'evidence_name', 'reverses_id', 'reason', 'created_by_staff_id',
+        'evidence_path', 'evidence_mime', 'evidence_name', 'reverses_id', 'replaces_id', 'reason', 'created_by_staff_id',
     ];
 
     protected function casts(): array
@@ -52,13 +53,31 @@ class Transaction extends WalletModel
         return $this->belongsTo(Deal::class);
     }
 
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(Source::class);
+    }
+
     public function reverses(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_id');
     }
 
+    /** The reversal that cancelled this entry: an edit or a delete (or, before 2026-10-09, Reverse). */
     public function reversedBy(): HasOne
     {
         return $this->hasOne(self::class, 'reverses_id');
+    }
+
+    /** The entry this one corrects (an edit). */
+    public function replaces(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaces_id');
+    }
+
+    /** The corrected entry recorded when this one was edited. */
+    public function replacedBy(): HasOne
+    {
+        return $this->hasOne(self::class, 'replaces_id');
     }
 }

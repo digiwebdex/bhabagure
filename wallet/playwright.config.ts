@@ -24,7 +24,10 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: 'list',
-  timeout: 60_000,
+  timeout: 90_000,
+  // The API is `php artisan serve`, one request at a time: after a change the wallet reloads five lists before a dialog
+  // closes, which takes seconds on a busy machine.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: `http://localhost:${WALLET_PORT}`,
     channel: E2E_CHANNEL,

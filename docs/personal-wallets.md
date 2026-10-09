@@ -23,7 +23,8 @@ no "Reset authenticator". The code (`Totp`, the `Authenticator` model, `auth/cod
 - **Everyone with a wallet** signs in at wallet.bhabaghure.com.bd with their staff email and password, and then has the
   design's screen for themselves alone: balance, cash in and out with
   sources, references and evidence, deals with advances and dues, the breakdown and the history. A new wallet starts
-  empty with two sources, Personal and Other.
+  empty with two sources, Personal and Other. Since 2026-10-09 everything saved has View, Edit and Delete icons, and
+  deals Add payment too (docs/wallet-edits.md).
 
 ## How it works
 

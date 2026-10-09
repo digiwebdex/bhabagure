@@ -5,7 +5,8 @@ import { resolve } from "node:path";
 /**
  * docs/phase-7-hr-attendance-bonus-wallet.md §8, §10: the super admin opens the wallet with the password (no
  * authenticator code since 2026-10-09);
- * cash in with a saved reference; a deal with an advance and a payment; a reversal with its reason. An admin can't get in.
+ * cash in with a saved reference; a deal with an advance, edited, and a payment added; an entry edited, viewed with
+ * what changed, and deleted (docs/wallet-edits.md). An admin can't get in.
  */
 test.describe.configure({ mode: "serial" });
 
@@ -51,7 +52,7 @@ test("the super admin opens the wallet with the password alone, and an admin wit
   await expect(page.getByText("Private · only you see it")).toBeVisible();
 });
 
-test("cash in with a saved reference, a deal with its advance and a payment, and a reversal with its reason", async ({
+test("cash in with a saved reference; a deal edited and paid; an entry edited, viewed with its history and deleted", async ({
   page,
 }) => {
   await signIn(page, "owner@e2e.test");
@@ -61,7 +62,7 @@ test("cash in with a saved reference, a deal with its advance and a payment, and
 
   // A business of the proprietor's, added in the wallet itself; a saved reference clicked into the form.
   const form = page.getByTestId("cash-form");
-  await page.getByText("Add a business or source").click();
+  await page.getByText("Add or edit a business or source").click();
   await page.getByLabel("Business or source name").fill("Family business");
   await page.getByRole("button", { name: "+ Add" }).click();
   await expect(form.getByLabel("Which business or source")).toContainText(
@@ -81,7 +82,25 @@ test("cash in with a saved reference, a deal with its advance and a payment, and
   await expect(page.getByTestId("wallet-balance")).toHaveText("BDT 1,20,000");
   await expect(page.getByTestId("breakdown")).toContainText("Family business");
 
-  // A deal: the advance can't exceed the total; it goes into the balance, and a payment settles what is due.
+  // Renamed in the list: the entry already made and the breakdown show the new name.
+  const sources = page.getByTestId("sources");
+  await sources
+    .getByRole("button", { name: "Rename “Family business”" })
+    .click();
+  await sources.getByLabel("New name").fill("Family business Ltd");
+  await sources.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByTestId("breakdown")).toContainText(
+    "Family business Ltd",
+  );
+  await expect(page.getByTestId("history")).toContainText(
+    "Family business Ltd",
+  );
+  await expect(form.getByLabel("Which business or source")).toContainText(
+    "Family business Ltd",
+  );
+
+  // A deal: the advance can't exceed the total; it goes into the balance. Then the deal edited and a payment added
+  // (docs/wallet-edits.md).
   const deal = page.getByTestId("deal-form");
   await deal.getByLabel("Company or client").fill("Software project");
   await deal.getByLabel("Deal total").fill("80000");
@@ -101,22 +120,92 @@ test("cash in with a saved reference, a deal with its advance and a payment, and
     "Total due BDT 40,000",
   );
   await expect(page.getByTestId("wallet-balance")).toHaveText("BDT 1,60,000");
-  await page
-    .getByTestId("deals")
-    .getByRole("button", { name: "Record payment" })
+  const deals = page.getByTestId("deals");
+  await deals
+    .getByRole("button", { name: "Edit the deal “Software project”" })
     .click();
-  await expect(page.getByTestId("deals")).toContainText("Fully paid");
+  const editDeal = page.getByRole("dialog", {
+    name: "Edit the deal “Software project”",
+  });
+  await editDeal.getByLabel("Deal total").fill("30000");
+  await expect(editDeal).toContainText(
+    "The total can’t be less than the BDT 40,000 already received.",
+  );
+  await editDeal.getByLabel("Deal total").fill("90000");
+  await editDeal.getByLabel("Reason (optional)").fill("Extra page");
+  await editDeal.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Deal “Software project” saved")).toBeVisible();
+  await expect(page.getByTestId("due-total")).toHaveText(
+    "Total due BDT 50,000",
+  );
+  await deals
+    .getByRole("button", { name: "Add payment to “Software project”" })
+    .click();
+  const pay = page.getByRole("dialog", {
+    name: "Add payment · Software project",
+  });
+  await expect(pay.getByLabel("Amount (BDT)")).toHaveValue("50000");
+  await pay.getByLabel("Amount (BDT)").fill("40000");
+  await pay.getByRole("button", { name: "Save payment" }).click();
+  await expect(
+    page.getByText("Payment BDT 40,000 from Software project recorded"),
+  ).toBeVisible();
+  await expect(page.getByTestId("due-total")).toHaveText(
+    "Total due BDT 10,000",
+  );
   await expect(page.getByTestId("wallet-balance")).toHaveText("BDT 2,00,000");
+  await deals
+    .getByRole("button", { name: "View the deal “Software project”" })
+    .click();
+  const viewDeal = page.getByRole("dialog", {
+    name: "Deal: Software project",
+  });
+  await expect(viewDeal.getByTestId("deal-history")).toContainText(
+    "Total: BDT 80,000 → BDT 90,000",
+  );
+  await expect(viewDeal.getByTestId("deal-history")).toContainText(
+    "Reason: Extra page",
+  );
+  await viewDeal.getByRole("button", { name: "Close" }).click();
 
-  // Reverse the cash in: an entry the other way with the reason; nothing is deleted.
+  // Edit the cash in: the corrected entry takes its place, and the balance follows.
   const history = page.getByTestId("history");
-  await history.getByRole("button", { name: "Reverse “Profit share”" }).click();
-  const dialog = page.getByRole("dialog", { name: "Reverse BDT 1,20,000" });
-  await dialog.getByLabel("Reason").fill("Entered in the wrong month");
-  await dialog.getByRole("button", { name: "Reverse" }).click();
-  await expect(history).toContainText("Reversal · Entered in the wrong month");
+  await history.getByRole("button", { name: "Edit “Profit share”" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit “Profit share”" });
+  await edit.getByLabel("Amount (BDT)").fill("100000");
+  await edit.getByLabel("Reason (optional)").fill("Typed wrong");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Saved · BDT 1,00,000")).toBeVisible();
+  await expect(page.getByTestId("wallet-balance")).toHaveText("BDT 1,80,000");
+  await expect(history).toContainText("BDT 1,00,000");
+  await expect(history).not.toContainText("BDT 1,20,000");
+
+  // View shows what the edit changed and why; Delete from there, with a reason.
+  await history.getByRole("button", { name: "View “Profit share”" }).click();
+  const view = page.getByRole("dialog", { name: "Entry: Profit share" });
+  await expect(view.getByTestId("entry-versions")).toContainText(
+    "Amount: BDT 1,20,000 → BDT 1,00,000",
+  );
+  await expect(view.getByTestId("entry-versions")).toContainText(
+    "Reason: Typed wrong",
+  );
+  await view.getByRole("button", { name: "Delete" }).click();
+  const remove = page.getByRole("dialog", { name: "Delete BDT 1,00,000" });
+  await remove
+    .getByLabel("Reason (optional)")
+    .fill("Entered in the wrong month");
+  await remove.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText("Deleted · BDT 1,00,000")).toBeVisible();
   await expect(page.getByTestId("wallet-balance")).toHaveText("BDT 80,000");
-  await expect(history.getByText("Reversed", { exact: true })).toBeVisible();
+  await expect(history).not.toContainText("Profit share");
+
+  // "Show edits and deletions" brings both versions back, marked.
+  await page.getByRole("button", { name: "Show edits and deletions" }).click();
+  await expect(history).toContainText("Replaced by an edit");
+  await expect(history).toContainText("Entered in the wrong month");
+  await expect(
+    history.getByRole("button", { name: "Edit “Profit share”" }),
+  ).toHaveCount(0);
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(

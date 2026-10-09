@@ -15,8 +15,8 @@ use Tests\TestCase;
 
 /**
  * docs/phase-7-hr-attendance-bonus-wallet.md §8: cash in and out with a source, a reference and evidence; deals with an
- * advance no more than the total and payments no more than what is due; reversal with a reason instead of delete;
- * evidence encrypted with the wallet's own key.
+ * advance no more than the total and payments no more than what is due; Delete as a reversal with its reason
+ * (docs/wallet-edits.md; WalletEditsTest has Edit and the rest); evidence encrypted with the wallet's own key.
  */
 class WalletBookTest extends TestCase
 {
@@ -66,13 +66,17 @@ class WalletBookTest extends TestCase
         $this->withUnencryptedCookie('bh_wallet', $this->session)->get("/api/v1/wallet/transactions/{$row->id}/evidence", ['X-Wallet-Request' => '1'])->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')->assertHeader('Cache-Control', 'no-store, private');
 
-        // Reversing the cash out: an entry the other way, with the reason; once only; a reversal can't be reversed.
-        $reversal = $this->wallet('POST', "transactions/{$out->json('data.id')}/reverse", ['reason' => 'Entered twice'], $this->session)->assertCreated()
-            ->assertJsonPath('data.direction', 'in')->assertJsonPath('data.reason', 'Entered twice');
-        $this->wallet('POST', "transactions/{$out->json('data.id')}/reverse", ['reason' => 'Again'], $this->session)->assertConflict()->assertJsonPath('code', 'already_reversed');
-        $this->wallet('POST', "transactions/{$reversal->json('data.id')}/reverse", ['reason' => 'Undo'], $this->session)->assertConflict()->assertJsonPath('code', 'not_reversible');
+        // Deleting the cash out (docs/wallet-edits.md): an entry the other way on its own date, with the reason; once only;
+        // that line itself can't be changed. It leaves the list; "Show edits and deletions" still shows it.
+        $this->wallet('POST', "transactions/{$out->json('data.id')}/delete", ['reason' => 'Entered twice'], $this->session)->assertOk()->assertJsonPath('data.deleted', true);
+        $reversal = Transaction::query()->where('reverses_id', $out->json('data.id'))->sole();
+        $this->assertSame(['in', '2026-09-16', 'Entered twice'], [$reversal->direction, $reversal->occurred_on->toDateString(), $reversal->reason]);
+        $this->wallet('POST', "transactions/{$out->json('data.id')}/delete", session: $this->session)->assertConflict()->assertJsonPath('code', 'already_changed');
+        $this->wallet('POST', "transactions/{$reversal->id}/delete", session: $this->session)->assertConflict()->assertJsonPath('code', 'not_changeable');
         $this->assertSame(120000, (int) $this->wallet('GET', 'summary', session: $this->session)->json('data.balance'));
-        $this->wallet('GET', 'transactions?direction=out', session: $this->session)->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.reversed', true);
+        $this->wallet('GET', 'transactions?direction=out', session: $this->session)->assertOk()->assertJsonPath('meta.total', 0);
+        $this->wallet('GET', 'transactions?direction=out&history=1', session: $this->session)->assertOk()->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.status', 'deleted')->assertJsonPath('data.0.change_reason', 'Entered twice');
 
         // Presets per direction.
         $this->wallet('POST', 'presets', ['direction' => 'in', 'label' => 'Profit share'], $this->session)->assertCreated()->assertJsonPath('data.0.label', 'Profit share');
@@ -95,11 +99,11 @@ class WalletBookTest extends TestCase
         $paid = $this->wallet('POST', "deals/{$id}/payments", ['amount' => 40000], $this->session)->assertCreated()
             ->assertJsonPath('data.due', 0)->assertJsonPath('data.settled', true)->assertJsonPath('data.payments.1.reference', 'Due payment');
 
-        // The advance and payment are cash in under the deal's name; reversing a payment makes it due again.
+        // The advance and payment are cash in under the deal's name; deleting a payment makes it due again.
         $summary = $this->wallet('GET', 'summary', session: $this->session);
         $this->assertSame(['Software project', 80000, 0], [$summary->json('data.by_source.0.name'), (int) $summary->json('data.by_source.0.in'), (int) $summary->json('data.due_total')]);
-        $this->wallet('POST', "transactions/{$paid->json('data.payments.1.id')}/reverse", ['reason' => 'Cheque bounced'], $this->session)->assertCreated();
-        $this->wallet('GET', 'deals', session: $this->session)->assertJsonPath('data.0.due', 40000)->assertJsonPath('data.0.settled', false)->assertJsonPath('data.0.payments.1.reversed', true);
+        $this->wallet('POST', "transactions/{$paid->json('data.payments.1.id')}/delete", ['reason' => 'Cheque bounced'], $this->session)->assertOk();
+        $this->wallet('GET', 'deals', session: $this->session)->assertJsonPath('data.0.due', 40000)->assertJsonPath('data.0.settled', false)->assertJsonCount(1, 'data.0.payments');
         $this->assertSame(40000, (int) $this->wallet('GET', 'summary', session: $this->session)->json('data.balance'));
     }
 

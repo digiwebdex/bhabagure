@@ -93,12 +93,21 @@ class PersonalWalletsTest extends TestCase
         $this->wallet('GET', 'presets', session: $mine)->assertOk()->assertJsonCount(0, 'data');
         $this->assertSame(0, (int) $this->wallet('GET', 'summary', session: $mine)->json('data.due_total'));
 
-        // Another wallet's entry, evidence and deal are not found, whoever asks.
-        $this->wallet('POST', "transactions/{$bossEntry}/reverse", ['reason' => 'Trying'], $mine)->assertNotFound();
+        // Another wallet's entry, evidence and deal are not found, whoever asks: not to view, edit, delete or pay.
+        $this->wallet('GET', "transactions/{$bossEntry}", session: $mine)->assertNotFound();
+        $this->wallet('POST', "transactions/{$bossEntry}/edit", ['amount' => 1, 'reference' => 'Mine now', 'occurred_on' => now('Asia/Dhaka')->toDateString()], $mine)->assertNotFound();
+        $this->wallet('POST', "transactions/{$bossEntry}/delete", ['reason' => 'Trying'], $mine)->assertNotFound();
         $this->wallet('GET', "transactions/{$bossEntry}/evidence", session: $mine)->assertNotFound();
+        $this->wallet('GET', "deals/{$bossDeal}", session: $mine)->assertNotFound();
+        $this->wallet('POST', "deals/{$bossDeal}/edit", ['name' => 'Mine now', 'total' => 1], $mine)->assertNotFound();
+        $this->wallet('POST', "deals/{$bossDeal}/delete", session: $mine)->assertNotFound();
         $this->wallet('POST', "deals/{$bossDeal}/payments", ['amount' => 1000], $mine)->assertNotFound();
         $agentEntry = Transaction::query()->where('created_by_staff_id', $agent->id)->value('id');
-        $this->wallet('POST', "transactions/{$agentEntry}/reverse", ['reason' => 'Trying'], $boss)->assertNotFound();
+        $this->wallet('POST', "transactions/{$agentEntry}/delete", ['reason' => 'Trying'], $boss)->assertNotFound();
+        $this->wallet('GET', "transactions/{$agentEntry}", session: $boss)->assertNotFound();
+        // Nor their sources or saved references, to rename.
+        $this->wallet('POST', "sources/{$agentPersonal}/rename", ['name' => 'Taken'], $boss)->assertNotFound();
+        $this->assertSame(190000, (int) $this->wallet('GET', 'summary', session: $boss)->json('data.balance'));
         // Access shows who has a wallet, never what is in it.
         $this->assertSame(
             ['staff_id', 'name', 'email', 'super_admin', 'has_wallet', 'granted_at'],

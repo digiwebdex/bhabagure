@@ -1,5 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import { CloseIcon } from './icons'
 
 /** The prototype's frame: the bar with the wordmark and the isolation badge, the page, and the footer note. */
 export function Shell({ children, actions }: { children?: ReactNode; actions?: ReactNode }) {
@@ -82,6 +84,77 @@ export function PrimaryButton({ tone = 'violet', className = '', ...props }: But
       {...props}
       className={`cursor-pointer rounded-12 border-0 px-4 py-3 text-14 font-bold text-white disabled:cursor-not-allowed disabled:opacity-55 ${tones[tone]} ${className}`}
     />
+  )
+}
+
+export function SecondaryButton({ tone = 'plain', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: 'plain' | 'out' }) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-12 border bg-transparent px-4 py-2.5 text-14 font-semibold disabled:cursor-not-allowed disabled:opacity-55 ${tone === 'out' ? 'border-wallet-out-soft/50 text-wallet-out-soft' : 'border-wallet-input text-wallet-text'} ${className}`}
+    />
+  )
+}
+
+/**
+ * An icon action (docs/wallet-edits.md): View, Edit, Delete or Add payment. The action's name is the button's name for
+ * screen readers and its tooltip.
+ */
+export function IconButton({ label, tone = 'plain', className = '', ...props }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label'> & { label: string; tone?: 'plain' | 'view' | 'in' | 'out' }) {
+  const tones = {
+    plain: 'text-wallet-muted hover:text-wallet-text',
+    view: 'text-wallet-lilac hover:text-wallet-lavender',
+    in: 'text-wallet-in-soft',
+    out: 'text-wallet-out-soft',
+  }
+  return (
+    <button
+      type="button"
+      title={label}
+      {...props}
+      aria-label={label}
+      className={`inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-8 border border-wallet-input bg-transparent hover:border-wallet-violet disabled:cursor-not-allowed disabled:opacity-40 ${tones[tone]} ${className}`}
+    />
+  )
+}
+
+/** A dialog over the page. Escape, ×, or a click that starts and ends on the backdrop closes it. */
+export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const { t } = useTranslation()
+  const pressedBackdrop = useRef(false)
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        pressedBackdrop.current = event.target === event.currentTarget
+      }}
+      onClick={(event) => {
+        if (pressedBackdrop.current && event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div className="flex max-h-[92vh] w-full max-w-lg flex-col gap-3.5 overflow-y-auto rounded-18 border border-wallet-line bg-wallet-surface p-5">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="m-0 text-17 leading-1.4 font-semibold">{title}</h2>
+          <IconButton label={t('close')} onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+        </div>
+        {children}
+      </div>
+    </div>
   )
 }
 

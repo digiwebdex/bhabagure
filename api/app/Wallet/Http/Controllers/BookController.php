@@ -2,7 +2,8 @@
 
 namespace App\Wallet\Http\Controllers;
 
-use App\Wallet\Models\Deal;
+use App\Wallet\Http\EntryRows;
+use App\Wallet\Models\AuditLog;
 use App\Wallet\Models\ReferencePreset;
 use App\Wallet\Models\Source;
 use App\Wallet\Models\Transaction;
@@ -17,8 +18,9 @@ use Illuminate\Validation\Rule;
 
 /**
  * The wallet screen's data (docs/phase-7-hr-attendance-bonus-wallet.md §8): summary and breakdown, cash in and out,
- * history with reversal, evidence, deals and their payments, sources and saved references. Everything is the signed-in
- * person's own (docs/personal-wallets.md): another wallet's ids answer 404, for the super admin too.
+ * history, each entry with its versions, Edit and Delete (docs/wallet-edits.md), evidence, sources and saved
+ * references; deals are DealController. Everything is the signed-in person's own (docs/personal-wallets.md): another
+ * wallet's ids answer 404, for the super admin too.
  */
 final class BookController extends WalletController
 {
@@ -27,17 +29,29 @@ final class BookController extends WalletController
         return response()->json(['data' => $book->summary($this->staff($request))]);
     }
 
+    /** Newest first, as the book stands; with `history`, edited and deleted entries too. Reversals are never rows. */
     public function history(Request $request): JsonResponse
     {
-        $direction = $request->validate(['direction' => ['nullable', Rule::in(['all', 'in', 'out'])], 'page' => ['nullable', 'integer', 'min:1']])['direction'] ?? 'all';
-        $page = Transaction::query()->ownedBy($this->staff($request)->id)->with(['deal:id,name', 'reversedBy:id,reverses_id'])
+        $filters = $request->validate(['direction' => ['nullable', Rule::in(['all', 'in', 'out'])], 'page' => ['nullable', 'integer', 'min:1'], 'history' => ['nullable', 'boolean']]);
+        $direction = $filters['direction'] ?? 'all';
+        $query = Transaction::query()->ownedBy($this->staff($request)->id)->with(EntryRows::WITH)->where('kind', '!=', Transaction::REVERSAL);
+        $page = ($request->boolean('history') ? $query : WalletBook::standing($query))
             ->when($direction !== 'all', fn ($query) => $query->where('direction', $direction))
             ->orderByDesc('occurred_on')->orderByDesc('id')->paginate(50);
 
         return response()->json([
-            'data' => collect($page->items())->map(fn (Transaction $entry) => self::row($entry))->all(),
+            'data' => collect($page->items())->map(fn (Transaction $entry) => EntryRows::row($entry))->all(),
             'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
         ]);
+    }
+
+    /** One entry, with every version of it (View). */
+    public function entry(Request $request, int $id): JsonResponse
+    {
+        $owner = $this->staff($request)->id;
+        $entry = Transaction::query()->ownedBy($owner)->where('kind', '!=', Transaction::REVERSAL)->with(EntryRows::WITH)->findOrFail($id);
+
+        return response()->json(['data' => EntryRows::withVersions($entry, $owner)]);
     }
 
     public function record(Request $request, WalletBook $book): JsonResponse
@@ -51,19 +65,50 @@ final class BookController extends WalletController
             'evidence' => EvidenceVault::rules(),
         ]);
 
-        return $this->attempt(fn () => response()->json(['data' => self::row($book->record(
+        return $this->attempt(fn () => response()->json(['data' => EntryRows::row($book->record(
             $data['direction'], (float) $data['amount'], (int) $data['source_id'], trim($data['reference']), $data['occurred_on'] ?? self::today(), $request->file('evidence'), $this->staff($request),
-        ))], 201));
+        )->load(EntryRows::WITH))], 201));
     }
 
-    public function reverse(Request $request, int $id, WalletBook $book): JsonResponse
+    /** Edit (docs/wallet-edits.md): answers with the corrected entry, which takes the old one's place. */
+    public function edit(Request $request, int $id, WalletBook $book): JsonResponse
     {
         $entry = Transaction::query()->ownedBy($this->staff($request)->id)->findOrFail($id);
-        $reason = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:300']])['reason'];
+        $data = $request->validate([
+            // Cash in or out, and the source, only for an ordinary entry: a deal's money stays under its deal.
+            'direction' => ['nullable', Rule::in([Transaction::IN, Transaction::OUT])],
+            'amount' => ['required', 'numeric', 'min:1', 'max:999999999'],
+            'source_id' => ['nullable', 'integer'],
+            'reference' => ['required', 'string', 'min:2', 'max:300'],
+            'occurred_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.self::today()],
+            'evidence' => EvidenceVault::rules(),
+            'remove_evidence' => ['nullable', 'boolean'],
+            'reason' => ['nullable', 'string', 'max:300'],
+        ]);
 
-        return $this->attempt(fn () => response()->json(['data' => self::row($book->reverse($entry, $reason, $this->staff($request)))], 201));
+        return $this->attempt(fn () => response()->json(['data' => EntryRows::row($book->edit($entry, [
+            'direction' => $data['direction'] ?? null,
+            'amount' => (float) $data['amount'],
+            'source_id' => isset($data['source_id']) ? (int) $data['source_id'] : null,
+            'reference' => trim($data['reference']),
+            'occurred_on' => $data['occurred_on'],
+        ], $request->file('evidence'), $request->boolean('remove_evidence'), self::reason($data), $this->staff($request))->load(EntryRows::WITH))]));
     }
 
+    /** Delete (docs/wallet-edits.md): the entry leaves the balance and the list; the history keeps it. */
+    public function delete(Request $request, int $id, WalletBook $book): JsonResponse
+    {
+        $entry = Transaction::query()->ownedBy($this->staff($request)->id)->findOrFail($id);
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:300']]);
+
+        return $this->attempt(function () use ($book, $entry, $data, $request) {
+            $book->delete($entry, self::reason($data), $this->staff($request));
+
+            return response()->json(['data' => ['deleted' => true]]);
+        });
+    }
+
+    /** Any version's evidence, the old ones too. */
     public function evidence(Request $request, int $id, EvidenceVault $vault): Response
     {
         $entry = Transaction::query()->ownedBy($this->staff($request)->id)->whereNotNull('evidence_path')->findOrFail($id);
@@ -77,50 +122,6 @@ final class BookController extends WalletController
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
         ]);
-    }
-
-    public function deals(Request $request): JsonResponse
-    {
-        return response()->json(['data' => Deal::query()->ownedBy($this->staff($request)->id)->with(['transactions' => fn ($query) => $query->with('reversedBy:id,reverses_id')->orderBy('id')])->latest('id')->get()
-            ->map(fn (Deal $deal) => self::dealRow($deal))->all()]);
-    }
-
-    public function createDeal(Request $request, WalletBook $book): JsonResponse
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:120'],
-            'total' => ['required', 'numeric', 'min:1', 'max:999999999'],
-            'advance' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
-            'note' => ['nullable', 'string', 'max:300'],
-            'reference' => ['nullable', 'string', 'max:300'],
-            'occurred_on' => self::dateRule(),
-            'evidence' => EvidenceVault::rules(),
-        ]);
-
-        return $this->attempt(function () use ($data, $request, $book) {
-            $deal = $book->createDeal(trim($data['name']), (float) $data['total'], (float) ($data['advance'] ?? 0), filled($data['note'] ?? null) ? trim($data['note']) : null,
-                filled($data['reference'] ?? null) ? trim($data['reference']) : __('wallet.advance'), $data['occurred_on'] ?? self::today(), $request->file('evidence'), $this->staff($request));
-
-            return response()->json(['data' => self::dealRow($deal->load(['transactions.reversedBy']))], 201);
-        });
-    }
-
-    public function recordPayment(Request $request, int $id, WalletBook $book): JsonResponse
-    {
-        $deal = Deal::query()->ownedBy($this->staff($request)->id)->findOrFail($id);
-        $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:1', 'max:999999999'],
-            'reference' => ['nullable', 'string', 'max:300'],
-            'occurred_on' => self::dateRule(),
-            'evidence' => EvidenceVault::rules(),
-        ]);
-
-        return $this->attempt(function () use ($deal, $data, $request, $book) {
-            $book->recordPayment($deal, (float) $data['amount'], filled($data['reference'] ?? null) ? trim($data['reference']) : __('wallet.due_payment'),
-                $data['occurred_on'] ?? self::today(), $request->file('evidence'), $this->staff($request));
-
-            return response()->json(['data' => self::dealRow($deal->fresh(['transactions.reversedBy']))], 201);
-        });
     }
 
     /** This person's sources; a new wallet starts with Personal and Other. */
@@ -139,7 +140,7 @@ final class BookController extends WalletController
         $name = trim($request->validate(['name' => ['required', 'string', 'min:2', 'max:120']])['name']);
         $source = Source::query()->ownedBy($owner)->where('name', $name)->first();
         if ($source !== null && $source->archived_at === null) {
-            return response()->json(['message' => __('wallet.source_exists'), 'code' => 'source_exists'], 409);
+            return self::refused('source_exists');
         }
         $source ??= new Source(['owner_staff_id' => $owner, 'name' => $name, 'sort_order' => 100]);
         $source->forceFill(['archived_at' => null])->save();
@@ -147,7 +148,24 @@ final class BookController extends WalletController
         return response()->json(['data' => self::sourceList($owner)], 201);
     }
 
-    /** Hidden from the form; entries already made keep its name. */
+    /** A new name, shown on its entries too (docs/wallet-edits.md). */
+    public function renameSource(Request $request, int $id): JsonResponse
+    {
+        $owner = $this->staff($request)->id;
+        $source = Source::query()->ownedBy($owner)->whereNull('archived_at')->findOrFail($id);
+        $name = trim($request->validate(['name' => ['required', 'string', 'min:2', 'max:120']])['name']);
+        $taken = Source::query()->ownedBy($owner)->where('name', $name)->whereKeyNot($source->id)->first();
+        if ($taken !== null) {
+            return self::refused($taken->archived_at === null ? 'source_exists' : 'source_name_deleted');
+        }
+        $before = $source->name;
+        $source->forceFill(['name' => $name])->save();
+        AuditLog::record('source_renamed', $owner, $source, ['name' => [$before, $name]]);
+
+        return response()->json(['data' => self::sourceList($owner)]);
+    }
+
+    /** Delete: hidden from the form; entries already made keep its name, and adding it again brings it back. */
     public function archiveSource(Request $request, int $id): JsonResponse
     {
         $owner = $this->staff($request)->id;
@@ -170,6 +188,20 @@ final class BookController extends WalletController
         return response()->json(['data' => self::presetList($owner)], 201);
     }
 
+    /** A saved reference reworded; entries already made keep the words they were saved with. */
+    public function editPreset(Request $request, int $id): JsonResponse
+    {
+        $owner = $this->staff($request)->id;
+        $preset = ReferencePreset::query()->ownedBy($owner)->findOrFail($id);
+        $label = trim($request->validate(['label' => ['required', 'string', 'min:2', 'max:120']])['label']);
+        if (ReferencePreset::query()->ownedBy($owner)->where('direction', $preset->direction)->where('label', $label)->whereKeyNot($preset->id)->exists()) {
+            return self::refused('preset_exists');
+        }
+        $preset->forceFill(['label' => $label])->save();
+
+        return response()->json(['data' => self::presetList($owner)]);
+    }
+
     public function removePreset(Request $request, int $id): JsonResponse
     {
         $owner = $this->staff($request)->id;
@@ -190,55 +222,24 @@ final class BookController extends WalletController
         return ReferencePreset::query()->ownedBy($owner)->orderBy('id')->get(['id', 'direction', 'label']);
     }
 
-    /** @return array<string, mixed> */
-    public static function row(Transaction $entry): array
+    private static function refused(string $code): JsonResponse
     {
-        return [
-            'id' => $entry->id,
-            'direction' => $entry->direction,
-            'amount' => (float) $entry->amount,
-            'kind' => $entry->kind,
-            'source' => $entry->source_name,
-            'deal' => $entry->deal_id ? ['id' => $entry->deal_id, 'name' => $entry->relationLoaded('deal') ? $entry->deal?->name : null] : null,
-            'reference' => $entry->reference,
-            'reason' => $entry->reason,
-            'occurred_on' => $entry->occurred_on->toDateString(),
-            'has_evidence' => $entry->evidence_path !== null,
-            'reverses_id' => $entry->reverses_id,
-            'reversed' => $entry->relationLoaded('reversedBy') && $entry->reversedBy !== null,
-            'created_at' => $entry->created_at?->toIso8601String(),
-        ];
+        return response()->json(['message' => __("wallet.{$code}"), 'code' => $code], 409);
     }
 
-    /** @return array<string, mixed> */
-    public static function dealRow(Deal $deal): array
+    /** @param array<string, mixed> $data */
+    public static function reason(array $data): ?string
     {
-        $received = round($deal->transactions->filter(fn (Transaction $entry) => $entry->kind !== Transaction::REVERSAL && $entry->reversedBy === null)->sum(fn (Transaction $entry) => (float) $entry->amount), 2);
-        $due = max(0.0, round((float) $deal->total - $received, 2));
-
-        return [
-            'id' => $deal->id,
-            'name' => $deal->name,
-            'total' => (float) $deal->total,
-            'note' => $deal->note,
-            'received' => $received,
-            'due' => $due,
-            'settled' => $due <= 0,
-            'created_at' => $deal->created_at?->toIso8601String(),
-            'payments' => $deal->transactions->map(fn (Transaction $entry) => [
-                'id' => $entry->id, 'kind' => $entry->kind, 'amount' => (float) $entry->amount, 'reference' => $entry->reference,
-                'occurred_on' => $entry->occurred_on->toDateString(), 'reversed' => $entry->reversedBy !== null,
-            ])->values()->all(),
-        ];
+        return filled($data['reason'] ?? null) ? trim($data['reason']) : null;
     }
 
     /** @return array<int, string> */
-    private static function dateRule(): array
+    public static function dateRule(): array
     {
         return ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.self::today()];
     }
 
-    private static function today(): string
+    public static function today(): string
     {
         return CarbonImmutable::now('Asia/Dhaka')->toDateString();
     }

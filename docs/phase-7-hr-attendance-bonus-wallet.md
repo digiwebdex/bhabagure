@@ -887,6 +887,10 @@ come from the client's message, and the layout check against the design is still
   history;
 - breakdown by source (a deal's money counts under its name), and history filtered by all, in or out, with evidence;
 - **the prototype's ✕ is Reverse with a reason:** an entry the other way, once. A reversed deal payment is due again.
+  **Changed 2026-10-09 (the owner), docs/wallet-edits.md:** View, Edit and Delete on every entry, Edit, Add payment
+  and Delete on deals, rename and delete for sources and saved references. Still append-only: Delete is that reversal
+  (on the entry's own date, reason optional), Edit the reversal plus the corrected entry; "Show edits and deletions"
+  shows what was there before.
 - `wallet_transactions` and `wallet_audit_logs` are append-only (`LedgerTables`). There is no PUT, PATCH or DELETE
   anywhere under `/wallet`: a saved reference is removed with a POST.
 - **Sources** are entered in the wallet. Only "Personal" and "Other" are seeded, so no business name is in this public

@@ -1,42 +1,33 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, ApiError } from './lib/api'
+import { EntryDialog, EntryIcons, type EntryAction } from './EntryDialogs'
+import { EvidenceIcon } from './icons'
+import { openEvidence } from './lib/evidence'
 import { useFormat } from './lib/format'
-import { actions, useBookChange, useHistory, type Direction, type Entry } from './lib/queries'
-import { Card, Chip, Notice, Pending, PrimaryButton, inputClass } from './ui'
+import { useHistory, type Direction, type Entry } from './lib/queries'
+import { Card, Chip, Notice, Pending } from './ui'
 
 /**
- * Transaction history, newest first, filtered by all, in or out. The prototype's ✕ is Reverse with a reason: an entry
- * the other way, so nothing is ever deleted.
+ * Transaction history, newest first, filtered by all, in or out. Each entry has View, Edit and Delete
+ * (docs/wallet-edits.md); "Show edits and deletions" brings back what was there before an edit or a delete.
  */
 export function History() {
   const { t } = useTranslation()
   const { bdt, date, number } = useFormat()
   const [direction, setDirection] = useState<Direction | 'all'>('all')
   const [page, setPage] = useState(1)
-  const history = useHistory(direction, page)
-  const [reversing, setReversing] = useState<Entry | null>(null)
+  const [withChanges, setWithChanges] = useState(false)
+  const history = useHistory(direction, page, withChanges)
+  const [open, setOpen] = useState<EntryAction | null>(null)
+  const [done, setDone] = useState<string | null>(null)
   const [evidenceError, setEvidenceError] = useState(false)
-
-  const openEvidence = async (entry: Entry) => {
-    const tab = window.open('', '_blank')
-    try {
-      const url = URL.createObjectURL(await api.blob(`transactions/${entry.id}/evidence`))
-      if (tab) tab.location.href = url
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
-      setEvidenceError(false)
-    } catch {
-      tab?.close()
-      setEvidenceError(true)
-    }
-  }
 
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="m-0 text-16 font-semibold">{t('history.title')}</h2>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {(['all', 'in', 'out'] as const).map((value) => (
             <Chip
               key={value}
@@ -49,60 +40,73 @@ export function History() {
               {t(`history.filters.${value}`)}
             </Chip>
           ))}
+          <Chip
+            on={withChanges}
+            onClick={() => {
+              setWithChanges(!withChanges)
+              setPage(1)
+            }}
+          >
+            {t('history.showChanges')}
+          </Chip>
         </div>
       </div>
+      {done ? <Notice tone="in">{done}</Notice> : null}
       {evidenceError ? <Notice tone="out">{t('history.evidenceFailed')}</Notice> : null}
       {!history.data ? (
         <Pending error={history.error} />
       ) : history.data.data.length === 0 ? (
         <p className="m-0 text-13 text-wallet-muted">{t('history.empty')}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse text-13" data-testid="history">
-            <thead>
+        // A table from 640px up; on a phone each row folds into two lines (reference and amount, then date, source and the
+        // icons), so View, Edit and Delete are always in sight without scrolling sideways.
+        <div className="sm:overflow-x-auto">
+          <table className="block w-full border-collapse text-13 sm:table sm:min-w-[600px]" data-testid="history">
+            <thead className="hidden sm:table-header-group">
               <tr className="text-left font-display text-11 tracking-[0.06em] text-wallet-muted uppercase">
                 <th className="border-b border-wallet-line px-2 py-2 font-semibold">{t('history.date')}</th>
                 <th className="border-b border-wallet-line px-2 py-2 font-semibold">{t('history.reference')}</th>
                 <th className="border-b border-wallet-line px-2 py-2 font-semibold">{t('history.source')}</th>
                 <th className="border-b border-wallet-line px-2 py-2 text-right font-semibold">{t('history.amount')}</th>
-                <th className="border-b border-wallet-line px-2 py-2">
-                  <span className="sr-only">{t('history.actions')}</span>
-                </th>
+                <th className="border-b border-wallet-line px-2 py-2 text-right font-semibold">{t('history.actions')}</th>
               </tr>
             </thead>
-            <tbody>
-              {(history.data?.data ?? []).map((entry) => (
-                <tr key={entry.id} className={entry.reversed || entry.kind === 'reversal' ? 'text-wallet-faint' : ''}>
-                  <td className="border-b border-wallet-line px-2 py-2.5 font-display whitespace-nowrap text-wallet-muted">{date(entry.occurred_on)}</td>
-                  <td className="border-b border-wallet-line px-2 py-2.5">
+            <tbody className="block sm:table-row-group">
+              {history.data.data.map((entry) => (
+                <tr
+                  key={entry.id}
+                  className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-b border-wallet-line py-2.5 sm:table-row sm:border-0 sm:py-0 ${entry.status === 'standing' ? '' : 'text-wallet-faint'}`}
+                >
+                  <td className="order-3 font-display text-12 text-wallet-muted sm:order-none sm:table-cell sm:border-b sm:border-wallet-line sm:px-2 sm:py-2.5 sm:text-13 sm:whitespace-nowrap">
+                    {date(entry.occurred_on)}
+                    <span className="font-sans sm:hidden"> · {entry.source}</span>
+                  </td>
+                  <td className="order-1 min-w-0 sm:order-none sm:table-cell sm:border-b sm:border-wallet-line sm:px-2 sm:py-2.5">
                     <span className="flex items-center gap-2">
                       <span aria-hidden className={`size-2 shrink-0 rounded-full ${entry.direction === 'in' ? 'bg-wallet-in' : 'bg-wallet-out'}`} />
-                      <span className={entry.reversed ? 'line-through' : ''}>{entry.reference}</span>
+                      <span className={entry.status === 'standing' ? '' : 'line-through'}>{entry.reference}</span>
                     </span>
-                    {entry.kind === 'reversal' ? <span className="block text-12 text-wallet-lilac">{t('history.reversalOf', { reason: entry.reason ?? '' })}</span> : null}
+                    <StatusLine entry={entry} />
                     {entry.has_evidence ? (
-                      <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-12 text-wallet-link" onClick={() => void openEvidence(entry)}>
-                        ⎘ {t('history.evidence')}
-                      </button>
-                    ) : null}
-                  </td>
-                  <td className="border-b border-wallet-line px-2 py-2.5 text-wallet-muted">{entry.source}</td>
-                  <td className={`border-b border-wallet-line px-2 py-2.5 text-right font-display font-bold whitespace-nowrap ${entry.direction === 'in' ? 'text-wallet-in-soft' : 'text-wallet-out-soft'}`}>
-                    {entry.direction === 'in' ? '+' : '−'} {bdt(entry.amount)}
-                  </td>
-                  <td className="border-b border-wallet-line px-2 py-2.5 text-right">
-                    {entry.kind !== 'reversal' && !entry.reversed ? (
                       <button
                         type="button"
-                        className="cursor-pointer rounded-8 border border-wallet-input bg-transparent px-2 py-1 text-12 font-semibold text-wallet-out-soft"
-                        onClick={() => setReversing(entry)}
-                        aria-label={t('history.reverseNamed', { reference: entry.reference })}
+                        className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-12 text-wallet-link"
+                        onClick={() => void openEvidence(entry.id).then((opened) => setEvidenceError(!opened))}
                       >
-                        {t('history.reverse')}
+                        <EvidenceIcon /> {t('history.evidence')}
                       </button>
-                    ) : entry.reversed ? (
-                      <span className="text-11">{t('history.reversed')}</span>
                     ) : null}
+                  </td>
+                  <td className="hidden text-wallet-muted sm:table-cell sm:border-b sm:border-wallet-line sm:px-2 sm:py-2.5">{entry.source}</td>
+                  <td
+                    className={`order-2 text-right font-display font-bold whitespace-nowrap sm:order-none sm:table-cell sm:border-b sm:border-wallet-line sm:px-2 sm:py-2.5 ${
+                      entry.status !== 'standing' ? 'line-through' : entry.direction === 'in' ? 'text-wallet-in-soft' : 'text-wallet-out-soft'
+                    }`}
+                  >
+                    {entry.direction === 'in' ? '+' : '−'} {bdt(entry.amount)}
+                  </td>
+                  <td className="order-4 sm:order-none sm:table-cell sm:border-b sm:border-wallet-line sm:px-2 sm:py-2.5">
+                    <EntryIcons entry={entry} onOpen={setOpen} />
                   </td>
                 </tr>
               ))}
@@ -121,36 +125,20 @@ export function History() {
           </button>
         </div>
       ) : null}
-      {reversing ? <ReverseDialog entry={reversing} onClose={() => setReversing(null)} /> : null}
+      {open ? <EntryDialog action={open} onChange={setOpen} onClose={() => setOpen(null)} onDone={setDone} /> : null}
     </Card>
   )
 }
 
-function ReverseDialog({ entry, onClose }: { entry: Entry; onClose: () => void }) {
+/** Under the reference: when an entry was edited (a corrected one) or replaced or deleted, and why. */
+function StatusLine({ entry }: { entry: Entry }) {
   const { t } = useTranslation()
-  const { bdt } = useFormat()
-  const [reason, setReason] = useState('')
-  const reverse = useBookChange(actions.reverse)
+  const { date } = useFormat()
+  const reason = entry.change_reason ? ` · ${entry.change_reason}` : ''
 
-  return (
-    <div role="dialog" aria-modal="true" aria-label={t('history.reverseTitle', { amount: bdt(entry.amount) })} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="flex w-full max-w-md flex-col gap-3 rounded-18 border border-wallet-line bg-wallet-surface p-5" onClick={(event) => event.stopPropagation()}>
-        <h2 className="m-0 text-17 font-semibold">{t('history.reverseTitle', { amount: bdt(entry.amount) })}</h2>
-        <p className="m-0 text-13 leading-1.55 text-wallet-muted">{t('history.reverseNote', { reference: entry.reference })}</p>
-        <label className="flex flex-col gap-1.5 text-13 text-wallet-muted">
-          {t('history.reason')}
-          <textarea className={`${inputClass} min-h-20`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />
-        </label>
-        {reverse.error ? <Notice tone="out">{reverse.error instanceof ApiError ? reverse.error.message : String(reverse.error)}</Notice> : null}
-        <div className="flex justify-end gap-2">
-          <button type="button" className="cursor-pointer rounded-12 border border-wallet-input bg-transparent px-4 py-2.5 text-14 font-semibold text-wallet-text" onClick={onClose}>
-            {t('history.cancel')}
-          </button>
-          <PrimaryButton tone="out" disabled={reason.trim().length < 3 || reverse.isPending} onClick={() => reverse.mutate({ id: entry.id, reason: reason.trim() }, { onSuccess: onClose })}>
-            {t('history.reverse')}
-          </PrimaryButton>
-        </div>
-      </div>
-    </div>
-  )
+  if (entry.status === 'edited') return <span className="block text-12 text-wallet-lilac">{t('history.replacedOn', { date: date(entry.changed_at ?? entry.occurred_on) }) + reason}</span>
+  if (entry.status === 'deleted')
+    return <span className="block text-12 text-wallet-out-soft">{t(entry.deal?.deleted ? 'history.deletedWithDeal' : 'history.deletedOn', { date: date(entry.changed_at ?? entry.occurred_on) }) + reason}</span>
+  if (entry.replaces_id !== null) return <span className="block text-12 text-wallet-lilac">{t('history.editedOn', { date: date(entry.created_at ?? entry.occurred_on) })}</span>
+  return null
 }
