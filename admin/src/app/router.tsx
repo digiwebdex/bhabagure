@@ -23,6 +23,7 @@ const HotelRequestsPage = page(() => import('../features/hotel/HotelRequestsPage
 const AttendancePage = page(() => import('../features/attendance/AttendancePage'), 'AttendancePage')
 const AttendanceStaffPage = page(() => import('../features/attendance/AttendanceStaffPage'), 'AttendanceStaffPage')
 const MyAttendancePage = page(() => import('../features/attendance/MyAttendancePage'), 'MyAttendancePage')
+const HolidayCalendarPage = page(() => import('../features/holidays/HolidayCalendarPage'), 'HolidayCalendarPage')
 const PayrollPage = page(() => import('../features/payroll/PayrollPage'), 'PayrollPage')
 const MyCommissionPage = page(() => import('../features/bonus/MyCommissionPage'), 'MyCommissionPage')
 const BookingDetailPage = page(() => import('../features/bookings/BookingDetailPage'), 'BookingDetailPage')
@@ -162,6 +163,8 @@ export const router = createBrowserRouter([
       { path: 'attendance', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendancePage /></Require> },
       { path: 'attendance/staff/:id', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendanceStaffPage /></Require> },
       { path: 'my-attendance', element: <MyAttendancePage /> },
+      // Everyone reads it; changes are holidays.manage's (docs/holiday-calendar.md).
+      { path: 'holidays', element: <HolidayCalendarPage /> },
       { path: 'payroll', element: <Require permissions={['payroll.view', 'payroll.manage']}><PayrollPage /></Require> },
       { path: 'my-commission', element: <Require permissions={['commission.view_own', 'commission.view_all']}><MyCommissionPage /></Require> },
       { path: 'staff', element: <Require permissions={['staff.manage']}><StaffPage /></Require> },

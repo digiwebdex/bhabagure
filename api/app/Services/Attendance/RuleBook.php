@@ -3,13 +3,12 @@
 namespace App\Services\Attendance;
 
 use App\Models\AttendanceRule;
-use App\Models\Holiday;
 use App\Models\Staff;
 use App\Services\AuditLogger;
 
 /**
- * The attendance and salary rules and the holiday list (docs/phase-7-hr-attendance-bonus-wallet.md §6): this
- * installation's own settings, nothing hard-coded. Saving rules for a month makes a version that holds from that month
+ * The attendance and salary rules (docs/phase-7-hr-attendance-bonus-wallet.md §6; the holidays are HolidayCalendar's):
+ * this installation's own settings, nothing hard-coded. Saving rules for a month makes a version that holds from that month
  * until a later one, so a change never rewrites months before it. Audited with the values before and after.
  */
 final class RuleBook
@@ -33,20 +32,6 @@ final class RuleBook
         ]);
 
         return $rule;
-    }
-
-    public function addHoliday(string $date, string $nameEn, string $nameBn, Staff $by): Holiday
-    {
-        $holiday = Holiday::query()->updateOrCreate(['date' => $date], ['name_en' => $nameEn, 'name_bn' => $nameBn, 'created_by_staff_id' => $by->id]);
-        $this->audit->record('attendance.holiday_saved', $by, null, ['date' => $date, 'name_en' => $nameEn]);
-
-        return $holiday;
-    }
-
-    public function removeHoliday(Holiday $holiday, Staff $by): void
-    {
-        $this->audit->record('attendance.holiday_removed', $by, null, ['date' => $holiday->date->toDateString(), 'name_en' => $holiday->name_en]);
-        $holiday->delete();
     }
 
     /** @return array<string, mixed> */

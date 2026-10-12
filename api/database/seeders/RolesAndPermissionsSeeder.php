@@ -67,6 +67,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'staff_documents.manage' => ['staff', 'স্টাফের ডকুমেন্ট আপলোড ও আর্কাইভ', 'Upload and archive staff documents'],
         'attendance.view_all' => ['staff', 'সবার হাজিরা দেখা', 'View everyone’s attendance'],
         'attendance.manage' => ['staff', 'হাজিরা, ডিভাইস ও ছুটি ব্যবস্থাপনা', 'Manage attendance, devices and leave'],
+        // The holiday calendar (docs/holiday-calendar.md): everyone sees it; no role keeps it by default, so it is the
+        // super admin's alone unless granted in Roles (the owner's choice, 2026-10-12).
+        'holidays.manage' => ['staff', 'ছুটির ক্যালেন্ডার ব্যবস্থাপনা', 'Manage the holiday calendar'],
         'payroll.view' => ['staff', 'বেতন শিট ও মূল বেতন দেখা', 'View payroll and base salaries'],
         'payroll.manage' => ['staff', 'বেতন নির্ধারণ, চূড়ান্ত ও পরিশোধ', 'Set salaries, finalise and pay payroll'],
         'cms.manage' => ['website', 'ওয়েবসাইট কনটেন্ট ব্যবস্থাপনা', 'Manage website content'],

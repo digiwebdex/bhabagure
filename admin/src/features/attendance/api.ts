@@ -199,13 +199,13 @@ export function useRules(month: string) {
   return useQuery({ queryKey: ['attendance-rules', month], queryFn: ({ signal }) => api.get<Data<{ month: string; rules: Rules; versions: Rules[] }>>(`admin/attendance/rules?month=${month}`, signal) })
 }
 
-/** Rules, holidays and corrections change what the month shows. */
+/** Rules, leave and corrections change what the month shows (holidays: features/holidays). */
 export function useAttendanceChange<TVariables, TResponse>(send: (variables: TVariables) => Promise<TResponse>) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: send,
     onSuccess: () => {
-      for (const key of ['attendance-month', 'attendance-person', 'attendance-rules', 'attendance-holidays', 'my-attendance', 'leave-requests', 'my-leave']) void client.invalidateQueries({ queryKey: [key] })
+      for (const key of ['attendance-month', 'attendance-person', 'attendance-rules', 'holiday-calendar', 'my-attendance', 'leave-requests', 'my-leave']) void client.invalidateQueries({ queryKey: [key] })
     },
   })
 }
@@ -214,14 +214,8 @@ export type RulesInput = Omit<Rules, 'effective_month'> & { month: string }
 
 export const attendanceActions = {
   saveRules: (body: RulesInput) => api.put<Data<{ month: string; rules: Rules; versions: Rules[] }>>('admin/attendance/rules', body),
-  addHoliday: (body: { date: string; name_en: string; name_bn: string }) => api.post<Data<Holiday>>('admin/attendance/holidays', body),
-  removeHoliday: (id: number) => api.delete<Data<null>>(`admin/attendance/holidays/${id}`),
   correct: (body: { staff_id: number; work_date: string; kind: 'in' | 'out' | 'worked'; time: string | null; reason: string }) => api.post<Data<PersonMonth>>('admin/attendance/corrections', body),
   reverse: ({ id, reason }: { id: number; reason: string }) => api.post<Data<PersonMonth>>(`admin/attendance/corrections/${id}/reverse`, { reason }),
-}
-
-export function useHolidays(year: number) {
-  return useQuery({ queryKey: ['attendance-holidays', year], queryFn: ({ signal }) => api.get<Data<Holiday[]>>(`admin/attendance/holidays?year=${year}`, signal) })
 }
 
 // ── Leave ───────────────────────────────────────────────────────────────────────────────────────

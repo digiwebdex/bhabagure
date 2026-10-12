@@ -589,6 +589,8 @@ through the API (`role_name_en` / `role_name_bn`).
     (paid or unpaid), absent, off, holiday, worked on a day off, not employed, in progress, upcoming.
   - The totals include what salary uses: reduced days, absent days, working days outside employment.
 - **Rules** are versioned by effective month (the design's defaults are seeded from 2000-01), with holidays alongside.
+  **Changed 2026-10-12 (the owner), docs/holiday-calendar.md:** holidays moved to HR → Holiday calendar, which every
+  staff member sees; date ranges for holidays of several days; kept by the super admin (`holidays.manage`).
   **Corrections** are append-only, undone by reversal rows; nobody corrects their own attendance except the super
   admin.
 - **Leave** (`LeaveDesk`):

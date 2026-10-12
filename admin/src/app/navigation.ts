@@ -102,6 +102,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'staff', path: '/staff', icon: 'S', permissions: ['staff.manage'], badge: 'bonus_withdrawals' },
       // Everyone's own days and leave (§5.1).
       { key: 'my_attendance', path: '/my-attendance', icon: '◴', permissions: [] },
+      // The year's holidays, for everyone; kept by the super admin (docs/holiday-calendar.md).
+      { key: 'holidays', path: '/holidays', icon: '▦', permissions: [] },
       // Their own sales, bonus account and withdrawals (Phase 5 §4.8, §7).
       { key: 'my_commission', path: '/my-commission', icon: '◈', permissions: ['commission.view_own', 'commission.view_all'] },
     ],

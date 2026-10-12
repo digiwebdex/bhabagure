@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 
 import { buttonClass } from '../../components/ui/button'
-import { Dialog, ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
+import { ErrorNotice, useToast } from '../../components/ui/feedback'
 import { Pair, SelectInput, TextInput } from '../../components/ui/fields'
-import { Card, CardTitle, Loading } from '../../components/ui/layout'
+import { Card, CardTitle } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
-import { attendanceActions, useAttendanceChange, useHolidays, WEEKDAYS, type Rules, type SinglePunch } from './api'
+import { useHolidayYear } from '../holidays/api'
+import { attendanceActions, useAttendanceChange, WEEKDAYS, type Rules, type SinglePunch } from './api'
 
 /**
  * The design's rules strip (duty start and end, late-or-early pay, grace, working days), plus the weekly off days and what
@@ -112,85 +114,27 @@ function RulesForm({ month, rules, manage }: { month: string; rules: Rules; mana
           {t('attendance.rules.saveFrom', { month: monthLabel(month) })}
         </button>
       ) : null}
-      <HolidaysList year={Number(month.slice(0, 4))} manage={manage} />
+      <HolidaysLink year={Number(month.slice(0, 4))} />
     </Card>
   )
 }
 
-function HolidaysList({ year, manage }: { year: number; manage: boolean }) {
+/** Holidays now live in HR → Holiday calendar (docs/holiday-calendar.md), kept by the super admin. */
+function HolidaysLink({ year }: { year: number }) {
   const { t } = useTranslation()
-  const { date, locale } = useFormat()
-  const toast = useToast()
-  const { confirm, element } = useConfirm()
-  const holidays = useHolidays(year)
-  const remove = useAttendanceChange(attendanceActions.removeHoliday)
-  const [adding, setAdding] = useState(false)
+  const { number } = useFormat()
+  const calendar = useHolidayYear(year)
+  const data = calendar.data?.data
 
   return (
-    <div className="flex flex-col gap-2 border-t border-app-line pt-3">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="m-0 text-14 font-semibold">{t('attendance.holidays', { year })}</h3>
-        {manage ? (
-          <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setAdding(true)}>
-            {t('attendance.addHoliday')}
-          </button>
-        ) : null}
-      </div>
-      {holidays.isPending ? (
-        <Loading />
-      ) : holidays.data?.data.length ? (
-        <ul className="m-0 flex list-none flex-col gap-1 p-0 text-13">
-          {holidays.data.data.map((holiday) => (
-            <li key={holiday.id} className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                <span className="font-display">{date(holiday.date)}</span> · {locale === 'en' ? holiday.name_en : holiday.name_bn}
-              </span>
-              {manage ? (
-                <button
-                  type="button"
-                  className="cursor-pointer text-12 font-semibold text-red"
-                  onClick={async () => {
-                    if (await confirm(t('attendance.removeHolidayConfirm', { date: date(holiday.date) }))) remove.mutate(holiday.id, { onSuccess: () => toast(t('attendance.holidayRemoved')) })
-                  }}
-                >
-                  {t('attendance.removeHoliday')}
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="m-0 text-12.5 text-app-muted">{t('attendance.noHolidays')}</p>
-      )}
-      {adding ? <HolidayDialog onClose={() => setAdding(false)} /> : null}
-      {element}
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-app-line pt-3 text-13" data-testid="rules-holidays">
+      <span className="text-app-muted">
+        {data ? `${t('holidays.inYear', { year })}: ${t('holidays.count', { count: data.holidays.length, n: number(data.holidays.length) })} · ${t('holidays.daysOff', { count: data.holiday_days, n: number(data.holiday_days) })}` : t('holidays.inYear', { year })}
+      </span>
+      <Link to={`/holidays?year=${year}`} className="font-semibold">
+        {t('attendance.openHolidayCalendar')}
+      </Link>
     </div>
   )
 }
 
-function HolidayDialog({ onClose }: { onClose: () => void }) {
-  const { t } = useTranslation()
-  const toast = useToast()
-  const [form, setForm] = useState({ date: '', name_en: '', name_bn: '' })
-  const add = useAttendanceChange(attendanceActions.addHoliday)
-  const fieldError = (name: string) => (add.error instanceof ApiError ? add.error.field(name) : undefined)
-
-  return (
-    <Dialog open onClose={onClose} title={t('attendance.addHolidayTitle')}>
-      <TextInput label={t('attendance.holidayDate')} type="date" value={form.date} onChange={(value) => setForm({ ...form, date: value })} error={fieldError('date')} />
-      <Pair>
-        <TextInput label={t('roles.nameEn')} value={form.name_en} onChange={(name_en) => setForm({ ...form, name_en })} error={fieldError('name_en')} maxLength={120} />
-        <TextInput label={t('roles.nameBn')} value={form.name_bn} onChange={(name_bn) => setForm({ ...form, name_bn })} error={fieldError('name_bn')} maxLength={120} />
-      </Pair>
-      {add.error && !(add.error instanceof ApiError && add.error.status === 422) ? <ErrorNotice error={add.error} /> : null}
-      <div className="flex justify-end gap-2">
-        <button type="button" className={buttonClass('outline')} onClick={onClose}>
-          {t('common.cancel')}
-        </button>
-        <button type="button" className={buttonClass('primary')} disabled={!form.date || !form.name_en.trim() || !form.name_bn.trim() || add.isPending} onClick={() => add.mutate(form, { onSuccess: () => { toast(t('attendance.holidayAdded')); onClose() } })}>
-          {t('common.save')}
-        </button>
-      </div>
-    </Dialog>
-  )
-}

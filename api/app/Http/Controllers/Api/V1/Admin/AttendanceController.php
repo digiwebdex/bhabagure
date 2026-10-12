@@ -22,8 +22,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * HR → Attendance & salary (docs/phase-7-hr-attendance-bonus-wallet.md §5.1, §6): the monthly table, one person's days,
- * the rules and holidays, and corrections. Reading needs attendance.view_all or attendance.manage; changing needs
- * attendance.manage.
+ * the rules, and corrections. Reading needs attendance.view_all or attendance.manage; changing needs attendance.manage.
+ * Holidays are the holiday calendar's (HolidayController, docs/holiday-calendar.md).
  */
 class AttendanceController extends Controller
 {
@@ -97,33 +97,6 @@ class AttendanceController extends Controller
         $book->save($month, $data, $request->user('staff'));
 
         return $this->rules($request->merge(['month' => $month]));
-    }
-
-    public function holidayList(Request $request): JsonResponse
-    {
-        $year = (int) ($request->validate(['year' => ['nullable', 'integer', 'min:2020', 'max:2100']])['year'] ?? now('Asia/Dhaka')->year);
-
-        return response()->json(['data' => Holiday::query()->whereYear('date', $year)->orderBy('date')->get()->map(fn (Holiday $holiday) => self::holiday($holiday))->all()]);
-    }
-
-    public function storeHoliday(Request $request, RuleBook $book): JsonResponse
-    {
-        $this->ensureManage($request);
-        $data = $request->validate([
-            'date' => ['required', 'date_format:Y-m-d'],
-            'name_en' => ['required', 'string', 'max:120'],
-            'name_bn' => ['required', 'string', 'max:120'],
-        ]);
-
-        return response()->json(['data' => self::holiday($book->addHoliday($data['date'], $data['name_en'], $data['name_bn'], $request->user('staff')))], 201);
-    }
-
-    public function destroyHoliday(Request $request, int $id, RuleBook $book): JsonResponse
-    {
-        $this->ensureManage($request);
-        $book->removeHoliday(Holiday::query()->findOrFail($id), $request->user('staff'));
-
-        return response()->json(['data' => null]);
     }
 
     public function correct(Request $request, CorrectionLog $log, DailyAttendance $attendance): JsonResponse

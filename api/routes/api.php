@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\DownloadLogController;
 use App\Http\Controllers\Api\V1\Admin\GalleryItemController;
 use App\Http\Controllers\Api\V1\Admin\HeroVideoController;
+use App\Http\Controllers\Api\V1\Admin\HolidayController;
 use App\Http\Controllers\Api\V1\Admin\HotelInquiryController;
 use App\Http\Controllers\Api\V1\Admin\InboxController;
 use App\Http\Controllers\Api\V1\Admin\InboxSettingsController;
@@ -366,9 +367,6 @@ Route::prefix('v1')->group(function () {
                 Route::get('attendance/staff/{id}', 'staff')->whereNumber('id');
                 Route::get('attendance/rules', 'rules');
                 Route::put('attendance/rules', 'saveRules');
-                Route::get('attendance/holidays', 'holidayList');
-                Route::post('attendance/holidays', 'storeHoliday');
-                Route::delete('attendance/holidays/{id}', 'destroyHoliday')->whereNumber('id');
                 Route::post('attendance/corrections', 'correct');
                 Route::post('attendance/corrections/{id}/reverse', 'reverseCorrection')->whereNumber('id');
             });
@@ -379,6 +377,15 @@ Route::prefix('v1')->group(function () {
             Route::post('leave-requests/{id}/approve', 'approve')->whereNumber('id');
             Route::post('leave-requests/{id}/reject', 'reject')->whereNumber('id');
             Route::post('leave-requests/{id}/revoke', 'revoke')->whereNumber('id');
+        });
+        // The holiday calendar (docs/holiday-calendar.md): everyone reads the year with their own leave; holidays.manage
+        // (the super admin's alone by default) keeps it.
+        Route::get('profile/holidays', [HolidayController::class, 'index']);
+        Route::middleware('permission:holidays.manage,staff')->controller(HolidayController::class)->group(function () {
+            Route::post('holidays', 'store');
+            Route::post('holidays/copy', 'copy');
+            Route::put('holidays/{group}', 'update')->whereUuid('group');
+            Route::delete('holidays/{group}', 'destroy')->whereUuid('group');
         });
         // Everyone's own attendance and leave: no permission, and no staff id to point elsewhere.
         Route::controller(MyAttendanceController::class)->group(function () {
