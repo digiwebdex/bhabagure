@@ -54,7 +54,7 @@ export function PaymentStep({ pkg, quote, hotelCategory }: { pkg: PackageView; q
   // saved only with it. The API asks too (for a page cached before the switch went on), and this step then follows it.
   const [verify, setVerify] = useState(pricing.verifyPhone === true);
   const leadPhone = normalizeBdMobile(booking.travellers[0]?.phone ?? '');
-  // The code goes by SMS, WhatsApp and to this email at once (docs/booking-phone-verification.md §6).
+  // The code goes by SMS and WhatsApp, and to this email too when one was given (docs/booking-phone-verification.md §7).
   const leadEmail = booking.travellers[0]?.email.trim() ?? '';
   const [sentTo, setSentTo] = useState<string | null>(null);
   // Where it went; null while a code sent a moment ago is reused and the channels aren't known.

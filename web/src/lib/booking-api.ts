@@ -225,7 +225,7 @@ export type CodeChannel = 'sms' | 'whatsapp' | 'email';
 export const sendBookingCode = (phone: string, email: string, locale: 'bn' | 'en') =>
   call<{ status: 'sent'; expires_in: number; retry_after: number; channels: CodeChannel[] }>('booking-codes', {
     method: 'POST',
-    body: JSON.stringify({ phone, email, locale }),
+    body: JSON.stringify({ phone, email: email || null, locale }),
     locale,
   });
 

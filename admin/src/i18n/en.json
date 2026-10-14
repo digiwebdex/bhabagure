@@ -994,7 +994,7 @@
     "addBank": "Add bank account",
     "removeBank": "Remove this account",
     "verifyPhone": "Check the customer with a code before a website booking is saved",
-    "verifyPhoneHint": "The code goes to the lead traveller by SMS, WhatsApp and email at once (their email is required while this is on); a booking is saved only with the right code. Office bookings never need one.",
+    "verifyPhoneHint": "The code goes to the lead traveller's mobile by SMS and WhatsApp, and to their email too if they gave one; a booking is saved only with the right code. Office bookings never need one.",
     "codesNeverSent": "No code has reached a customer yet — SMS, WhatsApp and email aren’t working from the server. While this is on, nobody can book on the website: leave it off until a code arrives.",
     "codesLastFailed": "The last code couldn’t be sent ({{failed}}); one reached a customer on {{sent}}. While this is on and codes fail, customers can’t book on the website.",
     "codesOk": "Codes are reaching customers — the last one on {{sent}}.",

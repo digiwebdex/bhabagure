@@ -639,7 +639,7 @@
     "verify": {
       "sent": "We sent a 6-digit code {where}. Enter it to confirm your booking — it works for {minutesText} minutes.",
       "code": "Booking code",
-      "enterCode": "Enter the 6-digit code we sent to your mobile and email.",
+      "enterCode": "Enter the 6-digit code we sent to your mobile.",
       "resend": "Send a new code",
       "resendIn": "New code in {secondsText}s",
       "changeNumber": "Change number",
@@ -651,9 +651,9 @@
       "viaWhatsApp": "on WhatsApp to {phone}",
       "viaEmail": "by email to {email}",
       "toBoth": "to {phone} and {email}",
+      "toPhone": "to {phone}",
       "and": " and "
-    },
-    "emailCodeHint": "The booking code goes here too."
+    }
   },
   "auth": {
     "signInTitle": "Sign in to your account",
@@ -722,8 +722,7 @@
     "minLength": "Use at least {minText} characters.",
     "travellers": "Enter between 1 and {maxText} travellers.",
     "confirmScan": "Please check this against your passport, then press “It’s correct” or fix it.",
-    "code": "Enter the 6-digit code.",
-    "emailForCode": "Add your email: the booking code goes there too."
+    "code": "Enter the 6-digit code."
   },
   "errors": {
     "sendFailed": "We could not send that — please try again shortly or call {phone}.",

@@ -29,7 +29,7 @@ export function PhoneCodeBox({
 }: {
   /** 8801XXXXXXXXX: the number the code went to. */
   phone: string;
-  /** The lead's email, where the code went too. */
+  /** The lead's email, where the code went too; empty when none was given. */
   email: string;
   /** Where it actually went; null when a code sent a moment ago is reused. */
   channels: CodeChannel[] | null;
@@ -47,7 +47,7 @@ export function PhoneCodeBox({
   // "by SMS to 01711…, on WhatsApp to 01711… and by email to a@b.com" — only the channels that took it.
   const parts = channels
     ? channels.map((channel) => (channel === 'sms' ? t('viaSms', { phone: local }) : channel === 'whatsapp' ? t('viaWhatsApp', { phone: local }) : t('viaEmail', { email })))
-    : [t('toBoth', { phone: local, email })];
+    : [email ? t('toBoth', { phone: local, email }) : t('toPhone', { phone: local })];
   const where = parts.length > 1 ? `${parts.slice(0, -1).join(', ')}${t('and')}${parts.at(-1)}` : parts[0];
 
   return (

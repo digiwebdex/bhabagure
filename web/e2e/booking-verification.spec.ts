@@ -40,8 +40,7 @@ async function toPayment(page: Page, phone: string) {
   const lead = dialog.locator('section').nth(0);
   await lead.getByLabel('Name (as on passport)').fill('CODE CUSTOMER');
   await lead.getByLabel('WhatsApp number').fill(phone);
-  // While the check is on the code goes by email too, so the lead's email is needed (docs/booking-phone-verification.md §6).
-  await lead.getByLabel(/^Email/).fill(`${phone}@example.test`);
+  // No email: optional while the check is on too, the code goes to the mobile (docs/booking-phone-verification.md §7).
   await dialog.getByRole('button', { name: 'Next step →' }).click();
   await dialog.getByRole('checkbox').check();
   await dialog.getByRole('button', { name: 'Next step →' }).click();
@@ -67,7 +66,7 @@ test('with the check on, the booking is saved only with the code sent to the lea
     expect(saved(phone).count).toBe(0);
 
     await pay.click();
-    await expect(box.getByRole('alert')).toHaveText('Enter the 6-digit code we sent to your mobile and email.');
+    await expect(box.getByRole('alert')).toHaveText('Enter the 6-digit code we sent to your mobile.');
     const code = lastCode(phone);
     await box.getByLabel('Booking code').fill(code === '123456' ? '654321' : '123456');
     await pay.click();

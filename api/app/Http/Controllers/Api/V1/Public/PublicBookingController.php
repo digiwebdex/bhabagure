@@ -62,10 +62,9 @@ class PublicBookingController extends Controller
             'travellers.*.passport_expiry' => ['nullable', 'date_format:Y-m-d', 'after:travel_date'],
             'travellers.*.phone' => ['nullable', 'regex:/^8801[3-9]\d{8}$/'],
             'travellers.0.phone' => ['required'],
+            // Optional, the lead's too: the booking code goes to the mobile, and to the email only when one is given
+            // (the owner's choice, 2026-10-15; docs/booking-phone-verification.md §7).
             'travellers.*.email' => ['nullable', 'email', 'max:190'],
-            // While the booking code check is on, the code goes by email too (client, 2026-09-25), so the lead's email is needed.
-            // (A rule for index 0 replaces the wildcard's for it, so the format checks are repeated here.)
-            'travellers.0.email' => [Rule::requiredIf(fn () => PhoneCheck::required()), 'nullable', 'email', 'max:190'],
             'travellers.*.passport_scan_token' => ['nullable', 'string', 'size:48'],
             'travellers.*.ocr_filled' => ['boolean'],
             'expected_total' => ['required', 'numeric', 'min:0'],
@@ -79,7 +78,6 @@ class PublicBookingController extends Controller
             'verification_code' => ['nullable', 'digits:6'],
         ], [
             'travellers.*.passport_expiry.after' => __('booking.passport_expiry_after_travel'),
-            'travellers.0.email.required' => __('booking.email_for_code'),
         ]);
 
         if (($data['idempotency_key'] ?? null) !== null && ($existing = $this->alreadyCreated($data['idempotency_key'])) !== null) {
@@ -163,12 +161,12 @@ class PublicBookingController extends Controller
         $request->merge(['phone' => Phone::normalizeBdMobile($phone) ?? $phone]);
         $data = $request->validate([
             'phone' => ['required', 'regex:/^8801[3-9]\d{8}$/'],
-            // The lead's email: the code goes there too (client, 2026-09-25).
-            'email' => ['required', 'email', 'max:190'],
+            // The lead's email, if they gave one: a copy of the code goes there too (optional since 2026-10-15).
+            'email' => ['nullable', 'email', 'max:190'],
             'locale' => ['required', Rule::in(['bn', 'en'])],
-        ], ['email.required' => __('booking.email_for_code')]);
+        ]);
 
-        $result = $codes->send($data['phone'], $data['locale'], $request->ip(), LoginCodes::BOOKING, trim($data['email']));
+        $result = $codes->send($data['phone'], $data['locale'], $request->ip(), LoginCodes::BOOKING, filled($data['email'] ?? null) ? trim($data['email']) : null);
 
         return match ($result['outcome']) {
             'throttled' => response()->json(['message' => __('auth.code_throttled', ['seconds' => $result['retry_after']]), 'code' => 'throttled', 'retry_after' => $result['retry_after']], Response::HTTP_TOO_MANY_REQUESTS),

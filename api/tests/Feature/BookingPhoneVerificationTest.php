@@ -58,7 +58,7 @@ class BookingPhoneVerificationTest extends TestCase
         $this->getJson('/api/v1/public/pricing')->assertJsonPath('data.verifyPhone', true);
 
         $this->postJson('/api/v1/public/bookings', $this->payload())->assertUnprocessable()
-            ->assertJsonPath('code', 'verification_required')->assertJsonPath('message', 'Enter the code we sent to your mobile and email to confirm the booking.');
+            ->assertJsonPath('code', 'verification_required')->assertJsonPath('message', 'Enter the code we sent to your mobile to confirm the booking.');
 
         $this->sendCode()->assertAccepted()->assertJsonPath('data.status', 'sent')->assertJsonPath('data.expires_in', 600)->assertJsonPath('data.retry_after', 60);
         $sms = end(FakeSmsGateway::$sent);
@@ -163,23 +163,23 @@ class BookingPhoneVerificationTest extends TestCase
     }
 
     #[Test]
-    public function while_the_check_is_on_the_lead_gives_an_email_and_the_code_goes_there_too(): void
+    public function the_leads_email_is_optional_and_when_given_the_code_goes_there_too(): void
     {
         $this->checkOn();
         $this->emailWorks();
 
-        // No email: refused, saying why, before any code is sent.
+        // No email (optional since 2026-10-15): the code goes to the mobile only, and the booking is saved with it.
         $noEmail = $this->payload();
         unset($noEmail['travellers'][0]['email']);
-        $this->postJson('/api/v1/public/bookings', $noEmail)->assertUnprocessable()
-            ->assertJsonValidationErrors(['travellers.0.email' => 'Add the lead traveller’s email: the booking code goes there too.']);
-        $this->sendCode(email: null)->assertUnprocessable()->assertJsonValidationErrors('email');
-        $this->assertSame([], FakeSmsGateway::$sent);
+        $this->sendCode(email: null)->assertAccepted()->assertJsonPath('data.channels', fn (array $channels) => ! in_array('email', $channels, true) && in_array('sms', $channels, true));
+        Mail::assertNotSent(LoginCodeMail::class);
+        $this->postJson('/api/v1/public/bookings', $noEmail + ['verification_code' => $this->lastCode()])->assertCreated();
 
-        // Every channel at once, and the form is told which took it.
+        // With an email: every channel at once, and the form is told which took it.
+        $this->travel(2)->minutes();
         $this->sendCode()->assertAccepted()->assertJsonPath('data.channels', fn (array $channels) => in_array('sms', $channels, true) && in_array('email', $channels, true));
         Mail::assertSent(LoginCodeMail::class, fn (LoginCodeMail $mail) => $mail->hasTo('tanvir@example.test') && $mail->code === $this->lastCode() && $mail->purpose === 'booking');
-        $this->assertStringContainsString('email', CustomerLoginCode::query()->sole()->channel);
+        $this->assertStringContainsString('email', CustomerLoginCode::query()->latest('id')->value('channel'));
     }
 
     #[Test]

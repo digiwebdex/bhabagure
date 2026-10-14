@@ -21,10 +21,10 @@ export function validatePackageStep(booking: Pick<BookingState, 'date' | 'pax'>,
 
 /**
  * Only the lead traveller's name and WhatsApp number are required (docs/phase-8-visa-quotes-pricing-downloads.md §2);
- * staff collect the rest later. Whatever is filled in is still checked. While the booking code check is on, the lead's
- * email is required too: the code goes there as well (docs/booking-phone-verification.md §6).
+ * staff collect the rest later. Whatever is filled in is still checked. The lead's email stays optional while the booking
+ * code check is on: the code goes to the mobile, and to the email only when one is given (docs/booking-phone-verification.md §7).
  */
-export function validateTravellers(booking: Pick<BookingState, 'travellers'>, tv: Translate, { leadEmail = false }: { leadEmail?: boolean } = {}) {
+export function validateTravellers(booking: Pick<BookingState, 'travellers'>, tv: Translate) {
   const errors: TravellerErrors[] = booking.travellers.map((traveller, index) => {
     const e: TravellerErrors = {};
     if (index === 0 && !traveller.name.trim()) e.name = tv('required');
@@ -46,8 +46,7 @@ export function validateTravellers(booking: Pick<BookingState, 'travellers'>, tv
     // The lead traveller needs a WhatsApp number; the others may leave it blank.
     if (index === 0 && !traveller.phone.trim()) e.phone = tv('required');
     else if (traveller.phone.trim() && !normalizeBdMobile(traveller.phone)) e.phone = tv('phone');
-    if (index === 0 && leadEmail && !traveller.email.trim()) e.email = tv('emailForCode');
-    else if (traveller.email.trim() && !isEmail(traveller.email)) e.email = tv('email');
+    if (traveller.email.trim() && !isEmail(traveller.email)) e.email = tv('email');
     return e;
   });
   return { errors, invalid: errors.some((e) => Object.keys(e).length > 0) };
