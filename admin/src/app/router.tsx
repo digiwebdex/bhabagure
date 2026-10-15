@@ -23,6 +23,7 @@ const HotelRequestsPage = page(() => import('../features/hotel/HotelRequestsPage
 const AttendancePage = page(() => import('../features/attendance/AttendancePage'), 'AttendancePage')
 const AttendanceStaffPage = page(() => import('../features/attendance/AttendanceStaffPage'), 'AttendanceStaffPage')
 const MyAttendancePage = page(() => import('../features/attendance/MyAttendancePage'), 'MyAttendancePage')
+const PaymentRequestsPage = page(() => import('../features/payment-requests/PaymentRequestsPage'), 'PaymentRequestsPage')
 const HolidayCalendarPage = page(() => import('../features/holidays/HolidayCalendarPage'), 'HolidayCalendarPage')
 const PayrollPage = page(() => import('../features/payroll/PayrollPage'), 'PayrollPage')
 const MyCommissionPage = page(() => import('../features/bonus/MyCommissionPage'), 'MyCommissionPage')
@@ -162,6 +163,7 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },
       { path: 'attendance', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendancePage /></Require> },
       { path: 'attendance/staff/:id', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendanceStaffPage /></Require> },
+      { path: 'payment-requests', element: <Require permissions={['transactions.create_manual']}><PaymentRequestsPage /></Require> },
       { path: 'my-attendance', element: <MyAttendancePage /> },
       // Everyone reads it; changes are holidays.manage's (docs/holiday-calendar.md).
       { path: 'holidays', element: <HolidayCalendarPage /> },

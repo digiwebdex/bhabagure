@@ -107,7 +107,7 @@ export async function quotationFor(page: Page, name: string, { send = true, role
  * A booking made the way the website makes one (public API), 70 days out, two travellers. `minimal`: only the lead's name
  * and WhatsApp number, the least the website asks for.
  */
-export async function websiteBooking(page: Page, name: string, email?: string, { minimal = false } = {}): Promise<{ reference: string; phone: string }> {
+export async function websiteBooking(page: Page, name: string, email?: string, { minimal = false } = {}): Promise<{ reference: string; phone: string; token: string }> {
   const travelDate = new Date(Date.now() + 70 * 86_400_000).toISOString().slice(0, 10)
   const phone = `0171${String(Date.now()).slice(-7)}`
   const response = await page.request.post(`${E2E_API_URL}/api/v1/public/bookings`, {
@@ -130,7 +130,9 @@ export async function websiteBooking(page: Page, name: string, email?: string, {
     },
   })
   expect(response.status()).toBe(201)
-  return { reference: ((await response.json()) as { data: { reference: string } }).data.reference, phone }
+  const created = ((await response.json()) as { data: { reference: string; accessToken: string } }).data
+  // The booking's private token: what the customer's booking page sends (X-Booking-Token).
+  return { reference: created.reference, phone, token: created.accessToken }
 }
 
 /** The last message the fake WhatsApp gateway "sent" to a number (+8801…), from api/storage/logs/whatsapp-fake.log. */

@@ -7,6 +7,7 @@ import type { Data, Paginated } from '../../lib/api/types'
 import type { DocumentSlot } from '../documents/api'
 import type { NotificationGroup } from '../notifications/api'
 import type { Voucher } from '../vouchers/api'
+import type { PaymentRequestRow } from '../payment-requests/api'
 
 /**
  * What a package costs one traveller on `date` before rooms and add-ons (docs/departure-prices.md): a group tour on one of
@@ -177,7 +178,9 @@ export type BookingDetail = BookingSummary & {
     created_at: string
     settled_at: string | null
   }[]
-  actions: Record<'edit_quote' | 'apply_coupon' | 'remove_coupon' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets' | 'upload_voucher', boolean>
+  /** Customers' "I've paid" with screenshots (docs/payment-requests.md); empty without transactions.create_manual. */
+  payment_requests: PaymentRequestRow[]
+  actions: Record<'decide_payment_requests' | 'edit_quote' | 'apply_coupon' | 'remove_coupon' | 'issue_invoice' | 'void_invoice' | 'record_payment' | 'reverse_payment' | 'confirm' | 'complete' | 'cancel' | 'send_whatsapp' | 'toggle_whatsapp_opt_out' | 'claim' | 'assign' | 'review_documents' | 'manage_tickets' | 'upload_voucher', boolean>
   quote_inputs: {
     list_price: number
     grid: PriceGrid | null

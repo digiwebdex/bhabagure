@@ -8,11 +8,13 @@ use App\Http\Controllers\Api\V1\Admin\BonusController;
 use App\Http\Controllers\Api\V1\Admin\DocumentReviewController;
 use App\Http\Controllers\Api\V1\Admin\InboxController;
 use App\Http\Controllers\Api\V1\Admin\LeaveRequestController;
+use App\Http\Controllers\Api\V1\Admin\PaymentRequestController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Models\Booking;
 use App\Models\Inquiry;
 use App\Models\LeaveRequest;
+use App\Models\PaymentRequest;
 use App\Models\Quotation;
 use App\Models\Review;
 use App\Models\Staff;
@@ -79,6 +81,13 @@ final class NavBadges
                 'query' => fn (Staff $staff) => SupportTicketController::filtered(['status' => SupportTicket::OPEN, 'overdue' => '1']),
             ],
             // Leave requests nobody has decided yet — the design's badge on Attendance & salary (Phase 7 §5.1).
+            // Customers' "I've paid" waiting for a decision (docs/payment-requests.md).
+            'payment_requests' => [
+                'permission' => ['transactions.create_manual'],
+                'path' => '/api/v1/admin/payment-requests',
+                'filter' => ['status' => PaymentRequest::PENDING],
+                'query' => fn (Staff $staff) => PaymentRequestController::filtered(['status' => PaymentRequest::PENDING]),
+            ],
             'leave_requests' => [
                 'permission' => ['attendance.manage'],
                 'path' => '/api/v1/admin/leave-requests',

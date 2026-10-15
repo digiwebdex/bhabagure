@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\BookingLine;
 use App\Models\Invoice;
 use App\Models\PaymentAttempt;
+use App\Services\Payments\PaymentRequests;
 use App\Services\Payments\PaymentService;
 use App\Support\Money;
 use App\Support\Payments\PaymentOptions;
@@ -63,6 +64,8 @@ final class PublicBooking
                 'url' => url("/api/v1/public/invoices/{$invoice->share_token}"),
                 'pdfUrl' => url("/api/v1/public/invoices/{$invoice->share_token}/pdf"),
             ] : null,
+            // "I've paid" requests with their screenshots, and what staff decided (docs/payment-requests.md).
+            'paymentRequests' => PaymentRequests::forCustomer($booking),
             'payment' => [
                 'canPay' => $canPay,
                 // Phase 8 §4.F: the built-in SSLCommerz checkout, and paying by hand with each method's exact amount.

@@ -271,6 +271,8 @@
       "support_other": "{{n}} tickets waiting over 24 hours — open the queue",
       "staff_documents_one": "{{n}} staff document needs attention — open the vault",
       "staff_documents_other": "{{n}} staff documents need attention — open the vault",
+      "payment_requests_one": "{{n}} payment request waiting — open the list",
+      "payment_requests_other": "{{n}} payment requests waiting — open the list",
       "leave_requests_one": "{{n}} leave request waiting — open the queue",
       "leave_requests_other": "{{n}} leave requests waiting — open the queue",
       "bonus_withdrawals_one": "{{n}} bonus withdrawal waiting — open the staff screen",
@@ -292,6 +294,7 @@
       "bookings": "Bookings",
       "customers": "Customers & leads",
       "vouchers": "Vouchers",
+      "payment_requests": "Payment requests",
       "packages": "Packages",
       "pricing": "Pricing & add-ons",
       "posts": "Blog",
@@ -2520,6 +2523,55 @@
     "record": "Record",
     "noneThisMonth": "No leave this month.",
     "recordTitle": "Record leave for someone"
+  },
+  "paymentRequests": {
+    "title": "Payment requests",
+    "subtitle": "What customers say they paid by bank or bKash, with their screenshots. Approving records the payment on the booking and confirms an inquiry.",
+    "cardTitle": "Payment requests from the customer",
+    "waiting_one": "{{count}} waiting",
+    "waiting_other": "{{count}} waiting",
+    "search": "Search booking, customer, phone or reference",
+    "filters": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "all": "All"
+    },
+    "empty": "No payment requests here.",
+    "emptyPending": "No payment requests waiting.",
+    "status": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "methods": {
+      "bank_transfer": "bank transfer",
+      "bkash": "bKash"
+    },
+    "via": {
+      "booking_page": "Sent from the booking page",
+      "portal": "Sent from the customer portal"
+    },
+    "paidOn": "paid {{date}}",
+    "due": "{{amount}} due",
+    "decided": {
+      "approved": "Approved by {{name}}, {{when}}",
+      "rejected": "Rejected by {{name}}, {{when}}"
+    },
+    "customerSaid": "the customer said {{amount}}",
+    "openScreenshot": "Open screenshot",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveTitle": "Approve the payment of {{amount}}",
+    "approveNote": "Check the screenshot against {{bank}}: approving records the payment on the booking with the screenshot as its receipt, issues the invoice if it has none, and confirms the booking if it is still an inquiry.",
+    "amountReceived": "Amount received",
+    "approveButton": "Approve and record payment",
+    "approved": "Payment of {{amount}} recorded",
+    "rejectTitle": "Reject the payment of {{amount}}",
+    "rejectNote": "The customer sees your reason on their booking page and in the portal.",
+    "reason": "Reason",
+    "rejectButton": "Reject",
+    "rejected": "Payment request rejected"
   },
   "holidays": {
     "title": "Holiday calendar",

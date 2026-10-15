@@ -16,6 +16,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'quotations', path: '/quotations', icon: 'Q', permissions: ['quotations.view_all', 'quotations.view_own'], badge: 'quotations' },
       { key: 'customers', path: '/customers', icon: 'C', permissions: ['customers.view'] },
       // Suppliers' confirmation vouchers and contracts for upcoming bookings (docs/booking-vouchers.md).
+      // Customers' "I've paid" with screenshots, to approve (docs/payment-requests.md).
+      { key: 'payment_requests', path: '/payment-requests', icon: '✓', permissions: ['transactions.create_manual'], badge: 'payment_requests' },
       { key: 'vouchers', path: '/vouchers', icon: '🗎', permissions: ['vouchers.view', 'vouchers.manage'] },
       // Brochure and visa PDFs downloaded from the website, to follow up (Phase 8 §4.E).
       { key: 'downloads', path: '/downloads', icon: '↓', permissions: ['downloads.view'] },

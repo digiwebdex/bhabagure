@@ -1263,6 +1263,60 @@ test.describe('how to pay', () => {
       await save({ banks: [], link: null, bkash: null });
     }
   });
+
+  // docs/payment-requests.md: "I've paid" under a bank account, with the amount, the date, a reference and a screenshot.
+  test('the customer sends a bank payment with a screenshot from the booking page and sees it waiting', async ({ page, request }) => {
+    const password = 'e2e-website-payment-pass';
+    artisan('tinker', `--execute=App\\Models\\Staff::query()->updateOrCreate(['email' => 'web.payment@e2e.test'], ['employee_code' => 'E2E-PAY', 'name' => 'Payment editor', 'password' => '${password}', 'status' => 'active', 'must_change_password' => false])->syncRoles(['admin']);`);
+    const login = await request.post(`${E2E_API_URL}/api/v1/staff/auth/login`, { data: { email: 'web.payment@e2e.test', password } });
+    const headers = { Authorization: `Bearer ${(await login.json()).access_token as string}`, Accept: 'application/json' };
+    const save = (value: unknown) => request.put(`${E2E_API_URL}/api/v1/admin/settings/payment`, { headers, data: { value } });
+
+    try {
+      await save({
+        banks: [
+          { bankName: 'Mutual Trust Bank', accountName: 'Example Holidays', accountNumber: '1310000000001', branch: 'Mirpur', routingNumber: '145260001', transferType: 'NPSB' },
+          { bankName: 'BRAC Bank', accountName: 'Example Holidays', accountNumber: '2020000000002', branch: 'Gulshan', routingNumber: '060260002', transferType: 'NPSB' },
+        ],
+        link: null,
+        bkash: { number: '+8801613000000', chargePercent: 1.3 },
+      });
+      const created = await request.post(`${E2E_API_URL}/api/v1/public/bookings`, {
+        headers: { Accept: 'application/json' },
+        data: {
+          package_slug: 'nepal-mustang-adventure-tour-8-days-7-nights',
+          travel_date: new Date(Date.now() + 52 * 86_400_000).toISOString().slice(0, 10),
+          pax: 1, room: 'twin', addons: [], travellers: [{ name: 'PAYMENT SENDER', phone: uniquePhone() }],
+          expected_total: 76500, terms_accepted: true, locale: 'en',
+        },
+      });
+      expect(created.status()).toBe(201);
+      const booking = (await created.json()).data as { reference: string; accessToken: string };
+
+      await page.goto(`/en/booking/${booking.reference}#t=${booking.accessToken}`);
+      const brac = page.getByTestId('pay-bank').nth(1);
+      await brac.getByRole('button', { name: 'I’ve paid — send payment details' }).click();
+      const form = brac.getByTestId('paid-form');
+      await expect(form.getByLabel('Amount you paid')).toHaveValue('76500');
+      await form.getByLabel('Amount you paid').fill('30000');
+      await form.getByLabel('Transaction or reference number (optional)').fill('NPSB-WEB-1');
+      // No screenshot yet: nothing is sent.
+      await form.getByRole('button', { name: 'Send payment request' }).click();
+      await expect(form).toContainText('Add a screenshot or photo of the payment.');
+      await form.getByLabel('Screenshot or photo of the payment').setInputFiles({ name: 'transfer.png', mimeType: 'image/png', buffer: Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000', 'hex') });
+      await form.getByRole('button', { name: 'Send payment request' }).click();
+
+      const sent = page.getByTestId('payment-requests');
+      await expect(sent).toContainText('Thank you! We’ll check your payment and confirm it here.', { timeout: 15_000 });
+      await expect(sent).toContainText('Waiting for confirmation');
+      await expect(sent).toContainText('BRAC Bank');
+      await expect(sent).toContainText('NPSB-WEB-1');
+      await expect(sent).toContainText('৳ 30,000');
+      await expect(page.getByTestId('paid-form')).toHaveCount(0);
+    } finally {
+      await save({ banks: [], link: null, bkash: null });
+    }
+  });
 });
 
 /**

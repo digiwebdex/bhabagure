@@ -50,6 +50,8 @@ export type PublicBooking = {
   paid: number;
   due: number;
   travellers: { name: string }[];
+  /** "I've paid" requests, newest first (docs/payment-requests.md). */
+  paymentRequests: PaymentRequestRow[];
   invoice: {
     number: string;
     issuedOn: string;
@@ -69,6 +71,21 @@ export type PublicBooking = {
 };
 
 /** api/app/Support/Payments/PaymentOptions.php: each method with the exact amount to send. */
+/** A customer's "I've paid" with its screenshot, and what staff decided (docs/payment-requests.md). */
+export type PaymentRequestRow = {
+  id: number;
+  method: 'bank_transfer' | 'bkash';
+  bankName: string;
+  amount: number;
+  approvedAmount: number | null;
+  paidOn: string;
+  reference: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  /** Why it wasn't accepted. */
+  note: string | null;
+  sentAt: string | null;
+};
+
 export type ManualPayment = {
   amount: number;
   /** Every bank account the agency takes transfers into, in the order set in Admin (up to three). */
@@ -168,7 +185,8 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
   if (res.status === 404) return { ok: false, reason: 'not_found' };
   if (res.status === 429) return { ok: false, reason: 'rate_limited' };
   if (res.status === 422) return { ok: false, reason: 'invalid', message: body?.message };
-  return { ok: false, reason: 'failed' };
+  // Anything else the API refused with a reason (a payment request on a closed booking, say): that reason.
+  return { ok: false, reason: 'failed', message: body?.message };
 }
 
 export const createBooking = (payload: BookingPayload) =>
@@ -228,6 +246,10 @@ export const sendBookingCode = (phone: string, email: string, locale: 'bn' | 'en
     body: JSON.stringify({ phone, email: email || null, locale }),
     locale,
   });
+
+/** "I've paid" from the booking page (docs/payment-requests.md): multipart, with the screenshot. */
+export const sendPaymentRequest = (reference: string, token: string, form: FormData, locale: string) =>
+  call<PaymentRequestRow[]>(`bookings/${encodeURIComponent(reference)}/payment-requests`, { method: 'POST', body: form, token, locale });
 
 export const getBooking = (reference: string, token: string, locale: string) =>
   call<PublicBooking>(`bookings/${encodeURIComponent(reference)}`, {

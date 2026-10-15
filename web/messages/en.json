@@ -1084,6 +1084,34 @@
     "tooMany": "That’s a lot of downloads for today — please try again later, or message us on WhatsApp.",
     "failed": "The download didn’t work — please try again."
   },
+  "payRequest": {
+    "open": "I’ve paid — send payment details",
+    "title": "Send your payment details",
+    "amount": "Amount you paid",
+    "paidOn": "Date you paid",
+    "reference": "Transaction or reference number (optional)",
+    "referenceBkash": "bKash transaction ID",
+    "screenshot": "Screenshot or photo of the payment",
+    "screenshotHint": "JPG, PNG or PDF, up to 5 MB. We check it before confirming your payment.",
+    "bkashAmountNote": "Enter the booking amount you paid, without the bKash charge.",
+    "send": "Send payment request",
+    "sending": "Sending…",
+    "cancel": "Cancel",
+    "amountRequired": "Enter the amount you paid.",
+    "amountOverDue": "That is more than the {due} still due.",
+    "referenceRequired": "Enter the bKash transaction ID.",
+    "screenshotRequired": "Add a screenshot or photo of the payment.",
+    "screenshotTooBig": "The file is over 5 MB. Choose a smaller one.",
+    "failed": "It couldn’t be sent. Please try again, or call or WhatsApp our office.",
+    "sent": "Thank you! We’ll check your payment and confirm it here.",
+    "listTitle": "Payments you sent",
+    "reason": "Reason: {note}",
+    "status": {
+      "pending": "Waiting for confirmation",
+      "approved": "Payment received",
+      "rejected": "Not accepted"
+    }
+  },
   "payHow": {
     "heading": "How to pay",
     "orHeading": "Or pay by hand",

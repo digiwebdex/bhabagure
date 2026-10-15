@@ -8,6 +8,7 @@ use App\Http\Resources\PublicBooking;
 use App\Models\Addon;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\PaymentRequest;
 use App\Services\Booking\BookingCreator;
 use App\Services\Booking\BookingRequest;
 use App\Services\Booking\PhoneCheck;
@@ -16,9 +17,12 @@ use App\Services\Booking\SeatsUnavailable;
 use App\Services\Booking\VerificationInvalid;
 use App\Services\Coupons\CouponRefused;
 use App\Services\Customers\LoginCodes;
+use App\Services\Ledger\EvidenceStore;
 use App\Services\Ledger\LedgerService;
 use App\Services\Payments\PaymentAmountChanged;
 use App\Services\Payments\PaymentNotAllowed;
+use App\Services\Payments\PaymentRequestRefused;
+use App\Services\Payments\PaymentRequests;
 use App\Services\Payments\PaymentService;
 use App\Services\Payments\PaymentsNotConfigured;
 use App\Services\Payments\SslCommerz\GatewayUnavailable;
@@ -185,6 +189,39 @@ class PublicBookingController extends Controller
      * Starts an SSLCommerz payment for the full balance plus any online payment charge, and returns the gateway page.
      * `expected_total` is the total the customer saw; if it no longer matches, nothing starts (409 price_changed).
      */
+    /**
+     * "I've paid" (docs/payment-requests.md): the amount, the account it went to, the date, a reference and a screenshot,
+     * from the booking page (its private token) or the portal (the signed-in customer). Staff approve it in the admin.
+     */
+    public function paymentRequest(Request $request, string $reference, PaymentRequests $requests): JsonResponse
+    {
+        $booking = $this->authorizedBooking($request, $reference);
+        $data = $request->validate([
+            'method' => ['required', Rule::in(PaymentRequest::METHODS)],
+            'account_number' => ['nullable', 'required_if:method,bank_transfer', 'string', 'max:60'],
+            'amount' => ['required', 'numeric', 'min:1', 'max:9999999999', 'decimal:0,2'],
+            // A calendar date in Dhaka: "today" must be accepted between midnight and 06:00 Dhaka, when UTC is still yesterday.
+            'paid_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.now('Asia/Dhaka')->toDateString()],
+            // bKash's transaction ID is how staff find it; a bank reference helps but isn't always to hand.
+            'reference' => ['nullable', 'required_if:method,bkash', 'string', 'max:100'],
+            'screenshot' => EvidenceStore::rules(),
+        ]);
+
+        try {
+            $requests->submit($booking, [
+                'method' => $data['method'],
+                'account_number' => $data['method'] === 'bank_transfer' ? trim((string) $data['account_number']) : null,
+                'amount' => (float) $data['amount'],
+                'paid_on' => $data['paid_on'],
+                'reference' => filled($data['reference'] ?? null) ? trim($data['reference']) : null,
+            ], $request->file('screenshot'), $request->hasHeader('X-Booking-Token') ? 'booking_page' : 'portal', $request->ip());
+        } catch (PaymentRequestRefused $e) {
+            return response()->json(['message' => __("payments.requests.{$e->reason}"), 'code' => $e->reason], $e->status);
+        }
+
+        return response()->json(['data' => PaymentRequests::forCustomer($booking)], Response::HTTP_CREATED);
+    }
+
     public function pay(Request $request, string $reference): JsonResponse
     {
         $booking = $this->authorizedBooking($request, $reference);

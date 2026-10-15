@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\OfferBannerController;
 use App\Http\Controllers\Api\V1\Admin\PackageController;
 use App\Http\Controllers\Api\V1\Admin\PackageImageController;
+use App\Http\Controllers\Api\V1\Admin\PaymentRequestController;
 use App\Http\Controllers\Api\V1\Admin\PaymentsController;
 use App\Http\Controllers\Api\V1\Admin\PayrollController;
 use App\Http\Controllers\Api\V1\Admin\PricingController;
@@ -197,6 +198,8 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings', 'store')->middleware('throttle:public-bookings');
             Route::get('bookings/{reference}', 'show')->middleware('throttle:public-read');
             Route::post('bookings/{reference}/payments', 'pay')->middleware('throttle:public-bookings');
+            // "I've paid", with a screenshot, for staff to approve (docs/payment-requests.md).
+            Route::post('bookings/{reference}/payment-requests', 'paymentRequest')->middleware('throttle:public-bookings');
         });
         Route::post('passport-scans', [PublicPassportScanController::class, 'store'])->middleware('throttle:passport-scans');
         // The booking form's coupon box (docs/coupons.md §2.6): a code checked against the booking, never a discount taken.
@@ -495,6 +498,14 @@ Route::prefix('v1')->group(function () {
             Route::post('quotations/{id}/convert', 'convert')->whereNumber('id');
             Route::post('quotations/{id}/assign', 'assign')->whereNumber('id');
             Route::post('quotations/{id}/{action}', 'transition')->whereNumber('id')->whereIn('action', ['send', 'accept', 'decline', 'withdraw', 'revise']);
+        });
+
+        // Payment requests (docs/payment-requests.md): customers' "I've paid" with a screenshot; approving records the payment.
+        Route::middleware('permission:transactions.create_manual,staff')->controller(PaymentRequestController::class)->group(function () {
+            Route::get('payment-requests', 'index');
+            Route::get('payment-requests/{id}/file', 'file')->whereNumber('id');
+            Route::post('payment-requests/{id}/approve', 'approve')->whereNumber('id');
+            Route::post('payment-requests/{id}/reject', 'reject')->whereNumber('id');
         });
 
         // Payments & invoices (§4.6): cash book, method cards, company balance, manual entries, online payment review,

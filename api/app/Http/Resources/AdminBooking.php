@@ -12,6 +12,7 @@ use App\Models\BookingVoucher;
 use App\Models\Invoice;
 use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
+use App\Models\PaymentRequest;
 use App\Models\Staff;
 use App\Models\Transaction;
 use App\Services\Booking\BookingQuoteEditor;
@@ -20,6 +21,7 @@ use App\Services\Documents\TravellerDocuments;
 use App\Services\Ledger\LedgerService;
 use App\Services\Notifications\MessageRenderer;
 use App\Services\Notifications\NotificationSettings;
+use App\Services\Payments\PaymentRequests;
 use App\Support\Money;
 use App\Support\Payments\PaymentOptions;
 use App\Support\Pricing\PricingConfig;
@@ -165,8 +167,13 @@ final class AdminBooking
                     'gateway_surcharge' => Money::toNumber($a->gateway_surcharge), 'failure_reason' => $a->failure_reason,
                     'risk_level' => $a->risk_level, 'created_at' => $a->created_at?->toIso8601String(), 'settled_at' => $a->settled_at?->toIso8601String(),
                 ])->values(),
+            // Customers' "I've paid" with screenshots (docs/payment-requests.md), for staff who record payments.
+            'payment_requests' => $can('transactions.create_manual')
+                ? PaymentRequest::query()->where('booking_id', $booking->id)->with('decidedBy')->latest('id')->get()->map(fn (PaymentRequest $row) => PaymentRequests::forStaff($row))->values()
+                : [],
             // What this staff member may do now. The server checks again on every action.
             'actions' => [
+                'decide_payment_requests' => $can('transactions.create_manual') && ! $booking->status->isFinal(),
                 'edit_quote' => $open && $current === null && $can('bookings.update'),
                 // A customer's coupon, while the quote can still change (docs/coupons.md §2.5).
                 'apply_coupon' => $open && $current === null && $can('bookings.update') && $booking->couponRedemption === null,

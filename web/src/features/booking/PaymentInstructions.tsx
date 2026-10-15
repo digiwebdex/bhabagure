@@ -4,17 +4,41 @@ import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 
 import { buttonClass } from '@/components/ui/button';
-import type { ManualPayment } from '@/lib/booking-api';
+import type { ManualPayment, PaymentRequestRow } from '@/lib/booking-api';
 import { useFormatters } from '@/lib/use-formatters';
+
+import { PaymentRequestForm, PaymentRequestList, type SendPaymentRequest } from './PaymentRequests';
 
 /**
  * How to pay a booking's balance by hand (docs/phase-8-visa-quotes-pricing-downloads.md §4.F): NPSB bank transfer, the
  * SSLCommerz payment link while the built-in checkout is off, and bKash with its charge already added. Every figure
- * comes from the API, so the booking page, the portal, the PDFs and the WhatsApp message quote the same amounts.
+ * comes from the API, so the booking page, the portal, the PDFs and the WhatsApp message quote the same amounts. With
+ * `send`, each bank and bKash box also takes "I've paid" with a screenshot for staff to approve (docs/payment-requests.md).
  */
-export function PaymentInstructions({ manual, reference, portal = false, alongsideCheckout = false }: { manual: ManualPayment; reference: string; portal?: boolean; alongsideCheckout?: boolean }) {
+export function PaymentInstructions({
+  manual,
+  reference,
+  portal = false,
+  alongsideCheckout = false,
+  requests = [],
+  send,
+  onSent,
+}: {
+  manual: ManualPayment;
+  reference: string;
+  portal?: boolean;
+  alongsideCheckout?: boolean;
+  requests?: PaymentRequestRow[];
+  send?: SendPaymentRequest;
+  onSent?: () => void;
+}) {
   const t = useTranslations('payHow');
   const f = useFormatters();
+  const [justSent, setJustSent] = useState(false);
+  const sent = () => {
+    setJustSent(true);
+    onSent?.();
+  };
   const box = portal ? 'border-portal-line bg-app-surface' : 'border-hairline bg-white';
 
   return (
@@ -25,6 +49,8 @@ export function PaymentInstructions({ manual, reference, portal = false, alongsi
         </h2>
         <span className="text-13 leading-1.55 text-muted">{t('reference', { reference })}</span>
       </div>
+
+      {send ? <PaymentRequestList requests={requests} justSent={justSent} /> : null}
 
       {manual.banks.map((bank) => (
         // One box per account (a second bank, BRAC Bank, was asked for on 2026-09-19); the customer uses either.
@@ -38,6 +64,7 @@ export function PaymentInstructions({ manual, reference, portal = false, alongsi
             <Row label={t('routingNumber')} value={bank.routingNumber} copy />
             <Row label={t('amount')} value={f.bdt(manual.amount)} strong />
           </dl>
+          {send ? <PaymentRequestForm into={{ method: 'bank_transfer', accountNumber: bank.accountNumber }} due={manual.amount} send={send} onSent={sent} portal={portal} /> : null}
         </div>
       ))}
 
@@ -61,6 +88,7 @@ export function PaymentInstructions({ manual, reference, portal = false, alongsi
             <Row label={t('bkashSend')} value={f.bdt(manual.bkash.total)} strong />
           </dl>
           <span className="text-12.5 leading-1.5 text-muted">{t('bkashNote', { reference })}</span>
+          {send ? <PaymentRequestForm into={{ method: 'bkash' }} due={manual.amount} send={send} onSent={sent} portal={portal} /> : null}
         </div>
       ) : null}
 

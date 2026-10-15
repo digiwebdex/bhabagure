@@ -23,6 +23,7 @@ import { BookingStatusBadge, PaymentBadge } from './badges'
 import { TicketsCard } from './TicketsCard'
 import { VouchersCard } from './VouchersCard'
 import { TravellerEditDialog } from './TravellerEditDialog'
+import { PaymentRequestItem } from '../payment-requests/PaymentRequestItem'
 
 export function BookingDetailPage() {
   const id = Number(useParams().id)
@@ -86,6 +87,7 @@ function BookingView({ booking }: { booking: BookingDetail }) {
           <InvoiceCard booking={booking} />
         </div>
         <div className="flex min-w-0 flex-col gap-4.5">
+          {booking.payment_requests.length > 0 ? <PaymentRequestsCard booking={booking} /> : null}
           <PaymentsCard booking={booking} />
           <TravellersCard booking={booking} />
           <TicketsCard booking={booking} />
@@ -455,6 +457,24 @@ function InvoiceCard({ booking }: { booking: BookingDetail }) {
           onSubmit={(reason) => voidInvoice.mutate({ invoiceId: current.id, reason }, { onSuccess: () => { setVoidOpen(false); toast(t('bookings.done.voided')) } })}
         />
       ) : null}
+    </Card>
+  )
+}
+
+/** The customer's "I've paid" with screenshots (docs/payment-requests.md), waiting ones first, to approve or reject. */
+function PaymentRequestsCard({ booking }: { booking: BookingDetail }) {
+  const { t } = useTranslation()
+  const waiting = booking.payment_requests.filter((row) => row.status === 'pending').length
+  const rows = [...booking.payment_requests].sort((a, b) => Number(b.status === 'pending') - Number(a.status === 'pending'))
+
+  return (
+    <Card>
+      <CardTitle title={t('paymentRequests.cardTitle')} aside={waiting > 0 ? <Badge tone="orange">{t('paymentRequests.waiting', { count: waiting })}</Badge> : undefined} />
+      <ul className="m-0 flex list-none flex-col p-0" data-testid="booking-payment-requests">
+        {rows.map((row) => (
+          <PaymentRequestItem key={row.id} row={row} canDecide={booking.actions.decide_payment_requests} bkashChargePercent={booking.bkash_charge_percent} />
+        ))}
+      </ul>
     </Card>
   )
 }

@@ -20,4 +20,15 @@ return [
         'bonus' => 'A bonus payout: delete it here and pay it again from Bonus.',
         'charge' => 'This payment came with a bKash charge: delete it and record it again on the booking.',
     ],
+    // Payment requests (docs/payment-requests.md): the customer reads these on the booking page and in the portal.
+    'requests' => [
+        'booking_closed' => 'This booking is closed and takes no more payments. Please contact our office.',
+        'nothing_due' => 'Nothing is due on this booking.',
+        'over_due' => 'That is more than is still due on this booking.',
+        'unknown_account' => 'Choose one of the accounts shown under How to pay.',
+        'too_many_pending' => 'Your earlier payments are still being checked. Please wait until we confirm them.',
+        'duplicate_reference' => 'A payment with this transaction or reference number was already sent.',
+        'already_decided' => 'This request was already approved or rejected.',
+        'bkash_charge' => 'A bKash charge needs the bKash charge set in Site settings and the transaction ID on the request.',
+    ],
 ];

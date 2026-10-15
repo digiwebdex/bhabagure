@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
-import { getBooking, isJustBooked, recallBookingToken, startPayment, type PublicBooking } from '@/lib/booking-api';
+import { getBooking, isJustBooked, recallBookingToken, sendPaymentRequest, startPayment, type PublicBooking } from '@/lib/booking-api';
 import { displayPhone, whatsappUrl } from '@/lib/links';
 import { useFormatters } from '@/lib/use-formatters';
 import type { PaymentMethod } from '@/state/booking';
@@ -97,6 +97,15 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
   }
 
   const { booking } = view;
+  // "I've paid" with a screenshot, sent with this booking's private token (docs/payment-requests.md).
+  const paymentRequests = {
+    requests: booking.paymentRequests,
+    send: async (form: FormData) => {
+      const result = await sendPaymentRequest(reference, view.token, form, locale);
+      return result.ok ? ({ ok: true } as const) : { ok: false as const, message: 'message' in result ? result.message : undefined };
+    },
+    onSent: () => void load(),
+  };
   const outcome =
     booking.paymentStatus === 'paid'
       ? 'paid'
@@ -151,7 +160,7 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
 
       {booking.payment.canPay && outcome !== 'checking' && !booking.payment.checkout ? (
         booking.payment.manual ? (
-          <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} />
+          <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} {...paymentRequests} />
         ) : (
           <p role="note" className="rounded-12 bg-orange-tint px-3.5 py-3 text-14 leading-1.6 text-amber">
             {tb('paymentUnavailable')}
@@ -193,7 +202,7 @@ export function BookingStatusPanel({ reference }: { reference: string }) {
         </div>
       ) : null}
       {booking.payment.canPay && outcome !== 'checking' && booking.payment.checkout && booking.payment.manual && (booking.payment.manual.banks.length > 0 || booking.payment.manual.bkash) ? (
-        <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} alongsideCheckout />
+        <PaymentInstructions manual={booking.payment.manual} reference={booking.reference} alongsideCheckout {...paymentRequests} />
       ) : null}
 
       <div className="flex flex-col gap-1.5 rounded-12 bg-row-alt px-3.5 py-3 text-13 leading-1.55 text-muted">

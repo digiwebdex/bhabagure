@@ -54,6 +54,16 @@ export function TripDetailView({ reference }: { reference: string }) {
     } else setPayError(result.code === 'payment_unavailable' || result.code === 'gateway_unavailable' ? (result.message ?? t('payFailed')) : t('payFailed'));
   };
 
+  // "I've paid" with a screenshot, as the signed-in customer (docs/payment-requests.md).
+  const paymentRequests = {
+    requests: trip.paymentRequests,
+    send: async (form: FormData) => {
+      const result = await portalCall(`public/bookings/${encodeURIComponent(trip.reference)}/payment-requests`, locale, { method: 'POST', body: form });
+      return result.ok ? ({ ok: true } as const) : { ok: false as const, message: 'message' in result ? result.message : undefined };
+    },
+    onSent: reload,
+  };
+
   const row = (label: string, value: string, strong = false) => (
     <div className={`flex justify-between gap-3 ${strong ? 'font-bold' : ''}`}>
       <dt className={strong ? '' : 'text-app-muted'}>{label}</dt>
@@ -120,7 +130,7 @@ export function TripDetailView({ reference }: { reference: string }) {
             </p>
           ) : trip.payment.canPay && !trip.payment.checkout ? (
             trip.payment.manual ? (
-              <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal />
+              <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal {...paymentRequests} />
             ) : (
               <p role="note" className="m-0 rounded-12 bg-orange-tint px-3.5 py-3 text-13.5 text-amber">
                 {tb('paymentUnavailable')}
@@ -156,7 +166,7 @@ export function TripDetailView({ reference }: { reference: string }) {
             </div>
           ) : null}
           {!checking && trip.payment.canPay && trip.payment.checkout && trip.payment.manual && (trip.payment.manual.banks.length > 0 || trip.payment.manual.bkash) ? (
-            <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal alongsideCheckout />
+            <PaymentInstructions manual={trip.payment.manual} reference={trip.reference} portal alongsideCheckout {...paymentRequests} />
           ) : null}
         </Card>
 
