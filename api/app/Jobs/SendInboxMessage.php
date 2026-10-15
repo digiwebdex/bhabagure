@@ -75,6 +75,10 @@ class SendInboxMessage implements ShouldQueue
         }
 
         $this->outcome($message, $result);
+        // Blue ticks only now, with the answer — never just for opening the chat (docs/admin-inbox.md, "Read receipts").
+        if ($result->isSent()) {
+            MarkInboxRead::dispatch($message->conversation_id);
+        }
     }
 
     private function messenger(ConversationMessage $message): void

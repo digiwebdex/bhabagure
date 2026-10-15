@@ -9,8 +9,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 /**
- * Blue ticks on the customer's phone once staff have opened the chat (docs/admin-inbox.md): the latest message they
- * sent is marked read through WaSender. Best effort — nothing is retried.
+ * Blue ticks on the customer's phone once staff have answered from the inbox (docs/admin-inbox.md, "Read receipts") — not when the
+ * chat is only opened: the latest message they sent is marked read through WaSender. Best effort — nothing is retried.
  */
 class MarkInboxRead implements ShouldQueue
 {

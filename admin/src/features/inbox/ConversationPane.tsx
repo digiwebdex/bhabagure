@@ -23,7 +23,7 @@ export function ConversationPane({ id, onBack }: { id: number; onBack: () => voi
   const [hasOlder, setHasOlder] = useState<boolean | null>(null)
   const unread = query.data?.data.unread_count ?? 0
 
-  // Opening a chat with unread messages reads it (and sends the customer blue ticks on WhatsApp).
+  // Opening a chat with unread messages clears the unread count here only: the customer gets blue ticks with a reply.
   useEffect(() => {
     if (unread > 0 && !markRead.isPending) markRead.mutate(undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when new messages arrive

@@ -203,6 +203,27 @@ class InboxTest extends TestCase
     }
 
     #[Test]
+    public function opening_a_chat_sends_the_customer_no_blue_ticks_until_staff_answer(): void
+    {
+        // The owner, 2026-10-15: "Seen" with no answer made customers think they were ignored.
+        Http::fake([
+            self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 7002, 'status' => 'in_progress']]),
+            self::WASENDER.'/messages/read' => Http::response(['success' => true]),
+        ]);
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Bali package?')])->assertOk();
+        $conversation = Conversation::query()->sole();
+        $agent = $this->staff('sales_agent');
+
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/inbox/conversations/{$conversation->id}/read")->assertOk();
+        $this->assertSame(0, $conversation->fresh()->unread_count);
+        Http::assertNotSent(fn (HttpRequest $request) => str_ends_with($request->url(), '/messages/read'));
+
+        // A failed reply sends no ticks either; a reply that goes does, for the customer's message.
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/inbox/conversations/{$conversation->id}/messages", ['body' => 'Ji, 3 rat 4 din'])->assertCreated();
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === self::WASENDER.'/messages/read' && $request['key']['id'] === 'IN1' && $request['key']['fromMe'] === false);
+    }
+
+    #[Test]
     public function a_pdf_reply_is_fetched_by_whatsapp_through_a_short_signed_link_only(): void
     {
         Http::fake([self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 7002]])]);
@@ -215,6 +236,9 @@ class InboxTest extends TestCase
 
         $url = null;
         Http::assertSent(function (HttpRequest $request) use (&$url) {
+            if ($request->url() !== self::WASENDER.'/send-message') {
+                return false; // the read receipt that follows the reply
+            }
             $url = $request['documentUrl'] ?? null;
 
             return $request['fileName'] === 'Mustang tour.pdf' && $request['text'] === 'Mustang brochure';

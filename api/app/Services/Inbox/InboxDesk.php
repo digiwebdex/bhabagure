@@ -3,7 +3,6 @@
 namespace App\Services\Inbox;
 
 use App\Enums\LeadSource;
-use App\Jobs\MarkInboxRead;
 use App\Jobs\SendInboxMessage;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
@@ -180,13 +179,16 @@ final class InboxDesk
             ->orderByRaw('external_id = ? desc', [$phone])->orderByDesc('last_message_at')->first();
     }
 
+    /**
+     * Opening a chat clears the inbox's own unread count — nothing more. The customer gets no blue ticks for it (the
+     * owner's choice, 2026-10-15: "Seen" without an answer upset customers); they come with a reply (SendInboxMessage).
+     */
     public function markRead(Conversation $conversation): void
     {
         if ($conversation->unread_count === 0) {
             return;
         }
         $conversation->forceFill(['unread_count' => 0])->save();
-        MarkInboxRead::dispatch($conversation->id);
     }
 
     public function assign(Conversation $conversation, ?Staff $to, Staff $by): void

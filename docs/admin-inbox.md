@@ -40,7 +40,10 @@ SMS is not in the inbox: bulksmsbd.net only sends, it cannot receive replies.
 - Delivery ticks: `messages.update` gives them, and `message.sent` links WaSender's id to WhatsApp's.
 - Media: photos, documents, voice notes and videos are fetched through WaSender's decrypt-media link (it lasts an
   hour) and stored encrypted.
-- Read receipts: opening a chat marks it read and sends blue ticks.
+- Read receipts (changed 2026-10-15, the owner's choice): opening a chat only clears the inbox's unread count. The
+  customer gets blue ticks when a staff reply from here has actually gone (`SendInboxMessage` → `MarkInboxRead`), so
+  "Seen" always comes with an answer. Before, a chat left open on a screen marked every new message seen at once, and
+  customers took it as being ignored. WaSender's own auto-read must be off too (§3, step 4).
 - Customer records: a chat whose number matches a customer is linked to them automatically.
 - History starts when the inbox is switched on. WaSender has no history API, so older chats stay on the phone.
 
@@ -55,7 +58,8 @@ SMS is not in the inbox: bulksmsbd.net only sends, it cannot receive replies.
 - Text, and optionally a photo, PDF or voice note of up to 16 MB.
 - The provider fetches the file once through a 30-minute signed link, `/api/v1/public/inbox-files/…`.
 - A reply that can't go shows "Not sent" with the reason.
-- Answering reads the chat, and an unassigned chat becomes the replier's.
+- Answering reads the chat (and, once the reply has gone, sends the customer blue ticks), and an unassigned chat
+  becomes the replier's.
 
 **Admin → Communication → Inbox** (sidebar badge = chats with unread messages):
 - The list:
@@ -94,6 +98,11 @@ Permissions:
    - the same secret
    - the events `messages.received`, `messages.upsert`, `messages.update`, `message.sent`, `session.status`
 3. Send a WhatsApp message to the number from another phone: it appears in Admin → Inbox within seconds.
+4. **No automatic "Seen"** (2026-10-15). In the same session's settings, the option that marks incoming messages as
+   read automatically (named like "Read incoming messages" / auto-read) must be **off**, and "Always online" too if it
+   is shown. With it on, WaSender itself sends blue ticks for every message the moment it arrives, whatever the inbox
+   does. Check it: from another phone, send the number a message and don't open the chat anywhere — it must stay at
+   two grey ticks.
 
 ## 4. Connecting the Facebook Page
 
