@@ -70,10 +70,10 @@ final class PayrollDesk
      * @param  array<string, int|float>  $totals  DailyAttendance totals
      * @return array{day_rate: float, deduction_days: float, deductions: float, adjustments: float, payable: int}
      */
-    public static function figures(float $base, int $workingDays, int $latePayPercent, array $totals, float $adjustments): array
+    public static function figures(float $base, int $workingDays, int $latePayPercent, array $totals, float $adjustments, string $basis = 'attendance'): array
     {
         $dayRate = $base / max(1, $workingDays);
-        $deductionDays = self::deductionDays($totals, $latePayPercent);
+        $deductionDays = self::deductionDays($totals, $latePayPercent, $basis);
         $deductions = round($dayRate * $deductionDays, 2);
 
         return [
@@ -278,9 +278,15 @@ final class PayrollDesk
     }
 
     /** @param array<string, int|float> $totals */
-    private static function deductionDays(array $totals, int $latePayPercent): float
+    private static function deductionDays(array $totals, int $latePayPercent, string $basis = 'attendance'): float
     {
-        return $totals['absent_days'] + $totals['not_employed_working_days'] + (100 - $latePayPercent) / 100 * $totals['reduced_days'];
+        // A fixed monthly salary (docs/staff-without-access.md) is cut only for working days outside employment.
+        if ($basis === 'fixed') {
+            return (float) $totals['not_employed_working_days'];
+        }
+
+        // Unpaid leave costs a day's pay, as an absence does (the owner's choice, 2026-10-16; it used to cost nothing).
+        return $totals['absent_days'] + ($totals['leave_unpaid'] ?? 0) + $totals['not_employed_working_days'] + (100 - $latePayPercent) / 100 * $totals['reduced_days'];
     }
 
     /**
@@ -307,7 +313,8 @@ final class PayrollDesk
                     'totals' => $computed[$person->id]['totals'],
                     'days' => $computed[$person->id]['days'],
                     'base' => $base,
-                    'figures' => $base === null ? null : self::figures($base, $rules->working_days_per_month, $rules->late_early_pay_percent, $computed[$person->id]['totals'], (float) $own->sum('amount')),
+                    'salary_basis' => $person->profile?->salary_basis ?? 'attendance',
+                    'figures' => $base === null ? null : self::figures($base, $rules->working_days_per_month, $rules->late_early_pay_percent, $computed[$person->id]['totals'], (float) $own->sum('amount'), $person->profile?->salary_basis ?? 'attendance'),
                     'adjustments' => $own->map(fn (PayrollAdjustment $adjustment) => self::adjustmentRow($adjustment))->values()->all(),
                     'item_id' => null,
                     'paid_at' => null,
@@ -330,10 +337,12 @@ final class PayrollDesk
         return [
             'staff' => AttendanceController::person($item->staff),
             'totals' => $item->totals,
+            'salary_basis' => $item->staff->profile?->salary_basis ?? 'attendance',
             'base' => (float) $item->base,
             'figures' => [
                 'day_rate' => (float) $item->day_rate,
-                'deduction_days' => round(self::deductionDays($item->totals, (int) ($rules['late_early_pay_percent'] ?? 50)), 2),
+                // From what was frozen, so a later rule (unpaid leave, a fixed salary) never re-reads a finalised month.
+                'deduction_days' => (float) $item->day_rate > 0 ? round((float) $item->deductions / (float) $item->day_rate, 2) : 0.0,
                 'deductions' => (float) $item->deductions,
                 'adjustments' => (float) $item->adjustments,
                 'payable' => (int) round((float) $item->payable),

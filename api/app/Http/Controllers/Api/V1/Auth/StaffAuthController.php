@@ -84,7 +84,8 @@ class StaffAuthController extends Controller
 
         $recent = $staff !== null && StaffInvitation::query()->where('staff_id', $staff->id)->where('purpose', StaffInvitation::RESET)
             ->where('created_at', '>', now()->subMinute())->exists();
-        if ($staff !== null && $staff->status === StaffStatus::Active && ! $recent) {
+        // Staff without software access never sign in, so they get no link either (docs/staff-without-access.md).
+        if ($staff !== null && $staff->status === StaffStatus::Active && $staff->software_access && ! $recent) {
             $plain = $links->issue($staff, StaffInvitation::RESET, null);
             $channels = ['email' => $links->email($staff, $plain, StaffInvitation::RESET), 'whatsapp' => $links->whatsApp($staff, $plain, StaffInvitation::RESET)];
             $this->audit->record('auth.staff.password_reset_requested', $staff, $staff, $channels + ['ip' => $request->ip()]);

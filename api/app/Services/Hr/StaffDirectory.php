@@ -23,7 +23,7 @@ final class StaffDirectory
 {
     public const PROFILE_FIELDS = [
         'designation', 'joined_on', 'left_on', 'date_of_birth', 'nid_number', 'address',
-        'emergency_contact_name', 'emergency_contact_phone', 'payout_method', 'payout_account',
+        'emergency_contact_name', 'emergency_contact_phone', 'payout_method', 'payout_account', 'salary_basis',
     ];
 
     /** Encrypted fields. The audit log only ever names changed fields, never their values. */
@@ -45,30 +45,64 @@ final class StaffDirectory
      */
     public function create(array $data, Staff $by): array
     {
-        $this->ensureAssignable($data['role'], $by);
+        // docs/staff-without-access.md: a peon, an office assistant, a video editor — on the list, the attendance and the
+        // salary sheet, never signing in: no role, no invitation, active from the start, an email only if HR has one.
+        $access = (bool) ($data['software_access'] ?? true);
+        if ($access) {
+            $this->ensureAssignable($data['role'], $by);
+        }
 
-        return DB::transaction(function () use ($data, $by) {
+        return DB::transaction(function () use ($data, $by, $access) {
             $staff = Staff::query()->create([
                 'employee_code' => self::nextEmployeeCode(),
                 'name' => $data['name'],
-                'email' => Str::lower($data['email']),
+                'email' => filled($data['email'] ?? null) ? Str::lower($data['email']) : null,
                 'phone' => $data['phone'] ?? null,
-                // Nobody knows this password: the invitation sets the real one.
+                // Nobody knows this password: the invitation sets the real one (and without access there is none).
                 'password' => Str::password(64),
-                'status' => StaffStatus::Invited,
+                'status' => $access ? StaffStatus::Invited : StaffStatus::Active,
+                'software_access' => $access,
                 'must_change_password' => false,
                 'locale' => $data['locale'] ?? 'bn',
             ]);
-            $staff->syncRoles([$data['role']]);
+            if ($access) {
+                $staff->syncRoles([$data['role']]);
+            }
             StaffProfile::query()->create([
                 'staff_id' => $staff->id,
                 'designation' => $data['designation'] ?? null,
                 'joined_on' => $data['joined_on'] ?? null,
+                'salary_basis' => $data['salary_basis'] ?? 'attendance',
                 'updated_by_staff_id' => $by->id,
             ]);
-            $this->audit->record('staff.created', $by, $staff, ['role' => $data['role']]);
+            $this->audit->record('staff.created', $by, $staff, ['role' => $access ? $data['role'] : null, 'software_access' => $access]);
 
-            return [$staff, $this->invitations->issue($staff, StaffInvitation::INVITE, $by)];
+            return [$staff, $access ? $this->invitations->issue($staff, StaffInvitation::INVITE, $by) : null];
+        });
+    }
+
+    /**
+     * Software access for someone added without it (docs/staff-without-access.md): their email and a role, and the usual
+     * invitation to set a password. They stay active, so their attendance and salary carry on as before.
+     *
+     * @return array{0: Staff, 1: string} the staff member and the plain invitation token
+     *
+     * @throws HrRefused
+     */
+    public function grantAccess(Staff $staff, string $email, string $role, Staff $by): array
+    {
+        $this->ensureMayManage($staff, $by);
+        if ($staff->software_access) {
+            throw new HrRefused('already_has_access');
+        }
+        $this->ensureAssignable($role, $by);
+
+        return DB::transaction(function () use ($staff, $email, $role, $by) {
+            $staff->forceFill(['email' => Str::lower($email), 'software_access' => true])->save();
+            $staff->syncRoles([$role]);
+            $this->audit->record('staff.access_granted', $by, $staff, ['role' => $role]);
+
+            return [$staff->refresh(), $this->invitations->issue($staff, StaffInvitation::INVITE, $by)];
         });
     }
 
@@ -81,8 +115,9 @@ final class StaffDirectory
     {
         $this->ensureMayManage($staff, $by);
 
-        if (array_key_exists('email', $data) && Str::lower((string) $data['email']) !== $staff->email
-            && $staff->status !== StaffStatus::Invited && ! $by->isSuperAdmin()) {
+        // Without software access the email is only a contact detail, not a sign-in: anyone managing HR may change it.
+        if (array_key_exists('email', $data) && Str::lower((string) $data['email']) !== (string) $staff->email
+            && $staff->software_access && $staff->status !== StaffStatus::Invited && ! $by->isSuperAdmin()) {
             throw new HrRefused('email_locked');
         }
         if (filled($data['nid_number'] ?? null) && StaffProfile::query()->where('nid_number_hash', StaffDocument::numberHash((string) $data['nid_number']))
@@ -92,8 +127,8 @@ final class StaffDirectory
 
         return DB::transaction(function () use ($staff, $data, $by) {
             $account = array_intersect_key($data, array_flip(['name', 'email', 'phone', 'locale']));
-            if (isset($account['email'])) {
-                $account['email'] = Str::lower((string) $account['email']);
+            if (array_key_exists('email', $account)) {
+                $account['email'] = filled($account['email']) ? Str::lower((string) $account['email']) : null;
             }
             $staff->fill($account);
             $changed = array_keys($staff->getDirty());
@@ -126,6 +161,9 @@ final class StaffDirectory
             throw new HrRefused('own_role');
         }
         $this->ensureMayManage($staff, $by);
+        if (! $staff->software_access) {
+            throw new HrRefused('no_software_access');
+        }
         $this->ensureAssignable($role, $by);
         $from = $staff->getRoleNames()->first();
         if ($from === $role) {
@@ -176,7 +214,8 @@ final class StaffDirectory
 
         DB::transaction(function () use ($staff, $by) {
             $hasPassword = $staff->last_login_at !== null || $staff->invitations()->whereNotNull('used_at')->exists();
-            $staff->forceFill(['status' => $hasPassword ? StaffStatus::Active : StaffStatus::Invited])->save();
+            // Without software access there is no password to set: straight back to active.
+            $staff->forceFill(['status' => $hasPassword || ! $staff->software_access ? StaffStatus::Active : StaffStatus::Invited])->save();
             $profile = $staff->profile()->first();
             if ($profile?->left_on !== null) {
                 $profile->fill(['left_on' => null, 'updated_by_staff_id' => $by->id])->save();
@@ -213,6 +252,9 @@ final class StaffDirectory
             throw new HrRefused('own_account');
         }
         $this->ensureMayManage($staff, $by);
+        if (! $staff->software_access) {
+            throw new HrRefused('no_software_access');
+        }
         if ($staff->status !== StaffStatus::Active) {
             throw new HrRefused('not_active');
         }

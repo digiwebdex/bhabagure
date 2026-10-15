@@ -91,14 +91,19 @@ final class DailyAttendance
                 if ($out === null && $in !== null && $times !== [] && self::minutes(end($times)) - self::minutes($in) >= self::SAME_ARRIVAL_MINUTES) {
                     $out = end($times);
                 }
-                $worked = $fixes->contains('kind', AttendanceCorrection::WORKED);
+                // The day's status set by hand (Present, Absent, paid or unpaid leave): the latest in force wins over the
+                // device and over a leave request; the punches stay as they are.
+                $set = $fixes->whereIn('kind', AttendanceCorrection::DAY_STATUSES)->last()?->kind;
+                $worked = $set === AttendanceCorrection::WORKED;
+                $setLeave = in_array($set, [AttendanceCorrection::LEAVE_PAID, AttendanceCorrection::LEAVE_UNPAID], true);
 
                 $status = match (true) {
                     ($joined !== null && $date < $joined) || ($left !== null && $date > $left) => self::NOT_EMPLOYED,
                     $date > $today => self::UPCOMING,
                     $kind !== 'working' => $in !== null || $worked ? self::WORKED_OFF : $kind,
                     $worked => self::FULL,
-                    $onLeave !== null => self::LEAVE,
+                    $set === AttendanceCorrection::ABSENT => self::ABSENT,
+                    $setLeave, $onLeave !== null => self::LEAVE,
                     $in === null => $date === $today ? self::UPCOMING : self::ABSENT,
                     $out === null => $date === $today ? self::IN_PROGRESS : self::SINGLE_PUNCH,
                     default => self::judge($in, $out, $rules),
@@ -114,7 +119,9 @@ final class DailyAttendance
                     'out' => $out === null ? null : substr($out, 0, 5),
                     'punches' => array_map(fn (string $time) => substr($time, 0, 5), $times),
                     'corrected' => $fixes->isNotEmpty(),
-                    'leave' => $status === self::LEAVE ? ['id' => $onLeave->id, 'paid' => $onLeave->paid] : null,
+                    'leave' => $status !== self::LEAVE ? null : ($setLeave
+                        ? ['id' => null, 'paid' => $set === AttendanceCorrection::LEAVE_PAID, 'manual' => true]
+                        : ['id' => $onLeave->id, 'paid' => $onLeave->paid, 'manual' => false]),
                     'minutes' => $in !== null && $out !== null ? max(0, self::minutes($out) - self::minutes($in)) : 0,
                 ];
             }

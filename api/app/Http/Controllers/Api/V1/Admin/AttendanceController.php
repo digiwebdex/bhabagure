@@ -106,13 +106,19 @@ class AttendanceController extends Controller
             'staff_id' => ['required', 'integer', Rule::exists('staff', 'id')],
             'work_date' => ['required', 'date_format:Y-m-d'],
             'kind' => ['required', Rule::in(AttendanceCorrection::KINDS)],
-            'time' => ['nullable', 'required_unless:kind,worked', 'date_format:H:i'],
+            'time' => ['nullable', 'required_if:kind,in,out', 'date_format:H:i'],
+            // A day status (worked · absent · leave_paid · leave_unpaid) may run to a later date.
+            'until' => ['nullable', 'date_format:Y-m-d', 'prohibited_if:kind,in,out'],
             'reason' => ['required', 'string', 'min:3', 'max:300'],
         ]);
         $person = Staff::query()->with(['roles', 'profile'])->findOrFail($data['staff_id']);
 
         try {
-            $log->add($person, $data['work_date'], $data['kind'], isset($data['time']) ? $data['time'].':00' : null, $data['reason'], $request->user('staff'));
+            if (in_array($data['kind'], AttendanceCorrection::DAY_STATUSES, true)) {
+                $log->setDays($person, $data['work_date'], $data['until'] ?? $data['work_date'], $data['kind'], $data['reason'], $request->user('staff'));
+            } else {
+                $log->add($person, $data['work_date'], $data['kind'], $data['time'].':00', $data['reason'], $request->user('staff'));
+            }
         } catch (AttendanceRefused $e) {
             return $this->refused($e);
         }

@@ -67,7 +67,8 @@ export type Day = {
   out: string | null
   punches: string[]
   corrected: boolean
-  leave: { id: number; paid: boolean } | null
+  /** id null and manual true for leave set by hand from the attendance page, not a leave request. */
+  leave: { id: number | null; paid: boolean; manual: boolean } | null
   minutes: number
 }
 
@@ -115,7 +116,11 @@ export type MonthData = {
   rows: { staff: Person; totals: Totals; today: Day | null }[]
 }
 
-export type Correction = { id: number; work_date: string; kind: 'in' | 'out' | 'worked' | 'reversal'; time: string | null; reason: string; reverses_id: number | null; by?: string | null; created_at: string | null }
+/** A time fixed by hand (in, out), or the whole day's status (docs/staff-without-access.md §3): worked is Present. */
+export const DAY_STATUS_KINDS = ['worked', 'absent', 'leave_paid', 'leave_unpaid'] as const
+export type CorrectionKind = 'in' | 'out' | (typeof DAY_STATUS_KINDS)[number]
+
+export type Correction = { id: number; work_date: string; kind: CorrectionKind | 'reversal'; time: string | null; reason: string; reverses_id: number | null; by?: string | null; created_at: string | null }
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'revoked'
 export type LeaveRow = {
@@ -214,7 +219,7 @@ export type RulesInput = Omit<Rules, 'effective_month'> & { month: string }
 
 export const attendanceActions = {
   saveRules: (body: RulesInput) => api.put<Data<{ month: string; rules: Rules; versions: Rules[] }>>('admin/attendance/rules', body),
-  correct: (body: { staff_id: number; work_date: string; kind: 'in' | 'out' | 'worked'; time: string | null; reason: string }) => api.post<Data<PersonMonth>>('admin/attendance/corrections', body),
+  correct: (body: { staff_id: number; work_date: string; kind: CorrectionKind; time: string | null; until: string | null; reason: string }) => api.post<Data<PersonMonth>>('admin/attendance/corrections', body),
   reverse: ({ id, reason }: { id: number; reason: string }) => api.post<Data<PersonMonth>>(`admin/attendance/corrections/${id}/reverse`, { reason }),
 }
 

@@ -86,6 +86,6 @@ final class WalletAuth
      */
     public static function allowed(Staff $staff): bool
     {
-        return $staff->status === StaffStatus::Active && ($staff->isSuperAdmin() || Member::hasAccess($staff->id));
+        return $staff->status === StaffStatus::Active && $staff->software_access && ($staff->isSuperAdmin() || Member::hasAccess($staff->id));
     }
 }

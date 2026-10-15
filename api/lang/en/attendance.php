@@ -15,6 +15,8 @@ return [
     'own_attendance' => 'Someone else corrects your own attendance.',
     'future_day' => 'A day that hasn’t happened yet can’t be corrected.',
     'already_reversed' => 'This correction has already been undone.',
+    'range_too_long' => 'Choose 1 to 31 days, the last on or after the first.',
+    'no_working_days' => 'Every day in this range is a holiday or a weekly day off.',
     'holiday_overlap' => 'Another holiday already falls on one of these days.',
     'holiday_too_long' => 'A holiday can be 1 to 15 days long. Enter longer closures as two holidays.',
 ];

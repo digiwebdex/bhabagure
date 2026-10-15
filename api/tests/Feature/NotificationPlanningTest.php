@@ -176,6 +176,8 @@ class NotificationPlanningTest extends TestCase
     #[Test]
     public function website_forms_alert_the_sales_team_and_a_nearly_full_departure_alerts_once(): void
     {
+        // The air quote below departs on 12 October 2026: the website refuses a date already past.
+        $this->travelTo(Carbon::parse('2026-10-01 10:00', 'Asia/Dhaka'));
         $agent = $this->verifiedStaff('sales_agent', '8801811000222');
         NotificationSettings::saveAlertRecipients(['new_booking_alert' => [], 'new_lead_alert' => [$agent->id], 'low_seat_alert' => [$agent->id]], $agent);
 

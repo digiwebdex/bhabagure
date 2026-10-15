@@ -15,8 +15,11 @@ class StaffProfile extends Model
 
     protected $fillable = [
         'staff_id', 'designation', 'joined_on', 'left_on', 'date_of_birth', 'nid_number', 'address',
-        'emergency_contact_name', 'emergency_contact_phone', 'payout_method', 'payout_account', 'updated_by_staff_id',
+        'emergency_contact_name', 'emergency_contact_phone', 'payout_method', 'payout_account', 'salary_basis', 'updated_by_staff_id',
     ];
+
+    /** docs/staff-without-access.md: pay worked out from attendance (absences and late days cut it), or a fixed monthly amount. */
+    public const SALARY_BASES = ['attendance', 'fixed'];
 
     protected $hidden = ['nid_number_hash'];
 

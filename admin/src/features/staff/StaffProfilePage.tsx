@@ -27,6 +27,7 @@ import {
 import { ArchiveDocumentDialog, UploadDocumentDialog } from './DocumentDialogs'
 import { DocumentStatusBadge, ExpiryNote } from './documentBits'
 import { InvitationDialog } from './InvitationDialog'
+import { SalaryBasisInput } from './StaffPage'
 import { useOpenStaffDocument } from './useOpenStaffDocument'
 
 /** One staff member's record (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): account, HR record, role and access, base salary (§6), documents. */
@@ -46,7 +47,7 @@ export function StaffProfilePage() {
       <Link to="/staff" className="self-start text-13 font-semibold text-blue">
         {t('staff.back')}
       </Link>
-      <PageHeader title={staff.name} subtitle={`${roleLabel(staff.role, locale)} · ${staff.employee_code}`} actions={<Badge tone={staff.status === 'active' ? 'green' : staff.status === 'invited' ? 'blue' : 'slate'}>{t(`staff.status.${staff.status}`)}</Badge>} />
+      <PageHeader title={staff.name} subtitle={`${staff.software_access ? roleLabel(staff.role, locale) : t('staff.noAccessBadge')} · ${staff.employee_code}`} actions={<Badge tone={staff.status === 'active' ? 'green' : staff.status === 'invited' ? 'blue' : 'slate'}>{t(`staff.status.${staff.status}`)}</Badge>} />
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
         {/* Remounted when the saved record changes, so the form always starts from what the API holds. */}
         <RecordForm key={JSON.stringify([staff.name, staff.email, staff.phone, staff.locale, staff.profile])} staff={staff} />
@@ -72,7 +73,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
   const options = useStaffOptions()
   const [form, setForm] = useState({
     name: staff.name,
-    email: staff.email,
+    email: staff.email ?? '',
     phone: staff.phone ?? '',
     locale: staff.locale,
     designation: staff.profile.designation ?? '',
@@ -85,6 +86,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
     emergency_contact_phone: staff.profile.emergency_contact_phone ?? '',
     payout_method: staff.profile.payout_method ?? '',
     payout_account: staff.profile.payout_account ?? '',
+    salary_basis: staff.profile.salary_basis,
   })
   const save = useStaffAction(staff.id, staffActions.update(staff.id))
   const fieldError = (name: string) => (save.error instanceof ApiError ? save.error.field(name) : undefined)
@@ -96,7 +98,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
     save.mutate(
       {
         name: form.name.trim(),
-        ...(staff.actions.change_email ? { email: form.email.trim() } : {}),
+        ...(staff.actions.change_email ? { email: staff.software_access ? form.email.trim() : blankToNull(form.email) } : {}),
         phone: blankToNull(form.phone),
         locale: form.locale,
         designation: blankToNull(form.designation),
@@ -109,6 +111,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
         emergency_contact_phone: blankToNull(form.emergency_contact_phone),
         payout_method: (blankToNull(form.payout_method) as PayoutMethod | null),
         payout_account: blankToNull(form.payout_account),
+        salary_basis: form.salary_basis,
       },
       { onSuccess: () => toast(t('staff.saved')) },
     )
@@ -120,7 +123,16 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
       <fieldset disabled={!editable} className="m-0 flex flex-col gap-3.5 border-0 p-0">
         <Pair>
           <TextInput label={t('staff.name')} value={form.name} onChange={set('name')} error={fieldError('name')} maxLength={120} />
-          <TextInput label={t('staff.email')} type="email" value={form.email} onChange={set('email')} error={fieldError('email')} disabled={!staff.actions.change_email} hint={staff.actions.change_email ? undefined : t('staff.emailLocked')} maxLength={190} />
+          <TextInput
+            label={staff.software_access ? t('staff.email') : t('staff.emailOptional')}
+            type="email"
+            value={form.email}
+            onChange={set('email')}
+            error={fieldError('email')}
+            disabled={!staff.actions.change_email}
+            hint={staff.actions.change_email ? undefined : t('staff.emailLocked')}
+            maxLength={190}
+          />
         </Pair>
         <Pair>
           <TextInput label={t('staff.phone')} type="tel" value={form.phone} onChange={set('phone')} error={fieldError('phone')} maxLength={20} />
@@ -150,6 +162,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
           />
           <TextInput label={t('staff.payoutAccount')} value={form.payout_account} onChange={set('payout_account')} error={fieldError('payout_account')} hint={t('staff.privateHint')} maxLength={60} autoComplete="off" />
         </Pair>
+        <SalaryBasisInput value={form.salary_basis} onChange={set('salary_basis')} error={fieldError('salary_basis')} />
       </fieldset>
       {save.error && !(save.error instanceof ApiError && save.error.status === 422) ? <ErrorNotice error={save.error} /> : null}
       {editable ? (
@@ -172,6 +185,7 @@ function AccessCard({ staff }: { staff: StaffDetail }) {
   const options = useStaffOptions()
   const [role, setRole] = useState(staff.role?.name ?? '')
   const [suspending, setSuspending] = useState(false)
+  const [granting, setGranting] = useState(false)
   const [invitation, setInvitation] = useState<Invitation | null>(null)
   const changeRole = useStaffAction(staff.id, staffActions.role(staff.id))
   const reactivate = useStaffAction(staff.id, staffActions.reactivate(staff.id))
@@ -183,7 +197,18 @@ function AccessCard({ staff }: { staff: StaffDetail }) {
   return (
     <Card>
       <CardTitle title="Role & access" />
-      {staff.actions.change_role ? (
+      {!staff.software_access ? (
+        <div className="flex flex-col gap-2" data-testid="no-software-access">
+          <p className="m-0 text-13.5">
+            <Badge tone="slate">{t('staff.noAccessBadge')}</Badge> <span className="text-12.5 text-app-muted">{t('staff.noAccessHint')}</span>
+          </p>
+          {staff.actions.grant_access ? (
+            <button type="button" className={buttonClass('outline', 'sm', 'self-start')} onClick={() => setGranting(true)}>
+              {t('staff.grantAccess')}
+            </button>
+          ) : null}
+        </div>
+      ) : staff.actions.change_role ? (
         <div className="flex flex-wrap items-end gap-2">
           <SelectInput label={t('staff.role')} value={role} onChange={setRole} options={roles.map((option) => ({ value: option.name, label: roleLabel(option, locale) }))} className="min-w-56 flex-1" />
           <button
@@ -233,9 +258,60 @@ function AccessCard({ staff }: { staff: StaffDetail }) {
       </div>
       {actionError ? <ErrorNotice error={actionError} /> : null}
       {suspending ? <SuspendDialog staff={staff} onClose={() => setSuspending(false)} /> : null}
-      {invitation ? <InvitationDialog name={staff.name} email={staff.email} phone={staff.phone} invitation={invitation} onClose={() => setInvitation(null)} /> : null}
+      {granting ? (
+        <GrantAccessDialog
+          staff={staff}
+          onClose={() => setGranting(false)}
+          onGranted={(given, roleName) => {
+            setGranting(false)
+            setRole(roleName)
+            setInvitation(given)
+          }}
+        />
+      ) : null}
+      {invitation ? <InvitationDialog name={staff.name} email={staff.email ?? ''} phone={staff.phone} invitation={invitation} onClose={() => setInvitation(null)} /> : null}
       {element}
     </Card>
+  )
+}
+
+/** Software access for someone added without it: a sign-in email and a role, then the usual one-time invitation link. */
+function GrantAccessDialog({ staff, onClose, onGranted }: { staff: StaffDetail; onClose: () => void; onGranted: (invitation: Invitation, role: string) => void }) {
+  const { t } = useTranslation()
+  const { locale } = useFormat()
+  const options = useStaffOptions()
+  const [email, setEmail] = useState(staff.email ?? '')
+  const [role, setRole] = useState('')
+  const grant = useStaffAction(staff.id, staffActions.grantAccess(staff.id))
+  const fieldError = (name: string) => (grant.error instanceof ApiError ? grant.error.field(name) : undefined)
+  const roles = options.data?.data.roles ?? []
+
+  return (
+    <Dialog open onClose={onClose} title={t('staff.grantAccessTitle', { name: staff.name })}>
+      <p className="m-0 text-13 leading-1.6 text-app-muted">{t('staff.grantAccessNote')}</p>
+      <TextInput label={t('staff.email')} type="email" value={email} onChange={setEmail} error={fieldError('email')} hint={t('staff.emailHint')} maxLength={190} autoComplete="off" />
+      <SelectInput
+        label={t('staff.role')}
+        value={role}
+        onChange={setRole}
+        options={[{ value: '', label: t('staff.pickRole') }, ...roles.map((option) => ({ value: option.name, label: roleLabel(option, locale) }))]}
+        error={fieldError('role')}
+      />
+      {grant.error && !(grant.error instanceof ApiError && grant.error.status === 422) ? <ErrorNotice error={grant.error} /> : null}
+      <div className="flex justify-end gap-2">
+        <button type="button" className={buttonClass('outline')} onClick={onClose}>
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          className={buttonClass('primary')}
+          disabled={email.trim() === '' || role === '' || grant.isPending}
+          onClick={() => grant.mutate({ email: email.trim(), role }, { onSuccess: (response) => onGranted(response.invitation, response.data.role?.name ?? role) })}
+        >
+          {grant.isPending ? t('common.working') : t('staff.grantAndInvite')}
+        </button>
+      </div>
+    </Dialog>
   )
 }
 

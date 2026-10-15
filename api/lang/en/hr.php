@@ -21,4 +21,6 @@ return [
     'unknown_permission' => 'That permission doesn’t exist.',
     'role_name_taken' => 'Another role already has this name.',
     'document_archived' => 'This document is already archived.',
+    'no_software_access' => 'This staff member has no software access. Give it first with “Give software access”.',
+    'already_has_access' => 'This staff member already has software access.',
 ];

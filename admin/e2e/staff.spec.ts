@@ -130,3 +130,68 @@ test('"Forgot password?" on the sign-in page asks for the email and says where t
   await page.getByRole('link', { name: 'Go to sign in' }).click()
   await expect(page.getByRole('heading', { name: 'Staff sign in' })).toBeVisible()
 })
+
+test('a peon is added without software access, a day is set to unpaid leave by hand and undone, and access is given later', async ({ page }) => {
+  // docs/staff-without-access.md. A recent working day in Dhaka (not a Friday, the default day off).
+  const dhaka = (offsetDays: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date(Date.now() - offsetDays * 86_400_000))
+  let offset = 3
+  while (new Date(`${dhaka(offset)}T12:00:00Z`).getUTCDay() === 5) offset++
+  const date = dhaka(offset)
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const label = `${Number(date.slice(8, 10))} ${months[Number(date.slice(5, 7)) - 1]} ${date.slice(0, 4)}`
+  const suffix = String(Date.now()).slice(-5)
+  const name = `Karim Mia ${suffix}`
+
+  await signIn(page, 'admin')
+  await page.goto('/staff')
+  await page.getByRole('button', { name: '+ Add staff' }).click({ timeout: FIRST_LOAD.timeout })
+  const dialog = page.getByRole('dialog', { name: 'Add a staff member' })
+  await dialog.getByRole('switch').click()
+  await expect(dialog.getByLabel('Role')).toHaveCount(0)
+  await dialog.getByLabel('Name', { exact: true }).fill(name)
+  await dialog.getByLabel('Designation').fill('Peon')
+  await dialog.getByLabel('Joined').fill(`${date.slice(0, 7)}-01`)
+  await dialog.getByLabel('Salary basis').selectOption('fixed')
+  await dialog.getByRole('button', { name: 'Add staff member' }).click()
+
+  // No invitation: straight to the record.
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
+  await expect(page.getByTestId('no-software-access')).toContainText('No software access')
+  await expect(page.getByLabel('Salary basis')).toHaveValue('fixed')
+  const id = /\/staff\/(\d+)/.exec(page.url())?.[1]
+  expect(id).toBeTruthy()
+
+  // On the attendance: the day set to unpaid leave by hand, then undone back to the device's absence.
+  await page.goto(`/attendance/staff/${id}?month=${date.slice(0, 7)}`)
+  const correct = page.getByRole('button', { name: `Correct — ${label}`, exact: true })
+  const day = page.getByTestId('attendance-days-table').locator('tbody tr').filter({ has: correct })
+  await expect(day).toContainText('Absent', FIRST_LOAD)
+  await correct.click()
+  const correction = page.getByRole('dialog', { name: `Correct ${label}` })
+  await correction.getByLabel('Change').selectOption('leave_unpaid')
+  await expect(correction.getByLabel('Time')).toHaveCount(0)
+  await correction.getByLabel('Why').fill('Went to the village, told us by phone')
+  await correction.getByRole('button', { name: 'Save correction' }).click()
+  await expect(page.getByText('Correction saved')).toBeVisible()
+  await expect(day).toContainText('Unpaid leave')
+  const corrections = page.getByTestId('attendance-corrections')
+  await expect(corrections).toContainText('set as unpaid leave')
+  await corrections.getByRole('button', { name: 'Undo' }).click()
+  const undo = page.getByRole('dialog', { name: 'Undo this correction?' })
+  await undo.getByLabel('Why').fill('Wrong person')
+  await undo.getByRole('button', { name: 'Undo' }).click()
+  await expect(page.getByText('Correction undone')).toBeVisible()
+  await expect(day).toContainText('Absent')
+
+  // Access later: an email and a role, and the usual one-time invitation link.
+  await page.goto(`/staff/${id}`)
+  await page.getByRole('button', { name: 'Give software access' }).click({ timeout: FIRST_LOAD.timeout })
+  const grant = page.getByRole('dialog', { name: `Software access for ${name}` })
+  await grant.getByLabel('Sign-in email').fill(`karim.${suffix}@e2e.test`)
+  await grant.getByLabel('Role').selectOption('sales_agent')
+  await grant.getByRole('button', { name: 'Give access and invite' }).click()
+  const invitation = page.getByRole('dialog', { name: `Invitation for ${name}` })
+  await expect(invitation.getByTestId('invitation-link')).toHaveValue(/\/accept-invite#token=[0-9a-f]{64}$/)
+  await invitation.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByTestId('no-software-access')).toHaveCount(0)
+})

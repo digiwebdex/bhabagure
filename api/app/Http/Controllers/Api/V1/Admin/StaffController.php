@@ -100,9 +100,12 @@ class StaffController extends Controller
         $this->normalise($request);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email:rfc', 'max:190', Rule::unique('staff', 'email')],
+            // Without software access (docs/staff-without-access.md): no role, no invitation, an email only if HR has one.
+            'software_access' => ['nullable', 'boolean'],
+            'email' => [Rule::requiredIf(fn () => $request->boolean('software_access', true)), 'nullable', 'email:rfc', 'max:190', Rule::unique('staff', 'email')],
             'phone' => ['nullable', 'regex:/^8801[3-9]\d{8}$/'],
-            'role' => ['required', 'string', 'max:100'],
+            'role' => [Rule::requiredIf(fn () => $request->boolean('software_access', true)), 'nullable', 'string', 'max:100'],
+            'salary_basis' => ['nullable', Rule::in(StaffProfile::SALARY_BASES)],
             'locale' => ['nullable', Rule::in(['bn', 'en'])],
             'designation' => ['nullable', 'string', 'max:80'],
             'joined_on' => ['nullable', 'date_format:Y-m-d'],
@@ -110,14 +113,14 @@ class StaffController extends Controller
         $by = $request->user('staff');
 
         try {
-            [$staff, $token] = $directory->create($data, $by);
+            [$staff, $token] = $directory->create(['software_access' => $request->boolean('software_access', true)] + $data, $by);
         } catch (HrRefused $e) {
             return $this->hrRefused($e);
         }
 
         return response()->json([
             'data' => $this->detail($staff, $by),
-            'invitation' => $this->invitationData($staff, $token, $invitations),
+            'invitation' => $token === null ? null : $this->invitationData($staff, $token, $invitations),
         ], 201);
     }
 
@@ -127,7 +130,7 @@ class StaffController extends Controller
         $this->normalise($request);
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:120'],
-            'email' => ['sometimes', 'required', 'email:rfc', 'max:190', Rule::unique('staff', 'email')->ignore($staff->id)],
+            'email' => ['sometimes', $staff->software_access ? 'required' : 'nullable', 'email:rfc', 'max:190', Rule::unique('staff', 'email')->ignore($staff->id)],
             'phone' => ['sometimes', 'nullable', 'regex:/^8801[3-9]\d{8}$/'],
             'locale' => ['sometimes', 'required', Rule::in(['bn', 'en'])],
             'designation' => ['sometimes', 'nullable', 'string', 'max:80'],
@@ -141,6 +144,7 @@ class StaffController extends Controller
             'emergency_contact_phone' => ['sometimes', 'nullable', 'string', 'max:20'],
             'payout_method' => ['sometimes', 'nullable', Rule::in(StaffProfile::PAYOUT_METHODS)],
             'payout_account' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'salary_basis' => ['sometimes', 'required', Rule::in(StaffProfile::SALARY_BASES)],
         ]);
         $by = $request->user('staff');
 
@@ -197,6 +201,24 @@ class StaffController extends Controller
         return response()->json(['data' => $this->detail($staff->refresh(), $request->user('staff'))]);
     }
 
+    /** Software access for someone added without it: their email, a role and the usual invitation (docs/staff-without-access.md). */
+    public function grantAccess(Request $request, int $id, StaffDirectory $directory, StaffInvitations $invitations): JsonResponse
+    {
+        $staff = self::find($id);
+        $data = $request->validate([
+            'email' => ['required', 'email:rfc', 'max:190', Rule::unique('staff', 'email')->ignore($staff->id)],
+            'role' => ['required', 'string', 'max:100'],
+        ]);
+
+        try {
+            [$staff, $token] = $directory->grantAccess($staff, $data['email'], $data['role'], $request->user('staff'));
+        } catch (HrRefused $e) {
+            return $this->hrRefused($e);
+        }
+
+        return response()->json(['data' => $this->detail($staff, $request->user('staff')), 'invitation' => $this->invitationData($staff, $token, $invitations)]);
+    }
+
     /** A fresh invitation for someone who hasn't set a password: emailed, and its link shown once to copy. */
     public function invite(Request $request, int $id, StaffDirectory $directory, StaffInvitations $invitations): JsonResponse
     {
@@ -239,6 +261,8 @@ class StaffController extends Controller
             'email' => $staff->email,
             'phone' => $staff->phone,
             'status' => $staff->status->value,
+            // false: on the list, attendance and payroll only; never signs in (docs/staff-without-access.md).
+            'software_access' => $staff->software_access,
             'role' => $role ? self::roleData($role) : null,
             'is_super_admin' => $role?->name === StaffRole::SuperAdmin->value,
             'designation' => $staff->profile?->designation,
@@ -286,16 +310,18 @@ class StaffController extends Controller
                     'emergency_contact_phone' => $profile?->emergency_contact_phone,
                     'payout_method' => $profile?->payout_method,
                     'payout_account' => $profile?->payout_account,
+                    'salary_basis' => $profile?->salary_basis ?? 'attendance',
                 ],
                 'documents' => $documents?->map(fn (StaffDocument $document) => StaffDocumentController::row($document, $today))->values()->all(),
                 'actions' => [
                     'edit' => $may,
-                    'change_email' => $may && ($staff->status === StaffStatus::Invited || $viewer->isSuperAdmin()),
-                    'change_role' => $may && ! $mine,
+                    'change_email' => $may && ($staff->status === StaffStatus::Invited || $viewer->isSuperAdmin() || ! $staff->software_access),
+                    'change_role' => $may && ! $mine && $staff->software_access,
+                    'grant_access' => $may && ! $staff->software_access,
                     'suspend' => $may && ! $mine && $staff->status !== StaffStatus::Suspended,
                     'reactivate' => $may && $staff->status === StaffStatus::Suspended,
                     'reinvite' => $may && $staff->status === StaffStatus::Invited,
-                    'password_reset' => $may && ! $mine && $staff->status === StaffStatus::Active,
+                    'password_reset' => $may && ! $mine && $staff->status === StaffStatus::Active && $staff->software_access,
                     'upload_documents' => $viewer->can('staff_documents.manage'),
                 ],
             ];

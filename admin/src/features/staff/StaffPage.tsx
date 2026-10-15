@@ -8,13 +8,26 @@ import { DataTable, type Column, type RowAction } from '../../components/table/D
 import { buttonClass } from '../../components/ui/button'
 import { controlClass } from '../../components/ui/controls'
 import { Dialog, ErrorNotice } from '../../components/ui/feedback'
-import { Pair, SelectInput, TextInput } from '../../components/ui/fields'
+import { Pair, SelectInput, Switch, TextInput } from '../../components/ui/fields'
 import { Badge, Card, Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { WITHDRAWAL_FILTERS } from '../bonus/api'
 import { WithdrawalsCard } from '../bonus/WithdrawalsCard'
-import { roleLabel, useCreateStaff, useStaffList, useStaffOptions, type Invitation, type NewStaff, type StaffDetail, type StaffFilters, type StaffListStatus, type StaffRow } from './api'
+import {
+  roleLabel,
+  SALARY_BASES,
+  useCreateStaff,
+  useStaffList,
+  useStaffOptions,
+  type Invitation,
+  type NewStaff,
+  type SalaryBasis,
+  type StaffDetail,
+  type StaffFilters,
+  type StaffListStatus,
+  type StaffRow,
+} from './api'
 import { InvitationDialog } from './InvitationDialog'
 
 const STATUSES: StaffListStatus[] = ['current', 'active', 'invited', 'suspended', 'all']
@@ -58,7 +71,9 @@ export function StaffPage() {
     <span className="flex flex-col items-start gap-0.5">
       <Badge tone={row.status === 'active' ? 'green' : row.status === 'invited' ? 'blue' : 'slate'}>{t(`staff.status.${row.status}`)}</Badge>
       <span className="text-12 text-app-muted">
-        {row.status === 'invited'
+        {!row.software_access
+          ? t('staff.noAccess')
+          : row.status === 'invited'
           ? row.invitation_expires_at
             ? t('staff.inviteExpires', { date: dateTime(row.invitation_expires_at) })
             : t('staff.inviteLapsed')
@@ -77,7 +92,8 @@ export function StaffPage() {
         <div className="flex flex-col gap-0.5">
           <span className="font-medium">{row.name}</span>
           <span className="text-12 text-app-muted">
-            {row.email} · <span className="font-display">{row.employee_code}</span>
+            {row.email ? `${row.email} · ` : null}
+            <span className="font-display">{row.employee_code}</span>
           </span>
         </div>
       ),
@@ -87,7 +103,7 @@ export function StaffPage() {
       header: t('staff.columns.role'),
       cell: (row) => (
         <div className="flex flex-col gap-0.5">
-          <span>{roleLabel(row.role, locale)}</span>
+          {row.software_access ? <span>{roleLabel(row.role, locale)}</span> : <Badge tone="slate">{t('staff.noAccessBadge')}</Badge>}
           {row.designation ? <span className="text-12 text-app-muted">{row.designation}</span> : null}
         </div>
       ),
@@ -158,44 +174,74 @@ export function StaffPage() {
         ) : null}
       </Card>
       {can('bonus.manage') || can('commission.view_all') ? <WithdrawalsCard key={withdrawals ?? 'open'} initial={withdrawals ?? 'open'} /> : null}
-      {adding ? <AddStaffDialog onClose={() => setAdding(false)} onCreated={(staff, invitation) => { setAdding(false); setInvited({ staff, invitation }) }} /> : null}
-      {invited ? <InvitationDialog name={invited.staff.name} email={invited.staff.email} phone={invited.staff.phone} invitation={invited.invitation} onClose={() => { setInvited(null); navigate(`/staff/${invited.staff.id}`) }} /> : null}
+      {adding ? (
+        <AddStaffDialog
+          onClose={() => setAdding(false)}
+          onCreated={(staff, invitation) => {
+            setAdding(false)
+            // Without software access there's no link to hand over: straight to their record.
+            if (invitation) setInvited({ staff, invitation })
+            else navigate(`/staff/${staff.id}`)
+          }}
+        />
+      ) : null}
+      {invited ? <InvitationDialog name={invited.staff.name} email={invited.staff.email ?? ''} phone={invited.staff.phone} invitation={invited.invitation} onClose={() => { setInvited(null); navigate(`/staff/${invited.staff.id}`) }} /> : null}
     </>
   )
 }
 
-function AddStaffDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (staff: StaffDetail, invitation: Invitation) => void }) {
+function AddStaffDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (staff: StaffDetail, invitation: Invitation | null) => void }) {
   const { t } = useTranslation()
   const { locale } = useFormat()
   const options = useStaffOptions()
   const create = useCreateStaff()
-  const [form, setForm] = useState<NewStaff>({ name: '', email: '', phone: '', role: '', designation: '', joined_on: todayInDhaka(), locale: 'bn' })
+  const [form, setForm] = useState<NewStaff>({ name: '', email: '', phone: '', role: '', designation: '', joined_on: todayInDhaka(), locale: 'bn', software_access: true, salary_basis: 'attendance' })
   const fieldError = (name: keyof NewStaff) => (create.error instanceof ApiError ? create.error.field(name) : undefined)
   const roles = options.data?.data.roles ?? []
-  const ready = form.name.trim() !== '' && form.email.trim() !== '' && form.role !== ''
+  const access = form.software_access
+  const ready = form.name.trim() !== '' && (!access || (form.email.trim() !== '' && form.role !== ''))
 
   return (
     <Dialog open onClose={onClose} title={t('staff.addTitle')}>
+      <Switch label={t('staff.softwareAccess')} checked={access} onChange={(software_access) => setForm({ ...form, software_access })} hint={t(access ? 'staff.softwareAccessHint' : 'staff.noAccessHint')} />
       <Pair>
         <TextInput label={t('staff.name')} value={form.name} onChange={(name) => setForm({ ...form, name })} error={fieldError('name')} maxLength={120} autoComplete="off" />
-        <TextInput label={t('staff.email')} type="email" value={form.email} onChange={(email) => setForm({ ...form, email })} error={fieldError('email')} hint={t('staff.emailHint')} maxLength={190} autoComplete="off" />
+        <TextInput
+          label={access ? t('staff.email') : t('staff.emailOptional')}
+          type="email"
+          value={form.email}
+          onChange={(email) => setForm({ ...form, email })}
+          error={fieldError('email')}
+          hint={access ? t('staff.emailHint') : undefined}
+          maxLength={190}
+          autoComplete="off"
+        />
       </Pair>
       <Pair>
         <TextInput label={t('staff.phone')} type="tel" value={form.phone} onChange={(phone) => setForm({ ...form, phone })} error={fieldError('phone')} hint={t('staff.phoneHint')} maxLength={20} />
-        <SelectInput
-          label={t('staff.role')}
-          value={form.role}
-          onChange={(role) => setForm({ ...form, role })}
-          options={[{ value: '', label: t('staff.pickRole') }, ...roles.map((role) => ({ value: role.name, label: roleLabel(role, locale) }))]}
-          error={fieldError('role')}
-        />
+        {access ? (
+          <SelectInput
+            label={t('staff.role')}
+            value={form.role}
+            onChange={(role) => setForm({ ...form, role })}
+            options={[{ value: '', label: t('staff.pickRole') }, ...roles.map((role) => ({ value: role.name, label: roleLabel(role, locale) }))]}
+            error={fieldError('role')}
+          />
+        ) : (
+          <SalaryBasisInput value={form.salary_basis} onChange={(salary_basis) => setForm({ ...form, salary_basis })} error={fieldError('salary_basis')} />
+        )}
       </Pair>
       <Pair>
         <TextInput label={t('staff.designation')} value={form.designation} onChange={(designation) => setForm({ ...form, designation })} error={fieldError('designation')} maxLength={80} />
         <TextInput label={t('staff.joinedOn')} type="date" value={form.joined_on} onChange={(joined_on) => setForm({ ...form, joined_on })} error={fieldError('joined_on')} />
       </Pair>
-      <SelectInput label={t('staff.language')} value={form.locale} onChange={(value) => setForm({ ...form, locale: value === 'en' ? 'en' : 'bn' })} options={[{ value: 'bn', label: 'বাংলা' }, { value: 'en', label: 'English' }]} hint={t('staff.languageHint')} />
-      <p className="m-0 text-12.5 leading-1.55 text-app-muted">{t('staff.inviteExplainer')}</p>
+      {access ? (
+        <Pair>
+          <SelectInput label={t('staff.language')} value={form.locale} onChange={(value) => setForm({ ...form, locale: value === 'en' ? 'en' : 'bn' })} options={[{ value: 'bn', label: 'বাংলা' }, { value: 'en', label: 'English' }]} hint={t('staff.languageHint')} />
+          <SalaryBasisInput value={form.salary_basis} onChange={(salary_basis) => setForm({ ...form, salary_basis })} error={fieldError('salary_basis')} />
+        </Pair>
+      ) : null}
+      <p className="m-0 text-12.5 leading-1.55 text-app-muted">{t(access ? 'staff.inviteExplainer' : 'staff.noAccessExplainer')}</p>
       {create.error && !(create.error instanceof ApiError && create.error.status === 422) ? <ErrorNotice error={create.error} /> : null}
       <div className="flex justify-end gap-2">
         <button type="button" className={buttonClass('outline')} onClick={onClose}>
@@ -205,11 +251,31 @@ function AddStaffDialog({ onClose, onCreated }: { onClose: () => void; onCreated
           type="button"
           className={buttonClass('primary')}
           disabled={!ready || create.isPending}
-          onClick={() => create.mutate({ ...form, designation: form.designation.trim(), phone: form.phone.trim() }, { onSuccess: (response) => onCreated(response.data, response.invitation) })}
+          onClick={() =>
+            create.mutate(
+              { ...form, designation: form.designation.trim(), phone: form.phone.trim(), email: form.email.trim(), role: access ? form.role : '' },
+              { onSuccess: (response) => onCreated(response.data, response.invitation) },
+            )
+          }
         >
-          {create.isPending ? t('common.working') : t('staff.create')}
+          {create.isPending ? t('common.working') : t(access ? 'staff.create' : 'staff.createNoAccess')}
         </button>
       </div>
     </Dialog>
+  )
+}
+
+/** How the month's salary is worked out (docs/staff-without-access.md §2). */
+export function SalaryBasisInput({ value, onChange, error }: { value: SalaryBasis; onChange: (value: SalaryBasis) => void; error?: string }) {
+  const { t } = useTranslation()
+  return (
+    <SelectInput
+      label={t('staff.salaryBasis')}
+      value={value}
+      onChange={(next) => onChange(next === 'fixed' ? 'fixed' : 'attendance')}
+      options={SALARY_BASES.map((basis) => ({ value: basis, label: t(`staff.salaryBases.${basis}`) }))}
+      hint={t(`staff.salaryBasisHints.${value}`)}
+      error={error}
+    />
   )
 }

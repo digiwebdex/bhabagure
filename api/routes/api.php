@@ -334,6 +334,8 @@ Route::prefix('v1')->group(function () {
             Route::post('staff/{id}/reactivate', 'reactivate')->whereNumber('id');
             Route::post('staff/{id}/invitation', 'invite')->whereNumber('id');
             Route::post('staff/{id}/password-reset', 'passwordReset')->whereNumber('id');
+            // Software access for someone added without it (docs/staff-without-access.md).
+            Route::post('staff/{id}/access', 'grantAccess')->whereNumber('id');
         });
         Route::middleware('permission:system.roles_manage,staff')->controller(RoleController::class)->group(function () {
             Route::get('roles', 'index');

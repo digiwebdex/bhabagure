@@ -23,7 +23,8 @@ final class MemberController extends WalletController
         $this->superAdminOnly($request);
         $members = Member::query()->get()->keyBy('staff_id');
 
-        $staff = Staff::query()->where('status', StaffStatus::Active->value)->orderBy('name')->get()
+        // Only staff who can sign in: a wallet is opened with the staff password.
+        $staff = Staff::query()->where('status', StaffStatus::Active->value)->where('software_access', true)->orderBy('name')->get()
             ->map(function (Staff $person) use ($members) {
                 $member = $members->get($person->id);
 
@@ -45,7 +46,7 @@ final class MemberController extends WalletController
     {
         $by = $this->superAdminOnly($request);
         $staffId = (int) $request->validate(['staff_id' => ['required', 'integer']])['staff_id'];
-        $person = Staff::query()->where('status', StaffStatus::Active->value)->find($staffId);
+        $person = Staff::query()->where('status', StaffStatus::Active->value)->where('software_access', true)->find($staffId);
         if ($person === null) {
             return response()->json(['message' => __('wallet.staff_unknown'), 'code' => 'staff_unknown'], 422);
         }

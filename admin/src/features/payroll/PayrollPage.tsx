@@ -91,7 +91,9 @@ function Sheet({ sheet }: { sheet: PayrollSheet }) {
         <span className="flex flex-col">
           <span className="font-medium">{row.staff.name}</span>
           <span className="text-12 text-app-muted">
-            {roleLabel(row.staff.role, locale)} · {row.staff.employee_code}
+            {row.staff.role ? `${roleLabel(row.staff.role, locale)} · ` : null}
+            {row.staff.employee_code}
+            {row.salary_basis === 'fixed' ? ` · ${t('staff.salaryBases.fixed')}` : null}
           </span>
         </span>
       ),

@@ -2196,7 +2196,28 @@
     "suspendReason": "Reason",
     "suspended": "{{name}} suspended",
     "reactivate": "Reactivate",
-    "reactivated": "{{name}} can sign in again"
+    "reactivated": "{{name}} can sign in again",
+    "softwareAccess": "Software access",
+    "softwareAccessHint": "Signs in to this admin panel",
+    "noAccessHint": "On the staff list, attendance and salary sheet only — never signs in",
+    "noAccess": "No software access",
+    "noAccessBadge": "No software access",
+    "noAccessExplainer": "No role and no invitation. Software access can be given later from their record.",
+    "emailOptional": "Email (optional)",
+    "createNoAccess": "Add staff member",
+    "salaryBasis": "Salary basis",
+    "salaryBases": {
+      "attendance": "From attendance",
+      "fixed": "Fixed monthly"
+    },
+    "salaryBasisHints": {
+      "attendance": "Absences, unpaid leave and late or early days come off",
+      "fixed": "The month’s amount whatever the attendance (days before joining or after leaving still come off)"
+    },
+    "grantAccess": "Give software access",
+    "grantAccessTitle": "Software access for {{name}}",
+    "grantAccessNote": "They get a sign-in email and a role, and a one-time link to choose their password. Their attendance and salary carry on as before.",
+    "grantAndInvite": "Give access and invite"
   },
   "vault": {
     "title": "Vault",
@@ -2446,7 +2467,10 @@
     "correctionKinds": {
       "in": "in set to {{time}}",
       "out": "out set to {{time}}",
-      "worked": "marked as worked",
+      "worked": "set as present (full day)",
+      "absent": "set as absent",
+      "leave_paid": "set as paid leave",
+      "leave_unpaid": "set as unpaid leave",
       "reversal": "correction undone"
     },
     "undo": "Undo",
@@ -2459,8 +2483,14 @@
     "correctionOptions": {
       "in": "Set the in time",
       "out": "Set the out time",
-      "worked": "Mark as worked (official duty)"
+      "worked": "Present — a full day (e.g. official duty)",
+      "absent": "Absent",
+      "leave_paid": "Paid leave",
+      "leave_unpaid": "Unpaid leave (a day’s pay comes off)"
     },
+    "statusNote": "This overrides the device; the punches stay on record, and Undo brings them back.",
+    "until": "Until (optional)",
+    "untilHint": "For several days: holidays and weekly days off in between are left alone. Up to 31 days.",
     "time": "Time",
     "saveCorrection": "Save correction",
     "correctedToast": "Correction saved",

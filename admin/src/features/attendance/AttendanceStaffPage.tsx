@@ -10,7 +10,7 @@ import { Card, CardTitle, EmptyState, Loading, PageHeader } from '../../componen
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { roleLabel } from '../staff/api'
-import { attendanceActions, shiftMonth, useAttendanceChange, usePersonMonth, type Correction, type Day, type PersonMonth, type Totals } from './api'
+import { attendanceActions, DAY_STATUS_KINDS, shiftMonth, useAttendanceChange, usePersonMonth, type Correction, type CorrectionKind, type Day, type PersonMonth, type Totals } from './api'
 import { DaysTable } from './DaysTable'
 import { LeaveStatusBadge } from './LeaveCard'
 
@@ -195,11 +195,13 @@ function CorrectionDialog({ person, day, onClose }: { person: PersonMonth; day: 
   const { t } = useTranslation()
   const { date } = useFormat()
   const toast = useToast()
-  const [kind, setKind] = useState<'in' | 'out' | 'worked'>(day.in === null ? 'in' : 'out')
+  const [kind, setKind] = useState<CorrectionKind>(day.in === null ? 'in' : 'out')
   const [time, setTime] = useState(kind === 'in' ? person.rules.duty_start : person.rules.duty_end)
+  const [until, setUntil] = useState('')
   const [reason, setReason] = useState('')
   const correct = useAttendanceChange(attendanceActions.correct)
   const fieldError = (name: string) => (correct.error instanceof ApiError ? correct.error.field(name) : undefined)
+  const isTime = kind === 'in' || kind === 'out'
 
   return (
     <Dialog open onClose={onClose} title={t('attendance.correctTitle', { date: date(day.date) })}>
@@ -208,14 +210,21 @@ function CorrectionDialog({ person, day, onClose }: { person: PersonMonth; day: 
         label={t('attendance.correctionKind')}
         value={kind}
         onChange={(value) => {
-          const next = value as 'in' | 'out' | 'worked'
+          const next = value as CorrectionKind
           setKind(next)
           if (next === 'in') setTime(person.rules.duty_start)
           if (next === 'out') setTime(person.rules.duty_end)
         }}
-        options={(['in', 'out', 'worked'] as const).map((value) => ({ value, label: t(`attendance.correctionOptions.${value}`) }))}
+        options={(['in', 'out', ...DAY_STATUS_KINDS] as const).map((value) => ({ value, label: t(`attendance.correctionOptions.${value}`) }))}
       />
-      {kind !== 'worked' ? <TextInput label={t('attendance.time')} type="time" value={time} onChange={setTime} error={fieldError('time')} /> : null}
+      {isTime ? (
+        <TextInput label={t('attendance.time')} type="time" value={time} onChange={setTime} error={fieldError('time')} />
+      ) : (
+        <>
+          <p className="m-0 text-12.5 leading-1.55 text-app-muted">{t('attendance.statusNote')}</p>
+          <TextInput label={t('attendance.until')} type="date" value={until} onChange={setUntil} min={day.date} max={todayInDhaka()} hint={t('attendance.untilHint')} error={fieldError('until')} />
+        </>
+      )}
       <TextArea label={t('attendance.why')} value={reason} onChange={setReason} error={fieldError('reason')} rows={2} maxLength={300} />
       {correct.error && !(correct.error instanceof ApiError && correct.error.status === 422) ? <ErrorNotice error={correct.error} /> : null}
       <div className="flex justify-end gap-2">
@@ -225,10 +234,10 @@ function CorrectionDialog({ person, day, onClose }: { person: PersonMonth; day: 
         <button
           type="button"
           className={buttonClass('primary')}
-          disabled={reason.trim().length < 3 || (kind !== 'worked' && !time) || correct.isPending}
+          disabled={reason.trim().length < 3 || (isTime && !time) || correct.isPending}
           onClick={() =>
             correct.mutate(
-              { staff_id: person.staff.id, work_date: day.date, kind, time: kind === 'worked' ? null : time, reason: reason.trim() },
+              { staff_id: person.staff.id, work_date: day.date, kind, time: isTime ? time : null, until: !isTime && until ? until : null, reason: reason.trim() },
               { onSuccess: () => { toast(t('attendance.correctedToast')); onClose() } },
             )
           }

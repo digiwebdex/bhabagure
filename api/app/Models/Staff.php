@@ -20,9 +20,12 @@ class Staff extends Authenticatable implements JWTSubject
     /** spatie/laravel-permission: this model's roles and permissions live on the staff guard. */
     protected string $guard_name = 'staff';
 
-    protected $fillable = ['employee_code', 'name', 'email', 'phone', 'password', 'status', 'must_change_password', 'locale'];
+    protected $fillable = ['employee_code', 'name', 'email', 'phone', 'password', 'status', 'software_access', 'must_change_password', 'locale'];
 
     protected $hidden = ['password', 'whatsapp_code_hash'];
+
+    /** As the column's default: everyone signs in unless added without software access (docs/staff-without-access.md). */
+    protected $attributes = ['software_access' => true];
 
     protected function casts(): array
     {
@@ -30,6 +33,7 @@ class Staff extends Authenticatable implements JWTSubject
             'password' => 'hashed',
             'status' => StaffStatus::class,
             'must_change_password' => 'boolean',
+            'software_access' => 'boolean',
             'last_login_at' => 'datetime',
             'whatsapp_verified_at' => 'datetime',
             'whatsapp_code_expires_at' => 'datetime',
@@ -43,9 +47,10 @@ class Staff extends Authenticatable implements JWTSubject
         return $this->whatsapp_verified_at !== null ? $this->whatsapp_number : null;
     }
 
+    /** Not suspended, and given software access (staff without it are on the list and the payroll only). */
     public function canSignIn(): bool
     {
-        return $this->status !== StaffStatus::Suspended;
+        return $this->status !== StaffStatus::Suspended && $this->software_access;
     }
 
     /** The HR record (docs/phase-7-hr-attendance-bonus-wallet.md §4.1), created with the staff member. */

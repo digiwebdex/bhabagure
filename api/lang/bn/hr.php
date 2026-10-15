@@ -21,4 +21,6 @@ return [
     'unknown_permission' => 'এই অনুমতিটি নেই।',
     'role_name_taken' => 'এই নামে আরেকটি রোল আছে।',
     'document_archived' => 'ডকুমেন্টটি আগেই আর্কাইভ হয়েছে।',
+    'no_software_access' => 'এই স্টাফের সফটওয়্যার এক্সেস নেই। আগে “Give software access” দিয়ে এক্সেস দিন।',
+    'already_has_access' => 'এই স্টাফের আগেই সফটওয়্যার এক্সেস আছে।',
 ];

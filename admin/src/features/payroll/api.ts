@@ -17,6 +17,8 @@ export type PayrollRow = {
   /** null: no base salary for the month, so not on its payroll. */
   base: number | null
   figures: Figures | null
+  /** fixed: the month's amount whatever the attendance (docs/staff-without-access.md §2). */
+  salary_basis: 'attendance' | 'fixed'
   adjustments: Adjustment[]
   /** Set once the month is finalised. */
   item_id: number | null

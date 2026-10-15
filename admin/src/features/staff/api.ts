@@ -13,9 +13,12 @@ export type StaffRow = {
   id: number
   employee_code: string
   name: string
-  email: string
+  /** null for someone without software access whose email HR doesn't have. */
+  email: string | null
   phone: string | null
   status: StaffStatus
+  /** false: on the staff list, attendance and salary sheet, but never signs in (docs/staff-without-access.md). */
+  software_access: boolean
   role: StaffRole | null
   is_super_admin: boolean
   designation: string | null
@@ -42,13 +45,18 @@ export type StaffProfile = {
   emergency_contact_phone: string | null
   payout_method: PayoutMethod | null
   payout_account: string | null
+  salary_basis: SalaryBasis
 }
+
+/** attendance: absences, unpaid leave and late days come off · fixed: the month's amount whatever the attendance. */
+export type SalaryBasis = 'attendance' | 'fixed'
+export const SALARY_BASES: SalaryBasis[] = ['attendance', 'fixed']
 
 export type StaffDetail = StaffRow & {
   locale: 'bn' | 'en'
   profile: StaffProfile
   documents: StaffDocument[] | null
-  actions: Record<'edit' | 'change_email' | 'change_role' | 'suspend' | 'reactivate' | 'reinvite' | 'password_reset' | 'upload_documents', boolean>
+  actions: Record<'edit' | 'change_email' | 'change_role' | 'suspend' | 'reactivate' | 'reinvite' | 'password_reset' | 'grant_access' | 'upload_documents', boolean>
 }
 
 export const DOCUMENT_TYPES = ['passport', 'nid', 'driving_licence', 'cv', 'appointment_letter', 'contract', 'certificate', 'photo', 'other'] as const
@@ -106,12 +114,13 @@ export function useStaffMember(id: number) {
   return useQuery({ queryKey: ['staff-member', id], queryFn: ({ signal }) => api.get<Data<StaffDetail>>(`admin/staff/${id}`, signal) })
 }
 
-export type NewStaff = { name: string; email: string; phone: string; role: string; designation: string; joined_on: string; locale: 'bn' | 'en' }
+export type NewStaff = { name: string; email: string; phone: string; role: string; designation: string; joined_on: string; locale: 'bn' | 'en'; software_access: boolean; salary_basis: SalaryBasis }
 
 export function useCreateStaff() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (body: NewStaff) => api.post<Data<StaffDetail> & { invitation: Invitation }>('admin/staff', body),
+    // No invitation for someone added without software access.
+    mutationFn: (body: NewStaff) => api.post<Data<StaffDetail> & { invitation: Invitation | null }>('admin/staff', body),
     onSuccess: (response) => {
       client.setQueryData(['staff-member', response.data.id], { data: response.data })
       void client.invalidateQueries({ queryKey: ['staff'] })
@@ -138,6 +147,7 @@ export const staffActions = {
   suspend: (id: number) => (body: { reason: string; left_on: string | null }) => api.post<Data<StaffDetail>>(`admin/staff/${id}/suspend`, body),
   reactivate: (id: number) => () => api.post<Data<StaffDetail>>(`admin/staff/${id}/reactivate`),
   reinvite: (id: number) => () => api.post<Data<StaffDetail> & { invitation: Invitation }>(`admin/staff/${id}/invitation`),
+  grantAccess: (id: number) => (body: { email: string; role: string }) => api.post<Data<StaffDetail> & { invitation: Invitation }>(`admin/staff/${id}/access`, body),
 }
 
 export function usePasswordReset(id: number) {
