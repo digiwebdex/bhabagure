@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 
 /**
  * Meta's Messenger Platform for the Facebook Page (Graph API, docs/admin-inbox.md §4). The Page token goes in the
- * Authorization header, never in a URL or a log. With the App secret, every call carries its appsecret_proof (an HMAC
+ * Authorization header, never in a log, and in a URL only where debug_token requires it. With the App secret, every call carries its appsecret_proof (an HMAC
  * of the token, never the secret itself), which an app set to "Require app secret" refuses calls without.
  */
 final class MessengerClient
@@ -27,26 +27,47 @@ final class MessengerClient
     }
 
     /**
-     * The Page a token belongs to, to check it before saving.
+     * The Page a token belongs to, to check it before saving. Asked of debug_token, which needs no permission beyond
+     * pages_messaging: reading the Page itself (/me) wants pages_read_engagement, which a Messenger-only app doesn't
+     * have (2026-10-17, the Bhabagure inbox app). The name is read only if Facebook allows it.
      *
-     * @return array{id: string, name: string}|null
+     * @return array{id: string, name: ?string}|null
      */
     public function page(): ?array
     {
         try {
-            $response = $this->client()->get('/me', ['fields' => 'id,name']);
+            // input_token has to be a parameter here (Meta's rule); the request is TLS and nothing logs it.
+            $response = $this->client()->get('/debug_token', ['input_token' => $this->pageToken]);
         } catch (ConnectionException) {
             $this->lastError = 'Facebook could not be reached';
 
             return null;
         }
-        $id = $response->json('id');
-        if ($response->successful() && is_string($id)) {
-            return ['id' => $id, 'name' => (string) $response->json('name', '')];
-        }
-        $this->lastError = $this->reason($response);
+        $id = $response->json('data.profile_id');
+        if (! $response->successful() || $response->json('data.is_valid') !== true || ! is_string($id)) {
+            $this->lastError = $response->successful() ? 'The token is not a valid Page access token' : $this->reason($response);
 
-        return null;
+            return null;
+        }
+        if ($response->json('data.type') !== 'PAGE') {
+            $this->lastError = 'This is a '.strtolower((string) $response->json('data.type')).' token, not a Page access token: use Generate next to the Page';
+
+            return null;
+        }
+        if (! in_array('pages_messaging', (array) $response->json('data.scopes'), true)) {
+            $this->lastError = 'The token doesn’t include the pages_messaging permission';
+
+            return null;
+        }
+
+        try {
+            $named = $this->client()->get('/'.rawurlencode($id), ['fields' => 'name']);
+            $name = $named->successful() ? $named->json('name') : null;
+        } catch (ConnectionException) {
+            $name = null;
+        }
+
+        return ['id' => $id, 'name' => is_string($name) && $name !== '' ? $name : null];
     }
 
     /** Receives the Page's messages, deliveries, reads and echoes at the app's webhook. */

@@ -71,6 +71,8 @@ export type InboxSettings = {
     page_id: string | null
     page_name: string | null
     connected_at: string | null
+    /** false: the token couldn't subscribe the Page, so the Meta app's own subscription (step 2 there) is relied on. */
+    subscribed_here: boolean
     app_secret_set: boolean
     verify_token: string
     webhook_url: string

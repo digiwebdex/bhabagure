@@ -3773,6 +3773,7 @@
     "disconnect": "Disconnect",
     "confirmDisconnect": "Disconnect the Facebook Page? Messenger messages stop coming in until it is connected again.",
     "messengerSaved": "The Facebook Page is connected",
+    "subscribedInMeta": "This token can send and receive messages but can’t subscribe the Page by itself, so messages arrive through the subscription made in the Meta app: in Messenger API settings, step 2 must list messages, message_echoes, message_deliveries and message_reads next to the Page.",
     "cannedTitle": "Quick replies",
     "cannedNote": "Saved answers staff put into a reply with one click, then adjust before sending.",
     "addCanned": "Add",

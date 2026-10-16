@@ -37,11 +37,11 @@ class InboxSettingsController extends Controller
             // Facebook's own reason ("Invalid OAuth access token", "…requires appsecret_proof…"), so staff know what to fix.
             throw ValidationException::withMessages(['page_token' => [__('inbox.page_token_invalid', ['reason' => $client->lastError])]]);
         }
-        // Without the subscription no message would ever arrive: nothing is saved until it holds.
-        if (! $client->subscribe($page['id'])) {
-            throw ValidationException::withMessages(['page_token' => [__('inbox.page_not_subscribed', ['reason' => $client->lastError])]]);
-        }
-        MessengerSettings::save($page['id'], $page['name'], trim($data['page_token']), isset($data['app_secret']) ? trim($data['app_secret']) : null, $request->user('staff'));
+        // The Page's messages reach the webhook once it is subscribed. A token with pages_manage_metadata does it here; a
+        // Messenger-only token can't, and then the subscription made in the Meta app (Messenger API settings, step 2)
+        // is what counts — the settings say so instead of claiming it.
+        $subscribed = $client->subscribe($page['id']);
+        MessengerSettings::save($page['id'], $page['name'], trim($data['page_token']), isset($data['app_secret']) ? trim($data['app_secret']) : null, $request->user('staff'), $subscribed);
         $audit->record('inbox.messenger_connected', $request->user('staff'), null, ['page_id' => $page['id']]);
 
         return response()->json(['data' => $this->state()]);
@@ -75,6 +75,8 @@ class InboxSettingsController extends Controller
                 'page_id' => $messenger['page_id'],
                 'page_name' => $messenger['page_name'],
                 'connected_at' => $messenger['connected_at'],
+                // false: the software couldn't subscribe the Page itself; it relies on the Meta app's own subscription.
+                'subscribed_here' => $messenger['subscribed'],
                 'app_secret_set' => $messenger['app_secret'] !== null,
                 'verify_token' => $messenger['verify_token'],
                 'webhook_url' => $api.'/api/v1/webhooks/messenger',

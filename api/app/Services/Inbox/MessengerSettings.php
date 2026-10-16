@@ -17,7 +17,7 @@ final class MessengerSettings
 {
     public const KEY = 'inbox_messenger';
 
-    /** @return array{page_id: ?string, page_name: ?string, page_token: ?string, app_secret: ?string, verify_token: string, connected_at: ?string} */
+    /** @return array{page_id: ?string, page_name: ?string, page_token: ?string, app_secret: ?string, verify_token: string, connected_at: ?string, subscribed: bool} */
     public static function get(): array
     {
         $value = (array) SiteSetting::get(self::KEY, []);
@@ -29,6 +29,7 @@ final class MessengerSettings
             'app_secret' => self::decrypt($value['app_secret'] ?? null),
             'verify_token' => (string) ($value['verify_token'] ?? self::ensureVerifyToken()),
             'connected_at' => $value['connected_at'] ?? null,
+            'subscribed' => (bool) ($value['subscribed'] ?? true),
         ];
     }
 
@@ -40,7 +41,7 @@ final class MessengerSettings
     }
 
     /** Saves a checked connection; a blank token or secret keeps the one stored. */
-    public static function save(string $pageId, string $pageName, ?string $pageToken, ?string $appSecret, Staff $by): void
+    public static function save(string $pageId, ?string $pageName, ?string $pageToken, ?string $appSecret, Staff $by, bool $subscribed = true): void
     {
         $current = (array) SiteSetting::get(self::KEY, []);
         SiteSetting::query()->updateOrCreate(['key' => self::KEY], [
@@ -51,6 +52,7 @@ final class MessengerSettings
                 'app_secret' => $appSecret !== null && $appSecret !== '' ? Crypt::encryptString($appSecret) : ($current['app_secret'] ?? null),
                 'verify_token' => $current['verify_token'] ?? self::ensureVerifyToken(),
                 'connected_at' => now()->toIso8601String(),
+                'subscribed' => $subscribed,
             ],
             'updated_by_staff_id' => $by->id,
         ]);

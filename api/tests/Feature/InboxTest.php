@@ -268,12 +268,20 @@ class InboxTest extends TestCase
     {
         // Every call carries the appsecret_proof (an app set to "Require app secret" refuses one without), so the URLs
         // end in a query string.
+        // The Page is identified by debug_token, which a Messenger-only token (pages_messaging) may call; reading the
+        // Page itself wants pages_read_engagement (2026-10-17, the Bhabagure inbox app), so its name is optional.
+        $readPage = ['error' => ['message' => '(#100) This endpoint requires the \'pages_read_engagement\' permission', 'code' => 100]];
         Http::fake([
             'https://graph.facebook.com/v21.0/me/messages?*' => Http::response(['recipient_id' => 'PSID1', 'message_id' => 'm_OUT1']),
-            'https://graph.facebook.com/v21.0/me?*' => Http::sequence()
+            'https://graph.facebook.com/v21.0/debug_token?*' => Http::sequence()
                 ->push(['error' => ['message' => 'Malformed access token EAAG-wrong-token-1234567890', 'code' => 190]], 400)
-                ->push(['id' => 'PAGE1', 'name' => 'Bhabaghure Holidays']),
-            'https://graph.facebook.com/v21.0/PAGE1/subscribed_apps?*' => Http::response(['success' => true]),
+                ->push(['data' => ['type' => 'USER', 'is_valid' => true, 'profile_id' => '777', 'scopes' => ['public_profile']]])
+                ->push(['data' => ['type' => 'PAGE', 'is_valid' => true, 'profile_id' => 'PAGE1', 'scopes' => ['pages_messaging', 'public_profile']]])
+                ->push(['data' => ['type' => 'PAGE', 'is_valid' => true, 'profile_id' => 'PAGE1', 'scopes' => ['pages_messaging', 'pages_manage_metadata', 'pages_read_engagement']]]),
+            'https://graph.facebook.com/v21.0/PAGE1?*' => Http::sequence()->push($readPage, 400)->push(['id' => 'PAGE1', 'name' => 'Bhabaghure Holidays']),
+            'https://graph.facebook.com/v21.0/PAGE1/subscribed_apps?*' => Http::sequence()
+                ->push(['error' => ['message' => '(#200) Requires pages_manage_metadata permission to manage the object', 'code' => 200]], 403)
+                ->push(['success' => true]),
             'https://graph.facebook.com/v21.0/PSID1?*' => Http::response(['name' => 'Mim Akter']),
         ]);
         $admin = $this->staff('admin');
@@ -284,9 +292,19 @@ class InboxTest extends TestCase
         // Facebook repeats the token in this one: it is never shown back.
         $this->assertStringContainsString('Malformed access token [token]', $refused);
         $this->assertStringNotContainsString('EAAG-wrong-token', $refused);
+        // A user token pasted by mistake.
+        $this->assertStringContainsString('not a Page access token', $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-user-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
+            ->assertUnprocessable()->json('errors.page_token.0'));
         $this->assertFalse(MessengerSettings::connected());
+
+        // A Messenger-only token: connected, by the Page id, relying on the subscription made in the Meta app.
+        $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-page-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
+            ->assertOk()->assertJsonPath('data.messenger.connected', true)->assertJsonPath('data.messenger.page_id', 'PAGE1')
+            ->assertJsonPath('data.messenger.page_name', null)->assertJsonPath('data.messenger.subscribed_here', false);
+        // With the Page permissions too, the name is read and the Page subscribed here.
         $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-page-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
             ->assertOk()->assertJsonPath('data.messenger.connected', true)->assertJsonPath('data.messenger.page_name', 'Bhabaghure Holidays')
+            ->assertJsonPath('data.messenger.subscribed_here', true)
             ->assertJsonMissingPath('data.messenger.page_token')->assertJsonMissingPath('data.messenger.app_secret');
         $stored = json_encode(SiteSetting::query()->find(MessengerSettings::KEY)->value);
         $this->assertStringNotContainsString('EAAG-page-token', (string) $stored);

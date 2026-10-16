@@ -121,6 +121,7 @@ function MessengerCard({ state }: { state: InboxSettings['messenger'] }) {
           {t('inbox.pageConnected', { name: state.page_name ?? state.page_id ?? '', date: state.connected_at ? dateTime(state.connected_at) : '—' })}
         </p>
       ) : null}
+      {state.connected && !state.subscribed_here ? <p className="m-0 rounded-10 bg-orange-tint px-3 py-2 text-12.5 leading-1.55 text-amber">{t('inbox.subscribedInMeta')}</p> : null}
       <ol className="m-0 flex flex-col gap-1.5 pl-5 text-13 leading-1.55" data-testid="messenger-steps">
         {(t('inbox.metaSteps', { returnObjects: true }) as string[]).map((step) => (
           <li key={step}>{step}</li>
