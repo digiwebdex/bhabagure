@@ -23,10 +23,10 @@ final class InvoiceView
 {
     /**
      * 5: English only (2026-09-19); 6: a smaller logo (2026-09-23); 7: notes of any length run on to further pages, and a
-     * line's detail prints under it (2026-10-01); 8: the signatures at the foot of the last page (2026-10-01). A stored
-     * PDF from before is made again.
+     * line's detail prints under it (2026-10-01); 8: the signatures at the foot of the last page (2026-10-01); 9: reversed
+     * payments and their reversals left off (2026-10-16). A stored PDF from before is made again.
      */
-    public const TEMPLATE_VERSION = '8';
+    public const TEMPLATE_VERSION = '9';
 
     /**
      * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on
@@ -67,8 +67,10 @@ final class InvoiceView
 
         $deal = $invoice->kind === Invoice::KIND_DEAL;
         // A booking's payments are the booking's (they carry over a void and reissue); a deal's are the invoice's own.
+        // Only the payments that stand: an edited or deleted payment and its reversal are the books' history, not the
+        // customer's (the client, 2026-10-16 — INV-1066 printed each edit as + and −). They still add up to the same paid.
         $rows = Transaction::query()->when($invoice->booking_id !== null, fn ($q) => $q->where('booking_id', $invoice->booking_id), fn ($q) => $q->where('invoice_id', $invoice->id ?? 0))
-            ->whereIn('category', [LedgerService::CATEGORY_PAYMENT, LedgerService::CATEGORY_ONLINE_CHARGE])->orderBy('occurred_at')->orderBy('id')->get();
+            ->whereIn('category', [LedgerService::CATEGORY_PAYMENT, LedgerService::CATEGORY_ONLINE_CHARGE])->standing()->orderBy('occurred_at')->orderBy('id')->get();
         // An online payment's charge line is listed with the payment it belongs to (same gateway reference).
         $charges = $rows->where('category', LedgerService::CATEGORY_ONLINE_CHARGE)->keyBy(fn (Transaction $t) => (string) preg_replace('/:charge$/', '', (string) $t->external_ref));
         $payments = $rows->where('category', LedgerService::CATEGORY_PAYMENT)

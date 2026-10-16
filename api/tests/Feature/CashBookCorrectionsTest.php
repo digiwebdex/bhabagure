@@ -9,8 +9,10 @@ use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\Transaction;
+use App\Services\Invoices\InvoiceView;
 use App\Services\Ledger\LedgerService;
 use App\Support\Ledger\CashCategories;
+use App\Support\Numerals;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -108,6 +110,11 @@ class CashBookCorrectionsTest extends TestCase
             ->assertCreated()->assertJsonPath('data.category', 'customer_payment')->assertJsonPath('data.invoice.id', $invoiceId)->json('data.id');
         $invoice = Invoice::query()->findOrFail($invoiceId);
         $this->assertEquals([25000, 25000, 'partial'], [(float) $invoice->paid_amount, (float) $invoice->balance_due, $invoice->payment_status]);
+
+        // The printed invoice shows the payment as it stands, not the edit's + and − (the client, 2026-10-16: INV-1066).
+        $printed = app(InvoiceView::class)->data($invoice, true);
+        $this->assertSame([['Payment on '.Numerals::date($today, 'en').' (bKash · BK-77)', 'BDT 25,000']], $printed['paymentRows']);
+        $this->assertCount(1, $printed['payments']);
 
         // More than the invoice comes to: refused, and nothing changes.
         $count = Transaction::query()->count();

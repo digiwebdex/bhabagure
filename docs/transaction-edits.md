@@ -53,6 +53,11 @@ recalculation:
 - the journal and the reports.
 The corrected entry is a new one, so an approval tick on the old one does not carry over: it needs checking again.
 
+**What the customer sees (2026-10-16, after INV-1066 printed every edit as + and −):** the printed invoice and the
+portal's Payments list only the payments that stand (`Transaction::standing()`): the corrected entry, never the cancelled
+one or its reversal. The paid amount and amount due were already right. The full history stays in the admin — the cash
+book's "Show edits and deletions" and the booking.
+
 ## Data and API
 
 - `transaction_corrections` (append-only, LedgerTables): `kind` edit · delete, `original_transaction_id`,

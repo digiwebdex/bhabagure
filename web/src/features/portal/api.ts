@@ -94,11 +94,11 @@ export type PaymentsData = {
     at: string;
     reference: string;
     title: string;
-    kind: 'payment' | 'charge' | 'reversal';
+    /** Only payments and charges that stand: an edited or deleted one and its reversal are left off. */
+    kind: 'payment' | 'charge';
     method: string;
     externalRef: string | null;
     amount: number;
-    reversed: boolean;
   }[];
 };
 

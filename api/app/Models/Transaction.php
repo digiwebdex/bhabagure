@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\TransactionDirection;
 use App\Models\Concerns\AppendOnly;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -42,6 +43,15 @@ class Transaction extends Model
     public function approval(): HasOne
     {
         return $this->hasOne(TransactionApproval::class);
+    }
+
+    /**
+     * Entries that stand: neither a reversal nor reversed. What a customer is shown (the invoice, the portal): an edit
+     * or a delete is a reversal plus, for an edit, the corrected entry, and only the corrected entry is theirs to see.
+     */
+    public function scopeStanding(Builder $query): void
+    {
+        $query->whereNull('reverses_transaction_id')->whereDoesntHave('reversal');
     }
 
     /** The entry that reversed this one, if any (an entry is reversed at most once). */

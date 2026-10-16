@@ -935,8 +935,6 @@
         "sslcommerz": "Online payment"
       },
       "onlineCharge": "online payment charge",
-      "reversal": "Reversed",
-      "reversed": "Cancelled",
       "receipt": "Invoice"
     },
     "support": {

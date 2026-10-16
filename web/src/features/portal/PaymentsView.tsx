@@ -6,7 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { useFormatters } from '@/lib/use-formatters';
 
 import { usePortal, type PaymentsData } from './api';
-import { LoadState, Pill } from './ui';
+import { LoadState } from './ui';
 
 const KNOWN_METHODS = ['cash', 'bank_transfer', 'cheque', 'card_terminal', 'bkash', 'nagad', 'rocket', 'sslcommerz'];
 
@@ -62,11 +62,10 @@ export function PaymentsView() {
                 {row.kind === 'charge' ? ` · ${t('onlineCharge')}` : ''}
               </span>
             </span>
-            <span className={`font-display font-semibold ${row.amount < 0 ? 'text-red' : ''} ${row.reversed ? 'line-through opacity-60' : ''}`}>
+            <span className={`font-display font-semibold ${row.amount < 0 ? 'text-red' : ''}`}>
               {row.amount < 0 ? `− ${f.bdt(Math.abs(row.amount))}` : f.bdt(row.amount)}
             </span>
             <span className="flex flex-wrap items-center gap-2 text-12 font-semibold whitespace-nowrap">
-              {row.kind === 'reversal' ? <Pill tone="red">{t('reversal')}</Pill> : row.reversed ? <Pill tone="grey">{t('reversed')}</Pill> : null}
               <Link href={`/trips/${row.reference}`}>{t('receipt')}</Link>
             </span>
           </div>

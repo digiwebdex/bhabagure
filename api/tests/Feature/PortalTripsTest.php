@@ -9,7 +9,6 @@ use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
 use App\Models\Quotation;
 use App\Models\Staff;
-use App\Models\Transaction;
 use App\Services\Invoices\InvoiceIssuer;
 use App\Services\Ledger\LedgerService;
 use App\Services\Payments\SslCommerz\SslCommerzGateway;
@@ -78,7 +77,7 @@ class PortalTripsTest extends TestCase
     }
 
     #[Test]
-    public function payments_come_from_the_ledger_with_reversals_and_nothing_staff_only(): void
+    public function payments_come_from_the_ledger_without_reversed_entries_and_nothing_staff_only(): void
     {
         $booking = $this->websiteBooking('01711-000001', 30);
         $other = $this->websiteBooking('01711-000009', 30);
@@ -95,12 +94,9 @@ class PortalTripsTest extends TestCase
 
         $data = $this->actingAsApi($booking->customer)->getJson('/api/v1/portal/payments')->assertOk()->json('data');
         $this->assertSame([50000, 103000, 1], [$data['paid'], $data['due'], $data['bookings']]);
-        $this->assertSame([
-            ['reversal', 'cash', -20000, false],
-            ['payment', 'cash', 20000, true],
-            ['payment', 'bkash', 50000, false],
-        ], array_map(fn (array $row) => [$row['kind'], $row['method'], $row['amount'], $row['reversed']], $data['history']));
-        $this->assertSame('TRX8FK2M4QX', $data['history'][2]['externalRef']);
+        // The payment typed on the wrong booking and its reversal are the books' history, not the customer's (2026-10-16).
+        $this->assertSame([['payment', 'bkash', 50000]], array_map(fn (array $row) => [$row['kind'], $row['method'], $row['amount']], $data['history']));
+        $this->assertSame('TRX8FK2M4QX', $data['history'][0]['externalRef']);
         $json = json_encode($data);
         foreach (['Counter note', 'Wrong booking', 'evidence', 'Another customer'] as $staffOnly) {
             $this->assertStringNotContainsString($staffOnly, $json);

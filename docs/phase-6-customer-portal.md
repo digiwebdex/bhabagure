@@ -94,7 +94,9 @@ Kept from the plan, open to veto:
 
 ### 3.4 Payments
 - KPIs: paid and due across the customer's bookings.
-- History from the cash book: date, trip, method, reference, amount, reversals.
+- History from the cash book: date, trip, method, reference, amount. Since 2026-10-16 (the client's choice) only the
+  payments that stand: a payment staff edited or deleted, and its reversal, stay in the admin, as on the invoice
+  (docs/transaction-edits.md).
 - The invoice link per trip.
 
 ### 3.5 Support (question 3)
@@ -180,7 +182,8 @@ Kept from the plan, open to veto:
 - **Documents:** passport scan and photo per traveller on upcoming trips, 5 MB, encrypted on the private disk, served
   back only to the customer and to staff who can see the booking, never cached. A missing passport number can be added
   once and is never shown back. Visa and insurance are statuses staff set.
-- **Payments:** paid and due from the ledger; history from the cash book with reversals. The invoice is the receipt.
+- **Payments:** paid and due from the ledger; history from the cash book, payments that stand only (no reversals since
+  2026-10-16). The invoice is the receipt.
 - **Support:** tickets optionally about a trip; the conversation; staff appear by first name.
 - **Profile:** name, address, language for messages, WhatsApp on/off; a new email or phone is confirmed with a code
   sent to it. A phone-change code can't be used to sign in, nor the reverse. Neither change can take another

@@ -14,8 +14,8 @@ use Illuminate\Http\Request;
 
 /**
  * Payments (docs/phase-6-customer-portal.md §2 #5, §3.4): paid and due from the ledger-derived booking amounts, and the
- * history from the cash book — the customer's payments, online payment charges, and reversals of either. Staff notes,
- * receipts and gateway fees stay in the admin.
+ * history from the cash book — the customer's payments and online payment charges that stand (an edited or deleted one
+ * and its reversal are left off, since 2026-10-16). Staff notes, receipts and gateway fees stay in the admin.
  */
 class PortalPaymentController extends Controller
 {
@@ -26,13 +26,15 @@ class PortalPaymentController extends Controller
         $bookings = PortalTripController::bookingsOf(PortalTripController::customer($request))->get()->keyBy('id');
         $en = app()->getLocale() === 'en';
 
+        // Only what stands, as on the invoice (the client, 2026-10-16): an edited or deleted payment and its reversal stay
+        // in the admin's books, and the paid figure already leaves them out.
         $rows = Transaction::query()
             ->whereIn('booking_id', $bookings->keys())
             ->whereIn('category', [LedgerService::CATEGORY_PAYMENT, LedgerService::CATEGORY_ONLINE_CHARGE])
+            ->standing()
             ->orderByDesc('occurred_at')->orderByDesc('id')
             ->limit(self::HISTORY_LIMIT)
             ->get();
-        $reversed = Transaction::query()->whereIn('reverses_transaction_id', $rows->pluck('id'))->pluck('reverses_transaction_id')->flip();
         $open = $bookings->reject(fn (Booking $b) => $b->status === BookingStatus::Cancelled);
 
         return response()->json(['data' => [
@@ -40,7 +42,7 @@ class PortalPaymentController extends Controller
             'due' => Money::toNumber($open->sum(fn (Booking $b) => max(0, (float) $b->due_amount))),
             'bookings' => $bookings->count(),
             'openBookings' => $open->filter(fn (Booking $b) => (float) $b->due_amount > 0)->count(),
-            'history' => $rows->map(function (Transaction $row) use ($bookings, $reversed, $en) {
+            'history' => $rows->map(function (Transaction $row) use ($bookings, $en) {
                 $booking = $bookings->get($row->booking_id);
 
                 return [
@@ -48,11 +50,10 @@ class PortalPaymentController extends Controller
                     'at' => $row->occurred_at->toIso8601String(),
                     'reference' => $booking->reference,
                     'title' => $en ? $booking->package_title_en : ($booking->package_title_bn ?: $booking->package_title_en),
-                    'kind' => $row->reverses_transaction_id !== null ? 'reversal' : ($row->category === LedgerService::CATEGORY_ONLINE_CHARGE ? 'charge' : 'payment'),
+                    'kind' => $row->category === LedgerService::CATEGORY_ONLINE_CHARGE ? 'charge' : 'payment',
                     'method' => $row->method,
                     'externalRef' => $row->external_ref,
                     'amount' => Money::toNumber($row->direction === TransactionDirection::In ? $row->amount : -1 * (float) $row->amount),
-                    'reversed' => $reversed->has($row->id),
                 ];
             })->all(),
         ]]);
