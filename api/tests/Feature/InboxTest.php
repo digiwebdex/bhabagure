@@ -266,20 +266,31 @@ class InboxTest extends TestCase
     #[Test]
     public function the_facebook_page_is_connected_with_a_checked_token_kept_encrypted_and_its_messages_come_in_signed(): void
     {
+        // Every call carries the appsecret_proof (an app set to "Require app secret" refuses one without), so the URLs
+        // end in a query string.
         Http::fake([
-            'https://graph.facebook.com/v21.0/me?*' => Http::response(['id' => 'PAGE1', 'name' => 'Bhabaghure Holidays']),
-            'https://graph.facebook.com/v21.0/PAGE1/subscribed_apps' => Http::response(['success' => true]),
+            'https://graph.facebook.com/v21.0/me/messages?*' => Http::response(['recipient_id' => 'PSID1', 'message_id' => 'm_OUT1']),
+            'https://graph.facebook.com/v21.0/me?*' => Http::sequence()
+                ->push(['error' => ['message' => 'Invalid OAuth access token - Cannot parse access token', 'code' => 190]], 400)
+                ->push(['id' => 'PAGE1', 'name' => 'Bhabaghure Holidays']),
+            'https://graph.facebook.com/v21.0/PAGE1/subscribed_apps?*' => Http::response(['success' => true]),
             'https://graph.facebook.com/v21.0/PSID1?*' => Http::response(['name' => 'Mim Akter']),
-            'https://graph.facebook.com/v21.0/me/messages' => Http::response(['recipient_id' => 'PSID1', 'message_id' => 'm_OUT1']),
         ]);
         $admin = $this->staff('admin');
         $this->actingAsApi($this->staff('sales_agent'))->getJson('/api/v1/admin/inbox/settings')->assertForbidden();
+        // A refused token says why, in Facebook's words (2026-10-17: "didn't accept" alone left the owner guessing).
+        $refused = $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-wrong-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
+            ->assertUnprocessable()->json('errors.page_token.0');
+        $this->assertStringContainsString('Invalid OAuth access token', $refused);
+        $this->assertFalse(MessengerSettings::connected());
         $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-page-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
             ->assertOk()->assertJsonPath('data.messenger.connected', true)->assertJsonPath('data.messenger.page_name', 'Bhabaghure Holidays')
             ->assertJsonMissingPath('data.messenger.page_token')->assertJsonMissingPath('data.messenger.app_secret');
         $stored = json_encode(SiteSetting::query()->find(MessengerSettings::KEY)->value);
         $this->assertStringNotContainsString('EAAG-page-token', (string) $stored);
         $this->assertStringNotContainsString('app-secret-1234567890', (string) $stored);
+        $proof = hash_hmac('sha256', 'EAAG-page-token-1234567890', 'app-secret-1234567890');
+        Http::assertSent(fn (HttpRequest $request) => str_contains($request->url(), '/PAGE1/subscribed_apps?appsecret_proof='.$proof));
         $verify = MessengerSettings::get()['verify_token'];
 
         // Meta's subscription check.
@@ -298,7 +309,7 @@ class InboxTest extends TestCase
 
         // A reply inside the 24 hours goes by the Graph API; its echo isn't filed twice.
         $this->actingAsApi($this->staff('sales_agent'))->postJson("/api/v1/admin/inbox/conversations/{$conversation->id}/messages", ['body' => 'Ji ache!'])->assertCreated();
-        Http::assertSent(fn (HttpRequest $request) => $request->url() === 'https://graph.facebook.com/v21.0/me/messages' && $request['recipient']['id'] === 'PSID1'
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === 'https://graph.facebook.com/v21.0/me/messages?appsecret_proof='.$proof && $request['recipient']['id'] === 'PSID1'
             && $request['message']['text'] === 'Ji ache!' && $request['messaging_type'] === 'RESPONSE' && $request->hasHeader('Authorization', 'Bearer EAAG-page-token-1234567890'));
         $this->messenger(['object' => 'page', 'entry' => [['id' => 'PAGE1', 'messaging' => [[
             'sender' => ['id' => 'PAGE1'], 'recipient' => ['id' => 'PSID1'], 'timestamp' => now()->getTimestampMs(), 'message' => ['mid' => 'm_OUT1', 'text' => 'Ji ache!', 'is_echo' => true],

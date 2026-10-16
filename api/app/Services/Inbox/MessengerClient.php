@@ -4,21 +4,26 @@ namespace App\Services\Inbox;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 /**
  * Meta's Messenger Platform for the Facebook Page (Graph API, docs/admin-inbox.md §4). The Page token goes in the
- * Authorization header, never in a URL or a log.
+ * Authorization header, never in a URL or a log. With the App secret, every call carries its appsecret_proof (an HMAC
+ * of the token, never the secret itself), which an app set to "Require app secret" refuses calls without.
  */
 final class MessengerClient
 {
-    public function __construct(private readonly string $pageToken) {}
+    /** What Facebook said when it last refused a call: its own words, for staff to act on. Never holds the token. */
+    public ?string $lastError = null;
+
+    public function __construct(private readonly string $pageToken, private readonly ?string $appSecret = null) {}
 
     public static function fromSettings(): ?self
     {
-        $token = MessengerSettings::get()['page_token'];
+        $settings = MessengerSettings::get();
 
-        return $token === null ? null : new self($token);
+        return $settings['page_token'] === null ? null : new self($settings['page_token'], $settings['app_secret']);
     }
 
     /**
@@ -31,21 +36,43 @@ final class MessengerClient
         try {
             $response = $this->client()->get('/me', ['fields' => 'id,name']);
         } catch (ConnectionException) {
+            $this->lastError = 'Facebook could not be reached';
+
             return null;
         }
         $id = $response->json('id');
+        if ($response->successful() && is_string($id)) {
+            return ['id' => $id, 'name' => (string) $response->json('name', '')];
+        }
+        $this->lastError = self::reason($response);
 
-        return $response->successful() && is_string($id) ? ['id' => $id, 'name' => (string) $response->json('name', '')] : null;
+        return null;
     }
 
     /** Receives the Page's messages, deliveries, reads and echoes at the app's webhook. */
     public function subscribe(string $pageId): bool
     {
         try {
-            return $this->client()->post("/{$pageId}/subscribed_apps", ['subscribed_fields' => 'messages,message_echoes,message_deliveries,message_reads'])->json('success') === true;
+            $response = $this->client()->post("/{$pageId}/subscribed_apps", ['subscribed_fields' => 'messages,message_echoes,message_deliveries,message_reads']);
         } catch (ConnectionException) {
+            $this->lastError = 'Facebook could not be reached';
+
             return false;
         }
+        if ($response->json('success') === true) {
+            return true;
+        }
+        $this->lastError = self::reason($response);
+
+        return false;
+    }
+
+    /** Facebook's own message for a refused call, e.g. "Invalid OAuth access token" — short, and never the token. */
+    private static function reason(Response $response): string
+    {
+        $message = $response->json('error.message');
+
+        return mb_substr(is_string($message) && $message !== '' ? $message : 'HTTP '.$response->status(), 0, 300);
     }
 
     /** The customer's name as Messenger shows it; null when Meta won't say. */
@@ -121,10 +148,14 @@ final class MessengerClient
 
     private function client(): PendingRequest
     {
-        return Http::baseUrl(rtrim((string) config('bhabaghure.notifications.inbox.graph_url'), '/'))
+        $request = Http::baseUrl(rtrim((string) config('bhabaghure.notifications.inbox.graph_url'), '/'))
             ->withToken($this->pageToken)
             ->acceptJson()
             ->asJson()
             ->timeout(15);
+
+        return $this->appSecret === null || $this->appSecret === ''
+            ? $request
+            : $request->withQueryParameters(['appsecret_proof' => hash_hmac('sha256', $this->pageToken, $this->appSecret)]);
     }
 }

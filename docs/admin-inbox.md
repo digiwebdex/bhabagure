@@ -115,7 +115,9 @@ Done by someone who is an **admin of the Facebook Page**:
    - subscribe the Page to `messages`, `message_echoes`, `message_deliveries` and `message_reads`
 4. App settings → Basic → copy the **App secret**.
 5. Paste the Page token and App secret in Admin → Inbox → Settings → Connect the Page. They are checked with Facebook
-   first.
+   first, and the Page is subscribed to the app; nothing is saved unless both work, and a refusal shows Facebook's own
+   reason. Every Graph call carries `appsecret_proof` (HMAC-SHA256 of the token with the App secret), so an app with
+   "Require app secret" switched on works too (2026-10-17).
 6. Until Meta approves the app (App Review, permission `pages_messaging`, with a short screen recording of replying
    from the inbox), only people with a role on the app can message through it. After approval, every customer can.
 

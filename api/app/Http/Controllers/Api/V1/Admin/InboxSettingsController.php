@@ -29,12 +29,18 @@ class InboxSettingsController extends Controller
             'page_token' => ['required', 'string', 'min:20', 'max:1000'],
             'app_secret' => [MessengerSettings::get()['app_secret'] === null ? 'required' : 'nullable', 'string', 'min:16', 'max:200'],
         ]);
-        $client = new MessengerClient(trim($data['page_token']));
+        // Checked with the secret too: an app set to "Require app secret" refuses a call without its proof.
+        $secret = isset($data['app_secret']) && trim($data['app_secret']) !== '' ? trim($data['app_secret']) : MessengerSettings::get()['app_secret'];
+        $client = new MessengerClient(trim($data['page_token']), $secret);
         $page = $client->page();
         if ($page === null) {
-            throw ValidationException::withMessages(['page_token' => [__('inbox.page_token_invalid')]]);
+            // Facebook's own reason ("Invalid OAuth access token", "…requires appsecret_proof…"), so staff know what to fix.
+            throw ValidationException::withMessages(['page_token' => [__('inbox.page_token_invalid', ['reason' => $client->lastError])]]);
         }
-        $client->subscribe($page['id']);
+        // Without the subscription no message would ever arrive: nothing is saved until it holds.
+        if (! $client->subscribe($page['id'])) {
+            throw ValidationException::withMessages(['page_token' => [__('inbox.page_not_subscribed', ['reason' => $client->lastError])]]);
+        }
         MessengerSettings::save($page['id'], $page['name'], trim($data['page_token']), isset($data['app_secret']) ? trim($data['app_secret']) : null, $request->user('staff'));
         $audit->record('inbox.messenger_connected', $request->user('staff'), null, ['page_id' => $page['id']]);
 

@@ -129,7 +129,8 @@ test('an admin manages quick replies, and a Page token Facebook refuses is not s
   await page.getByLabel('Page access token').fill('EAAG-not-a-real-token-000000')
   await page.getByLabel('App secret').fill('not-a-real-app-secret')
   await page.getByRole('button', { name: 'Connect the Page' }).click()
-  await expect(page.getByText('Facebook didn’t accept this Page access token. Copy it again from the Meta app.')).toBeVisible({ timeout: 45_000 })
+  // Facebook's own reason follows ("Invalid OAuth access token…"), or "could not be reached" offline.
+  await expect(page.getByText(/^Facebook didn’t accept this Page access token and App secret\. Facebook says: “.+”/)).toBeVisible({ timeout: 45_000 })
   await expect(page.getByText('Not connected')).toBeVisible()
 
   // Sales agents don't get the settings.
