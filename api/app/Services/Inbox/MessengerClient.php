@@ -44,7 +44,7 @@ final class MessengerClient
         if ($response->successful() && is_string($id)) {
             return ['id' => $id, 'name' => (string) $response->json('name', '')];
         }
-        $this->lastError = self::reason($response);
+        $this->lastError = $this->reason($response);
 
         return null;
     }
@@ -62,17 +62,21 @@ final class MessengerClient
         if ($response->json('success') === true) {
             return true;
         }
-        $this->lastError = self::reason($response);
+        $this->lastError = $this->reason($response);
 
         return false;
     }
 
-    /** Facebook's own message for a refused call, e.g. "Invalid OAuth access token" — short, and never the token. */
-    private static function reason(Response $response): string
+    /**
+     * Facebook's own message for a refused call, e.g. "Invalid OAuth access token" — short, and never the token, which
+     * Facebook sometimes repeats ("Malformed access token EAAG…").
+     */
+    private function reason(Response $response): string
     {
         $message = $response->json('error.message');
+        $message = is_string($message) && $message !== '' ? str_replace($this->pageToken, '[token]', $message) : 'HTTP '.$response->status();
 
-        return mb_substr(is_string($message) && $message !== '' ? $message : 'HTTP '.$response->status(), 0, 300);
+        return mb_substr($message, 0, 300);
     }
 
     /** The customer's name as Messenger shows it; null when Meta won't say. */

@@ -271,7 +271,7 @@ class InboxTest extends TestCase
         Http::fake([
             'https://graph.facebook.com/v21.0/me/messages?*' => Http::response(['recipient_id' => 'PSID1', 'message_id' => 'm_OUT1']),
             'https://graph.facebook.com/v21.0/me?*' => Http::sequence()
-                ->push(['error' => ['message' => 'Invalid OAuth access token - Cannot parse access token', 'code' => 190]], 400)
+                ->push(['error' => ['message' => 'Malformed access token EAAG-wrong-token-1234567890', 'code' => 190]], 400)
                 ->push(['id' => 'PAGE1', 'name' => 'Bhabaghure Holidays']),
             'https://graph.facebook.com/v21.0/PAGE1/subscribed_apps?*' => Http::response(['success' => true]),
             'https://graph.facebook.com/v21.0/PSID1?*' => Http::response(['name' => 'Mim Akter']),
@@ -281,7 +281,9 @@ class InboxTest extends TestCase
         // A refused token says why, in Facebook's words (2026-10-17: "didn't accept" alone left the owner guessing).
         $refused = $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-wrong-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
             ->assertUnprocessable()->json('errors.page_token.0');
-        $this->assertStringContainsString('Invalid OAuth access token', $refused);
+        // Facebook repeats the token in this one: it is never shown back.
+        $this->assertStringContainsString('Malformed access token [token]', $refused);
+        $this->assertStringNotContainsString('EAAG-wrong-token', $refused);
         $this->assertFalse(MessengerSettings::connected());
         $this->actingAsApi($admin)->putJson('/api/v1/admin/inbox/settings/messenger', ['page_token' => 'EAAG-page-token-1234567890', 'app_secret' => 'app-secret-1234567890'])
             ->assertOk()->assertJsonPath('data.messenger.connected', true)->assertJsonPath('data.messenger.page_name', 'Bhabaghure Holidays')
