@@ -24,9 +24,10 @@ final class InvoiceView
     /**
      * 5: English only (2026-09-19); 6: a smaller logo (2026-09-23); 7: notes of any length run on to further pages, and a
      * line's detail prints under it (2026-10-01); 8: the signatures at the foot of the last page (2026-10-01); 9: reversed
-     * payments and their reversals left off (2026-10-16). A stored PDF from before is made again.
+     * payments and their reversals left off (2026-10-16); 10: payment dates in Dhaka time (2026-10-22). A stored PDF from
+     * before is made again.
      */
-    public const TEMPLATE_VERSION = '9';
+    public const TEMPLATE_VERSION = '10';
 
     /**
      * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on
@@ -43,6 +44,9 @@ final class InvoiceView
         // "BDT", not the ৳ sign: an English-only document (2026-09-19).
         $bdt = fn ($value) => Numerals::bdt($value, $locale, 'auto', 'code');
         $date = fn ($value) => $value ? Numerals::date($value->toDateString(), $locale) : '—';
+        // A payment's moment is stored in UTC: its date is the day in Dhaka. Taken as UTC, a payment made before 6 am —
+        // or dated a day, which is stored as Dhaka's midnight — printed the day before (found 2026-10-22).
+        $paidOn = fn ($value) => $date($value?->copy()->timezone('Asia/Dhaka'));
 
         $status = match (true) {
             $invoice->status === Invoice::VOID => ['key' => 'void', 'label' => 'VOID'],
@@ -76,7 +80,7 @@ final class InvoiceView
         $payments = $rows->where('category', LedgerService::CATEGORY_PAYMENT)
             ->map(fn (Transaction $t) => ($t->direction->value === 'out' ? '− ' : '').$bdt($t->amount).' · '.$this->methodLabel($t->method)
                 // A gateway or wallet reference; a deal payment's reference is only its label.
-                .(($t->external_ref ?? $t->reference_label) ? ' · '.($t->external_ref ?? $t->reference_label) : '').' · '.$date($t->occurred_at)
+                .(($t->external_ref ?? $t->reference_label) ? ' · '.($t->external_ref ?? $t->reference_label) : '').' · '.$paidOn($t->occurred_at)
                 .(isset($charges[(string) $t->external_ref]) && $t->external_ref !== null
                     ? ' · + '.$bdt($charges[$t->external_ref]->amount).' '.($t->method === 'bkash' ? 'bKash charge' : 'online payment charge')
                     : ''))
@@ -85,7 +89,7 @@ final class InvoiceView
         // how the client's own invoices read.
         $paymentRows = $rows->where('category', LedgerService::CATEGORY_PAYMENT)
             ->map(fn (Transaction $t) => [
-                'Payment on '.$date($t->occurred_at)
+                'Payment on '.$paidOn($t->occurred_at)
                     // The reference is what a customer checks the payment against, so it is printed with it.
                     .' ('.$this->methodLabel($t->method).(($t->external_ref ?? $t->reference_label) ? ' · '.($t->external_ref ?? $t->reference_label) : '').')',
                 ($t->direction->value === 'out' ? '− ' : '').$bdt($t->amount),
