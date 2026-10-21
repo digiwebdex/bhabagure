@@ -38,8 +38,14 @@ final class SiteSettingKeys
      */
     public const BRAND = 'brand';
 
+    /**
+     * EMI rates for the booking form's preview (docs/emi-preview.md): `{ enabled, minAmount, groups }` (App\Support\
+     * Payments\EmiRates). Served to the website with the pricing (GET /public/pricing), not as a setting.
+     */
+    public const EMI = 'emi';
+
     /** The keys Admin → Site settings edits. */
-    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING, self::FEATURES, self::BRAND];
+    public const STAFF_EDITABLE = [...self::PUBLIC, self::PAYMENT, self::BOOKING, self::FEATURES, self::BRAND, self::EMI];
 
     /** Edited on the Pricing screen, served by GET /public/pricing. */
     public const PRICING = 'pricing';

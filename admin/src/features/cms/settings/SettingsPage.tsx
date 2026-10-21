@@ -11,6 +11,7 @@ import { WEBSITE_FEATURES, type BankAccount, type CodeDelivery, type Data, type 
 import { BRAND_LOGOS_KEY, ORIGINAL_LIGHT_LOGO, useBrandLogos } from '../../../lib/brand'
 import { useFormat } from '../../../lib/useFormat'
 import { MediaPicker } from '../media/media'
+import { EmiRatesEditor } from './EmiRatesEditor'
 import { HeroVideoCard } from './HeroVideoCard'
 
 type Key = keyof SiteSettings
@@ -163,6 +164,12 @@ export function SettingsPage() {
             </>
           )}
         </SettingCard>
+        {/* docs/emi-preview.md: the EMI preview under the website booking form's first step. Information only. */}
+        {data.emi ? (
+          <SettingCard settingKey="emi" title={t('settings.emi.title')} initial={data.emi}>
+            {(value, set, error) => <EmiRatesEditor value={value} set={set} error={error} />}
+          </SettingCard>
+        ) : null}
         {/* docs/brand-logo.md: the logos and browser icon everywhere — website, portal, admin and PDFs. */}
         <SettingCard settingKey="brand" title={t('settings.brand.title')} initial={{ logo: null, logoLight: null, icon: null, ...data.brand }}>
           {(value, set, error) => <BrandSlots value={value} set={set} error={error} />}

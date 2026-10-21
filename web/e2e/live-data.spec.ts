@@ -930,6 +930,74 @@ test.describe('CMS to website', () => {
     }
   });
 
+  test('the EMI preview under step 1 is on the whole booking amount, follows every change, keeps the form and adds nothing (docs/emi-preview.md)', async ({ page, request }) => {
+    const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['settings'] } });
+    const taka = (text: string) => Number(text.replace(/[^\d]/g, ''));
+    const card = page.locator('#packages article').filter({ hasText: 'THAILAND BUDGET ESCAPE' });
+    await page.goto('/en');
+    await card.getByRole('button', { name: 'Book now' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Book online' });
+    const date = new Date(Date.now() + 63 * 86_400_000).toISOString().slice(0, 10);
+    await dialog.getByLabel('Departure date').fill(date);
+    await dialog.getByLabel('Travellers').fill('2');
+    await dialog.getByLabel('Room').selectOption('single');
+
+    // Below Room type, and closed until asked for.
+    const preview = dialog.getByTestId('emi-preview');
+    const trigger = preview.getByRole('button', { name: 'See EMI options' });
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect((await trigger.boundingBox())!.y).toBeGreaterThan((await dialog.getByLabel('Room').boundingBox())!.y);
+    await trigger.click();
+    const amount = taka(await preview.getByTestId('emi-amount').locator('strong').innerText());
+    expect(amount).toBeGreaterThan(5000);
+
+    // "Other banks (35)" first: every tenure, 12 months at 11.33 %, the charge added once.
+    const plans = preview.getByTestId('emi-plans').locator('li');
+    await expect(plans).toHaveCount(8);
+    const extra = Math.round((amount * 11.33) / 100);
+    await expect(preview.locator('li[data-months="12"]')).toContainText(`৳ ${(Math.ceil((amount + extra) / 12)).toLocaleString('en-IN')} / month`);
+    await expect(preview).toContainText('still being confirmed with SSLCommerz');
+    // Standard Chartered offers no 30 months.
+    await preview.getByRole('tab', { name: 'Standard Chartered' }).click();
+    await expect(plans).toHaveCount(7);
+    await expect(preview.locator('li[data-months="30"]')).toHaveCount(0);
+
+    // Closing it keeps every choice; a change re-prices it at once.
+    await preview.getByRole('button', { name: 'Hide EMI options' }).click();
+    await expect(dialog.getByLabel('Travellers')).toHaveValue('2');
+    await expect(dialog.getByLabel('Departure date')).toHaveValue(date);
+    await expect(dialog.getByLabel('Room')).toHaveValue('single');
+    await dialog.getByLabel('Travellers').fill('3');
+    await trigger.click();
+    const three = taka(await preview.getByTestId('emi-amount').locator('strong').innerText());
+    expect(three).toBeGreaterThan(amount);
+
+    // The booking's total is the amount the preview used: nothing was added for opening it.
+    await dialog.getByRole('button', { name: 'Next step →' }).click();
+    const lead = dialog.locator('section').nth(0);
+    await lead.getByLabel('Name (as on passport)').fill('KARIM HOSSAIN');
+    await lead.getByLabel('WhatsApp number').fill(uniquePhone());
+    await dialog.getByRole('button', { name: 'Next step →' }).click();
+    expect(taka(await dialog.getByTestId('booking-total').innerText())).toBe(three);
+
+    // Below the minimum: the eligibility message, no plans.
+    artisan('tinker', `--execute=$v = App\\Support\\Payments\\EmiRates::settings(); $v['minAmount'] = 10000000; App\\Models\\SiteSetting::query()->updateOrCreate(['key' => 'emi'], ['value' => $v]); echo 'ok';`);
+    try {
+      expect((await refresh()).status()).toBe(200);
+      await expect.poll(async () => {
+        await page.goto('/en');
+        await card.getByRole('button', { name: 'Book now' }).click();
+        await page.getByRole('dialog', { name: 'Book online' }).getByTestId('emi-preview').getByRole('button', { name: 'See EMI options' }).click();
+        return page.getByTestId('emi-below-minimum').count();
+      }, { timeout: 20_000 }).toBe(1);
+      await expect(page.getByTestId('emi-below-minimum')).toContainText('EMI is available on bookings of ৳ 1,00,00,000 or more.');
+      await expect(page.getByTestId('emi-plans')).toHaveCount(0);
+    } finally {
+      artisan('tinker', `--execute=$v = App\\Support\\Payments\\EmiRates::settings(); $v['minAmount'] = 5000; App\\Models\\SiteSetting::query()->updateOrCreate(['key' => 'emi'], ['value' => $v]); echo 'ok';`);
+      await refresh();
+    }
+  });
+
   test('a group tour: a fixed price, the room changes it, and it is booked on its departures only — no calendar (docs/fixed-departure-group-tours.md)', async ({ page, request }) => {
     const thai = 'thailand-budget-escape-bangkok-pattaya-coral-island-with';
     const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['packages', 'departures'] } });

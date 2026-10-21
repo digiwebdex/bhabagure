@@ -62,5 +62,132 @@
       "price": 600,
       "unit": "per_person"
     }
-  ]
+  ],
+  "emi": {
+    "minAmount": 5000,
+    "groups": [
+      {
+        "key": "all_banks",
+        "name": {
+          "bn": "অন্যান্য ব্যাংক (৩৫টি)",
+          "en": "Other banks (35)"
+        },
+        "eligibilityPending": true,
+        "tenures": [
+          {
+            "months": 3,
+            "percent": 5.13
+          },
+          {
+            "months": 6,
+            "percent": 6.75
+          },
+          {
+            "months": 9,
+            "percent": 8.99
+          },
+          {
+            "months": 12,
+            "percent": 11.33
+          },
+          {
+            "months": 18,
+            "percent": 15.03
+          },
+          {
+            "months": 24,
+            "percent": 20.38
+          },
+          {
+            "months": 30,
+            "percent": 21.8
+          },
+          {
+            "months": 36,
+            "percent": 26.26
+          }
+        ]
+      },
+      {
+        "key": "standard_chartered",
+        "name": {
+          "bn": "স্ট্যান্ডার্ড চার্টার্ড",
+          "en": "Standard Chartered"
+        },
+        "eligibilityPending": false,
+        "tenures": [
+          {
+            "months": 3,
+            "percent": 5.67
+          },
+          {
+            "months": 6,
+            "percent": 7.86
+          },
+          {
+            "months": 9,
+            "percent": 10.74
+          },
+          {
+            "months": 12,
+            "percent": 13.77
+          },
+          {
+            "months": 18,
+            "percent": 17.65
+          },
+          {
+            "months": 24,
+            "percent": 23.25
+          },
+          {
+            "months": 36,
+            "percent": 31.07
+          }
+        ]
+      },
+      {
+        "key": "city_bank",
+        "name": {
+          "bn": "দ্য সিটি ব্যাংক",
+          "en": "The City Bank"
+        },
+        "eligibilityPending": false,
+        "tenures": [
+          {
+            "months": 3,
+            "percent": 5.65
+          },
+          {
+            "months": 6,
+            "percent": 7.27
+          },
+          {
+            "months": 9,
+            "percent": 9.51
+          },
+          {
+            "months": 12,
+            "percent": 11.85
+          },
+          {
+            "months": 18,
+            "percent": 15.55
+          },
+          {
+            "months": 24,
+            "percent": 20.9
+          },
+          {
+            "months": 30,
+            "percent": 22.32
+          },
+          {
+            "months": 36,
+            "percent": 26.78
+          }
+        ]
+      }
+    ]
+  }
 }

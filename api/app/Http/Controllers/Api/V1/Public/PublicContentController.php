@@ -26,6 +26,7 @@ use App\Services\Media\HeroVideo;
 use App\Support\Brand;
 use App\Support\CreatorProfile;
 use App\Support\Money;
+use App\Support\Payments\EmiRates;
 use App\Support\Payments\PaymentOptions;
 use App\Support\WebsiteFeatures;
 use Illuminate\Database\Eloquent\Builder;
@@ -170,6 +171,8 @@ class PublicContentController extends Controller
             'onlineCheckout' => PaymentOptions::checkoutAvailable(),
             // On, the form sends a code to the lead's mobile before the booking is saved (docs/booking-phone-verification.md).
             'verifyPhone' => PhoneCheck::required(),
+            // The EMI preview under the booking form's first step (docs/emi-preview.md); null while switched off.
+            'emi' => EmiRates::forWebsite(),
             'addons' => Addon::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get()
                 ->map(fn (Addon $addon) => [
                     'code' => $addon->code,

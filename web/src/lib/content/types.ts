@@ -215,6 +215,30 @@ export interface PricingSettings extends PricingConfig {
    * older API, or the seed): off.
    */
   verifyPhone?: boolean;
+  /**
+   * EMI rates for the booking form's preview (docs/emi-preview.md), from Admin → Site settings → EMI rates. Null or absent
+   * (switched off, an older API, or the seed): no preview.
+   */
+  emi?: EmiSettings | null;
+}
+
+/** One EMI tenure a rate group offers: the charge in percent, card and EMI charges included. */
+export interface EmiTenure {
+  months: number;
+  percent: number;
+}
+
+export interface EmiSettings {
+  /** Bookings below this amount (BDT) get the eligibility message, not plans. */
+  minAmount: number;
+  /** In the order to show; only groups that are on, each with only the tenures it offers. */
+  groups: {
+    key: string;
+    name: Localized;
+    /** The group's banks aren't confirmed yet (SSLCommerz's "For All (35) Banks"). */
+    eligibilityPending: boolean;
+    tenures: EmiTenure[];
+  }[];
 }
 
 export interface SiteSettings {

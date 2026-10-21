@@ -107,7 +107,7 @@ export function BookingModal() {
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-fluid-18-28 pt-booking-body-top pb-fluid-20-28">
         <StepIndicator current={booking.step} />
 
-        {booking.step === 1 ? <PackageStep errors={booking.attempted[1] ? validatePackageStep(booking, tv, pkg).errors : {}} roomLabel={roomLabel} /> : null}
+        {booking.step === 1 ? <PackageStep errors={booking.attempted[1] ? validatePackageStep(booking, tv, pkg).errors : {}} roomLabel={roomLabel} total={quote.total} /> : null}
         {booking.step === 2 ? <TravellersStep errors={booking.attempted[2] ? validateTravellers(booking, tv).errors : []} /> : null}
         {booking.step === 3 ? (
           <ReviewStep pkg={pkg} quote={quote} hotelCategory={hotelCategory} termsError={booking.attempted[3] && !booking.terms ? t('termsRequired') : undefined} />

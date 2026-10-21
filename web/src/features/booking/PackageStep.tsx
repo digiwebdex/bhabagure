@@ -14,6 +14,7 @@ import { normalizeDigits, todayIso } from '@/lib/validators';
 import { useBooking } from '@/state/booking';
 
 import { bookingDate, hasRoom } from './departures';
+import { EmiPreview } from './EmiPreview';
 import type { PackageStepErrors } from './validation';
 
 const ROOMS: RoomType[] = ['twin', 'single', 'triple'];
@@ -121,7 +122,8 @@ function GroupSizePicker({ pkg }: { pkg: PackageView }) {
   );
 }
 
-export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; roomLabel: (room: RoomType) => string }) {
+/** `total` is the booking's whole amount as quoted (travellers, room, add-ons, charges) — what an EMI preview is on. */
+export function PackageStep({ errors, roomLabel, total }: { errors: PackageStepErrors; roomLabel: (room: RoomType) => string; total: number }) {
   const t = useTranslations('booking');
   const { packages, pricing, addons } = useSiteContent();
   const f = useFormatters();
@@ -211,6 +213,8 @@ export function PackageStep({ errors, roomLabel }: { errors: PackageStepErrors; 
           );
         })}
       </div>
+      {/* After the add-ons, so the amount it shows already includes them (the client's choice, 2026-10-22). */}
+      {pricing.emi ? <EmiPreview emi={pricing.emi} amount={total} pax={booking.pax} /> : null}
     </>
   );
 }

@@ -10,6 +10,7 @@ use App\Models\SiteSetting;
 use App\Services\AuditLogger;
 use App\Services\Customers\LoginCodes;
 use App\Support\Brand;
+use App\Support\Payments\EmiRates;
 use App\Support\Payments\PaymentOptions;
 use App\Support\WebsiteFeatures;
 use Illuminate\Http\JsonResponse;
@@ -78,6 +79,21 @@ class SiteSettingController extends Controller
             'value.logoLight' => ['nullable', 'integer', 'exists:media,id'],
             'value.icon' => ['nullable', 'integer', 'exists:media,id'],
         ],
+        // EMI rates for the booking form's preview (docs/emi-preview.md): per rate group, a percent per tenure, or null where
+        // that tenure isn't offered (Standard Chartered has no 30 months).
+        'emi' => [
+            'value' => ['required', 'array'],
+            'value.enabled' => ['required', 'boolean'],
+            'value.minAmount' => ['required', 'integer', 'between:0,10000000'],
+            'value.groups' => ['required', 'array', 'size:3'],
+            'value.groups.*.key' => ['required', 'distinct', 'in:all_banks,standard_chartered,city_bank'],
+            'value.groups.*.name.bn' => ['required', 'string', 'max:80'],
+            'value.groups.*.name.en' => ['required', 'string', 'max:80'],
+            'value.groups.*.enabled' => ['required', 'boolean'],
+            'value.groups.*.eligibilityPending' => ['required', 'boolean'],
+            'value.groups.*.rates' => ['required', 'array'],
+            'value.groups.*.rates.*' => ['nullable', 'numeric', 'between:0,100', 'decimal:0,2'],
+        ],
         // Which website features the public sees (docs/website-features.md): every switch, each true or false.
         'features' => [
             'value' => ['required', 'array'],
@@ -96,6 +112,8 @@ class SiteSettingController extends Controller
         if (is_array($settings[SiteSettingKeys::PAYMENT] ?? null)) {
             $settings[SiteSettingKeys::PAYMENT] = PaymentOptions::normalize($settings[SiteSettingKeys::PAYMENT]);
         }
+        // The EMI rates as the website uses them: the chart until they are first saved.
+        $settings[SiteSettingKeys::EMI] = EmiRates::settings();
 
         // Beside the booking check's switch: whether a code has ever reached a customer (docs/booking-phone-verification.md).
         return response()->json(['data' => (object) $settings, 'meta' => ['codes' => LoginCodes::deliveryStatus()]]);
@@ -119,6 +137,7 @@ class SiteSettingController extends Controller
                 // Only the known field, as a true boolean (a form may send "1").
                 SiteSettingKeys::BOOKING => ['verifyPhone' => filter_var($validated['value']['verifyPhone'], FILTER_VALIDATE_BOOLEAN)],
                 SiteSettingKeys::BRAND => collect(Brand::SLOTS)->mapWithKeys(fn (string $slot) => [$slot => isset($validated['value'][$slot]) ? (int) $validated['value'][$slot] : null])->all(),
+                SiteSettingKeys::EMI => EmiRates::normalize($validated['value']),
                 SiteSettingKeys::FEATURES => collect(WebsiteFeatures::KEYS)->mapWithKeys(fn (string $feature) => [$feature => filter_var($validated['value'][$feature], FILTER_VALIDATE_BOOLEAN)])->all(),
                 default => $validated['value'],
             },

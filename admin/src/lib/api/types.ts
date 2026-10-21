@@ -335,6 +335,17 @@ export type Localized = { bn: string; en: string }
 
 export type BankAccount = { bankName: string; accountName: string; accountNumber: string; branch: string; routingNumber: string; transferType: string }
 
+/** The EMI tenures on SSLCommerz's chart, in months. */
+export const EMI_TENURES = ['3', '6', '9', '12', '18', '24', '30', '36'] as const
+
+export type EmiRates = {
+  enabled: boolean
+  /** Bookings below this (BDT) get an eligibility message instead of plans. */
+  minAmount: number
+  /** all_banks · standard_chartered · city_bank. A rate is a percent, or null where that tenure isn't offered. */
+  groups: { key: string; name: Localized; enabled: boolean; eligibilityPending: boolean; rates: Record<(typeof EMI_TENURES)[number], number | null> }[]
+}
+
 export type SiteSettings = {
   company?: { name: Localized; brand: Localized }
   contact?: {
@@ -369,6 +380,8 @@ export type SiteSettings = {
   }
   /** The website booking form's checks (docs/booking-phone-verification.md). */
   booking?: { verifyPhone: boolean }
+  /** EMI rates for the website booking form's preview (docs/emi-preview.md); always sent, the chart until first saved. */
+  emi?: EmiRates
   /** The logos and browser icon (docs/brand-logo.md): media-library ids, null for the original. */
   brand?: { logo: number | null; logoLight: number | null; icon: number | null }
   /** Which website features the public sees (docs/website-features.md); absent until first saved, which means all on. */
