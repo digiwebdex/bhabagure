@@ -202,6 +202,40 @@ class InvoicePdfTest extends TestCase
         $this->assertEqualsWithDelta(288.0, max(array_column($pdf['texts'], 'baselineMm')), 3.0, 'the thank-you at the foot (297 − 7 mm)');
     }
 
+    #[Test]
+    public function every_invoice_links_the_refund_policy_at_its_foot_and_the_delivery_receipt_does_not(): void
+    {
+        // The client, 2026-10-22: a reference only — no checkbox, no "you have agreed".
+        $url = 'https://bhabaghure.com.bd/refund-policy';
+        $link = '<a href="'.$url.'">Read our Refund Policy</a>: <a href="'.$url.'">'.$url.'</a>';
+        foreach (['a4', 'a5'] as $size) {
+            $html = app(InvoicePdf::class)->html($this->invoice, true, size: $size);
+            $this->assertStringContainsString($link, $html, $size);
+            // In the foot: after the terms, before the signatures.
+            $this->assertTrue(strpos($html, 'Visa processing fees') < strpos($html, 'Read our Refund Policy') && strpos($html, 'Read our Refund Policy') < strpos($html, 'Customer Signature'), $size);
+        }
+        $this->assertStringContainsString($url.'</a>', app(InvoicePdf::class)->html($this->invoice, true, size: 'slip'));
+        $this->assertStringNotContainsString('Refund Policy', app(InvoicePdf::class)->html($this->invoice, true, size: 'delivery'));
+        // What customers open from their booking page: the same.
+        $this->assertStringContainsString($link, app(InvoicePdf::class)->html($this->invoice, true, maskPassports: true));
+        $this->assertStringNotContainsString('agree', strtolower((string) preg_replace('/.*data-region="refund-policy"[^>]*>(.*?)<\/div>.*/s', '$1', app(InvoicePdf::class)->html($this->invoice, true))));
+    }
+
+    #[Test]
+    public function the_pdfs_refund_policy_link_is_clickable_and_clear_of_the_signatures(): void
+    {
+        $file = $this->renderPdf(true);
+        // A link annotation to the exact address, and the address printed so paper works too.
+        $this->assertStringContainsString('(https://bhabaghure.com.bd/refund-policy)', (string) file_get_contents($file));
+        $pdf = $this->inspect($file);
+        $this->assertSame(1, $pdf['pages']);
+        $policy = $this->find($pdf, 'Read our Refund Policy');
+        $this->assertPdfContains('https://bhabaghure.com.bd/refund-policy', array_column($pdf['texts'], 'str'));
+        // Below the terms and above the signatures, not on top of either.
+        $this->assertGreaterThan($this->find($pdf, 'Visa processing fees')['baselineMm'], $policy['yMm']);
+        $this->assertLessThan($this->find($pdf, 'Customer Signature')['yMm'] - 3.0, $policy['baselineMm']);
+    }
+
     private function renderPdf(bool $header, ?Invoice $invoice = null): string
     {
         try {

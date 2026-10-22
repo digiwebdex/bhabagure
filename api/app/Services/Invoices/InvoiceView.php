@@ -24,10 +24,16 @@ final class InvoiceView
     /**
      * 5: English only (2026-09-19); 6: a smaller logo (2026-09-23); 7: notes of any length run on to further pages, and a
      * line's detail prints under it (2026-10-01); 8: the signatures at the foot of the last page (2026-10-01); 9: reversed
-     * payments and their reversals left off (2026-10-16); 10: payment dates in Dhaka time (2026-10-22). A stored PDF from
-     * before is made again.
+     * payments and their reversals left off (2026-10-16); 10: payment dates in Dhaka time (2026-10-22); 11: the refund policy link at the
+     * foot (2026-10-22). A stored PDF from before is made again.
      */
-    public const TEMPLATE_VERSION = '10';
+    public const TEMPLATE_VERSION = '11';
+
+    /**
+     * Printed at the foot of every invoice (the client, 2026-10-22): a reference only, never a claim the customer agreed
+     * to it. The exact address the client gave; the page itself is Website → Legal pages → Refund policy.
+     */
+    public const REFUND_POLICY_URL = 'https://bhabaghure.com.bd/refund-policy';
 
     /**
      * @param  string  $size  a4 · a5 · slip · delivery (docs/phase-9-accounts.md §5) — the same figures, printed on
@@ -180,6 +186,8 @@ final class InvoiceView
                 'Visa processing fees are not refunded if a visa is refused. This invoice is computer-generated and valid without a signature.',
             ],
             'voidReason' => $invoice->status === Invoice::VOID ? $invoice->void_reason : null,
+            // On every invoice, A4, A5 and the 80mm slip — not the delivery receipt, which isn't one.
+            'refundPolicyUrl' => $size === 'delivery' ? null : self::REFUND_POLICY_URL,
         ];
     }
 

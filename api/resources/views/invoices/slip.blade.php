@@ -126,6 +126,9 @@
       Please check every document before signing.<br>
     @endif
     Thank you for travelling with us.<br>
+    @if (($refundPolicyUrl ?? null) !== null)
+      <span data-region="refund-policy"><a href="{{ $refundPolicyUrl }}" style="color: inherit">Read our Refund Policy</a>:<br><a href="{{ $refundPolicyUrl }}" class="num" style="color: inherit">{{ $refundPolicyUrl }}</a></span><br>
+    @endif
     @if ($company['website'])<span class="num">{{ $company['website'] }}</span>@endif
   </footer>
 </div>

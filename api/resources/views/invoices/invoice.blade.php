@@ -147,6 +147,9 @@
   footer { margin-top: auto; padding-top: {{ $a5 ? '4mm' : '6mm' }}; display: flex; flex-direction: column; gap: 2.5mm; break-inside: avoid; }
   footer .terms { display: flex; flex-direction: column; gap: 0.6mm; }
   footer .terms span.t { font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; orphans: 2; widows: 2; }
+  {{-- The refund policy (invoices only): the words and the address both link, and the address is printed so paper works too. --}}
+  footer .policy { font-size: {{ $a5 ? '6.5pt' : '8pt' }}; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+  footer .policy a { color: var(--blue); text-decoration: underline; }
   footer .signs { display: flex; justify-content: space-between; gap: 10mm; padding-top: {{ $a5 ? '2mm' : '3.5mm' }}; break-inside: avoid; break-after: avoid; }
   footer .sign { flex: 1; max-width: {{ $a5 ? '46mm' : '64mm' }}; display: flex; flex-direction: column; gap: 1mm; text-align: center; }
   footer .sign .line { border-top: 0.3mm dashed var(--muted); }
@@ -299,6 +302,9 @@
         <span class="t">· {{ $term }}</span>
       @endforeach
     </div>
+    @if (($refundPolicyUrl ?? null) !== null)
+      <div class="policy" data-region="refund-policy"><a href="{{ $refundPolicyUrl }}">Read our Refund Policy</a>: <a href="{{ $refundPolicyUrl }}">{{ $refundPolicyUrl }}</a></div>
+    @endif
     <div class="signs">
       <div class="sign"><div class="line"></div><span>Customer Signature</span></div>
       <div class="sign"><div class="line"></div><span>Authorized Signature</span></div>

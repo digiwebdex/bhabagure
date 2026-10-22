@@ -246,7 +246,8 @@ class QuotationTest extends TestCase
         $this->assertStringContainsString('This price is honoured until', $html);
         // English only, amounts in BDT (2026-09-19).
         $this->assertStringContainsString('BDT 1,53,000', $html);
-        foreach (['Balance due', 'Travellers', 'data-invoice'] as $absent) {
+        // The refund policy link is for invoices (2026-10-22).
+        foreach (['Balance due', 'Travellers', 'data-invoice', 'Refund Policy'] as $absent) {
             $this->assertStringNotContainsString($absent, $html);
         }
         $this->assertSame(0, preg_match('/[\x{0980}-\x{09FF}]/u', strip_tags($html)), 'no Bangla on the quotation');
