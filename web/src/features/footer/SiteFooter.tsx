@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { FacebookGlyph, InstagramGlyph, LinkedInGlyph, TikTokGlyph, YouTubeGlyph } from '@/components/brand/SocialGlyphs';
 import { WhatsAppGlyph } from '@/components/brand/WhatsAppGlyph';
+import { CookieSettingsButton } from '@/features/CookieConsent';
 import { Link } from '@/i18n/navigation';
 import { featureOn } from '@/lib/content/features';
 import type { AppLocale } from '@/i18n/routing';
@@ -99,6 +100,12 @@ export async function SiteFooter({ locale, settings, emptySections = [] }: { loc
       </div>
 
       <p>{t('footer.copyright', { year })}</p>
+      {/* Only with Google Analytics connected: change the answer to the cookie banner (docs/visitor-analytics.md §GA4). */}
+      {settings.ga4 ? (
+        <p className="mt-1.5">
+          <CookieSettingsButton />
+        </p>
+      ) : null}
     </footer>
   );
 }

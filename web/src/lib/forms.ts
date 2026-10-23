@@ -1,6 +1,7 @@
 'use client';
 
 import { analyticsHeaders } from './analytics';
+import { ga4Event } from './ga4';
 
 export type SubmitResult = { ok: true } | { ok: false; reason: 'unavailable' | 'rate_limited' | 'invalid' | 'failed' };
 
@@ -27,7 +28,14 @@ export async function submitPublicForm(path: string, payload: Record<string, unk
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...analyticsHeaders() },
       body: JSON.stringify(payload),
     });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      // Google Analytics, when connected and accepted: a lead for an enquiry or quote request, a sign-up for the
+      // newsletter — after the API accepted it, never on the click (docs/visitor-analytics.md §GA4).
+      const leads: Record<string, string> = { inquiries: 'enquiry', 'air-quotes': 'air_quote', 'hotel-quotes': 'hotel_quote' };
+      if (path === 'newsletter') ga4Event('newsletter_signup');
+      else if (leads[path]) ga4Event('generate_lead', { form: leads[path] });
+      return { ok: true };
+    }
     if (res.status === 429) return { ok: false, reason: 'rate_limited' };
     if (res.status === 422) return { ok: false, reason: 'invalid' };
     return { ok: false, reason: 'failed' };

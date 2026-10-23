@@ -73,7 +73,8 @@ export type Live = {
   recent: { type: string; page: string; at: string; country: string | null; countryName: string | null; city: string | null; device: string }[]
 }
 
-export type AnalyticsSettings = { enabled: boolean; retentionMonths: number; activeMinutes: number; sessionMinutes: number; excludedPaths: string[] }
+/** `ga4MeasurementId`: Google Analytics 4's web stream id ("G-…"), null when not connected. */
+export type AnalyticsSettings = { enabled: boolean; retentionMonths: number; activeMinutes: number; sessionMinutes: number; excludedPaths: string[]; ga4MeasurementId: string | null }
 
 export function query(filters: Filters, extra: Record<string, string | number> = {}): string {
   const params = new URLSearchParams()

@@ -112,6 +112,29 @@ domains; booking references and tokens in paths replaced. Do Not Track and Globa
 aggregates; Live shows place, pages and device only. Kept 13 months. The privacy policy (Website → Legal pages) has a
 section on it.
 
+## GA4
+
+**Asked (2026-10-24):** an option to connect Google Analytics 4. **Decided, each as recommended:** the website sends
+visits to GA4 (reports and Realtime are read in analytics.google.com); GA4 loads **only after the visitor accepts
+cookies**; bookings and enquiries go to GA4 as events; only the **super admin** connects or disconnects it.
+
+- **Connect:** Visitor analytics → Settings → Google Analytics 4 → paste the web stream's **Measurement ID** (`G-…`) →
+  Save. The setup steps are on that screen. Emptying it disconnects. Saved in the `analytics` setting
+  (`ga4MeasurementId`, checked against `^G-[A-Z0-9]{4,15}$`), served to the website in `GET public/settings` as `ga4`
+  (a Measurement ID is public: it is in every page that uses GA4), and the website's settings are refreshed at once.
+- **Website** (`lib/ga4.ts`, `features/CookieConsent.tsx`): with an ID, a banner (Accept / Decline) on the first visit;
+  the answer is kept in this browser (`localStorage bh_cookie_choice`). Accept → Google's tag
+  (`googletagmanager.com/gtag/js?id=…`) loads, `send_page_view: false`, and page views are sent by hand on the same
+  "once per page" rule as our analytics. Decline → never loaded; declining after accepting removes the `_ga` cookies
+  and reloads. Do Not Track / Global Privacy Control → never loaded, no banner. "Cookie settings" in the footer reopens
+  the banner. Without an ID: no banner, no Google request at all.
+- **GA4 events** (no names, phones, emails or form contents): `page_view`; `begin_checkout` (booking form opened, the
+  package); `booking_made` (after the API saved it: `value` = the booking's total, `currency` BDT, `transaction_id` =
+  booking reference, the package and travellers); `generate_lead` with `form` = enquiry · air_quote · hotel_quote (after
+  the API accepted it); `newsletter_signup`. In GA4, mark `booking_made` and `generate_lead` as key events.
+- GA4 counts only visitors who accept, so its figures are lower than our own (which count everyone, cookielessly).
+  The two are not meant to match.
+
 ## Operating it
 
 - **Install / update nginx:** `deploy.sh --install-nginx` (nginx -t first; the old file restored on failure).

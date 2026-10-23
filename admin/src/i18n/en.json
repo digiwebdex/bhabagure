@@ -1068,6 +1068,20 @@
       "excluded": "Pages never counted",
       "excludedHint": "One path per line, each starting with / — e.g. /blog. The customer portal and the admin are never counted."
     },
+    "ga4": {
+      "title": "Google Analytics 4",
+      "connected": "Connected · {{id}}",
+      "notConnected": "Not connected",
+      "steps": [
+        "At analytics.google.com, sign in with the company's Google account and create an account and a GA4 property for Bhabaghure Holidays (time zone Bangladesh, currency BDT).",
+        "Admin → Data streams → Add stream → Web: enter https://bhabaghure.com.bd and name it Website.",
+        "Copy the stream's Measurement ID (it starts with G-) and paste it below, then Save.",
+        "In GA4, Admin → Events: mark booking_made and generate_lead as key events, so bookings and enquiries count as conversions."
+      ],
+      "measurementId": "Measurement ID",
+      "hint": "The website then shows a cookie banner and loads Google Analytics only for visitors who accept. Leave empty to disconnect. Our own visitor analytics carries on either way.",
+      "openRealtime": "Open GA4 Realtime ↗"
+    },
     "definitions": {
       "title": "What the numbers mean",
       "visitors": {

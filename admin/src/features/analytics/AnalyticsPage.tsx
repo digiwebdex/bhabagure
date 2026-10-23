@@ -6,7 +6,7 @@ import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
 import { ErrorNotice, useToast } from '../../components/ui/feedback'
 import { NumberInput, Switch, TextArea, TextInput } from '../../components/ui/fields'
-import { Card, CardTitle, Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
+import { Badge, Card, CardTitle, Chips, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { flag, shiftDay, useAnalyticsSettings, useBreakdown, useLive, useSaveAnalyticsSettings, useSummary, type AnalyticsSettings, type EventRow, type Filters, type SessionRow } from './api'
@@ -340,6 +340,33 @@ function SettingsForm({ initial, title }: { initial: AnalyticsSettings; title: s
         <NumberInput label={t('analytics.settings.session')} value={value.sessionMinutes} onChange={(sessionMinutes) => setValue({ ...value, sessionMinutes: sessionMinutes ?? 30 })} error={error('sessionMinutes')} hint={t('analytics.settings.sessionHint')} />
       </div>
       <TextArea label={t('analytics.settings.excluded')} value={paths} onChange={setPaths} rows={3} error={error('excludedPaths') ?? error('excludedPaths.0')} hint={t('analytics.settings.excludedHint')} />
+
+      {/* Google Analytics 4 (docs/visitor-analytics.md §GA4): the website loads it for visitors who accept cookies. */}
+      <div className="flex flex-col gap-2.5 rounded-12 border border-app-line p-3.5" data-testid="ga4-settings">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="m-0 text-14 font-semibold">{t('analytics.ga4.title')}</h3>
+          <Badge tone={initial.ga4MeasurementId ? 'green' : 'slate'}>{initial.ga4MeasurementId ? t('analytics.ga4.connected', { id: initial.ga4MeasurementId }) : t('analytics.ga4.notConnected')}</Badge>
+        </div>
+        <ol className="m-0 flex flex-col gap-1 pl-5 text-12.5 leading-1.55 text-app-muted">
+          {(t('analytics.ga4.steps', { returnObjects: true }) as string[]).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+        <TextInput
+          label={t('analytics.ga4.measurementId')}
+          value={value.ga4MeasurementId ?? ''}
+          onChange={(id) => setValue({ ...value, ga4MeasurementId: id.trim() === '' ? null : id.trim() })}
+          error={error('ga4MeasurementId')}
+          placeholder="G-XXXXXXXXXX"
+          hint={t('analytics.ga4.hint')}
+          autoComplete="off"
+        />
+        {initial.ga4MeasurementId ? (
+          <a className="self-start text-13 font-semibold text-blue" href="https://analytics.google.com/analytics/web/#/realtime" target="_blank" rel="noopener noreferrer">
+            {t('analytics.ga4.openRealtime')}
+          </a>
+        ) : null}
+      </div>
       {save.error && !(save.error instanceof ApiError && save.error.status === 422) ? <ErrorNotice error={save.error} /> : null}
       <button
         type="button"

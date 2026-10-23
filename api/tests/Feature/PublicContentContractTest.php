@@ -100,7 +100,8 @@ class PublicContentContractTest extends TestCase
         $features = array_fill_keys(WebsiteFeatures::KEYS, true);
         // logos likewise: the logos chosen in Site settings, none until then (docs/brand-logo.md).
         $brand = ['logo' => null, 'logoLight' => null, 'icon' => null];
-        $this->assertEquals($this->seedFile('settings.json') + ['features' => $features, 'logos' => $brand], $this->getJson('/api/v1/public/settings')->json('data'));
+        // ga4: Google Analytics 4's Measurement ID, null until the super admin connects it (docs/visitor-analytics.md §GA4).
+        $this->assertEquals($this->seedFile('settings.json') + ['features' => $features, 'logos' => $brand, 'ga4' => null], $this->getJson('/api/v1/public/settings')->json('data'));
     }
 
     /**

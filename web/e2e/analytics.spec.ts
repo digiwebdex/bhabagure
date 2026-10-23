@@ -63,6 +63,55 @@ test('a visit counts each page once, a package opened from its card as its page,
   expect(visit.events[3]).toMatchObject({ subject: 'contact' });
 });
 
+test('with Google Analytics connected, its tag loads only after Accept, and Cookie settings changes the answer', async ({ page, request }) => {
+  const refresh = () => request.post('/api/revalidate', { headers: { Authorization: 'Bearer e2e-revalidate-secret' }, data: { tags: ['settings'] } });
+  const setGa4 = (id: string | null) =>
+    artisan('tinker', `--execute=$v = App\\Services\\Analytics\\AnalyticsSettings::get(); $v['ga4MeasurementId'] = ${id ? `'${id}'` : 'null'}; App\\Models\\SiteSetting::query()->updateOrCreate(['key' => 'analytics'], ['value' => $v]); echo 'ok';`);
+  // Google's tag is answered here: the test never reaches Google, and sees each request for it.
+  const tagRequests: string[] = [];
+  await page.route('https://www.googletagmanager.com/**', (route) => {
+    tagRequests.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: 'text/javascript', body: '' });
+  });
+
+  // Not connected: no banner, no tag.
+  await page.goto('/en');
+  await expect(page.getByTestId('cookie-consent')).toHaveCount(0);
+
+  setGa4('G-E2ETEST123');
+  try {
+    expect((await refresh()).status()).toBe(200);
+    await expect.poll(async () => {
+      await page.goto('/en');
+      return page.getByTestId('cookie-consent').count();
+    }, { timeout: 20_000 }).toBe(1);
+
+    // Decline: nothing loads, and the answer is remembered.
+    await page.getByTestId('cookie-consent').getByRole('button', { name: 'Decline' }).click();
+    await expect(page.getByTestId('cookie-consent')).toHaveCount(0);
+    await page.reload();
+    await page.waitForTimeout(1000);
+    await expect(page.getByTestId('cookie-consent')).toHaveCount(0);
+    expect(tagRequests).toEqual([]);
+
+    // Cookie settings in the footer asks again; Accept loads GA4 for this Measurement ID and counts the page.
+    await page.getByRole('button', { name: 'Cookie settings' }).click();
+    await page.getByTestId('cookie-consent').getByRole('button', { name: 'Accept' }).click();
+    await expect.poll(() => tagRequests.length).toBe(1);
+    expect(tagRequests[0]).toContain('id=G-E2ETEST123');
+    const sent = await page.evaluate(() => JSON.stringify((window as unknown as { dataLayer: unknown[] }).dataLayer));
+    expect(sent).toContain('"config","G-E2ETEST123"');
+    expect(sent).toContain('"page_view"');
+    // Accepted before: the next visit loads it straight away, without asking.
+    await page.reload();
+    await expect.poll(() => tagRequests.length).toBe(2);
+    await expect(page.getByTestId('cookie-consent')).toHaveCount(0);
+  } finally {
+    setGa4(null);
+    await refresh();
+  }
+});
+
 test('a browser that asks not to be tracked sends nothing, and the website works as before', async ({ browser }) => {
   const context = await browser.newContext();
   await context.addInitScript(() => Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { get: () => true }));

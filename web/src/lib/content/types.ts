@@ -268,6 +268,11 @@ export interface SiteSettings {
   logos?: { logo: string | null; logoLight: string | null; icon: string | null };
   /** Which website features the public sees (docs/website-features.md); absent (an older API, the seed): all on. */
   features?: Partial<Record<WebsiteFeature, boolean>>;
+  /**
+   * Google Analytics 4's Measurement ID ("G-…") when the super admin has connected it (docs/visitor-analytics.md §GA4);
+   * loaded only for visitors who accept cookies. Null or absent: not connected, no banner.
+   */
+  ga4?: string | null;
 }
 
 /** The website features Admin → Site settings can switch off for the public (docs/website-features.md). */

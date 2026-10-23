@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\RevalidateWebsite;
 use App\Models\SiteSetting;
 use App\Services\Analytics\AnalyticsFilters;
 use App\Services\Analytics\AnalyticsReports;
@@ -86,10 +87,14 @@ class AnalyticsController extends Controller
             'sessionMinutes' => ['required', 'integer', 'between:5,240'],
             'excludedPaths' => ['present', 'array', 'max:30'],
             'excludedPaths.*' => ['string', 'max:120', 'starts_with:/', Rule::notIn(['/'])],
-        ]);
+            // Google Analytics 4: the web stream's Measurement ID (G-…), or empty to disconnect.
+            'ga4MeasurementId' => ['nullable', 'string', 'regex:'.AnalyticsSettings::GA4_PATTERN.'i'],
+        ], ['ga4MeasurementId.regex' => __('analytics.ga4_invalid')]);
         $value = AnalyticsSettings::normalize($data);
         SiteSetting::query()->updateOrCreate(['key' => AnalyticsSettings::SETTING], ['value' => $value, 'updated_by_staff_id' => $request->user('staff')->id]);
         $audit->record('analytics.settings_updated', $request->user('staff'), changes: $value);
+        // The website reads the GA4 Measurement ID with its settings: refresh them at once.
+        RevalidateWebsite::dispatch(['settings']);
 
         return response()->json(['data' => $value]);
     }

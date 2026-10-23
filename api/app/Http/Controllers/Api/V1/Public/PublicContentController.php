@@ -20,6 +20,7 @@ use App\Models\TeamMember;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
+use App\Services\Analytics\AnalyticsSettings;
 use App\Services\Booking\PhoneCheck;
 use App\Services\Cms\LegalPages;
 use App\Services\Media\HeroVideo;
@@ -195,6 +196,9 @@ class PublicContentController extends Controller
             'features' => WebsiteFeatures::all(),
             // The logos and browser icon chosen in Site settings; null keeps the original (docs/brand-logo.md).
             'logos' => Brand::urls(),
+            // Google Analytics 4's Measurement ID, loaded only for visitors who accept cookies; null when not connected
+            // (docs/visitor-analytics.md §GA4).
+            'ga4' => AnalyticsSettings::ga4MeasurementId(),
         ]));
     }
 

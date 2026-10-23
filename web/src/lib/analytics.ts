@@ -5,6 +5,8 @@
  * (Global Privacy Control or Do Not Track), and nothing here can break a page: every failure is swallowed.
  */
 
+import { ga4Event, ga4PageView } from './ga4';
+
 const STORE = 'bh_visit';
 /** A tab idle this long starts a new visit (the API's default session window). */
 const SESSION_MINUTES = 30;
@@ -79,6 +81,8 @@ export function trackPageView(path: string = window.location.pathname): void {
   const now = Date.now();
   if (lastView && lastView.path === path && now - lastView.at < SAME_VIEW_MS) return;
   lastView = { path, at: now };
+  // Google Analytics too, when connected and the visitor accepted cookies (ga4.ts).
+  ga4PageView(path);
   const id = visit(true);
   if (!id) return;
   const first = !started;
@@ -94,6 +98,8 @@ export function notePath(path: string): void {
 
 /** A step on the way to booking, e.g. "booking_started" with "package:<slug>". */
 export function trackEvent(type: 'booking_started' | 'package_view', subject?: string): void {
+  // GA4's own name for the first step of a purchase.
+  if (type === 'booking_started') ga4Event('begin_checkout', { currency: 'BDT', items: subject ? [{ item_id: subject.replace(/^package:/, '') }] : [] });
   const id = visit(true);
   if (!id) return;
   send({ session: id, events: [{ key: uuid(), type, path: window.location.pathname, ...(subject ? { subject } : {}) }], locale: locale() });

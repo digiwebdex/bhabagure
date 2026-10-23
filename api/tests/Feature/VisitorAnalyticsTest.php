@@ -238,6 +238,28 @@ class VisitorAnalyticsTest extends TestCase
     }
 
     #[Test]
+    public function the_super_admin_connects_google_analytics_and_the_website_gets_its_measurement_id(): void
+    {
+        $this->getJson('/api/v1/public/settings')->assertOk()->assertJsonPath('data.ga4', null);
+        $owner = $this->staff('super_admin');
+        $settings = ['enabled' => true, 'retentionMonths' => 13, 'activeMinutes' => 5, 'sessionMinutes' => 30, 'excludedPaths' => []];
+
+        // An old Universal Analytics id, or anything else, isn't a GA4 Measurement ID.
+        foreach (['UA-12345-1', 'G-', 'G-ABC 123', '<script>'] as $wrong) {
+            $this->actingAsApi($owner)->putJson('/api/v1/admin/analytics/settings', $settings + ['ga4MeasurementId' => $wrong])->assertUnprocessable()->assertJsonValidationErrors('ga4MeasurementId');
+        }
+        // Admins see the reports but don't connect Google.
+        $this->actingAsApi($this->staff('admin'))->putJson('/api/v1/admin/analytics/settings', $settings + ['ga4MeasurementId' => 'G-ABC123XYZ'])->assertForbidden();
+
+        $this->actingAsApi($owner)->putJson('/api/v1/admin/analytics/settings', $settings + ['ga4MeasurementId' => ' g-abc123xyz '])->assertOk()->assertJsonPath('data.ga4MeasurementId', 'G-ABC123XYZ');
+        $this->getJson('/api/v1/public/settings')->assertJsonPath('data.ga4', 'G-ABC123XYZ');
+
+        // Emptied: disconnected.
+        $this->actingAsApi($owner)->putJson('/api/v1/admin/analytics/settings', $settings + ['ga4MeasurementId' => null])->assertOk()->assertJsonPath('data.ga4MeasurementId', null);
+        $this->getJson('/api/v1/public/settings')->assertJsonPath('data.ga4', null);
+    }
+
+    #[Test]
     public function visits_older_than_the_retention_period_are_deleted_with_their_events(): void
     {
         $this->visitOn('2025-08-01 10:00', ['/', '/visa/thailand'], self::DHAKA);

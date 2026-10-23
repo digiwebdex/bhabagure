@@ -12,7 +12,7 @@ final class AnalyticsSettings
 {
     public const SETTING = 'analytics';
 
-    /** @return array{enabled: bool, retentionMonths: int, activeMinutes: int, sessionMinutes: int, excludedPaths: list<string>} */
+    /** @return array{enabled: bool, retentionMonths: int, activeMinutes: int, sessionMinutes: int, excludedPaths: list<string>, ga4MeasurementId: ?string} */
     public static function defaults(): array
     {
         return [
@@ -25,10 +25,22 @@ final class AnalyticsSettings
             'sessionMinutes' => 30,
             // Path prefixes never counted (the portal and the admin are never tracked anyway).
             'excludedPaths' => [],
+            // Google Analytics 4 (docs/visitor-analytics.md §GA4): the web stream's Measurement ID, "G-…". Set, the
+            // website loads Google's tag for visitors who accept cookies; null, never.
+            'ga4MeasurementId' => null,
         ];
     }
 
-    /** @return array{enabled: bool, retentionMonths: int, activeMinutes: int, sessionMinutes: int, excludedPaths: list<string>} */
+    /** A GA4 web stream's Measurement ID: "G-" and 4–15 letters or digits. */
+    public const GA4_PATTERN = '/^G-[A-Z0-9]{4,15}$/';
+
+    /** The Measurement ID the website should load, or null. Public: it is in every page that uses GA4 anyway. */
+    public static function ga4MeasurementId(): ?string
+    {
+        return self::get()['ga4MeasurementId'];
+    }
+
+    /** @return array{enabled: bool, retentionMonths: int, activeMinutes: int, sessionMinutes: int, excludedPaths: list<string>, ga4MeasurementId: ?string} */
     public static function get(): array
     {
         $saved = SiteSetting::get(self::SETTING);
@@ -38,7 +50,7 @@ final class AnalyticsSettings
 
     /**
      * @param  array<string, mixed>  $value
-     * @return array{enabled: bool, retentionMonths: int, activeMinutes: int, sessionMinutes: int, excludedPaths: list<string>}
+     * @return array{enabled: bool, retentionMonths: int, activeMinutes: int, sessionMinutes: int, excludedPaths: list<string>, ga4MeasurementId: ?string}
      */
     public static function normalize(array $value): array
     {
@@ -54,6 +66,7 @@ final class AnalyticsSettings
             'activeMinutes' => max(1, min(30, (int) ($value['activeMinutes'] ?? $defaults['activeMinutes']))),
             'sessionMinutes' => max(5, min(240, (int) ($value['sessionMinutes'] ?? $defaults['sessionMinutes']))),
             'excludedPaths' => array_slice($paths, 0, 30),
+            'ga4MeasurementId' => is_string($value['ga4MeasurementId'] ?? null) && preg_match(self::GA4_PATTERN, $id = strtoupper(trim($value['ga4MeasurementId']))) ? $id : null,
         ];
     }
 }

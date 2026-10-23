@@ -1,6 +1,7 @@
 'use client';
 
 import { analyticsHeaders } from './analytics';
+import { ga4Event } from './ga4';
 
 /**
  * Booking, payment and passport-scan calls to the Laravel API (docs/phase-3-booking.md §2, §4, §5).
@@ -193,12 +194,18 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
   return { ok: false, reason: 'failed', message: body?.message };
 }
 
-export const createBooking = (payload: BookingPayload) =>
-  call<PublicBooking & { accessToken: string }>('bookings', {
+export const createBooking = async (payload: BookingPayload) => {
+  const result = await call<PublicBooking & { accessToken: string }>('bookings', {
     method: 'POST',
     body: JSON.stringify(payload),
     locale: payload.locale,
   });
+  // Google Analytics, when connected and accepted: the booking made, with its value — never who made it.
+  if (result.ok) {
+    ga4Event('booking_made', { value: payload.expected_total, currency: 'BDT', transaction_id: result.data.reference, items: [{ item_id: payload.package_slug, quantity: payload.pax }] });
+  }
+  return result;
+};
 
 /** What the booking form's Apply button sends: the booking's choices, the lead's number and the passports typed so far. */
 export type CouponCheckPayload = {

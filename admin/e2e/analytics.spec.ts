@@ -101,4 +101,18 @@ test('live lists only the visit seen in the last minutes, and the super admin ch
   await page.getByLabel('Pages never counted').fill('')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText('Saved', { exact: true }).first()).toBeVisible()
+
+  // Google Analytics 4: an old Universal Analytics id is refused; a GA4 Measurement ID connects it; emptied, disconnected.
+  const ga4 = page.getByTestId('ga4-settings')
+  await expect(ga4).toContainText('Not connected')
+  await ga4.getByLabel('Measurement ID').fill('UA-12345-1')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(ga4).toContainText('A GA4 Measurement ID looks like G-ABC123XYZ')
+  await ga4.getByLabel('Measurement ID').fill('g-e2etest123')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(ga4).toContainText('Connected · G-E2ETEST123', FIRST_LOAD)
+  await expect(ga4.getByRole('link', { name: 'Open GA4 Realtime ↗' })).toBeVisible()
+  await ga4.getByLabel('Measurement ID').fill('')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(ga4).toContainText('Not connected', FIRST_LOAD)
 })

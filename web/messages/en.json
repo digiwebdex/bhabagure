@@ -501,6 +501,14 @@
     "notifications": "Notifications",
     "notificationsNote": "Automated WhatsApp messages about bookings come only from this number."
   },
+  "cookies": {
+    "title": "Cookies for Google Analytics",
+    "text": "With your permission we use Google Analytics, which sets cookies, to see which pages people find useful. It never receives your name, phone number or what you type in a form. Decline and it isn't loaded; the website works the same either way.",
+    "privacy": "Privacy policy",
+    "accept": "Accept",
+    "decline": "Decline",
+    "settings": "Cookie settings"
+  },
   "footer": {
     "copyright": "© {year} Bhabaghure Holidays Aviation · Bangladesh",
     "licence": "Civil Aviation registration no. {licence}",

@@ -15,6 +15,7 @@ import { BookingModal } from './booking/BookingModal';
 import { SiteFooter } from './footer/SiteFooter';
 import { SiteHeader } from './header/SiteHeader';
 import { PackageModalHost } from './packages/PackageModalHost';
+import { CookieConsent } from './CookieConsent';
 import { VisitorAnalytics } from './VisitorAnalytics';
 
 interface SiteChromeProps {
@@ -49,7 +50,9 @@ export async function SiteChrome({ locale, views, pathname, pageSections, childr
         <BookingModal />
         <AuthModal />
         <RevealObserver />
-        {/* Visitor analytics (docs/visitor-analytics.md): website pages only — never the portal or the admin. */}
+        {/* Visitor analytics (docs/visitor-analytics.md): website pages only — never the portal or the admin. The cookie
+            banner first, so a visitor who accepted before has GA4 ready for the page view. */}
+        <CookieConsent measurementId={views.settings.ga4 ?? null} />
         <VisitorAnalytics />
       </div>
     </SiteContentProvider>
