@@ -14,7 +14,7 @@ return [
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['Accept', 'Authorization', 'Content-Type', 'X-Locale', 'X-Requested-With', 'X-Booking-Token'],
+    'allowed_headers' => ['Accept', 'Authorization', 'Content-Type', 'X-Locale', 'X-Requested-With', 'X-Booking-Token', 'X-Analytics-Session'],
 
     // Content-Disposition: the admin (another origin) saves a document under the name the API gives it, INV-1065.pdf.
     'exposed_headers' => ['Retry-After', 'Content-Disposition'],

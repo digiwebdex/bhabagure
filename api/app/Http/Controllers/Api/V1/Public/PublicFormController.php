@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\Inquiry;
 use App\Models\NewsletterSubscriber;
 use App\Models\TourPackage;
+use App\Services\Analytics\AnalyticsRecorder;
 use App\Support\NewsletterUnsubscribeToken;
 use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
@@ -58,6 +59,7 @@ class PublicFormController extends Controller
             'ip' => $request->ip(),
         ]);
         InquiryReceived::dispatch($inquiry);
+        app(AnalyticsRecorder::class)->conversion($request, 'enquiry', 'inquiry:'.$inquiry->id, $package ? 'package:'.$package->slug : 'contact');
 
         return $this->accepted();
     }
@@ -100,6 +102,7 @@ class PublicFormController extends Controller
             'ip' => $request->ip(),
         ]);
         InquiryReceived::dispatch($inquiry);
+        app(AnalyticsRecorder::class)->conversion($request, 'air_quote', 'inquiry:'.$inquiry->id);
 
         return $this->accepted();
     }
@@ -143,6 +146,7 @@ class PublicFormController extends Controller
             'ip' => $request->ip(),
         ]);
         InquiryReceived::dispatch($inquiry);
+        app(AnalyticsRecorder::class)->conversion($request, 'hotel_quote', 'inquiry:'.$inquiry->id);
 
         return $this->accepted();
     }
@@ -169,6 +173,7 @@ class PublicFormController extends Controller
                 'unsubscribed_at' => null,
             ])->save();
         }
+        app(AnalyticsRecorder::class)->conversion($request, 'newsletter', 'newsletter:'.$subscriber->id);
 
         // Same answer whether or not the address was already on the list: the form can't be used to test addresses.
         return $this->accepted();

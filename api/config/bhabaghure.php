@@ -76,6 +76,14 @@ return [
     ],
 
     /*
+     * Visitor analytics (docs/visitor-analytics.md). ANALYTICS_ALLOW_HEADLESS counts headless browsers — only for the
+     * e2e tests, whose browser is one; on live they are bots.
+     */
+    'analytics' => [
+        'allow_headless' => (bool) env('ANALYTICS_ALLOW_HEADLESS', false),
+    ],
+
+    /*
      * Invoice print view and PDFs (docs/phase-3-booking.md §6). PDFs come from packages/pdf (headless Chrome).
      * PDF_CHROME_PATH: a Chrome binary — Chrome for Testing inside the project directory on the VPS, or the desktop
      * Chrome locally. Empty = Playwright's own Chromium.

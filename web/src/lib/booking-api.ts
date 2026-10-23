@@ -1,5 +1,7 @@
 'use client';
 
+import { analyticsHeaders } from './analytics';
+
 /**
  * Booking, payment and passport-scan calls to the Laravel API (docs/phase-3-booking.md §2, §4, §5).
  *
@@ -154,6 +156,8 @@ async function call<T>(path: string, init: RequestInit & { token?: string; local
         'X-Locale': init.locale,
         ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
         ...(init.token ? { 'X-Booking-Token': init.token } : {}),
+        // On a booking saved or a payment request sent, the API counts it as this visit's conversion (docs/visitor-analytics.md).
+        ...(init.method === 'POST' ? analyticsHeaders() : {}),
       },
     });
   } catch {

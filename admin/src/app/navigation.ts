@@ -73,6 +73,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
   {
     key: 'website',
     items: [
+      // The public website's visits, without cookies or IP addresses (docs/visitor-analytics.md).
+      { key: 'analytics', path: '/analytics', icon: '◎', permissions: ['analytics.view'] },
       { key: 'posts', path: '/posts', icon: 'B', permissions: ['cms.manage'] },
       { key: 'team', path: '/team', icon: 'T', permissions: ['cms.manage'] },
       // The badge counts customers' reviews waiting for approval (docs/customer-reviews.md).

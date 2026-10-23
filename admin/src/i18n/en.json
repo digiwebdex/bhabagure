@@ -304,6 +304,7 @@
       "visas": "Visa services",
       "media": "Media library",
       "settings": "Site settings",
+      "analytics": "Visitor analytics",
       "notifications": "Notifications",
       "quotations": "Quotations",
       "air_ticketing": "Air ticketing",
@@ -927,6 +928,185 @@
     "codeHint": "Set once; bookings refer to it.",
     "onlineCharge": "Online payment charge",
     "onlineChargeNote": "Added to online (SSLCommerz) payments as its own line — “Online payment charge” — on the website’s review and payment steps, and included in the total the customer agrees to. 0 means the company absorbs the gateway’s fee. The SSLCommerz store itself must never add a fee on top."
+  },
+  "analytics": {
+    "title": "Visitor analytics",
+    "subtitle": "The public website's visits — no cookies, no IP addresses kept",
+    "print": "Print",
+    "tab": "Report",
+    "tabs": {
+      "overview": "Overview",
+      "locations": "Locations",
+      "live": "Live",
+      "pages": "Pages & tours",
+      "sources": "Traffic sources",
+      "devices": "Devices",
+      "conversions": "Conversions",
+      "settings": "Settings"
+    },
+    "period": "Period",
+    "periods": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "7": "Last 7 days",
+      "30": "Last 30 days",
+      "90": "Last 90 days",
+      "custom": "Custom"
+    },
+    "from": "From",
+    "to": "To",
+    "filteredBy": "Filtered by",
+    "removeFilter": "Remove the filter {{name}}",
+    "filterBy": "Show only {{name}}",
+    "filterNames": {
+      "country": "Country",
+      "device": "Device",
+      "source": "Source",
+      "path": "Page"
+    },
+    "visitors": "Visitors",
+    "sessions": "Sessions",
+    "pageViews": "Page views",
+    "viewsPerSession": "Pages per session",
+    "engaged": "Average time on site",
+    "bounce": "One-page sessions",
+    "countries": "Countries",
+    "conversions": "Conversions",
+    "activeNow": "On the website now",
+    "activeNote": "Seen in the last {{minutes}} minutes",
+    "coverage": "Known for {{percent}} of sessions",
+    "conversionRate": "{{percent}} of sessions converted",
+    "vsPrevious": "{{change}} vs the previous period",
+    "noComparison": "No figures for the previous period",
+    "seconds": "{{n}} s",
+    "minutes": "{{n}} min",
+    "trend": "Visitors and sessions by day",
+    "trendLabel": "Visitors and sessions each day of the period",
+    "trendTip": "{{date}}: {{visitors}} visitors, {{sessions}} sessions, {{views}} page views",
+    "peak": "Highest day: {{n}} sessions",
+    "noData": "Nothing recorded for this period",
+    "noDataNote": "Visits appear here as people browse the website.",
+    "csv": "CSV",
+    "csvFailed": "The CSV couldn't be downloaded. Try again.",
+    "map": "Visitors around the world",
+    "mapLabel": "World map: the darker a country, the more sessions from it",
+    "mapHint": "Point at a country to see its sessions; click one to filter every report by it.",
+    "fewer": "Fewer",
+    "more": "More",
+    "sessionsCount_one": "{{n}} session",
+    "sessionsCount_other": "{{n}} sessions",
+    "locationNote": "The country is known for {{percent}} of sessions; the rest are listed as Unknown. Locations are approximate and come from Cloudflare — a VPN or a mobile network can place someone in another city.",
+    "cityNote": "Cities and regions appear once “Add visitor location headers” is switched on in Cloudflare.",
+    "campaignNote": "Campaigns appear for visits from links tagged with utm_source (and utm_medium, utm_campaign).",
+    "conversionNote": "A conversion is counted only when the API saved it: a booking, an enquiry, an air or hotel quote request, a newsletter sign-up, a review, or a payment request.",
+    "unknownPlace": "Unknown location",
+    "columns": {
+      "name": "Name",
+      "share": "Share",
+      "converting": "Converting sessions",
+      "views": "Views",
+      "started": "Booking form opened",
+      "booked": "Booked",
+      "count": "Count"
+    },
+    "reports": {
+      "country": "Countries",
+      "region": "Regions",
+      "city": "Cities",
+      "page": "Most viewed pages",
+      "tour": "Tours and visas",
+      "landing": "Landing pages",
+      "exit": "Exit pages",
+      "source": "Sources",
+      "referrer": "Referring sites",
+      "campaign": "Campaigns",
+      "device": "Device types",
+      "browser": "Browsers",
+      "os": "Operating systems",
+      "language": "Website language",
+      "conversion": "Conversions by kind",
+      "conversionBySource": "Converting sessions by source",
+      "conversionByCountry": "Converting sessions by country"
+    },
+    "liveTitle_one": "{{n}} session on the website",
+    "liveTitle_other": "{{n}} sessions on the website",
+    "liveNote": "Seen in the last {{minutes}} minutes · refreshes every 15 seconds",
+    "nobodyLive": "Nobody on the website right now",
+    "liveRow": "Now on {{page}} · came in on {{landing}} · {{views}} pages · {{source}}",
+    "liveTimes": "Arrived {{started}} · last seen {{seen}}",
+    "recent": "Latest activity (24 hours)",
+    "devices": {
+      "desktop": "Computer",
+      "mobile": "Phone",
+      "tablet": "Tablet"
+    },
+    "sources": {
+      "direct": "direct",
+      "search": "search engine",
+      "social": "social media",
+      "referral": "another website",
+      "campaign": "campaign"
+    },
+    "conversionTypes": {
+      "booking_completed": "Booking made",
+      "enquiry": "Enquiry sent",
+      "air_quote": "Air ticket quote requested",
+      "hotel_quote": "Hotel quote requested",
+      "newsletter": "Newsletter sign-up",
+      "review": "Review sent",
+      "payment_request": "Payment sent for approval"
+    },
+    "settings": {
+      "enabled": "Record visits to the website",
+      "enabledHint": "Off, nothing new is recorded; what is already here stays until its retention period ends.",
+      "retention": "Keep visits for (months)",
+      "retentionHint": "1 to 36. Older visits are deleted every night.",
+      "active": "“On the website now” window (minutes)",
+      "activeHint": "1 to 30. A visit counts as live if seen this recently.",
+      "session": "A visit ends after (idle minutes)",
+      "sessionHint": "5 to 240.",
+      "excluded": "Pages never counted",
+      "excludedHint": "One path per line, each starting with / — e.g. /blog. The customer portal and the admin are never counted."
+    },
+    "definitions": {
+      "title": "What the numbers mean",
+      "visitors": {
+        "term": "Visitors",
+        "text": "Different browsers on each day. Counted without cookies, by a code that changes every day, so someone who comes back on three days counts three times, and two people sharing one network and browser type on one day can count once."
+      },
+      "sessions": {
+        "term": "Sessions",
+        "text": "One browser tab's visit, until it has been idle for 30 minutes (see Settings). Sessions are counted on the day they started."
+      },
+      "pageViews": {
+        "term": "Page views",
+        "text": "Pages opened on the website, including package pages opened from a card. The same page reported twice within two seconds is counted once."
+      },
+      "engaged": {
+        "term": "Average time on site",
+        "text": "How long the tab was actually visible, from a heartbeat every 30 seconds — not how long it stayed open in the background."
+      },
+      "bounce": {
+        "term": "One-page sessions",
+        "text": "Sessions that viewed only one page."
+      },
+      "active": {
+        "term": "On the website now",
+        "text": "Sessions seen within the last few minutes (Settings). Older visits are never shown as live."
+      },
+      "conversions": {
+        "term": "Conversions",
+        "text": "Bookings, enquiries, quote requests, newsletter sign-ups, reviews and payment requests the API saved, each counted once, on the visit that sent it. Clicks alone are never conversions. The customer portal is a separate site and isn't tracked."
+      },
+      "location": {
+        "term": "Location",
+        "text": "Country, region and city from Cloudflare, by IP address, approximate. Only requests that really came through Cloudflare are located; anything else is Unknown. Never an address."
+      },
+      "privacy": {
+        "term": "Privacy",
+        "text": "No cookies, no IP addresses, no names or form contents are kept. Browsers that ask not to be tracked (Do Not Track, Global Privacy Control) aren't counted, nor are bots. Visits are deleted after the retention period."
+      }
+    }
   },
   "settings": {
     "title": "Site settings",

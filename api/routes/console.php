@@ -183,6 +183,9 @@ Artisan::command('passport-scans:prune', function (PassportScanner $scanner) {
 
 Schedule::command('passport-scans:prune')->hourly()->onOneServer();
 
+// Visitor analytics older than the retention period (docs/visitor-analytics.md).
+Schedule::command('analytics:prune')->dailyAt('03:40')->timezone('Asia/Dhaka')->withoutOverlapping()->onOneServer();
+
 // Run by bhabaghure-queue.service before the worker starts (docs/deployment.md §5). Exit code 1 stops the unit.
 Artisan::command('bhabaghure:queue-preflight {--redis-db= : Redis database reserved for the queue} {--redis-cache-db= : Redis database reserved for the cache} {--job-timeout= : queue:work --timeout in seconds}', function () {
     $options = [];

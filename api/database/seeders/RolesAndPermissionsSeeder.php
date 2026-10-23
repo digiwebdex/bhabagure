@@ -73,6 +73,11 @@ class RolesAndPermissionsSeeder extends Seeder
         'payroll.view' => ['staff', 'বেতন শিট ও মূল বেতন দেখা', 'View payroll and base salaries'],
         'payroll.manage' => ['staff', 'বেতন নির্ধারণ, চূড়ান্ত ও পরিশোধ', 'Set salaries, finalise and pay payroll'],
         'cms.manage' => ['website', 'ওয়েবসাইট কনটেন্ট ব্যবস্থাপনা', 'Manage website content'],
+        // Visitor analytics (docs/visitor-analytics.md): the reports and their CSV for admins (the client, 2026-10-24);
+        // the settings — tracking on or off, how long visits are kept — the super admin's alone.
+        'analytics.view' => ['website', 'ভিজিটর অ্যানালিটিক্স দেখা', 'View visitor analytics'],
+        'analytics.export' => ['website', 'ভিজিটর অ্যানালিটিক্স CSV ডাউনলোড', 'Download visitor analytics as CSV'],
+        'analytics.manage' => ['website', 'ভিজিটর অ্যানালিটিক্স সেটিংস', 'Change visitor analytics settings'],
         // Coupons (docs/coupons.md): admins manage them, accountants see them and the report (decided 2026-09-24).
         'coupons.view' => ['marketing', 'কুপন ও কুপন রিপোর্ট দেখা', 'View coupons and the coupon report'],
         'coupons.manage' => ['marketing', 'কুপন তৈরি, সম্পাদনা ও আর্কাইভ', 'Create, edit and archive coupons'],
@@ -104,6 +109,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
             'notifications.send', 'notifications.manage', 'support.manage', 'coupons.view', 'coupons.manage',
             'vouchers.view', 'vouchers.manage', 'inbox.view', 'inbox.reply', 'inbox.manage',
+            'analytics.view', 'analytics.export',
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',

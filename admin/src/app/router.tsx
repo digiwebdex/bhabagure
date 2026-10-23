@@ -73,6 +73,7 @@ const RolesPage = page(() => import('../features/staff/RolesPage'), 'RolesPage')
 const SetPasswordPage = page(() => import('../features/auth/SetPasswordPage'), 'SetPasswordPage')
 const ForgotPasswordPage = page(() => import('../features/auth/ForgotPasswordPage'), 'ForgotPasswordPage')
 const SettingsPage = page(() => import('../features/cms/settings/SettingsPage'), 'SettingsPage')
+const AnalyticsPage = page(() => import('../features/analytics/AnalyticsPage'), 'AnalyticsPage')
 const StaffPage = page(() => import('../features/staff/StaffPage'), 'StaffPage')
 const StaffProfilePage = page(() => import('../features/staff/StaffProfilePage'), 'StaffProfilePage')
 const VaultPage = page(() => import('../features/staff/VaultPage'), 'VaultPage')
@@ -161,6 +162,7 @@ export const router = createBrowserRouter([
       { path: 'visas', element: <Require permissions={cms}><VisaServicesPage /></Require> },
       { path: 'media', element: <Require permissions={['packages.manage', 'cms.manage']}><MediaLibraryPage /></Require> },
       { path: 'settings', element: <Require permissions={cms}><SettingsPage /></Require> },
+      { path: 'analytics', element: <Require permissions={['analytics.view']}><AnalyticsPage /></Require> },
       { path: 'attendance', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendancePage /></Require> },
       { path: 'attendance/staff/:id', element: <Require permissions={['attendance.view_all', 'attendance.manage']}><AttendanceStaffPage /></Require> },
       { path: 'payment-requests', element: <Require permissions={['transactions.create_manual']}><PaymentRequestsPage /></Require> },

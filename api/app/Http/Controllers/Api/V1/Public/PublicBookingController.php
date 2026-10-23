@@ -9,6 +9,7 @@ use App\Models\Addon;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\PaymentRequest;
+use App\Services\Analytics\AnalyticsRecorder;
 use App\Services\Booking\BookingCreator;
 use App\Services\Booking\BookingRequest;
 use App\Services\Booking\PhoneCheck;
@@ -150,6 +151,9 @@ class PublicBookingController extends Controller
             return $this->verificationInvalid();
         }
 
+        // A conversion once the booking is saved, once per booking (docs/visitor-analytics.md).
+        app(AnalyticsRecorder::class)->conversion($request, 'booking_completed', 'booking:'.$created['booking']->id, 'package:'.$data['package_slug']);
+
         return response()->json(['data' => PublicBooking::make($created['booking']) + ['accessToken' => $created['accessToken']]], Response::HTTP_CREATED);
     }
 
@@ -208,7 +212,7 @@ class PublicBookingController extends Controller
         ]);
 
         try {
-            $requests->submit($booking, [
+            $submitted = $requests->submit($booking, [
                 'method' => $data['method'],
                 'account_number' => $data['method'] === 'bank_transfer' ? trim((string) $data['account_number']) : null,
                 'amount' => (float) $data['amount'],
@@ -218,6 +222,7 @@ class PublicBookingController extends Controller
         } catch (PaymentRequestRefused $e) {
             return response()->json(['message' => __("payments.requests.{$e->reason}"), 'code' => $e->reason], $e->status);
         }
+        app(AnalyticsRecorder::class)->conversion($request, 'payment_request', 'payment_request:'.$submitted->id);
 
         return response()->json(['data' => PaymentRequests::forCustomer($booking)], Response::HTTP_CREATED);
     }

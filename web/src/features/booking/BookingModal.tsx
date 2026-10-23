@@ -1,13 +1,14 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { defaultHotelCategory, quoteBooking, type RoomType } from '@bhabaghure/pricing';
 
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { buttonClass } from '@/components/ui/button';
 import { Modal, ModalClose } from '@/components/ui/Modal';
+import { trackEvent } from '@/lib/analytics';
 import { roomPercent, roomPricesFor } from '@/lib/package-price';
 import { useFormatters } from '@/lib/use-formatters';
 import { useBooking, type BookingStep } from '@/state/booking';
@@ -64,6 +65,12 @@ export function BookingModal() {
         : null,
     [pkg, booking.pax, booking.room, selectedAddons, pricing, hotelCategory, couponOff],
   );
+
+  // A step towards a booking (docs/visitor-analytics.md): the form opened, for this package.
+  useEffect(() => {
+    if (booking.open && booking.packageSlug) trackEvent('booking_started', `package:${booking.packageSlug}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opening, for the package it opened with
+  }, [booking.open]);
 
   if (!pkg || !quote) return null;
 

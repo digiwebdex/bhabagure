@@ -240,6 +240,12 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureRateLimiting(): void
     {
+        // The website's analytics beacon (docs/visitor-analytics.md): a tab sends a page view per page and a heartbeat
+        // every 30 seconds — far under these, which only stop a script filling the tables.
+        RateLimiter::for('analytics', fn (Request $request) => [
+            Limit::perMinute(60)->by('analytics-minute|'.$request->ip()),
+            Limit::perDay(5000)->by('analytics-day|'.$request->ip()),
+        ]);
         RateLimiter::for('public-forms', fn (Request $request) => [
             Limit::perMinute(5)->by('forms-minute|'.$request->ip()),
             Limit::perDay(40)->by('forms-day|'.$request->ip()),

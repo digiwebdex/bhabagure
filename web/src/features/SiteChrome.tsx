@@ -15,6 +15,7 @@ import { BookingModal } from './booking/BookingModal';
 import { SiteFooter } from './footer/SiteFooter';
 import { SiteHeader } from './header/SiteHeader';
 import { PackageModalHost } from './packages/PackageModalHost';
+import { VisitorAnalytics } from './VisitorAnalytics';
 
 interface SiteChromeProps {
   locale: AppLocale;
@@ -48,6 +49,8 @@ export async function SiteChrome({ locale, views, pathname, pageSections, childr
         <BookingModal />
         <AuthModal />
         <RevealObserver />
+        {/* Visitor analytics (docs/visitor-analytics.md): website pages only — never the portal or the admin. */}
+        <VisitorAnalytics />
       </div>
     </SiteContentProvider>
   );

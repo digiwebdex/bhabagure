@@ -1,5 +1,7 @@
 'use client';
 
+import { analyticsHeaders } from './analytics';
+
 /**
  * Sends a customer's review with its trip photos (docs/customer-reviews.md) to POST /public/reviews as multipart. On a
  * refusal the API's own sentences come back per field, so the form shows them under the right control.
@@ -18,7 +20,7 @@ export async function submitReview(form: FormData): Promise<ReviewResult> {
   if (!base) return { ok: false, reason: 'unavailable' };
 
   try {
-    const res = await fetch(`${base}/api/v1/public/reviews`, { method: 'POST', headers: { Accept: 'application/json' }, body: form });
+    const res = await fetch(`${base}/api/v1/public/reviews`, { method: 'POST', headers: { Accept: 'application/json', ...analyticsHeaders() }, body: form });
     if (res.ok) return { ok: true };
     if (res.status === 429) return { ok: false, reason: 'rate_limited' };
     if (res.status === 422) {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Review;
+use App\Services\Analytics\AnalyticsRecorder;
 use App\Services\Reviews\ReviewSubmissions;
 use App\Support\Phone;
 use App\Support\WebsiteFeatures;
@@ -50,7 +51,8 @@ class PublicReviewController extends Controller
             throw ValidationException::withMessages(['phone' => __('cms.review_limit')]);
         }
 
-        $reviews->submit($data, $request->file('photos') ?? []);
+        $review = $reviews->submit($data, $request->file('photos') ?? []);
+        app(AnalyticsRecorder::class)->conversion($request, 'review', 'review:'.$review->id);
 
         return $this->received();
     }

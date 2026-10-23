@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Admin\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AccountingReportController;
 use App\Http\Controllers\Api\V1\Admin\AirInquiryController;
 use App\Http\Controllers\Api\V1\Admin\AirlinePartnerController;
+use App\Http\Controllers\Api\V1\Admin\AnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\AssignableStaffController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
@@ -76,6 +77,7 @@ use App\Http\Controllers\Api\V1\Portal\PortalProfileController;
 use App\Http\Controllers\Api\V1\Portal\PortalQuotationController;
 use App\Http\Controllers\Api\V1\Portal\PortalSupportController;
 use App\Http\Controllers\Api\V1\Portal\PortalTripController;
+use App\Http\Controllers\Api\V1\Public\PublicAnalyticsController;
 use App\Http\Controllers\Api\V1\Public\PublicBookingController;
 use App\Http\Controllers\Api\V1\Public\PublicContentController;
 use App\Http\Controllers\Api\V1\Public\PublicCouponController;
@@ -202,6 +204,8 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/{reference}/payment-requests', 'paymentRequest')->middleware('throttle:public-bookings');
         });
         Route::post('passport-scans', [PublicPassportScanController::class, 'store'])->middleware('throttle:passport-scans');
+        // The website's visitor analytics beacon (docs/visitor-analytics.md).
+        Route::post('analytics/events', [PublicAnalyticsController::class, 'store'])->middleware('throttle:analytics');
         // The booking form's coupon box (docs/coupons.md §2.6): a code checked against the booking, never a discount taken.
         Route::post('coupons/check', [PublicCouponController::class, 'check'])->middleware('throttle:coupon-checks');
 
@@ -696,6 +700,20 @@ Route::prefix('v1')->group(function () {
             Route::get('addons', 'addons');
             Route::post('addons', 'storeAddon');
             Route::put('addons/{id}', 'updateAddon')->whereNumber('id');
+        });
+
+        // Visitor analytics (docs/visitor-analytics.md): reports, CSV, and the super admin's settings.
+        Route::controller(AnalyticsController::class)->prefix('analytics')->group(function () {
+            Route::middleware('permission:analytics.view,staff')->group(function () {
+                Route::get('summary', 'summary');
+                Route::get('live', 'live');
+                Route::get('breakdown/{dimension}', 'breakdown')->where('dimension', '[a-z]+');
+            });
+            Route::get('export/{report}', 'export')->where('report', '[a-z]+')->middleware('permission:analytics.export,staff');
+            Route::middleware('permission:analytics.manage,staff')->group(function () {
+                Route::get('settings', 'settings');
+                Route::put('settings', 'updateSettings');
+            });
         });
 
         Route::middleware('permission:cms.manage,staff')->group(function () {

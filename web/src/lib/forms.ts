@@ -1,5 +1,7 @@
 'use client';
 
+import { analyticsHeaders } from './analytics';
+
 export type SubmitResult = { ok: true } | { ok: false; reason: 'unavailable' | 'rate_limited' | 'invalid' | 'failed' };
 
 /**
@@ -21,7 +23,8 @@ export async function submitPublicForm(path: string, payload: Record<string, unk
   try {
     const res = await fetch(`${base}/api/v1/public/${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      // The visit's id, so an enquiry that succeeds counts as this visit's conversion (docs/visitor-analytics.md).
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...analyticsHeaders() },
       body: JSON.stringify(payload),
     });
     if (res.ok) return { ok: true };

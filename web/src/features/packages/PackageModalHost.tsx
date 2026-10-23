@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useSiteContent } from '@/components/providers/SiteContentProvider';
 import { Modal, ModalClose } from '@/components/ui/Modal';
 import type { AppLocale } from '@/i18n/routing';
+import { notePath, trackPageView } from '@/lib/analytics';
 import { localizedPath, packagePath, packageSlugFromPathname } from '@/lib/links';
 import { useSiteUi } from '@/state/site-ui';
 import { useTripSearch } from '@/state/trip-search';
@@ -35,6 +36,8 @@ export function PackageModalHost({ homePath }: { homePath: string }) {
       window.history.pushState(null, '', localizedPath(locale, packagePath(slug)));
       pushed.current = true;
     }
+    // A view of the package's page, however it opened (docs/visitor-analytics.md); once, if the router reports it too.
+    if (slug) trackPageView(localizedPath(locale, packagePath(slug)));
   }, [slug, openedBy, locale]);
 
   // Back / forward.
@@ -53,6 +56,8 @@ export function PackageModalHost({ homePath }: { homePath: string }) {
   }, [packages, openPackage, closePackage]);
 
   const close = useCallback(() => {
+    // Back on the page the dialog opened over: not a new view of it.
+    notePath(homePath);
     if (pushed.current) {
       window.history.back(); // popstate closes the modal
       return;

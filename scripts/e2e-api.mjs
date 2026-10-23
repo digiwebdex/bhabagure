@@ -53,6 +53,8 @@ export function writeE2eEnv({ origins, webUrl = '', portalUrl = '', adminUrl = '
     // Payments go to the local SSLCommerz stand-in; passport OCR is off, so the "type manually" path is what runs.
     SSLCOMMERZ_MODE: 'fake',
     PASSPORT_OCR_PROVIDER: 'none',
+    // The tests' browser is headless, which counts as a bot on live: here its visits are recorded (docs/visitor-analytics.md).
+    ANALYTICS_ALLOW_HEADLESS: 'true',
     // WhatsApp through the local stand-in (each message lands in api/storage/logs/whatsapp-fake.log), unpaced;
     // notification emails go to the log mailer.
     WASENDER_MODE: 'fake',
