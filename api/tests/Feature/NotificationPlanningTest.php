@@ -141,6 +141,8 @@ class NotificationPlanningTest extends TestCase
     #[Test]
     public function a_missing_passport_is_chased_seven_days_out_only_if_it_is_still_missing(): void
     {
+        // The trip departs on 31 October 2026: the reminder's day (the 24th) has to be ahead of "now".
+        $this->travelTo(Carbon::parse('2026-10-01 10:00', 'Asia/Dhaka'));
         $missing = $this->confirmedBooking(passportForSecond: null);
         $fixed = $this->confirmedBooking(passportForSecond: null);
         $row = NotificationMessage::query()->where('related_id', $missing->id)->where('event', 'documents_pending')->where('channel', 'whatsapp')->firstOrFail();

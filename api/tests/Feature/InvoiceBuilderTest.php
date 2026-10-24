@@ -52,8 +52,27 @@ class InvoiceBuilderTest extends TestCase
         $send('01711000002')->assertCreated()->assertJsonPath('data.customer.phone', '8801711000002');
         $this->assertSame(2, Customer::query()->count(), 'the same number finds the customer made before');
 
-        // Not a Bangladeshi mobile: refused with a message staff can act on.
-        $send('0171100')->assertUnprocessable()->assertJsonValidationErrors(['customer.phone' => 'Enter a Bangladeshi mobile number, e.g. 01711-000000.']);
+        // Another country's number with its code (the client, 2026-10-24), in any written form: digits with the code.
+        $send('+977 981-2345678')->assertCreated()->assertJsonPath('data.customer.phone', '9779812345678');
+        $send('00977 (981) 2345678')->assertCreated()->assertJsonPath('data.customer.phone', '9779812345678');
+        $send('+44 20 7946 0958')->assertCreated()->assertJsonPath('data.customer.phone', '442079460958');
+        $this->assertSame(4, Customer::query()->count(), 'the Nepali number found its customer the second time');
+
+        // Too short, letters, or a foreign number without its code (it can't be told from a Bangladeshi typo): refused.
+        $message = 'Enter a Bangladeshi mobile (01711-000000) or another country’s number with its code (+977 981-2345678).';
+        foreach (['0171100', 'call me', '9812345678', '+12', '+1234567890123456'] as $wrong) {
+            $send($wrong)->assertUnprocessable()->assertJsonValidationErrors(['customer.phone' => $message]);
+        }
+
+        // Found by the number in any form, and printed with its code, never as a local number.
+        $nepal = Customer::query()->where('phone', '9779812345678')->sole();
+        foreach (['+977 981-2345678', '9779812345678', '981-2345678'] as $typed) {
+            $this->assertContains($nepal->id, array_column($this->actingAsApi($this->admin())->getJson('/api/v1/admin/customers?'.http_build_query(['search' => $typed]))->assertOk()->json('data'), 'id'), $typed);
+        }
+        $invoice = Invoice::query()->where('customer_id', $nepal->id)->firstOrFail();
+        $html = app(InvoicePdf::class)->html($invoice, true, 'en');
+        $this->assertStringContainsString('+9779812345678', $html);
+        $this->assertStringContainsString('01711000002', app(InvoicePdf::class)->html(Invoice::query()->whereHas('customer', fn ($q) => $q->where('phone', '8801711000002'))->firstOrFail(), true, 'en'));
     }
 
     #[Test]

@@ -239,9 +239,18 @@ final class InvoiceView
     }
 
     /** 8801743939300 / +8801743939300 → 01743939300 (identifiers keep Latin digits). */
+    /**
+     * A Bangladeshi number as it is written at home (8801711000000 → 01711000000); another country's with its code
+     * (9779812345678 → +9779812345678), so a foreign number never reads as a local one.
+     */
     private function phone(string $phone): string
     {
-        return preg_replace('/^\+?88/', '', $phone) ?? $phone;
+        $digits = ltrim($phone, '+');
+        if (str_starts_with($digits, '880')) {
+            return substr($digits, 2);
+        }
+
+        return ctype_digit($digits) ? '+'.$digits : $phone;
     }
 
     private function mask(string $passport): string

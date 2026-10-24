@@ -3402,7 +3402,7 @@
     "customer": "Billed to",
     "customerHint": "Nobody picked above? This name becomes the customer",
     "customerPhone": "Phone",
-    "customerPhoneHint": "8801XXXXXXXXX — the number the customer record is kept under",
+    "customerPhoneHint": "A Bangladeshi mobile (01711-000000), or another country’s number with its code (+977 981-2345678). The customer record is kept under this number.",
     "changeCustomer": "Bill someone else",
     "findCustomer": "Find a customer",
     "findCustomerHint": "Name or phone number",

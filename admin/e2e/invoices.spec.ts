@@ -168,6 +168,31 @@ test('the customer and Item boxes list their choices on a click, and a new item 
   await expect(page.getByTestId('products')).toContainText('Srimangal, Lawachara')
 })
 
+test('an invoice is written for a customer with a foreign number, which needs its country code', async ({ page }) => {
+  // The client, 2026-10-24: not only Bangladeshi numbers.
+  await signIn(page, 'admin')
+  const stamp = String(Date.now())
+  const customer = `E2E Nepal ${stamp}`
+  await page.goto('/invoices/new')
+  await page.getByLabel('Billed to').fill(customer)
+  await expect(page.getByText('or another country’s number with its code (+977 981-2345678)')).toBeVisible(FIRST_LOAD)
+  await page.getByLabel('What it is for').fill(`E2E Kathmandu tour ${stamp}`)
+  await page.getByTestId('invoice-lines').getByLabel('Item').fill('Tour package')
+  await page.getByTestId('invoice-lines').getByLabel('Unit price').fill('45000')
+
+  // Without its code a foreign number can't be told from a Bangladeshi typo: Save stays off until it has one.
+  await page.getByLabel('Phone', { exact: true }).fill(`98${stamp.slice(-8)}`)
+  await expect(page.getByRole('button', { name: 'Save draft' })).toBeDisabled()
+  await page.getByLabel('Phone', { exact: true }).fill(`+977 98${stamp.slice(-8, -4)}-${stamp.slice(-4)}`)
+  await page.getByRole('button', { name: 'Save draft' }).click()
+  await expect(page.getByText('Draft saved')).toBeVisible()
+  await expect(page.getByTestId('invoices-table').locator('tbody tr').filter({ hasText: customer })).toContainText('Draft', FIRST_LOAD)
+
+  // The customer is kept under the number with its code, and found by it however it is typed.
+  await page.goto(`/customers?search=${encodeURIComponent(`+977 98${stamp.slice(-8)}`)}`)
+  await expect(page.getByText(customer).first()).toBeVisible(FIRST_LOAD)
+})
+
 test('a draft nobody wants is deleted, and an issued invoice is not', async ({ page }) => {
   await signIn(page, 'admin')
   const stamp = String(Date.now())

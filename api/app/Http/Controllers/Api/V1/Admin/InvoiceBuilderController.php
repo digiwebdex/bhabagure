@@ -209,7 +209,7 @@ class InvoiceBuilderController extends Controller
             return Customer::query()->findOrFail($data['customer_id']);
         }
 
-        $phone = Phone::normalizeBdMobile($data['customer']['phone']) ?? $data['customer']['phone'];
+        $phone = Phone::normalizeWhatsApp($data['customer']['phone']) ?? $data['customer']['phone'];
 
         return Customer::query()->firstOrCreate(['phone' => $phone], [
             'name' => trim($data['customer']['name']),
@@ -222,11 +222,17 @@ class InvoiceBuilderController extends Controller
     /** @return array<string, mixed> */
     private function validated(Request $request): array
     {
-        // A new customer's number as staff type it — 01711-000000, +880 1711 000000 — is stored as 8801711000000, as
-        // everywhere else. Checked after it is tidied, never refused for its spaces or dashes.
+        // A new customer's number as staff type it, kept as digits with the country code (the client, 2026-10-24: not only
+        // Bangladeshi numbers): a Bangladeshi mobile in any form — 01711-000000, +880 1711 000000 — as 8801711000000, as
+        // everywhere else; another country's written with its + or 00 code — +977 981-2345678 — as 9779812345678.
+        // Without a code a foreign number can't be told from a Bangladeshi typo, so it is refused. Checked after it is
+        // tidied, never refused for its spaces, dashes or brackets.
+        $normalized = null;
         if (is_array($request->input('customer')) && is_string($request->input('customer.phone'))) {
-            $typed = $request->input('customer.phone');
-            $request->merge(['customer' => ['phone' => Phone::normalizeBdMobile($typed) ?? $typed] + $request->input('customer')]);
+            $normalized = Phone::normalizeWhatsApp($request->input('customer.phone'));
+            if ($normalized !== null) {
+                $request->merge(['customer' => ['phone' => $normalized] + $request->input('customer')]);
+            }
         }
 
         return $request->validate([
@@ -235,7 +241,12 @@ class InvoiceBuilderController extends Controller
             // Someone not on file yet: their name and number make the customer record the invoice is billed to.
             'customer' => ['nullable', 'array'],
             'customer.name' => ['required_with:customer', 'string', 'max:160'],
-            'customer.phone' => ['required_with:customer', 'regex:/^8801[3-9]\d{8}$/'],
+            // Only what the rule above recognised: E.164 as digits, a country code then the number (8 to 15 digits).
+            'customer.phone' => ['required_with:customer', function (string $attribute, mixed $value, \Closure $fail) use (&$normalized) {
+                if ($normalized === null) {
+                    $fail(__('invoices.phone_invalid'));
+                }
+            }],
             'customer.email' => ['nullable', 'email', 'max:190'],
             'title' => ['required', 'string', 'max:160'],
             'po_number' => ['nullable', 'string', 'max:60'],

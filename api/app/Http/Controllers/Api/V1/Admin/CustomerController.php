@@ -247,7 +247,8 @@ class CustomerController extends Controller
     private function filtered(Staff $staff, array $filters): Builder
     {
         $search = $filters['search'] ?? null;
-        $phone = $search !== null ? Phone::normalizeBdMobile($search) : null;
+        // A number in any written form — 01711-000000, +977 981-2345678 — finds the record it is stored under.
+        $phone = $search !== null ? Phone::normalizeWhatsApp($search) : null;
         $today = now('Asia/Dhaka');
 
         return Customer::query()->visibleTo($staff)

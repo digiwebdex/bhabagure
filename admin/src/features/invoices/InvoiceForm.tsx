@@ -8,6 +8,7 @@ import { NumberInput, Switch, TextArea, TextInput } from '../../components/ui/fi
 import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
+import { whatsAppNumber } from '../inbox/phone'
 import { invoiceActions, invoiceTotals, lineTotals, useInvoice, useInvoiceAction, type InvoiceDetail, type InvoiceInput } from './api'
 import { CustomerFinder } from './CustomerFinder'
 import { ItemCombobox } from './ItemPicker'
@@ -84,12 +85,14 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
   const setLine = (index: number, patch: Partial<Line>) => setLines((all) => all.map((line, i) => (i === index ? { ...line, ...patch } : line)))
 
   // An invoice always belongs to someone: a customer from the list, or a name and number to make the record from.
-  const hasParty = customerId !== null || (customerName.trim() !== '' && customerPhone.replace(/\D/g, '').length >= 11)
+  // A Bangladeshi mobile in any form, or another country's number with its + or 00 code — the API's own rule.
+  const hasParty = customerId !== null || (customerName.trim() !== '' && whatsAppNumber(customerPhone) !== null)
   const incomplete = !hasParty || !form.title.trim() || totals.total <= 0
 
   const payload = (): InvoiceInput => ({
     customer_id: customerId,
-    customer: customerId === null ? { name: customerName.trim(), phone: customerPhone.replace(/\D/g, '') } : null,
+    // As typed: the API keeps the + that tells a foreign number from a local one.
+    customer: customerId === null ? { name: customerName.trim(), phone: customerPhone.trim() } : null,
     title: form.title.trim(),
     po_number: form.po_number.trim() || null,
     note: form.note.trim() || null,
@@ -140,8 +143,10 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
             />
             <TextInput
               label={t('invoices.customerPhone')}
+              type="tel"
               value={customerPhone}
               onChange={setCustomerPhone}
+              placeholder="01711-000000 · +977 981-2345678"
               disabled={frozen || customerId !== null}
               hint={frozen || customerId !== null ? undefined : t('invoices.customerPhoneHint')}
               error={fieldError('customer.phone')}
