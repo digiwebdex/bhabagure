@@ -68,6 +68,53 @@ class PackageController extends Controller
         return response()->json(['data' => AdminContent::package($package->load(self::RELATIONS))], 201);
     }
 
+    /**
+     * A new draft like this package (docs/package-page.md), to make a similar tour without typing it again: its text,
+     * itinerary, inclusions, prices, room rates and tags. Not its photos, departures or bookings, which belong to it;
+     * a new code and address, and "(copy)" after the title, until staff change them.
+     */
+    public function duplicate(Request $request, int $id): JsonResponse
+    {
+        $source = TourPackage::query()->with(['itineraryDays', 'inclusions', 'tags'])->findOrFail($id);
+        $staff = $request->user('staff');
+
+        $copy = DB::transaction(function () use ($source, $staff) {
+            $copy = TourPackage::query()->create([
+                ...collect($source->only($source->getFillable()))->except(['wp_trip_id', 'status', 'published_at', 'is_featured', 'sort_order'])->all(),
+                'code' => self::unused('code', $source->code.'-COPY', 30),
+                'slug' => self::unused('slug', $source->slug.'-copy', 190),
+                'title_en' => $source->title_en.' (copy)',
+                'title_bn' => $source->title_bn === null ? null : $source->title_bn.' (কপি)',
+                'status' => PackageStatus::Draft,
+                'is_featured' => false,
+                'sort_order' => (int) TourPackage::query()->max('sort_order') + 1,
+            ]);
+            $copy->forceFill(['created_by_staff_id' => $staff->id, 'updated_by_staff_id' => $staff->id])->save();
+            $copy->itineraryDays()->createMany($source->itineraryDays->map->only(['day_number', 'title_bn', 'title_en', 'body_bn', 'body_en'])->all());
+            $copy->inclusions()->createMany($source->inclusions->map->only(['kind', 'text_bn', 'text_en', 'sort_order'])->all());
+            $copy->tags()->sync($source->tags->mapWithKeys(fn (Tag $tag) => [$tag->id => ['sort_order' => $tag->pivot->sort_order]])->all());
+
+            return $copy;
+        });
+
+        $this->audit->record('cms.package.duplicated', $staff, $copy, ['from_package_id' => $source->id, 'from_code' => $source->code]);
+
+        return response()->json(['data' => AdminContent::package($copy->load(self::RELATIONS))], 201);
+    }
+
+    /** "NP-01-COPY", else "NP-01-COPY2", "NP-01-COPY3"… — free in that column and within its length. */
+    private static function unused(string $column, string $base, int $max): string
+    {
+        $separator = $column === 'slug' ? '-' : '';
+        for ($n = 1; ; $n++) {
+            $suffix = $n === 1 ? '' : $separator.$n;
+            $candidate = mb_substr($base, 0, $max - mb_strlen($suffix)).$suffix;
+            if (! TourPackage::query()->where($column, $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+    }
+
     public function update(PackageRequest $request, int $id): JsonResponse
     {
         $package = TourPackage::query()->findOrFail($id);

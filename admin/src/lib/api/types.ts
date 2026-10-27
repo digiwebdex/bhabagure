@@ -102,6 +102,9 @@ export type TourPackage = PackageSummary & {
   destination_id: number
   summary_bn: string | null
   summary_en: string | null
+  /** Paragraphs about the tour on its page and in its brochure (docs/package-page.md). */
+  overview_bn: string | null
+  overview_en: string | null
   includes_airfare: boolean | null
   group_mode: 'group' | 'any'
   min_pax: number | null

@@ -25,9 +25,9 @@ class BrochurePdf
 {
     /**
      * Bump when a template changes, so stored PDFs are made again. 6: group tours as a photo brochure (2026-10-27);
-     * 7: customized trips too.
+     * 7: customized trips too; 8: the overview (2026-10-28).
      */
-    public const TEMPLATE_VERSION = 7;
+    public const TEMPLATE_VERSION = 8;
 
     /** Group sizes a package without a grid is priced for in the brochure. */
     private const SLAB_SIZES = [1, 2, 3, 4, 6, 10];

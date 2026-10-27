@@ -34,6 +34,8 @@ export interface TourPackage {
   status: 'draft' | 'published' | 'archived';
   title: Localized;
   summary: Localized;
+  /** Paragraphs about the tour, or null when none is written (docs/package-page.md). Absent from older bundles. */
+  overview?: Localized | null;
   durationDays: number;
   durationNights: number | null;
   regularPrice: number;

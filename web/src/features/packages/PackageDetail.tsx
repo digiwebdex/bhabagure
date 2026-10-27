@@ -102,6 +102,14 @@ export function PackageDetailBody({ pkg }: { pkg: PackageView }) {
         </div>
       </div>
 
+      {/* What the tour is, in staff's own paragraphs (docs/package-page.md); nothing when none is written. */}
+      {pkg.overview ? (
+        <div className="flex flex-col gap-2.5" data-testid="package-overview">
+          <h3 className="text-19 font-bold tracking-heading">{t('overview')}</h3>
+          <p className="text-15 leading-1.7 whitespace-pre-line text-pretty">{pkg.overview}</p>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3.25">
         <div className="flex flex-wrap items-baseline justify-between gap-2.5">
           <h3 className="text-19 font-bold tracking-heading">{t('pricing')}</h3>

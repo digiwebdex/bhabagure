@@ -16,7 +16,7 @@ const EVERY_MS = 5000;
  * on the website. Previous/next on every screen (the client asked for them), a count, swiping, and every five seconds on
  * its own, waiting as the offer banners do (useSlideshow).
  */
-export function TourPhotoSlideshow({ photos }: { photos: SiteViews['tourPhotos'] }) {
+export function TourPhotoSlideshow({ photos, linkToTour = true }: { photos: SiteViews['tourPhotos']; linkToTour?: boolean }) {
   const t = useTranslations('tourPhotos');
   const f = useFormatters();
   const { track, current, step, holdProps } = useSlideshow(photos.length, EVERY_MS);
@@ -52,7 +52,8 @@ export function TourPhotoSlideshow({ photos }: { photos: SiteViews['tourPhotos']
                   {photo.caption}
                   {photo.month ? <span className="font-normal text-white/80"> · {f.month(photo.month)}</span> : null}
                 </span>
-                {photo.packageSlug ? (
+                {/* Not on the tour's own page (docs/package-page.md): it would link to itself. */}
+                {linkToTour && photo.packageSlug ? (
                   <Link
                     href={`/packages/${photo.packageSlug}`}
                     aria-label={t('seeTourLabel', { title: photo.packageTitle ?? photo.caption })}

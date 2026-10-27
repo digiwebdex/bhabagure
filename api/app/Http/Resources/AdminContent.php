@@ -94,6 +94,8 @@ final class AdminContent
             'destination_id' => $package->destination_id,
             'summary_bn' => $package->summary_bn,
             'summary_en' => $package->summary_en,
+            'overview_bn' => $package->overview_bn,
+            'overview_en' => $package->overview_en,
             'includes_airfare' => $package->includes_airfare,
             'group_mode' => $package->group_mode,
             'min_pax' => $package->min_pax,

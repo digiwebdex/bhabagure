@@ -7,6 +7,7 @@ import { PackageDetailActions, PackageDetailBody, PackageDetailHeading } from '@
 import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { ReviewCards } from '@/features/reviews/ReviewCarousel';
 import { SiteChrome } from '@/features/SiteChrome';
+import { TourPhotoSlideshow } from '@/features/tour-photos/TourPhotoSlideshow';
 import { Link } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { getSiteViews, siteUrl } from '@/lib/content';
@@ -47,6 +48,9 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
   const tr = await getTranslations({ locale, namespace: 'reviewForm' });
   const path = packagePath(slug);
   const reviews = views.reviews.filter((review) => review.packageSlug === slug);
+  // The Group Tour Gallery's photos of this tour (docs/package-page.md); none while the gallery is switched off.
+  const tourPhotos = views.tourPhotos.filter((photo) => photo.packageSlug === slug);
+  const tp = await getTranslations({ locale, namespace: 'tourPhotos' });
 
   return (
     <SiteChrome locale={locale} views={views} pathname={path}>
@@ -57,6 +61,15 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
         </Link>
         <PackageDetailHeading pkg={pkg} as="h1" />
         <PackageDetailBody pkg={pkg} />
+        {tourPhotos.length > 0 ? (
+          <section id="package-tour-photos" className="flex flex-col gap-3.5" data-testid="package-tour-photos">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-fluid-20-26 font-bold tracking-heading">{tp('thisTour')}</h2>
+              <p className="text-14 text-muted">{tp('thisTourLede')}</p>
+            </div>
+            <TourPhotoSlideshow photos={tourPhotos} linkToTour={false} />
+          </section>
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-16 border border-hairline bg-paper-soft px-fluid-18-28 py-4">
           <PackageDetailActions pkg={pkg} bookFromLink />
         </div>

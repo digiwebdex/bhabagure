@@ -300,6 +300,7 @@
     "perPerson": "Per person",
     "groupTotal": "Group total",
     "headNote": "for {pax, plural, one {{paxText} traveller} other {{paxText} travellers}} · total {total}",
+    "overview": "Overview",
     "itinerary": "Day-by-day itinerary",
     "day": "DAY",
     "includes": "What is included",
@@ -429,7 +430,9 @@
     "next": "Next photo",
     "seeTour": "See this tour",
     "seeTourLabel": "See this tour: {title}",
-    "alt": "Our travellers — {caption}"
+    "alt": "Our travellers — {caption}",
+    "thisTour": "Photos from this tour",
+    "thisTourLede": "Our travellers on this tour."
   },
   "creator": {
     "role": "The traveller behind Bhabaghure Holidays",

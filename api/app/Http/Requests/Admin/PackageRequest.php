@@ -22,7 +22,7 @@ class PackageRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        foreach (['title_bn', 'summary_bn', 'summary_en', 'seo_title_bn', 'seo_title_en', 'seo_description_bn', 'seo_description_en', 'difficulty'] as $field) {
+        foreach (['title_bn', 'summary_bn', 'summary_en', 'overview_bn', 'overview_en', 'seo_title_bn', 'seo_title_en', 'seo_description_bn', 'seo_description_en', 'difficulty'] as $field) {
             if ($this->has($field) && trim((string) $this->input($field)) === '') {
                 $this->merge([$field => null]);
             }
@@ -91,6 +91,9 @@ class PackageRequest extends FormRequest
             'title_bn' => ['nullable', 'string', 'max:255'],
             'summary_en' => ['nullable', 'string', 'max:500'],
             'summary_bn' => ['nullable', 'string', 'max:500'],
+            // Paragraphs about the tour on its page and in its brochure (docs/package-page.md).
+            'overview_en' => ['nullable', 'string', 'max:10000'],
+            'overview_bn' => ['nullable', 'string', 'max:10000'],
             'duration_days' => ['required', 'integer', 'between:1,60'],
             'duration_nights' => ['nullable', 'integer', 'between:0,60', 'lte:duration_days'],
             'regular_price' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],

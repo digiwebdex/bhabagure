@@ -57,6 +57,8 @@ final class PublicContent
             'status' => $package->status->value,
             'title' => $package->localized('title'),
             'summary' => $package->localized('summary'),
+            // Paragraphs about the tour, or null when none is written (docs/package-page.md).
+            'overview' => $package->localizedOrNull('overview'),
             'durationDays' => $package->duration_days,
             'durationNights' => $package->duration_nights,
             'regularPrice' => Money::toNumber($package->regular_price),

@@ -278,6 +278,8 @@ Route::prefix('v1')->group(function () {
                 Route::post('packages/{id}/publish', 'publish')->whereNumber('id');
                 Route::post('packages/{id}/unpublish', 'unpublish')->whereNumber('id');
                 Route::post('packages/{id}/archive', 'archive')->whereNumber('id');
+                // A new draft like this package (docs/package-page.md).
+                Route::post('packages/{id}/duplicate', 'duplicate')->whereNumber('id');
             });
 
             Route::controller(PackageImageController::class)->group(function () {

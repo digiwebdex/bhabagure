@@ -41,6 +41,8 @@ export interface PackageView {
   destinationName: string;
   title: string;
   summary: string;
+  /** Paragraphs about the tour, line breaks kept; null when none is written (docs/package-page.md). */
+  overview: string | null;
   durationDays: number;
   durationNights: number | null;
   regularPrice: number;
@@ -243,6 +245,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       destinationName: destination ? pick(destination.name, locale) : p.destination,
       title: pick(p.title, locale),
       summary: pick(p.summary, locale),
+      overview: p.overview ? pick(p.overview, locale).trim() || null : null,
       durationDays: p.durationDays,
       durationNights: p.durationNights,
       regularPrice: p.regularPrice,

@@ -15,6 +15,7 @@
     $date = fn (string $iso) => \App\Support\Numerals::date($iso, $locale);
     $title = $pick($package->title_bn, $package->title_en);
     $summary = $pick($package->summary_bn, $package->summary_en);
+    $overview = trim($pick($package->overview_bn, $package->overview_en));
     $days = (int) $package->duration_days;
     $nights = $package->duration_nights;
     $duration = $nights !== null ? $number($days).' '.$l('দিন', 'days').' / '.$number($nights).' '.$l('রাত', 'nights') : $number($days).' '.$l('দিন', 'days');
@@ -83,6 +84,8 @@
   .fact.price { background: var(--tint); }
   .fact.price .value { color: var(--orange); font-size: 13pt; }
   .summary { margin-top: 5mm; color: var(--muted); font-size: 10.5pt; }
+  /* The overview as staff wrote it: their line breaks kept, a page break only between lines. */
+  .overview p { white-space: pre-line; font-size: 10.2pt; line-height: 1.6; orphans: 2; widows: 2; }
   .your { display: flex; justify-content: space-between; align-items: center; gap: 4mm; border: 0.35mm solid #F7C4A8; border-radius: 3mm; padding: 3mm 4mm; margin-top: 5mm; }
   .your strong { font-size: 16pt; color: var(--orange); }
 
@@ -176,6 +179,13 @@
     </div>
 
     @if ($summary)<p class="summary">{{ $summary }}</p>@endif
+
+    @if ($overview !== '')
+      <section class="overview">
+        <h2><span class="eyebrow">{{ $l('ট্যুর সম্পর্কে', 'About the tour') }}</span>{{ $l('ট্যুর পরিচিতি', 'Overview') }}</h2>
+        <p>{{ $overview }}</p>
+      </section>
+    @endif
 
     <div class="your">
       <span>

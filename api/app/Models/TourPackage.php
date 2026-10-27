@@ -17,7 +17,7 @@ class TourPackage extends Model
     use HasLocalizedFields, SoftDeletes;
 
     protected $fillable = [
-        'code', 'wp_trip_id', 'slug', 'destination_id', 'title_en', 'title_bn', 'summary_en', 'summary_bn',
+        'code', 'wp_trip_id', 'slug', 'destination_id', 'title_en', 'title_bn', 'summary_en', 'summary_bn', 'overview_en', 'overview_bn',
         'duration_days', 'duration_nights', 'regular_price', 'sale_price', 'price_grid', 'price_options', 'includes_airfare', 'group_mode',
         'min_pax', 'departure_mode', 'trip_type', 'single_supplement_percent', 'twin_supplement_percent', 'difficulty', 'source_image_url', 'seo_title_bn', 'seo_title_en',
         'seo_description_bn', 'seo_description_en', 'status', 'published_at', 'is_featured', 'sort_order',

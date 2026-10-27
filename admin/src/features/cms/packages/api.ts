@@ -14,6 +14,8 @@ export const emptyPackage = (): PackageForm => ({
   title_en: '',
   summary_bn: '',
   summary_en: '',
+  overview_bn: '',
+  overview_en: '',
   duration_days: 1,
   duration_nights: 0,
   regular_price: 0,
@@ -89,6 +91,8 @@ export const packageActions = {
   update: (id: number, form: PackageForm) => api.put<Data<TourPackage>>(`admin/packages/${id}`, form),
   transition: (id: number, action: 'publish' | 'unpublish' | 'archive') => api.post<Data<TourPackage>>(`admin/packages/${id}/${action}`),
   remove: (id: number) => api.delete(`admin/packages/${id}`),
+  // A new draft like this package: text, itinerary, inclusions and prices, not photos or dates (docs/package-page.md).
+  duplicate: (id: number) => api.post<Data<TourPackage>>(`admin/packages/${id}/duplicate`),
   reorder: (ids: number[]) => api.put('admin/packages/order', { ids }),
   addImage: (id: number, mediaId: number) => api.post<Data<PackageImage[]>>(`admin/packages/${id}/images`, { media_id: mediaId }),
   reorderImages: (id: number, imageIds: number[], coverId: number) => api.put<Data<PackageImage[]>>(`admin/packages/${id}/images/order`, { image_ids: imageIds, cover_image_id: coverId }),

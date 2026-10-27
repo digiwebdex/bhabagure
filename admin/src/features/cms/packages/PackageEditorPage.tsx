@@ -66,6 +66,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
   const save = usePackageMutation((values: PackageForm) => (pkg ? packageActions.update(pkg.id, values) : packageActions.create(values)))
   const transition = usePackageMutation((action: 'publish' | 'unpublish' | 'archive') => packageActions.transition(pkg!.id, action))
   const remove = usePackageMutation(() => packageActions.remove(pkg!.id))
+  const duplicate = usePackageMutation(() => packageActions.duplicate(pkg!.id))
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && !save.isPending && currentLocation.pathname !== nextLocation.pathname)
 
@@ -85,6 +86,19 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
     if (dirty) return toast(t('packages.saveFirst'), 'error')
     if (action === 'archive' && !(await confirm(t('packages.confirmArchive')))) return
     transition.mutate(action, { onSuccess: () => toast(t(`packages.done.${action}`)) })
+  }
+
+  // A new draft like this one, opened at once; unsaved edits here would not be in it.
+  const onDuplicate = async () => {
+    if (duplicate.isPending) return
+    if (dirty) return toast(t('packages.saveFirst'), 'error')
+    if (!(await confirm(t('packages.confirmDuplicate')))) return
+    duplicate.mutate(undefined, {
+      onSuccess: (result) => {
+        toast(t('packages.duplicated'))
+        navigate(`/packages/${result.data.id}`)
+      },
+    })
   }
 
   const onDelete = async () => {
@@ -230,6 +244,13 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
           </Card>
 
           <Card>
+            <CardTitle title={t('packages.overviewTitle')} />
+            <p className="m-0 text-12 leading-1.55 text-app-muted">{t('packages.overviewHint')}</p>
+            <TextArea label={t('packages.overviewBn')} value={form.overview_bn} onChange={(value) => set('overview_bn', value)} error={error('overview_bn')} rows={6} />
+            <TextArea label={t('packages.overviewEn')} value={form.overview_en} onChange={(value) => set('overview_en', value)} error={error('overview_en')} rows={6} />
+          </Card>
+
+          <Card>
             <CardTitle title="Itinerary · day by day" aside={<span className="text-12 text-app-muted">{t('packages.dayCount', { count: form.itinerary.length, n: number(form.itinerary.length) })}</span>} />
             <ItineraryEditor days={form.itinerary} onChange={(days) => set('itinerary', days)} error={error} />
           </Card>
@@ -270,7 +291,7 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
               ))}
             </ul>
             {!pkg ? <p className="m-0 text-12 text-app-muted">{t('packages.saveToContinue')}</p> : null}
-            <ErrorNotice error={transition.error ?? remove.error} />
+            <ErrorNotice error={transition.error ?? remove.error ?? duplicate.error} />
             {pkg ? (
               <div className="flex flex-wrap gap-2">
                 {pkg.status !== 'published' ? (
@@ -287,6 +308,9 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
                     {t('packages.archive')}
                   </button>
                 ) : null}
+                <button type="button" className={buttonClass('outline')} onClick={() => void onDuplicate()} aria-disabled={duplicate.isPending}>
+                  {duplicate.isPending ? t('packages.duplicating') : t('packages.duplicate')}
+                </button>
                 {pkg.status === 'published' && SITE_URL ? (
                   <a href={websiteUrl} target="_blank" rel="noreferrer" className={buttonClass('ghost')}>
                     {t('packages.viewOnWebsite')}
