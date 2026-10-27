@@ -100,8 +100,8 @@ class LandingBrochurePdf
         try {
             // Every photo the page prints, as a JPEG file the renderer serves for each of its addresses.
             $assets = [];
-            foreach ($this->photos($page, $package) as $index => $media) {
-                $jpeg = BrochurePhotos::jpeg($media) ?? throw new RuntimeException("Photo {$media->id} is missing or unreadable.");
+            foreach ($this->photos($page, $package) as $index => [$media, $variant]) {
+                $jpeg = BrochurePhotos::jpeg($media, $variant) ?? throw new RuntimeException("Photo {$media->id} is missing or unreadable.");
                 $file = "{$dir}/{$index}.jpg";
                 file_put_contents($file, $jpeg);
                 foreach ($this->addresses($media) as $url) {
@@ -148,9 +148,10 @@ class LandingBrochurePdf
 
     /**
      * The photos the page shows: the banner (the package's cover when none is chosen), those beside days the package
-     * has, and the gallery's memories not already on the page — as PublicContent::tourLandingPage gives them.
+     * has, and the gallery's memories not already on the page — as PublicContent::tourLandingPage gives them. Each with
+     * the size it is prepared from: the large ones from the 1600 px copy, the grid's small ones from the 800 px one.
      *
-     * @return list<Media>
+     * @return list<array{0: Media, 1: MediaVariant}>
      */
     private function photos(TourLandingPage $page, TourPackage $package): array
     {
@@ -160,7 +161,13 @@ class LandingBrochurePdf
         $used = collect([$page->hero_media_id ?? $package->images()->value('media_id'), ...$page->dayPhotos->pluck('media_id')])->filter()->all();
         $memories = array_map(fn (TourPhoto $photo) => $photo->image, array_filter(BrochurePhotos::gallery($package), fn (TourPhoto $photo) => ! in_array($photo->media_id, $used, true)));
 
-        return collect([$hero, ...$dayPhotos, ...$memories])->filter()->unique('id')->values()->all();
+        $large = collect([$hero, ...$dayPhotos])->filter()->unique('id');
+        $small = collect($memories)->filter()->unique('id')->reject(fn (Media $media) => $large->contains('id', $media->id));
+
+        return [
+            ...$large->map(fn (Media $media) => [$media, MediaVariant::Detail])->values()->all(),
+            ...$small->map(fn (Media $media) => [$media, MediaVariant::Card])->values()->all(),
+        ];
     }
 
     /** @return list<string> every address the website may use for this photo */
