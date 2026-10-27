@@ -1,4 +1,4 @@
-{{-- Rows of photos from App\Services\Brochures\GroupTourPhotos::rows(): each photo at its own width for the row's height,
+{{-- Rows of photos from App\Services\Brochures\BrochurePhotos::rows(): each photo at its own width for the row's height,
      so it keeps its shape. Caption under it when the Group Tour Gallery gives one. --}}
 @if ($rows !== [])
   <div class="{{ $class }}">

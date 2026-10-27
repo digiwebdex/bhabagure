@@ -13,12 +13,12 @@ use Intervention\Image\ImageManager;
 use Throwable;
 
 /**
- * The photos of a group tour's brochure (docs/group-tour-brochures.md): the package's cover as the banner, then its other
- * photos and every published photo of the Group Tour Gallery, in an order that looks random but is the same on every
+ * The photos of a package's brochure (docs/group-tour-brochures.md): the package's cover as the banner, then its other
+ * photos and published photos of the Group Tour Gallery, in an order that looks random but is the same on every
  * download of the same package. Rows are "justified": every photo keeps its own shape (never stretched, never cut) and
  * a row's photos share one height, so together they fill the page's width.
  */
-class GroupTourPhotos
+class BrochurePhotos
 {
     /** Width of the page's text area, and the space between two photos, in mm. */
     public const WIDTH_MM = 188.0;
@@ -53,17 +53,27 @@ class GroupTourPhotos
         });
         $own = $own->reject(fn (Media $media) => $media->id === $cover?->id)->values()->all();
 
-        $gallery = TourPhoto::query()->published()->with('image')->get()->filter(fn (TourPhoto $photo) => $photo->image !== null);
-        [$linked, $others] = $gallery->partition(fn (TourPhoto $photo) => $photo->tour_package_id === $package->id);
+        $gallery = TourPhoto::query()->published()->with(['image', 'tourPackage:id,destination_id'])->get()->filter(fn (TourPhoto $photo) => $photo->image !== null);
         $caption = fn (TourPhoto $photo) => ($locale === 'en' ? ($photo->caption_en ?: $photo->caption_bn) : ($photo->caption_bn ?: $photo->caption_en)) ?: null;
+        // Gallery photos by how close they are to this tour: of this package, of another tour to the same country, of no
+        // tour. A group tour then takes the rest of the gallery too (client, 2026-10-27); a customized trip doesn't, so
+        // a Nepal brochure shows no Thailand trip (client, 2026-10-27).
+        $groups = $gallery->groupBy(fn (TourPhoto $photo) => match (true) {
+            $photo->tour_package_id === $package->id => 0,
+            $photo->tour_package_id !== null && $photo->tourPackage?->destination_id === $package->destination_id => 1,
+            $photo->tour_package_id === null => 2,
+            default => 3,
+        });
+        $levels = $package->isGroupTour() ? [0, 1, 2, 3] : [0, 1, 2];
 
-        // The tour's own photos lead, then the gallery's photos of this tour, then the rest of the gallery; each group
-        // shuffled by the package, so two brochures differ but one brochure never changes between downloads.
-        $candidates = [
-            ...array_map(fn (Media $media) => [$media, null], self::shuffled($own, $package->id, fn (Media $media) => $media->id)),
-            ...array_map(fn (TourPhoto $photo) => [$photo->image, $caption($photo)], self::shuffled($linked->values()->all(), $package->id, fn (TourPhoto $photo) => $photo->media_id)),
-            ...array_map(fn (TourPhoto $photo) => [$photo->image, $caption($photo)], self::shuffled($others->values()->all(), $package->id, fn (TourPhoto $photo) => $photo->media_id)),
-        ];
+        // The tour's own photos lead, then the gallery's in that order; each group shuffled by the package, so two
+        // brochures differ but one brochure never changes between downloads.
+        $candidates = array_map(fn (Media $media) => [$media, null], self::shuffled($own, $package->id, fn (Media $media) => $media->id));
+        foreach ($levels as $level) {
+            foreach (self::shuffled($groups->get($level, collect())->values()->all(), $package->id, fn (TourPhoto $photo) => $photo->media_id) as $photo) {
+                $candidates[] = [$photo->image, $caption($photo)];
+            }
+        }
 
         $seen = $cover === null ? [] : [$cover->id => true];
         $photos = [];
@@ -83,10 +93,10 @@ class GroupTourPhotos
     /** Changes when a photo the brochure prints does, so stored PDFs are made again. */
     public static function fingerprint(TourPackage $package): string
     {
-        $gallery = TourPhoto::query()->published()->orderBy('id')->get(['id', 'media_id', 'tour_package_id', 'caption_bn', 'caption_en', 'updated_at']);
+        $gallery = TourPhoto::query()->published()->with('tourPackage:id,destination_id')->orderBy('id')->get(['id', 'media_id', 'tour_package_id', 'caption_bn', 'caption_en', 'updated_at']);
         $own = $package->images()->get(['id', 'media_id', 'is_cover', 'sort_order']);
 
-        return sha1(json_encode([$gallery->map(fn (TourPhoto $photo) => [$photo->id, $photo->media_id, $photo->tour_package_id, $photo->caption_bn, $photo->caption_en, $photo->updated_at?->getTimestamp()]), $own->toArray()]));
+        return sha1(json_encode([$gallery->map(fn (TourPhoto $photo) => [$photo->id, $photo->media_id, $photo->tour_package_id, $photo->tourPackage?->destination_id, $photo->caption_bn, $photo->caption_en, $photo->updated_at?->getTimestamp()]), $own->toArray()]));
     }
 
     /**

@@ -8,7 +8,7 @@ use App\Models\PackageImage;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Services\Brochures\BrochurePdf;
-use App\Services\Brochures\GroupTourPhotos;
+use App\Services\Brochures\BrochurePhotos;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /** A group tour's photo brochure (docs/group-tour-brochures.md). */
-class GroupTourBrochureTest extends TestCase
+class PhotoBrochureTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -73,6 +73,29 @@ class GroupTourBrochureTest extends TestCase
     }
 
     #[Test]
+    public function a_customized_trip_shows_its_countrys_photos_and_unlinked_ones_but_not_another_countrys(): void
+    {
+        $this->package->update(['trip_type' => 'customized']);
+        $sameCountry = TourPackage::query()->where('destination_id', $this->package->destination_id)->whereKeyNot($this->package->id)->firstOrFail();
+        $otherCountry = TourPackage::query()->where('destination_id', '!=', $this->package->destination_id)->firstOrFail();
+        $this->photo('nepal-trip', 1280, 960, $sameCountry->id);
+        $this->photo('no-trip', 1280, 960, null);
+        $this->photo('other-country', 1280, 960, $otherCountry->id);
+
+        $html = $this->brochure();
+
+        $this->assertStringContainsString('Customized Trip', $html);
+        $this->assertStringContainsString('Price per person by', $html);
+        $this->assertStringNotContainsString('Departure dates', $html);
+        $this->assertLessThan(strpos($html, $this->src('no-trip', 'card')), strpos($html, $this->src('nepal-trip', 'card')), 'The same country first.');
+        $this->assertStringNotContainsString($this->src('other-country', 'card'), $html);
+
+        // A group tour takes the rest of the gallery too.
+        $this->package->update(['trip_type' => TourPackage::GROUP_FIXED]);
+        $this->assertStringContainsString($this->src('other-country', 'card'), $this->brochure());
+    }
+
+    #[Test]
     public function photos_go_into_the_pdf_as_jpeg_which_chrome_does_not_inflate(): void
     {
         $image = imagecreatetruecolor(40, 30);
@@ -108,15 +131,15 @@ class GroupTourBrochureTest extends TestCase
         $aspects = [4 / 3, 959 / 1280, 900 / 1600, 1600 / 720, 4 / 3, 1440 / 1034, 1226 / 880, 4 / 3, 4 / 3, 4 / 3, 4 / 3];
         $photos = array_map(fn (float $aspect, int $i) => ['src' => "p{$i}", 'aspect' => $aspect, 'caption' => null], $aspects, array_keys($aspects));
 
-        $rows = GroupTourPhotos::rows($photos, 52, 34);
+        $rows = BrochurePhotos::rows($photos, 52, 34);
 
         $this->assertSame(array_column($photos, 'src'), array_merge(...array_map(fn (array $row) => array_column($row['photos'], 'src'), $rows)));
         foreach ($rows as $i => $row) {
             $this->assertLessThanOrEqual(52, $row['heightMm']);
-            $width = array_sum(array_column($row['photos'], 'widthMm')) + GroupTourPhotos::GAP_MM * (count($row['photos']) - 1);
-            $this->assertLessThanOrEqual(GroupTourPhotos::WIDTH_MM, $width);
+            $width = array_sum(array_column($row['photos'], 'widthMm')) + BrochurePhotos::GAP_MM * (count($row['photos']) - 1);
+            $this->assertLessThanOrEqual(BrochurePhotos::WIDTH_MM, $width);
             if ($i < count($rows) - 1) {
-                $this->assertGreaterThan(GroupTourPhotos::WIDTH_MM - 0.1, $width, 'A full row reaches the page’s edge.');
+                $this->assertGreaterThan(BrochurePhotos::WIDTH_MM - 0.1, $width, 'A full row reaches the page’s edge.');
             }
             foreach ($row['photos'] as $photo) {
                 // Its shape: width over height as the photo's own, to a hundredth of a millimetre.
@@ -124,7 +147,7 @@ class GroupTourBrochureTest extends TestCase
             }
         }
         // A short last row joins the one before it rather than standing alone as a tall photo.
-        $this->assertCount(1, GroupTourPhotos::rows(array_slice($photos, 0, 3), 70, 0));
+        $this->assertCount(1, BrochurePhotos::rows(array_slice($photos, 0, 3), 70, 0));
     }
 
     private function brochure(): string

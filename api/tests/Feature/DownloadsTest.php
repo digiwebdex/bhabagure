@@ -101,7 +101,7 @@ class DownloadsTest extends TestCase
 
         $html = $this->rendered[0];
         $this->assertStringContainsString('বেসিক / ৩ তারকা', $html);
-        $this->assertStringContainsString('<td class="num chosen">৳ ৯০,০০০</td>', $html);
+        $this->assertStringContainsString('<td class="num amount chosen">৳ ৯০,০০০</td>', $html);
         $this->assertStringContainsString('৪ তারকা হোটেল', $html);
         $this->assertSame(['4', 3], [Download::query()->sole()->hotel_category, Download::query()->sole()->pax]);
 
@@ -109,7 +109,7 @@ class DownloadsTest extends TestCase
         TourPackage::query()->where('slug', self::MUSTANG)->update(['price_grid' => json_encode(['4' => ['1' => 120000, '2' => 90000], '5' => ['1' => 160000, '2' => 130000]])]);
         $this->actingAsApi($customer)->get('/api/v1/portal/downloads/packages/'.self::MUSTANG.'?hotel_category=3&pax=2&locale=en')->assertOk();
         $this->assertSame('4', Download::query()->latest('id')->first()->hotel_category);
-        $this->assertStringContainsString('<td class="num chosen">৳ 90,000</td>', $this->rendered[1]);
+        $this->assertStringContainsString('<td class="num amount chosen">৳ 90,000</td>', $this->rendered[1]);
     }
 
     #[Test]
