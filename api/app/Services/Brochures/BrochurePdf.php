@@ -23,8 +23,8 @@ use Illuminate\Support\Facades\Storage;
  */
 class BrochurePdf
 {
-    /** Bump when a template changes, so stored PDFs are made again. */
-    public const TEMPLATE_VERSION = 5;
+    /** Bump when a template changes, so stored PDFs are made again. 6: group tours as a photo brochure (2026-10-27). */
+    public const TEMPLATE_VERSION = 6;
 
     /** Group sizes a package without a grid is priced for in the brochure. */
     private const SLAB_SIZES = [1, 2, 3, 4, 6, 10];
@@ -71,9 +71,10 @@ class BrochurePdf
     }
 
     /**
-     * A fixed-departure group tour (docs/fixed-departure-group-tours.md): its room prices and departure dates. With prices
-     * that differ by date (docs/departure-prices.md), each date says its price and the room table is for the date the
-     * website's card shows — the featured one, else the first.
+     * A fixed-departure group tour (docs/fixed-departure-group-tours.md), as a photo brochure (docs/group-tour-brochures.md):
+     * its room prices and departure dates, the itinerary and what is included, between photos from the tour and the Group
+     * Tour Gallery. With prices that differ by date (docs/departure-prices.md), each date says its price and the room
+     * table is for the date the website's card shows — the featured one, else the first.
      */
     private function groupTourHtml(TourPackage $package, int $pax, string $locale, bool $forPdf): string
     {
@@ -83,18 +84,27 @@ class BrochurePdf
         $rooms = PricingService::roomPrices($listPrice, $package->roomRates(), PricingConfig::current());
         $varies = count(array_unique(array_column($departures, 'price'))) > 1;
 
-        return view('brochures.package', $this->invoices->letterhead($locale) + [
+        // Photos: a row under the prices, one in the middle of the itinerary, and the rest as a gallery before the end.
+        $photos = GroupTourPhotos::for($package, $locale);
+        $pool = $photos['photos'];
+        $bands = [
+            GroupTourPhotos::rows(array_slice($pool, 0, 3), 70, 0),
+            GroupTourPhotos::rows(array_slice($pool, 3, 3), 70, 0),
+        ];
+
+        return view('brochures.group-tour', $this->invoices->letterhead($locale) + [
             'locale' => $locale,
             'forPdf' => $forPdf,
             'package' => $package,
-            'groupTour' => ['rooms' => $rooms, 'departures' => $departures, 'pricedOn' => $varies ? $shown['date'] : null],
+            'rooms' => $rooms,
+            'departures' => $departures,
+            'pricedOn' => $varies ? $shown['date'] : null,
             'rates' => $package->roomRates(),
-            'rows' => [],
-            'category' => null,
             'pax' => $pax,
-            'grid' => false,
             'config' => PricingConfig::current(),
-            'yourPrice' => $rooms['triple'],
+            'hero' => $photos['hero'],
+            'bands' => $bands,
+            'gallery' => GroupTourPhotos::rows(array_slice($pool, 6), 52, 34),
             'asOf' => now('Asia/Dhaka')->toDateString(),
         ])->render();
     }
@@ -102,7 +112,7 @@ class BrochurePdf
     /**
      * A package's scheduled departures from today, each with its price per person: its own, else the package's.
      *
-     * @return list<array{date: string, price: int|float, featured: bool}>
+     * @return list<array{date: string, returns: ?string, price: int|float, featured: bool}>
      */
     private static function upcomingDepartures(TourPackage $package): array
     {
@@ -112,6 +122,7 @@ class BrochurePdf
             ->orderBy('departs_on')->get()
             ->map(fn (PackageDeparture $departure) => [
                 'date' => $departure->departs_on->toDateString(),
+                'returns' => $departure->returns_on?->toDateString(),
                 'price' => $departure->price === null ? $base : Money::toNumber($departure->price),
                 'featured' => $departure->is_featured,
             ])->all();
@@ -122,7 +133,7 @@ class BrochurePdf
         $config = PricingConfig::current();
         $key = sha1(implode('|', [self::TEMPLATE_VERSION, 'package', $package->id, $package->updated_at?->getTimestamp(), $category, $pax, $locale,
             json_encode($config->slabs), $config->singleRoomSupplementPercent, $config->serviceChargePercent, now('Asia/Dhaka')->toDateString(),
-            $package->isGroupTour() ? json_encode(self::upcomingDepartures($package)) : '', Brand::fingerprint()]));
+            $package->isGroupTour() ? json_encode(self::upcomingDepartures($package)).GroupTourPhotos::fingerprint($package) : '', Brand::fingerprint()]));
 
         return $this->stored("brochures/packages/{$package->id}/{$key}.pdf", fn () => $this->packageHtml($package, $category, $pax, $locale, forPdf: true));
     }
