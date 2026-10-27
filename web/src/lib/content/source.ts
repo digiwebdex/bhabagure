@@ -78,6 +78,8 @@ async function loadSeed(withDemo: boolean): Promise<ContentBundle> {
     offers: [],
     // Travellers' own photos (docs/group-tour-gallery.md): only ever from the CMS.
     tourPhotos: [],
+    // Landing pages likewise (docs/tour-landing-pages.md).
+    tourPages: [],
   };
 }
 
@@ -86,8 +88,8 @@ async function loadFromApi(): Promise<ContentBundle> {
   // On the server the API is reached over loopback (API_INTERNAL_URL) rather than out through the CDN and back.
   const base = process.env.API_INTERNAL_URL || process.env.API_URL;
   if (!base) throw new Error('CONTENT_SOURCE=api needs API_URL');
-  const get = async <T,>(path: string, tag: string, { empty }: { empty?: T } = {}): Promise<T> => {
-    const res = await fetch(`${base}/api/v1/public/${path}`, { next: { tags: [tag], revalidate: 3600 } });
+  const get = async <T,>(path: string, tag: string | string[], { empty }: { empty?: T } = {}): Promise<T> => {
+    const res = await fetch(`${base}/api/v1/public/${path}`, { next: { tags: Array.isArray(tag) ? tag : [tag], revalidate: 3600 } });
     // A list newer than the API that answers: deploy.sh builds the website before it migrates and reloads the API, so the
     // build talks to the previous release. It renders empty, and the refresh at the end of the deploy fills it in.
     if (res.status === 404 && empty !== undefined) {
@@ -97,7 +99,7 @@ async function loadFromApi(): Promise<ContentBundle> {
     if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
     return (await res.json()).data as T;
   };
-  const [destinations, packages, departures, blog, team, reviews, gallery, visas, creator, partners, offers, tourPhotos, pricing, settings] = await Promise.all([
+  const [destinations, packages, departures, blog, team, reviews, gallery, visas, creator, partners, offers, tourPhotos, tourPages, pricing, settings] = await Promise.all([
     get<ContentBundle['destinations']>('destinations', 'packages'),
     get<ContentBundle['packages']>('packages', 'packages'),
     get<ContentBundle['departures']>('departures', 'departures'),
@@ -110,8 +112,10 @@ async function loadFromApi(): Promise<ContentBundle> {
     get<ContentBundle['partners']>('partners', 'partners', { empty: [] }),
     get<ContentBundle['offers']>('offers', 'offers', { empty: [] }),
     get<ContentBundle['tourPhotos']>('tour-photos', 'tour-photos', { empty: [] }),
+    // Their memories are the gallery's and their countdown a package's departure: any of those changing refreshes them.
+    get<ContentBundle['tourPages']>('tour-pages', ['tour-pages', 'tour-photos', 'packages', 'departures'], { empty: [] }),
     get<ContentBundle['pricing']>('pricing', 'settings'),
     get<ContentBundle['settings']>('settings', 'settings'),
   ]);
-  return { destinations, packages, departures, categories: blog.categories, posts: blog.posts, team, reviews, gallery, visas, creator, partners, offers, tourPhotos, pricing, settings };
+  return { destinations, packages, departures, categories: blog.categories, posts: blog.posts, team, reviews, gallery, visas, creator, partners, offers, tourPhotos, tourPages, pricing, settings };
 }

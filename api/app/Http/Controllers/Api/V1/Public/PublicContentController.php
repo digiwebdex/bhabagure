@@ -17,6 +17,7 @@ use App\Models\PricingSlab;
 use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\TeamMember;
+use App\Models\TourLandingPage;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
@@ -131,6 +132,22 @@ class PublicContentController extends Controller
         $photos = TourPhoto::query()->published()->whereNotNull('media_id')->with(['image', 'tourPackage'])->orderBy('sort_order')->orderBy('id')->get();
 
         return $this->data($photos->map(PublicContent::tourPhoto(...)));
+    }
+
+    /**
+     * Group tours' landing pages (docs/tour-landing-pages.md): published ones whose package is published. The tour's own
+     * content comes with the package in /packages; this is the presentation, and the gallery's photos in the order the
+     * brochure uses.
+     */
+    public function tourPages(): JsonResponse
+    {
+        $pages = TourLandingPage::query()->published()
+            ->whereHas('tourPackage', fn (Builder $query) => $query->published())
+            ->with(['tourPackage', 'hero', 'countdownDeparture', 'dayPhotos.media'])
+            ->orderBy('sort_order')->orderBy('id')
+            ->get();
+
+        return $this->data($pages->map(PublicContent::tourLandingPage(...)));
     }
 
     /** The airlines the agency books (docs/partners-and-payments.md); empty until one is published, and the band is hidden. */

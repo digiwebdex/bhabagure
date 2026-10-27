@@ -198,6 +198,29 @@ export interface TourPhoto {
   package: { slug: string; title: Localized } | null;
 }
 
+/**
+ * A group tour's landing page (docs/tour-landing-pages.md): its address and presentation. The tour itself — title,
+ * prices, dates, the days' text, inclusions — is the package's (`packageSlug`).
+ */
+export interface TourPage {
+  slug: string;
+  packageSlug: string;
+  /** Staff's own title or intro for the page; null for the package's title and overview. */
+  title: Localized | null;
+  intro: Localized | null;
+  /** Null for the package's cover. */
+  hero: ContentImage | null;
+  /** The departure the countdown is to; null for the next scheduled one. */
+  countdownDepartsOn: string | null;
+  /** On the home page's "Upcoming group tours", in `order`. */
+  promote: boolean;
+  order: number;
+  /** Photos beside days of the itinerary, by day number. */
+  days: { day: number; photos: ContentImage[] }[];
+  /** The Group Tour Gallery's photos for this tour, in the brochure's order (docs/group-tour-brochures.md §2). */
+  memories: TourPhoto[];
+}
+
 /** An airline the agency books, shown as a logo above the footer (docs/partners-and-payments.md). */
 export interface AirlinePartner {
   name: Localized;
@@ -294,6 +317,7 @@ export interface ContentBundle {
   partners: AirlinePartner[];
   offers: OfferBanner[];
   tourPhotos: TourPhoto[];
+  tourPages: TourPage[];
   pricing: PricingSettings;
   settings: SiteSettings;
 }

@@ -36,4 +36,11 @@ return [
     'hotel_category_required' => 'Choose the hotel category.',
     'group_tour_departure' => 'Choose one of this group tour’s departure dates.',
     'brand_icon_square' => 'The browser icon must be a square image, at least 180 × 180 pixels (512 × 512 is best).',
+    // Website → Tour landing pages (docs/tour-landing-pages.md).
+    'landing_page' => [
+        'package_not_published' => 'Publish the tour package first: the page shows its prices, dates and itinerary.',
+        'not_group_tour' => 'A landing page is for a group tour (a package with fixed departures).',
+        'departure_not_of_package' => 'Choose one of this tour’s own departures.',
+        'too_many_day_photos' => 'Up to three photos per day.',
+    ],
 ];

@@ -163,10 +163,39 @@ export interface SiteViews {
     packageSlug: string | null;
     packageTitle: string | null;
   }[];
+  /** Group tours' landing pages whose package is on the website (docs/tour-landing-pages.md). */
+  tourPages: TourPageView[];
   pricing: ContentBundle['pricing'];
   addons: { code: string; name: string; price: number; unit: 'per_person' | 'per_booking' }[];
   settings: ContentBundle['settings'] & { brand: string; companyName: string };
   stats: { packages: number; destinations: number };
+}
+
+/** A photo shown at its own shape, from the API's own sizes (no website image optimiser). */
+export interface PhotoView {
+  image: ImageView;
+  srcSet: string | null;
+  width: number | null;
+  height: number | null;
+}
+
+/**
+ * A landing page as shown (docs/tour-landing-pages.md): the page's presentation over its package's own view, so prices,
+ * dates and the days' text are never copied. Title and intro are staff's for the page, else the package's.
+ */
+export interface TourPageView {
+  slug: string;
+  pkg: PackageView;
+  title: string;
+  intro: string | null;
+  hero: PhotoView | null;
+  /** The departure the countdown is to (the chosen one while scheduled, else the next with seats, else the next). */
+  countdown: PackageDepartureView | null;
+  promote: boolean;
+  order: number;
+  /** Every day of the package's itinerary, with the photos staff put beside it. */
+  days: { day: number; title: string; body: string; photos: PhotoView[] }[];
+  memories: SiteViews['tourPhotos'];
 }
 
 /** The travel host and the videos staff picked (docs/travel-host.md). */
@@ -194,9 +223,54 @@ const image = (img: Partial<ContentImage> & { url: string; alt: Localized; isPla
  * through the website's image optimiser at first, which held the site's process over its memory limit until it stopped
  * answering (2026-09-24); the files are already WebP at the right widths.
  */
-function tourPhotoSrcSet(img: ContentImage): string | null {
+function tourPhotoSrcSet(img: Pick<ContentImage, 'variants'>): string | null {
   const sizes = (['thumb', 'card', 'detail', 'full'] as const).map((name) => img.variants?.[name]).filter((v) => v !== undefined);
   return sizes.length > 0 ? sizes.map((v) => `${v.url} ${v.width}w`).join(', ') : null;
+}
+
+function tourPhotoViews(photos: ContentBundle['tourPhotos'], locale: AppLocale): SiteViews['tourPhotos'] {
+  return photos.filter((p) => p.image).map((p) => ({
+    caption: pick(p.caption, locale),
+    month: p.month,
+    image: image(p.image!, locale),
+    srcSet: tourPhotoSrcSet(p.image!),
+    blurUrl: p.image!.variants?.thumb?.url ?? p.image!.url,
+    packageSlug: p.package?.slug ?? null,
+    packageTitle: p.package ? pick(p.package.title, locale) : null,
+  }));
+}
+
+function photoView(img: Parameters<typeof image>[0] & Pick<ContentImage, 'variants'>, locale: AppLocale): PhotoView {
+  const largest = img.variants?.full ?? img.variants?.detail ?? img.variants?.card;
+  return { image: image(img, locale), srcSet: tourPhotoSrcSet(img), width: largest?.width ?? null, height: largest?.height ?? null };
+}
+
+/** docs/tour-landing-pages.md: each page over its package's view; a page whose package isn't on the website is left out. */
+function tourPageViews(bundle: ContentBundle, packages: PackageView[], locale: AppLocale): TourPageView[] {
+  const bySlug = new Map(packages.map((p) => [p.slug, p]));
+  const sourceBySlug = new Map(bundle.packages.map((p) => [p.slug, p]));
+  return (bundle.tourPages ?? []).flatMap((page) => {
+    const pkg = bySlug.get(page.packageSlug);
+    if (!pkg) return [];
+    const cover = sourceBySlug.get(page.packageSlug)?.images[0];
+    const hero = page.hero ?? cover ?? null;
+    const photosByDay = new Map(page.days.map((d) => [d.day, d.photos]));
+    const chosen = page.countdownDepartsOn ? pkg.departures.find((d) => d.departsOn === page.countdownDepartsOn) : undefined;
+    return [
+      {
+        slug: page.slug,
+        pkg,
+        title: page.title ? pick(page.title, locale) : pkg.title,
+        intro: (page.intro ? pick(page.intro, locale) : pkg.overview)?.trim() || null,
+        hero: hero ? photoView(hero, locale) : null,
+        countdown: chosen ?? pkg.departures.find((d) => d.seatsLeft > 0) ?? pkg.departures[0] ?? null,
+        promote: page.promote,
+        order: page.order,
+        days: pkg.itinerary.map((d) => ({ ...d, photos: (photosByDay.get(d.day) ?? []).map((img) => photoView(img, locale)) })),
+        memories: tourPhotoViews(page.memories, locale),
+      },
+    ];
+  });
 }
 
 function creatorView(creator: ContentBundle['creator'] | undefined, locale: AppLocale): CreatorView | null {
@@ -374,15 +448,8 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
     // A banner without its picture is nothing to slide; the API only publishes ones that have it.
     offers: (bundle.offers ?? []).filter((o) => o.image).map((o) => ({ title: pick(o.title, locale), image: image(o.image!, locale), linkUrl: o.linkUrl })),
     // Likewise a photo without its picture; the API only publishes ones that have it.
-    tourPhotos: (bundle.tourPhotos ?? []).filter((p) => p.image).map((p) => ({
-      caption: pick(p.caption, locale),
-      month: p.month,
-      image: image(p.image!, locale),
-      srcSet: tourPhotoSrcSet(p.image!),
-      blurUrl: p.image!.variants?.thumb?.url ?? p.image!.url,
-      packageSlug: p.package?.slug ?? null,
-      packageTitle: p.package ? pick(p.package.title, locale) : null,
-    })),
+    tourPhotos: tourPhotoViews(bundle.tourPhotos ?? [], locale),
+    tourPages: tourPageViews(bundle, packages, locale),
     pricing: bundle.pricing,
     addons: bundle.pricing.addons.map((a) => ({ code: a.code, name: pick(a.name, locale), price: a.price, unit: a.unit })),
     settings: { ...bundle.settings, brand: pick(bundle.settings.company.brand, locale), companyName: pick(bundle.settings.company.name, locale) },

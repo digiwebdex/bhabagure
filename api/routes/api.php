@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\StaffDocumentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
+use App\Http\Controllers\Api\V1\Admin\TourLandingPageController;
 use App\Http\Controllers\Api\V1\Admin\TourPhotoController;
 use App\Http\Controllers\Api\V1\Admin\VisaServiceController;
 use App\Http\Controllers\Api\V1\Agent\AttendanceAgentController;
@@ -178,6 +179,7 @@ Route::prefix('v1')->group(function () {
             Route::get('partners', 'partners');
             Route::get('offers', 'offers');
             Route::get('tour-photos', 'tourPhotos');
+            Route::get('tour-pages', 'tourPages');
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
@@ -770,6 +772,19 @@ Route::prefix('v1')->group(function () {
                     Route::post("{$path}/{id}/unpublish", 'unpublish')->whereNumber('id');
                 });
             }
+
+            // A group tour's own landing page (docs/tour-landing-pages.md).
+            Route::controller(TourLandingPageController::class)->group(function () {
+                Route::get('tour-landing-pages', 'index');
+                Route::get('tour-landing-pages/options', 'options');
+                Route::post('tour-landing-pages', 'store');
+                Route::put('tour-landing-pages/order', 'reorder');
+                Route::get('tour-landing-pages/{id}', 'show')->whereNumber('id');
+                Route::put('tour-landing-pages/{id}', 'update')->whereNumber('id');
+                Route::delete('tour-landing-pages/{id}', 'destroy')->whereNumber('id');
+                Route::post('tour-landing-pages/{id}/publish', 'publish')->whereNumber('id');
+                Route::post('tour-landing-pages/{id}/unpublish', 'unpublish')->whereNumber('id');
+            });
 
             // The home page's hero video (docs/hero-video.md): uploaded in pieces, or a direct link.
             Route::controller(HeroVideoController::class)->prefix('settings/hero-video')->group(function () {

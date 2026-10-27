@@ -20,7 +20,7 @@ use Illuminate\Validation\Rule;
 
 class PackageController extends Controller
 {
-    private const RELATIONS = ['destination', 'itineraryDays', 'inclusions', 'tags', 'images.media'];
+    private const RELATIONS = ['destination', 'itineraryDays', 'inclusions', 'tags', 'images.media', 'landingPage'];
 
     public function __construct(private readonly AuditLogger $audit) {}
 

@@ -46,6 +46,7 @@ use App\Models\StaffDocument;
 use App\Models\SupportTicket;
 use App\Models\TeamMember;
 use App\Models\TourPackage;
+use App\Models\TourLandingPage;
 use App\Models\TourPhoto;
 use App\Models\Transaction;
 use App\Models\TravellerDocument;
@@ -178,6 +179,7 @@ class AppServiceProvider extends ServiceProvider
             'airline_partner' => AirlinePartner::class,
             'offer_banner' => OfferBanner::class,
             'tour_photo' => TourPhoto::class,
+            'tour_landing_page' => TourLandingPage::class,
             'booking_voucher' => BookingVoucher::class,
             'legal_page_version' => LegalPageVersion::class,
             'invoice_product' => InvoiceProduct::class,

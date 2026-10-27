@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -84,6 +85,12 @@ class TourPackage extends Model
     public function inclusions(): HasMany
     {
         return $this->hasMany(PackageInclusion::class)->orderBy('sort_order');
+    }
+
+    /** Its landing page, when one is made (docs/tour-landing-pages.md). */
+    public function landingPage(): HasOne
+    {
+        return $this->hasOne(TourLandingPage::class);
     }
 
     public function images(): HasMany

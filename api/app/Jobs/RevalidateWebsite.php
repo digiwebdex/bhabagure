@@ -17,7 +17,7 @@ class RevalidateWebsite implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable;
 
     /** Cache tags the website knows. */
-    public const TAGS = ['packages', 'departures', 'posts', 'team', 'reviews', 'gallery', 'visas', 'settings', 'creator', 'partners', 'offers', 'tour-photos', 'legal'];
+    public const TAGS = ['packages', 'departures', 'posts', 'team', 'reviews', 'gallery', 'visas', 'settings', 'creator', 'partners', 'offers', 'tour-photos', 'tour-pages', 'legal'];
 
     public int $tries = 5;
 

@@ -18,9 +18,12 @@ use App\Models\Review;
 use App\Models\ReviewPhoto;
 use App\Models\Tag;
 use App\Models\TeamMember;
+use App\Models\TourLandingDayPhoto;
+use App\Models\TourLandingPage;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
+use App\Services\Brochures\BrochurePhotos;
 use App\Support\CreatorProfile;
 use App\Support\Money;
 
@@ -181,6 +184,36 @@ final class PublicContent
             'package' => $package !== null && $package->status === PackageStatus::Published
                 ? ['slug' => $package->slug, 'title' => $package->localized('title')]
                 : null,
+        ];
+    }
+
+    /**
+     * A group tour's landing page (docs/tour-landing-pages.md; web/src/lib/content/types.ts TourPage): its address and
+     * presentation, and the package it shows. Title and intro are null unless staff wrote their own for the page; the
+     * banner null for the package's cover; the countdown date null for the next scheduled departure.
+     */
+    public static function tourLandingPage(TourLandingPage $page): array
+    {
+        $chosen = $page->countdownDeparture;
+        // A photo already on the page — the banner (the package's cover when none is chosen) or beside a day — is not
+        // shown again among the memories.
+        $used = $page->dayPhotos->pluck('media_id')->push($page->hero_media_id ?? $page->tourPackage->images()->value('media_id'))->filter()->all();
+
+        return [
+            'slug' => $page->slug,
+            'packageSlug' => $page->tourPackage->slug,
+            'title' => $page->localizedOrNull('title'),
+            'intro' => $page->localizedOrNull('intro'),
+            'hero' => self::image($page->hero, MediaVariant::Full),
+            'countdownDepartsOn' => $chosen !== null && $chosen->status === 'scheduled' ? $chosen->departs_on->toDateString() : null,
+            'promote' => $page->promote_on_home,
+            'order' => $page->sort_order,
+            'days' => $page->dayPhotos->groupBy('day_number')->map(fn ($photos, $day) => [
+                'day' => (int) $day,
+                'photos' => $photos->map(fn (TourLandingDayPhoto $photo) => self::image($photo->media, MediaVariant::Full))->filter()->values()->all(),
+            ])->values()->all(),
+            // Earlier trips, captioned, by the gallery rule the brochure uses (docs/group-tour-brochures.md §2).
+            'memories' => array_values(array_map(self::tourPhoto(...), array_filter(BrochurePhotos::gallery($page->tourPackage), fn (TourPhoto $photo) => ! in_array($photo->media_id, $used, true)))),
         ];
     }
 

@@ -319,6 +319,16 @@ function Editor({ pkg }: { pkg: TourPackage | null }) {
               </div>
             ) : null}
             {pkg && pkg.status === 'published' ? <p className="m-0 text-12 leading-1.55 text-app-muted">{t('packages.liveNote')}</p> : null}
+            {/* A group tour's landing page (docs/tour-landing-pages.md). */}
+            {pkg?.landing_page ? (
+              <Link to={`/tour-pages/${pkg.landing_page.id}`} className="text-13" data-testid="package-landing-link">
+                {t('packages.landingPage', { slug: pkg.landing_page.slug })} →
+              </Link>
+            ) : pkg && groupTour ? (
+              <Link to="/tour-pages/new" className="text-13">
+                {t('packages.makeLandingPage')} →
+              </Link>
+            ) : null}
           </Card>
 
           <Card>

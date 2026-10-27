@@ -89,6 +89,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'offers', path: '/offer-banners', icon: '★', permissions: ['cms.manage'] },
       // Travellers on their trips, in a slideshow on the home page (docs/group-tour-gallery.md).
       { key: 'tourPhotos', path: '/tour-photos', icon: '▣', permissions: ['cms.manage'] },
+      // A group tour's own page to share (docs/tour-landing-pages.md).
+      { key: 'tourPages', path: '/tour-pages', icon: '⚑', permissions: ['cms.manage'] },
       // Booking terms, refund policy and privacy policy, published in versions (docs/legal-pages.md).
       { key: 'legal', path: '/legal-pages', icon: '§', permissions: ['cms.manage'] },
       { key: 'media', path: '/media', icon: 'M', permissions: ['packages.manage', 'cms.manage'] },

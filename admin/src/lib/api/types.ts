@@ -105,6 +105,8 @@ export type TourPackage = PackageSummary & {
   /** Paragraphs about the tour on its page and in its brochure (docs/package-page.md). */
   overview_bn: string | null
   overview_en: string | null
+  /** Its landing page, when one is made (docs/tour-landing-pages.md). */
+  landing_page?: { id: number; slug: string; status: 'draft' | 'published' } | null
   includes_airfare: boolean | null
   group_mode: 'group' | 'any'
   min_pax: number | null

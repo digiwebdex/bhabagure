@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../../lib/api/client'
 import type { Data, Departure, Destination, PackageImage, PackageStatus, PackageSummary, Tag, TourPackage } from '../../../lib/api/types'
 
-export type PackageForm = Omit<TourPackage, 'id' | 'status' | 'published_at' | 'sort_order' | 'missing_bangla' | 'cover' | 'updated_at' | 'destination' | 'images' | 'wp_trip_id'>
+export type PackageForm = Omit<TourPackage, 'id' | 'status' | 'published_at' | 'sort_order' | 'missing_bangla' | 'cover' | 'updated_at' | 'destination' | 'images' | 'wp_trip_id' | 'landing_page'>
 
 export const emptyPackage = (): PackageForm => ({
   code: '',

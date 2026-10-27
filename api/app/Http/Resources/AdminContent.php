@@ -18,6 +18,8 @@ use App\Models\Review;
 use App\Models\ReviewPhoto;
 use App\Models\Tag;
 use App\Models\TeamMember;
+use App\Models\TourLandingDayPhoto;
+use App\Models\TourLandingPage;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
@@ -119,6 +121,10 @@ final class AdminContent
             'activities' => $package->tags->where('type', Tag::ACTIVITY)->pluck('name_en')->values(),
             'trip_types' => $package->tags->where('type', Tag::TRIP_TYPE)->pluck('name_en')->values(),
             'images' => $package->images->map(self::packageImage(...))->values(),
+            // Its landing page, for the editor's link (docs/tour-landing-pages.md).
+            'landing_page' => $package->relationLoaded('landingPage') && $package->landingPage !== null
+                ? ['id' => $package->landingPage->id, 'slug' => $package->landingPage->slug, 'status' => $package->landingPage->status->value]
+                : null,
         ];
     }
 
@@ -275,6 +281,56 @@ final class AdminContent
             'image' => $photo->relationLoaded('image') ? self::media($photo->image) : null,
             // The linked tour's name, for the list.
             'package_title' => $photo->relationLoaded('tourPackage') ? $photo->tourPackage?->title_en : null,
+        ];
+    }
+
+    /**
+     * A tour landing page for its editor (docs/tour-landing-pages.md), with what it reads from the package — the days'
+     * titles to put photos beside, the departures for the countdown, the cover the banner falls back to — shown, not
+     * edited, here.
+     */
+    public static function tourLandingPage(TourLandingPage $page): array
+    {
+        $package = $page->tourPackage;
+
+        return [
+            ...self::tourLandingPageSummary($page),
+            ...$page->only(['title_bn', 'title_en', 'intro_bn', 'intro_en', 'hero_media_id', 'countdown_departure_id']),
+            'day_photos' => $page->dayPhotos->map(fn (TourLandingDayPhoto $photo) => [
+                'day_number' => $photo->day_number,
+                'media_id' => $photo->media_id,
+                'image' => self::media($photo->media),
+            ])->values(),
+            'package' => $package === null ? null : [
+                'id' => $package->id,
+                'slug' => $package->slug,
+                'title_en' => $package->title_en,
+                'title_bn' => $package->title_bn,
+                'overview_en' => $package->overview_en,
+                'overview_bn' => $package->overview_bn,
+                'status' => $package->status->value,
+                'cover' => self::media($package->images->first()?->media),
+                'days' => $package->itineraryDays->map(fn ($day) => ['day_number' => $day->day_number, 'title_en' => $day->title_en, 'title_bn' => $day->title_bn])->values(),
+                'departures' => $package->departures->sortBy('departs_on')->map(fn (PackageDeparture $departure) => [
+                    'id' => $departure->id,
+                    'departs_on' => $departure->departs_on->toDateString(),
+                    'returns_on' => $departure->returns_on?->toDateString(),
+                    'status' => $departure->status,
+                ])->values(),
+            ],
+        ];
+    }
+
+    public static function tourLandingPageSummary(TourLandingPage $page): array
+    {
+        return [
+            ...$page->only(['id', 'slug', 'tour_package_id', 'promote_on_home', 'sort_order']),
+            'status' => $page->status->value,
+            'hero' => $page->relationLoaded('hero') ? self::media($page->hero) : null,
+            'package_title' => $page->tourPackage?->title_en,
+            'package_slug' => $page->tourPackage?->slug,
+            'package_status' => $page->tourPackage?->status->value,
+            'updated_at' => $page->updated_at?->toIso8601String(),
         ];
     }
 

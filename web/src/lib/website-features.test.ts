@@ -34,6 +34,17 @@ test('each feature switched off leaves out its own content and nothing else', ()
   assert.equal(noHost.posts.length, 1);
 });
 
+test('a landing page stays with the gallery off, without its earlier-trip memories', () => {
+  const page = { slug: 'mustang', packageSlug: 'mustang-trip', memories: [{}], days: [{ day: 1, photos: [{}] }] };
+  const on = withFeatures({ ...bundle(), tourPages: [page] } as unknown as ContentBundle);
+  assert.equal(on.tourPages[0].memories.length, 1);
+  const off = withFeatures({ ...bundle({ tourPhotos: false }), tourPages: [page] } as unknown as ContentBundle);
+  assert.equal(off.tourPages.length, 1);
+  assert.deepEqual(off.tourPages[0].memories, []);
+  // Its own day photos are the page's, not the gallery's.
+  assert.equal(off.tourPages[0].days[0].photos.length, 1);
+});
+
 test('only an explicit false switches a feature off', () => {
   assert.equal(featureOn({ features: { blog: true } }, 'blog'), true);
   assert.equal(featureOn({ features: {} }, 'team'), true);

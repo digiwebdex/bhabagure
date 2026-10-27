@@ -18,6 +18,7 @@ import { ReviewsSection } from '@/features/reviews/ReviewsSection';
 import { SearchPanel } from '@/features/search/SearchPanel';
 import { ServicesSection } from '@/features/services/ServicesSection';
 import { TourPhotosSection } from '@/features/tour-photos/TourPhotosSection';
+import { UpcomingToursSection } from '@/features/tour-pages/UpcomingToursSection';
 import { SiteChrome } from '@/features/SiteChrome';
 import { VisaSection } from '@/features/visa/VisaSection';
 import { WhyUsSection } from '@/features/why-us/WhyUsSection';
@@ -61,6 +62,7 @@ export default async function SiteHome({ params }: PageProps<'/[locale]/site'>) 
       <Marquee locale={locale} />
       <SearchPanel />
       <OffersSlideshow offers={views.offers} />
+      <UpcomingToursSection locale={locale} pages={views.tourPages} />
       <ServicesSection locale={locale} />
       <PackagesSection locale={locale} />
       <DeparturesSection locale={locale} departures={views.departures} />

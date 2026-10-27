@@ -12,7 +12,7 @@ import { Link } from '@/i18n/navigation';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { getSiteViews, siteUrl } from '@/lib/content';
 import { featureOn } from '@/lib/content/features';
-import { localizedPath, packagePath } from '@/lib/links';
+import { localizedPath, packagePath, tourPagePath } from '@/lib/links';
 import { jsonLd, touristTrip } from '@/lib/structured-data';
 
 export async function generateStaticParams() {
@@ -51,6 +51,8 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
   // The Group Tour Gallery's photos of this tour (docs/package-page.md); none while the gallery is switched off.
   const tourPhotos = views.tourPhotos.filter((photo) => photo.packageSlug === slug);
   const tp = await getTranslations({ locale, namespace: 'tourPhotos' });
+  const tourPage = views.tourPages.find((page) => page.pkg.slug === slug);
+  const tt = await getTranslations({ locale, namespace: 'tourPage' });
 
   return (
     <SiteChrome locale={locale} views={views} pathname={path}>
@@ -60,6 +62,12 @@ export default async function PackagePage({ params }: PageProps<'/[locale]/site/
           {t('backToHome')}
         </Link>
         <PackageDetailHeading pkg={pkg} as="h1" />
+        {/* The tour's own landing page, when it has one (docs/tour-landing-pages.md). */}
+        {tourPage ? (
+          <Link href={tourPagePath(tourPage.slug)} className="self-start rounded-pill bg-orange-tint px-4 py-2 text-14 font-semibold text-orange-deep" data-testid="tour-page-link">
+            {tt('storyLink')} →
+          </Link>
+        ) : null}
         <PackageDetailBody pkg={pkg} />
         {tourPhotos.length > 0 ? (
           <section id="package-tour-photos" className="flex flex-col gap-3.5" data-testid="package-tour-photos">

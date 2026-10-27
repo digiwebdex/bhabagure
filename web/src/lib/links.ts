@@ -10,6 +10,8 @@ export function localizedPath(locale: AppLocale, path: string): string {
 }
 
 export const packagePath = (slug: string) => `/packages/${slug}`;
+/** A group tour's landing page (bhabaghure.com.bd/tours/mustang-valley-trip; docs/tour-landing-pages.md). */
+export const tourPagePath = (slug: string) => `/tours/${slug}`;
 export const postPath = (slug: string) => `/blog/${slug}`;
 /** A visa service's page (bhabaghure.com.bd/visa/thailand-tourist-visa). */
 export const visaPath = (slug: string) => `/visa/${slug}`;

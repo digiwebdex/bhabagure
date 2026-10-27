@@ -53,26 +53,13 @@ class BrochurePhotos
         });
         $own = $own->reject(fn (Media $media) => $media->id === $cover?->id)->values()->all();
 
-        $gallery = TourPhoto::query()->published()->with(['image', 'tourPackage:id,destination_id'])->get()->filter(fn (TourPhoto $photo) => $photo->image !== null);
         $caption = fn (TourPhoto $photo) => ($locale === 'en' ? ($photo->caption_en ?: $photo->caption_bn) : ($photo->caption_bn ?: $photo->caption_en)) ?: null;
-        // Gallery photos by how close they are to this tour: of this package, of another tour to the same country, of no
-        // tour. A group tour then takes the rest of the gallery too (client, 2026-10-27); a customized trip doesn't, so
-        // a Nepal brochure shows no Thailand trip (client, 2026-10-27).
-        $groups = $gallery->groupBy(fn (TourPhoto $photo) => match (true) {
-            $photo->tour_package_id === $package->id => 0,
-            $photo->tour_package_id !== null && $photo->tourPackage?->destination_id === $package->destination_id => 1,
-            $photo->tour_package_id === null => 2,
-            default => 3,
-        });
-        $levels = $package->isGroupTour() ? [0, 1, 2, 3] : [0, 1, 2];
 
-        // The tour's own photos lead, then the gallery's in that order; each group shuffled by the package, so two
-        // brochures differ but one brochure never changes between downloads.
+        // The tour's own photos lead, then the gallery's; each shuffled by the package, so two brochures differ but one
+        // brochure never changes between downloads.
         $candidates = array_map(fn (Media $media) => [$media, null], self::shuffled($own, $package->id, fn (Media $media) => $media->id));
-        foreach ($levels as $level) {
-            foreach (self::shuffled($groups->get($level, collect())->values()->all(), $package->id, fn (TourPhoto $photo) => $photo->media_id) as $photo) {
-                $candidates[] = [$photo->image, $caption($photo)];
-            }
+        foreach (self::gallery($package) as $photo) {
+            $candidates[] = [$photo->image, $caption($photo)];
         }
 
         $seen = $cover === null ? [] : [$cover->id => true];
@@ -88,6 +75,33 @@ class BrochurePhotos
         }
 
         return ['hero' => $hero, 'photos' => $photos];
+    }
+
+    /**
+     * The Group Tour Gallery's published photos for this tour, in order — the brochure's and the landing page's memories
+     * (docs/tour-landing-pages.md). By how close they are: of this package, of another tour to the same country, of no
+     * tour. A group tour then takes the rest of the gallery too (client, 2026-10-27); a customized trip doesn't, so a
+     * Nepal brochure shows no Thailand trip (client, 2026-10-27). Within each group, shuffled by the package.
+     *
+     * @return list<TourPhoto> with image loaded
+     */
+    public static function gallery(TourPackage $package): array
+    {
+        $gallery = TourPhoto::query()->published()->with(['image', 'tourPackage:id,destination_id,slug,status,title_en,title_bn'])->get()
+            ->filter(fn (TourPhoto $photo) => $photo->image !== null);
+        $groups = $gallery->groupBy(fn (TourPhoto $photo) => match (true) {
+            $photo->tour_package_id === $package->id => 0,
+            $photo->tour_package_id !== null && $photo->tourPackage?->destination_id === $package->destination_id => 1,
+            $photo->tour_package_id === null => 2,
+            default => 3,
+        });
+
+        $ordered = [];
+        foreach ($package->isGroupTour() ? [0, 1, 2, 3] : [0, 1, 2] as $level) {
+            array_push($ordered, ...self::shuffled($groups->get($level, collect())->values()->all(), $package->id, fn (TourPhoto $photo) => $photo->media_id));
+        }
+
+        return $ordered;
     }
 
     /** Changes when a photo the brochure prints does, so stored PDFs are made again. */
