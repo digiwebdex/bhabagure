@@ -92,6 +92,26 @@ class DownloadsTest extends TestCase
     }
 
     #[Test]
+    public function an_itinerary_or_inclusion_edit_reaches_the_next_download_the_same_day(): void
+    {
+        $customer = $this->lead();
+        $url = '/api/v1/portal/downloads/packages/'.self::MUSTANG.'?pax=2&locale=en';
+        $this->actingAsApi($customer)->get($url)->assertOk();
+        $package = TourPackage::query()->where('slug', self::MUSTANG)->sole();
+        $updatedAt = $package->updated_at?->getTimestamp();
+
+        // Staff change only a day of the itinerary and an inclusion: the package's own row is not saved again.
+        $package->itineraryDays()->first()->update(['body_en' => 'A changed day plan']);
+        $package->inclusions()->first()->update(['text_en' => 'A changed inclusion']);
+        $this->assertSame($updatedAt, $package->fresh()->updated_at?->getTimestamp());
+
+        $this->actingAsApi($customer)->get($url)->assertOk();
+        $this->assertCount(2, $this->rendered, 'Made again, not the stored copy.');
+        $this->assertStringContainsString('A changed day plan', $this->rendered[1]);
+        $this->assertStringContainsString('A changed inclusion', $this->rendered[1]);
+    }
+
+    #[Test]
     public function a_grid_package_brochure_prices_every_sold_category_and_marks_the_chosen_one(): void
     {
         TourPackage::query()->where('slug', self::MUSTANG)->update(['price_grid' => json_encode(['3' => ['1' => 95000, '2' => 75000, '4' => 70000], '4' => ['1' => 120000, '2' => 90000]])]);

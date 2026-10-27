@@ -49,6 +49,9 @@ country and those linked to no tour, never another country's trip.
   Chrome stores a WebP uncompressed in a PDF: the first try was 28 MB, as JPEG about 3 MB.
 - **Stored PDFs** are made again when a gallery photo, its caption or link, or the package's photos change
   (`BrochurePhotos::fingerprint` in the cache key), and for template version 7.
+- **Edits reach the next download (fixed 2026-10-28):** the stored PDF was keyed on the package's `updated_at`, which an
+  edit of only the itinerary or the inclusions leaves as it was, so the old PDF was served until the next day. The key
+  now also holds the printed itinerary, inclusions and destination (`BrochurePdf::printedContent`).
 - **Worth doing in Admin → Website → Group tour gallery:** link the unlinked Kathmandu photos to a Nepal tour. Linked
   to no tour, they also appear in other countries' customized brochures (captioned with the place).
 

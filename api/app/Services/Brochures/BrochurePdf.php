@@ -140,12 +140,26 @@ class BrochurePdf
             ])->all();
     }
 
+    /**
+     * The itinerary, inclusions and destination as printed. Saving only these leaves the package's own row (and its
+     * updated_at) as it was, so a stored PDF keyed on that alone was served stale until the next day.
+     */
+    private static function printedContent(TourPackage $package): string
+    {
+        return sha1(json_encode([
+            $package->itineraryDays->map->only(['day_number', 'title_bn', 'title_en', 'body_bn', 'body_en'])->values(),
+            $package->inclusions->map->only(['kind', 'text_bn', 'text_en', 'sort_order'])->values(),
+            $package->destination?->only(['name_bn', 'name_en']),
+        ]));
+    }
+
     public function packagePdf(TourPackage $package, ?string $category, int $pax, string $locale): string
     {
         $config = PricingConfig::current();
         $key = sha1(implode('|', [self::TEMPLATE_VERSION, 'package', $package->id, $package->updated_at?->getTimestamp(), $category, $pax, $locale,
             json_encode($config->slabs), $config->singleRoomSupplementPercent, $config->serviceChargePercent, now('Asia/Dhaka')->toDateString(),
-            $package->isGroupTour() ? json_encode(self::upcomingDepartures($package)) : '', BrochurePhotos::fingerprint($package), Brand::fingerprint()]));
+            $package->isGroupTour() ? json_encode(self::upcomingDepartures($package)) : '', BrochurePhotos::fingerprint($package), Brand::fingerprint(),
+            self::printedContent($package)]));
 
         return $this->stored("brochures/packages/{$package->id}/{$key}.pdf", fn () => $this->packageHtml($package, $category, $pax, $locale, forPdf: true));
     }
