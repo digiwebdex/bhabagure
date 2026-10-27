@@ -103,6 +103,24 @@ return [
     ],
 
     /*
+     * A group tour's brochure as its landing page, printed (docs/tour-landing-pages.md §7). Off unless
+     * BROCHURE_LANDING_PDF=true: every download is then the photo brochure, as before. The page is loaded from the
+     * website on this server (WEBSITE_INTERNAL_URL, the address next start listens on — nginx's proxy_pass), and only
+     * that page, its own static files and its photos (prepared here as JPEG files) may load.
+     */
+    // The release deployed, when not read from the repository (App\Support\Release).
+    'release' => env('APP_RELEASE'),
+
+    'brochures' => [
+        'landing_pdf' => (bool) env('BROCHURE_LANDING_PDF', false),
+        'website_internal_url' => env('WEBSITE_INTERNAL_URL'),
+        'page_renderer' => env('PDF_PAGE_RENDERER', base_path('../packages/pdf/src/render-page.mjs')),
+        // The page has this long to load, and its fonts and photos this much more; all within the renderer's own limit.
+        'page_timeout_ms' => 20_000,
+        'assets_timeout_ms' => 10_000,
+    ],
+
+    /*
      * Notifications (docs/phase-4-whatsapp.md). WhatsApp through WaSenderAPI — an unofficial API: if the number is
      * banned or disconnected, email (always on for money messages) keeps customers informed.
      */

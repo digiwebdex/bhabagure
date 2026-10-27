@@ -10,6 +10,7 @@ import { formattersFor } from '@/lib/formatters';
 import { whatsappUrl } from '@/lib/links';
 import { roomPercent, roomPricesFor } from '@/lib/package-price';
 
+import { BookFromLink } from './BookFromLink';
 import { BookNow } from './BookNow';
 import { Countdown } from './Countdown';
 
@@ -74,6 +75,7 @@ export async function TourLandingPage({ page, views, locale }: { page: TourPageV
 
   return (
     <article className="flex flex-col" data-testid="tour-landing-page">
+      <BookFromLink packageSlug={pkg.slug} departures={pkg.departures} fallbackDate={date} />
       {/* Banner: the tour's photo across the page, the title over its darkened foot. */}
       <header className="relative isolate flex min-h-[78svh] items-end overflow-hidden bg-ink-deep">
         {page.hero ? (

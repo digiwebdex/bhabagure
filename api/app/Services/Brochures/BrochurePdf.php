@@ -32,7 +32,7 @@ class BrochurePdf
     /** Group sizes a package without a grid is priced for in the brochure. */
     private const SLAB_SIZES = [1, 2, 3, 4, 6, 10];
 
-    public function __construct(private readonly InvoicePdf $renderer, private readonly InvoiceView $invoices) {}
+    public function __construct(private readonly InvoicePdf $renderer, private readonly InvoiceView $invoices, private readonly LandingBrochurePdf $landing) {}
 
     /** Expects destination, itineraryDays and inclusions loaded. The chosen category and group size are highlighted. */
     public function packageHtml(TourPackage $package, ?string $category, int $pax, string $locale, bool $forPdf = false): string
@@ -126,7 +126,7 @@ class BrochurePdf
      *
      * @return list<array{date: string, returns: ?string, price: int|float, featured: bool}>
      */
-    private static function upcomingDepartures(TourPackage $package): array
+    public static function upcomingDepartures(TourPackage $package): array
     {
         $base = Money::toNumber($package->sale_price ?? $package->regular_price);
 
@@ -144,7 +144,7 @@ class BrochurePdf
      * The itinerary, inclusions and destination as printed. Saving only these leaves the package's own row (and its
      * updated_at) as it was, so a stored PDF keyed on that alone was served stale until the next day.
      */
-    private static function printedContent(TourPackage $package): string
+    public static function printedContent(TourPackage $package): string
     {
         return sha1(json_encode([
             $package->itineraryDays->map->only(['day_number', 'title_bn', 'title_en', 'body_bn', 'body_en'])->values(),
@@ -155,6 +155,15 @@ class BrochurePdf
 
     public function packagePdf(TourPackage $package, ?string $category, int $pax, string $locale): string
     {
+        // A group tour with a published landing page: that page printed, while BROCHURE_LANDING_PDF is on
+        // (docs/tour-landing-pages.md §7). Should it fail, the photo brochure below, as before.
+        if (LandingBrochurePdf::enabled() && ($page = $this->landing->publishedPage($package)) !== null) {
+            $landing = $this->landing->stored($page, $locale);
+            if ($landing !== null) {
+                return $landing;
+            }
+        }
+
         $config = PricingConfig::current();
         $key = sha1(implode('|', [self::TEMPLATE_VERSION, 'package', $package->id, $package->updated_at?->getTimestamp(), $category, $pax, $locale,
             json_encode($config->slabs), $config->singleRoomSupplementPercent, $config->serviceChargePercent, now('Asia/Dhaka')->toDateString(),

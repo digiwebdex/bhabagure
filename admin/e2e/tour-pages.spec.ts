@@ -27,6 +27,13 @@ test('a landing page is made for a group tour, promoted and published', async ({
 
     // Its days come from the package, ready for photos.
     await expect(page.getByTestId('tour-page-day').first()).toContainText('Day 1', FIRST_LOAD)
+
+    // A draft is previewed by a 30-minute link: the token after the #, never in the address a server sees.
+    await page.getByRole('button', { name: 'Preview', exact: true }).click()
+    const links = page.getByTestId('tour-preview-links')
+    await expect(links).toContainText('works until')
+    await expect(links.getByRole('link', { name: /Open preview \(English\)/ })).toHaveAttribute('href', /\/en\/tours\/preview#[\w-]+\.[\w-]+$/)
+    await expect(links.getByRole('link', { name: /Open preview \(Bangla\)/ })).toHaveAttribute('href', /\/tours\/preview#[\w-]+\.[\w-]+$/)
     await page.getByLabel('Show in "Upcoming group tours" on the home page').check()
     await page.getByRole('button', { name: 'Save', exact: true }).first().click()
     await expect(page.getByRole('button', { name: 'Saved', exact: true }).first()).toBeVisible()

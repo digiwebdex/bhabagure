@@ -474,7 +474,19 @@
     "promoHeading": "আমাদের গ্রুপের সাথে ঘুরুন",
     "bookingOpen": "বুকিং চলছে",
     "fullPlan": "পুরো প্ল্যান দেখুন",
-    "storyLink": "এই ট্যুরের পূর্ণ পেজ দেখুন"
+    "storyLink": "এই ট্যুরের পূর্ণ পেজ দেখুন",
+    "previewBanner": "প্রিভিউ — পাবলিক নয় (Preview — not public)",
+    "previewInvalidHeading": "এই প্রিভিউ লিংকের মেয়াদ শেষ বা লিংকটি সঠিক নয়",
+    "previewInvalidText": "প্রিভিউ লিংক ৩০ মিনিট কাজ করে। অ্যাডমিনে নতুন লিংক বানান: Website → Tour landing pages → পেজ → Preview।",
+    "printDeparts": "যাত্রা {dates} — এই ব্রোশিওরের তারিখ {asOf} থেকে আর {nText} দিন।",
+    "printDatesHeading": "ডিপার্চারের তারিখ ও মূল্য",
+    "printPerPerson": "জনপ্রতি",
+    "printBookLine": "অনলাইনে বুক করুন, তারিখ ও যাত্রী বেছে নিন:",
+    "printAsOf": "মূল্য ও তারিখ {asOf} অনুযায়ী; বুকিংয়ের সময়ের মূল্যই চূড়ান্ত।",
+    "printWhatsapp": "হোয়াটসঅ্যাপ",
+    "printPhone": "ফোন",
+    "printEmail": "ইমেইল",
+    "printWebsite": "ওয়েবসাইট"
   },
   "creator": {
     "role": "ভবঘুরে হলিডেজের পেছনের ট্রাভেলার",

@@ -48,15 +48,43 @@ class InvoicePdf
         return $bytes;
     }
 
+    /**
+     * The environment a renderer runs in: Chrome's profile, caches and temp files inside the project's storage (shared
+     * VPS rule). Also the landing-page brochure's (docs/tour-landing-pages.md §7).
+     *
+     * @return array<string, string>
+     */
+    public static function rendererEnvironment(): array
+    {
+        $chromeHome = (string) config('bhabaghure.invoices.chrome_home');
+        foreach ([$chromeHome, "{$chromeHome}/tmp"] as $path) {
+            if (! is_dir($path) && ! mkdir($path, 0700, true) && ! is_dir($path)) {
+                throw new RuntimeException("Cannot create {$path}");
+            }
+        }
+
+        return array_filter([
+            'CHROME_PATH' => config('bhabaghure.invoices.chrome_path'),
+            'HOME' => $chromeHome,
+            'TMPDIR' => "{$chromeHome}/tmp",
+            'XDG_CONFIG_HOME' => "{$chromeHome}/.config",
+            'XDG_CACHE_HOME' => "{$chromeHome}/.cache",
+            // Windows only (a developer's machine): under PHP's built-in server (php artisan serve) a child process
+            // inherits almost none of the environment. Node can't seed its random number generator without
+            // SystemRoot, and Chrome's profile and PDF stream need TEMP.
+            'SystemRoot' => PHP_OS_FAMILY === 'Windows' ? getenv('SystemRoot') : null,
+            'TEMP' => PHP_OS_FAMILY === 'Windows' ? "{$chromeHome}/tmp" : null,
+            'TMP' => PHP_OS_FAMILY === 'Windows' ? "{$chromeHome}/tmp" : null,
+        ]);
+    }
+
     /** Renders any print-view HTML to PDF bytes. */
     public function render(string $html): string
     {
         $dir = storage_path('app/private/tmp/pdf');
-        $chromeHome = (string) config('bhabaghure.invoices.chrome_home');
-        foreach ([$dir, $chromeHome, "{$chromeHome}/tmp"] as $path) {
-            if (! is_dir($path) && ! mkdir($path, 0700, true) && ! is_dir($path)) {
-                throw new RuntimeException("Cannot create {$path}");
-            }
+        $env = self::rendererEnvironment();
+        if (! is_dir($dir) && ! mkdir($dir, 0700, true) && ! is_dir($dir)) {
+            throw new RuntimeException("Cannot create {$dir}");
         }
         $base = $dir.DIRECTORY_SEPARATOR.Str::random(24);
         file_put_contents("{$base}.html", $html);
@@ -64,20 +92,7 @@ class InvoicePdf
         try {
             $process = new Process(
                 [config('bhabaghure.invoices.node_binary'), config('bhabaghure.invoices.renderer'), "{$base}.html", "{$base}.pdf"],
-                // Chrome's profile, caches and temp files stay inside the project's storage (shared VPS rule).
-                env: array_filter([
-                    'CHROME_PATH' => config('bhabaghure.invoices.chrome_path'),
-                    'HOME' => $chromeHome,
-                    'TMPDIR' => "{$chromeHome}/tmp",
-                    'XDG_CONFIG_HOME' => "{$chromeHome}/.config",
-                    'XDG_CACHE_HOME' => "{$chromeHome}/.cache",
-                    // Windows only (a developer's machine): under PHP's built-in server (php artisan serve) a child process
-                    // inherits almost none of the environment. Node can't seed its random number generator without
-                    // SystemRoot, and Chrome's profile and PDF stream need TEMP.
-                    'SystemRoot' => PHP_OS_FAMILY === 'Windows' ? getenv('SystemRoot') : null,
-                    'TEMP' => PHP_OS_FAMILY === 'Windows' ? "{$chromeHome}/tmp" : null,
-                    'TMP' => PHP_OS_FAMILY === 'Windows' ? "{$chromeHome}/tmp" : null,
-                ]),
+                env: $env,
                 timeout: (float) config('bhabaghure.invoices.timeout_seconds'),
             );
             $process->run();

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useMutation } from '@tanstack/react-query'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router'
 
 import { buttonClass } from '../../../components/ui/button'
@@ -36,7 +37,7 @@ export function TourPageEditorPage() {
  */
 function Editor({ page }: { page: TourPage | null }) {
   const { t } = useTranslation()
-  const { date, locale } = useFormat()
+  const { date, dateTime, locale } = useFormat()
   const toast = useToast()
   const navigate = useNavigate()
   const options = useTourPageOptions()
@@ -50,6 +51,8 @@ function Editor({ page }: { page: TourPage | null }) {
   const save = useTourPageMutation((values: TourPageForm) => (page ? tourPageActions.update(page.id, values) : tourPageActions.create(values)))
   const transition = useTourPageMutation((action: 'publish' | 'unpublish') => tourPageActions.transition(page!.id, action))
   const remove = useTourPageMutation(() => tourPageActions.remove(page!.id))
+  // Not a change to the page: a plain mutation, nothing refetched.
+  const preview = useMutation({ mutationFn: () => tourPageActions.previewLink(page!.id) })
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && !save.isPending && currentLocation.pathname !== nextLocation.pathname)
 
   const set = <K extends keyof TourPageForm>(key: K, value: TourPageForm[K]) => setForm((current) => ({ ...current, [key]: value }))
@@ -232,7 +235,29 @@ function Editor({ page }: { page: TourPage | null }) {
                     {t('packages.viewOnWebsite')}
                   </a>
                 ) : null}
+                <button
+                  type="button"
+                  className={buttonClass('outline')}
+                  onClick={() => (dirty ? toast(t('tourPages.saveFirst'), 'error') : preview.mutate())}
+                  aria-disabled={preview.isPending}
+                >
+                  {preview.isPending ? t('tourPages.previewMaking') : t('tourPages.preview')}
+                </button>
               </div>
+              <ErrorNotice error={preview.error} />
+              {preview.data ? (
+                <div className="flex flex-col gap-1 rounded-11 bg-app-surface-2 p-3 text-13" data-testid="tour-preview-links">
+                  <span className="text-app-muted">{t('tourPages.previewReady', { time: dateTime(preview.data.data.expires_at) })}</span>
+                  <span className="flex flex-wrap gap-3">
+                    <a href={preview.data.data.url_bn} target="_blank" rel="noopener noreferrer">
+                      {t('tourPages.previewBangla')} ↗
+                    </a>
+                    <a href={preview.data.data.url_en} target="_blank" rel="noopener noreferrer">
+                      {t('tourPages.previewEnglish')} ↗
+                    </a>
+                  </span>
+                </div>
+              ) : null}
             </Card>
           ) : null}
 

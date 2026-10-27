@@ -27,12 +27,14 @@ use App\Services\Cms\LegalPages;
 use App\Services\Media\HeroVideo;
 use App\Support\Brand;
 use App\Support\CreatorProfile;
+use App\Support\LandingPreviewToken;
 use App\Support\Money;
 use App\Support\Payments\EmiRates;
 use App\Support\Payments\PaymentOptions;
 use App\Support\WebsiteFeatures;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Read-only website content. Only published rows are ever returned: drafts (the unfinished Thai 02
@@ -67,18 +69,45 @@ class PublicContentController extends Controller
 
     public function departures(): JsonResponse
     {
-        $departures = PackageDeparture::query()
+        $departures = $this->upcomingDepartures()->whereHas('package', fn (Builder $query) => $query->published())->get();
+
+        return $this->data($departures->map(PublicContent::departure(...)));
+    }
+
+    /**
+     * A landing page as saved, draft or not, with its package and that package's departures, for the website's staff
+     * preview (docs/tour-landing-pages.md §6). Only with a valid preview token in the X-Preview-Token header; anything
+     * else is a plain 404 with nothing of the draft in it. Never cached, never indexed.
+     */
+    public function tourPagePreview(Request $request): JsonResponse
+    {
+        $private = ['Cache-Control' => 'no-store, private', 'X-Robots-Tag' => 'noindex, nofollow'];
+        $id = LandingPreviewToken::pageId($request->header('X-Preview-Token'));
+        $page = $id === null ? null : TourLandingPage::query()->with(['hero', 'countdownDeparture', 'dayPhotos.media'])->find($id);
+        $package = $page === null ? null : TourPackage::query()->with(['destination', 'itineraryDays', 'inclusions', 'tags', 'images.media'])->find($page->tour_package_id);
+        if ($page === null || $package === null) {
+            return response()->json(['message' => 'Not found.'], 404)->withHeaders($private);
+        }
+        $page->setRelation('tourPackage', $package);
+
+        return response()->json(['data' => [
+            'page' => PublicContent::tourLandingPage($page),
+            'package' => PublicContent::package($package),
+            'departures' => $this->upcomingDepartures()->where('tour_package_id', $package->id)->get()->map(PublicContent::departure(...)),
+        ]])->withHeaders($private);
+    }
+
+    /** Scheduled departures from today, with the seats taken. */
+    private function upcomingDepartures(): Builder
+    {
+        return PackageDeparture::query()
             ->with('package')
             ->where('status', 'scheduled')
             ->whereDate('departs_on', '>=', now('Asia/Dhaka')->toDateString())
-            ->whereHas('package', fn (Builder $query) => $query->published())
             ->withSum(['bookings as booked_pax' => fn (Builder $query) => $query->whereIn('status', self::SEAT_HOLDING_STATUSES)], 'pax_count')
             // Seats held while someone pays count as taken, as they do when the booking is created (DepartureSeats).
             ->withSum(['seatHolds as held_seats' => fn (Builder $query) => $query->active()], 'seats')
-            ->orderBy('departs_on')
-            ->get();
-
-        return $this->data($departures->map(PublicContent::departure(...)));
+            ->orderBy('departs_on');
     }
 
     public function posts(): JsonResponse

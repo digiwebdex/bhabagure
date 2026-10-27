@@ -31,6 +31,15 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         ],
       },
+      // A landing page's staff preview and its brochure print view (docs/tour-landing-pages.md §6–7): never indexed,
+      // never stored by a browser or a cache in between.
+      ...['/tours/preview', '/tours/preview/:path*', '/en/tours/preview', '/en/tours/preview/:path*', '/tours/:slug/print', '/en/tours/:slug/print'].map((source) => ({
+        source,
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Cache-Control', value: 'private, no-store' },
+        ],
+      })),
     ];
   },
   images: {

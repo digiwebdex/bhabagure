@@ -25,11 +25,13 @@ interface SiteChromeProps {
   pathname: string;
   /** Home-page sections this page also has (e.g. "contact"): the header links to them on the page instead of home. */
   pageSections?: string[];
+  /** False on a staff preview (docs/tour-landing-pages.md §6): no visit recorded, no cookie banner, no GA4. */
+  analytics?: boolean;
   children: ReactNode;
 }
 
 /** Header, footer, floating buttons, assistant and modals shared by every website page. */
-export async function SiteChrome({ locale, views, pathname, pageSections, children }: SiteChromeProps) {
+export async function SiteChrome({ locale, views, pathname, pageSections, analytics = true, children }: SiteChromeProps) {
   const t = await getTranslations({ locale, namespace: 'common' });
 
   return (
@@ -52,8 +54,12 @@ export async function SiteChrome({ locale, views, pathname, pageSections, childr
         <RevealObserver />
         {/* Visitor analytics (docs/visitor-analytics.md): website pages only — never the portal or the admin. The cookie
             banner first, so a visitor who accepted before has GA4 ready for the page view. */}
-        <CookieConsent measurementId={views.settings.ga4 ?? null} />
-        <VisitorAnalytics />
+        {analytics ? (
+          <>
+            <CookieConsent measurementId={views.settings.ga4 ?? null} />
+            <VisitorAnalytics />
+          </>
+        ) : null}
       </div>
     </SiteContentProvider>
   );

@@ -867,7 +867,12 @@
     "promote": "Show in \"Upcoming group tours\" on the home page",
     "promoteHint": "Shown only while the page is published and the tour has a departure to come.",
     "delete": "Delete page",
-    "confirmDelete": "Delete this landing page? Its address stops working. The tour package and its photos are not touched."
+    "confirmDelete": "Delete this landing page? Its address stops working. The tour package and its photos are not touched.",
+    "preview": "Preview",
+    "previewMaking": "Making a link…",
+    "previewReady": "Preview link ready — works until {{time}} (30 minutes). Shows the page as saved, marked \"Preview — not public\". Don't share it with customers.",
+    "previewBangla": "Open preview (Bangla)",
+    "previewEnglish": "Open preview (English)"
   },
   "tourPhotos": {
     "title": "Group tour photos",

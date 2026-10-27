@@ -474,7 +474,19 @@
     "promoHeading": "Travel with our group",
     "bookingOpen": "Booking open",
     "fullPlan": "See the full plan",
-    "storyLink": "See this tour's full story page"
+    "storyLink": "See this tour's full story page",
+    "previewBanner": "Preview — not public",
+    "previewInvalidHeading": "This preview link has expired or isn't valid",
+    "previewInvalidText": "Preview links work for 30 minutes. Make a new one in the admin: Website → Tour landing pages → the page → Preview.",
+    "printDeparts": "Departs {dates} — {n, plural, one {{nText} day} other {{nText} days}} from {asOf}, the date of this brochure.",
+    "printDatesHeading": "Departure dates and prices",
+    "printPerPerson": "per person",
+    "printBookLine": "Book online, choose a date and travellers:",
+    "printAsOf": "Prices and dates as of {asOf}; the price at booking is final.",
+    "printWhatsapp": "WhatsApp",
+    "printPhone": "Phone",
+    "printEmail": "Email",
+    "printWebsite": "Website"
   },
   "creator": {
     "role": "The traveller behind Bhabaghure Holidays",

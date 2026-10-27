@@ -69,14 +69,71 @@ A photo a page uses can't be deleted from the media library. Website staff (`cms
   also refreshed with `tour-photos`, `packages` and `departures`.
 - Tables `tour_landing_pages`, `tour_landing_day_photos` (migration `2026_10_28_110000`).
 
-## 6. Not yet
+## 6. Staff preview of a draft (2026-10-28)
 
-- **The matching brochure PDF** (next phase, approach approved in principle): the same page printed by the PDF
-  renderer — slideshow as a grid of every photo, the countdown as a fixed date, Book Now as a link.
-- **Staff preview of a draft** on the website: a page is seen only once published.
+Admin → Website → Tour landing pages → the page → **Preview** (website staff, `cms.manage`): a link for Bangla and one
+for English, working 30 minutes, to the page **as saved**, draft or not, marked "Preview — not public".
 
-## 7. Checked
+- The token (page id and expiry, signed with the app key: `App\Support\LandingPreviewToken`) is after the link's `#`,
+  which browsers never send. The page (`/tours/preview`) posts it to the website's `/api/tour-preview`, which checks it
+  with the API and keeps it in an HttpOnly, SameSite=Strict cookie, then reloads without it. From there it travels only
+  in the `X-Preview-Token` request header to `GET /public/tour-pages/preview` — so no address, server log, application
+  log or analytics ever holds it. The audit log records that a link was made, not the token.
+- Expired, tampered, for another page, or missing: a plain 404 from the API and "This preview link has expired or isn't
+  valid" on the website — never any of the draft.
+- The preview is never cached (`no-store`), never indexed (`noindex`), records no visit, loads no cookie banner or GA4,
+  and is in no public list, home page card or sitemap. The address `preview` is reserved.
 
-- `api/tests/Feature/TourLandingPageTest.php`; `admin/e2e/tour-pages.spec.ts`; `web/src/lib/website-features.test.ts`.
-- Looked at locally with the live Mustang package's content and photos (dev database): desktop and phone widths, both
-  languages, home page card. Website browser tests (`web/e2e`) not run: the PC hasn't the memory for the Next build.
+## 7. The matching brochure PDF (2026-10-28)
+
+The brochure **is the landing page printed**: the website's print view of it (`/tours/<slug>/print`, and
+`/tours/preview/print` for a draft) — the same words, photos and look, laid out for A4 (`TourPrint.tsx`).
+
+**On the web page → in the PDF:** the slideshow → every memory photo in a grid, each its own shape, captioned; the
+countdown → "Departs 19–25 Nov 2026 — 22 days from 28 Oct 2026, the date of this brochure" and every date with its
+price (no seats left: they change by the hour); Book Now → a link to the page with `?book=1&date=…`, which opens the
+website's booking form on that date while it has seats (else the page's next date) — nothing is booked by the link;
+WhatsApp, phone and email are links too, and the addresses are printed. Scripts don't run in the PDF.
+
+**Pages:** A4 portrait, as long as the content. The cover is the banner on the whole first page; then the tour in brief,
+introduction and dates; each day kept whole **when it fits on a page** — a longer day splits between paragraphs, its
+heading always with the text that follows; the photo grid's rows and list items never split; long price and inclusion
+lists split between items. Fonts: the website's own (Hind Siliguri, Bricolage), embedded; ticks and crosses are drawn,
+not glyphs.
+
+**Rendering** (`App\Services\Brochures\LandingBrochurePdf`, `PageRenderer`, `packages/pdf/src/render-page.mjs`): Chrome
+opens the print view at `WEBSITE_INTERNAL_URL` (the website on the server itself, `http://127.0.0.1:3340`) and may load
+exactly: that page (200, no redirect followed); the website's own static files under `/_next/static/` (GET, 200); and the
+page's photos — banner, day photos, memories — served from JPEG copies the API prepares (never fetched). Everything else
+is blocked and the render fails rather than print incomplete. The invoice renderer (`render.mjs`, no network at all) is
+unchanged. One render at a time; the page has 20 s, fonts and photos 10 s more, within the renderer's 60 s.
+
+**Downloads:** the same address, customer sign-in and Downloads log. With `BROCHURE_LANDING_PDF=true`, a package with a
+**published** landing page gets this PDF; anything else — off, no page, a draft page, a missing photo file, the website
+not answering, a blocked or failed load, a timeout — gets the photo brochure, as before, with a warning in the log. Only a
+complete PDF is stored (`brochures/landing/<page>/<key>.pdf`, one day's copies kept).
+
+**Made again when** anything printed changes: the page's presentation (title, introduction, banner, day photos,
+countdown date), the package (its row, itinerary, inclusions, destination), its departures, the gallery photos and
+captions it shows, prices and room supplements, the office's contact details, the logo, the release deployed (the
+website's design: `App\Support\Release`, the repository's commit) and the Dhaka date.
+
+**Review renders** (on the server's command line only; drafts through the preview, never a public address; nothing
+stored for customers): `php artisan brochures:landing-pdf <slug> bn|en --out=<file>`.
+
+**Switching it on** (separate approval): `BROCHURE_LANDING_PDF=true` in `api/.env`, then `deploy/deploy.sh
+--reload-config`. **Rollback:** `BROCHURE_LANDING_PDF=false` and `--reload-config` — every download is the photo brochure
+again at once; or revert the commit and deploy. No nginx, firewall or system setting is involved.
+
+## 8. Checked
+
+- API: `TourLandingPageTest`, `TourLandingPreviewTest`, `LandingBrochurePdfTest` (choice, sign-in and logging, the
+  allowlist manifest, prepared JPEGs, fallbacks, nothing stored on failure, every freshness trigger incl.
+  presentation-only changes, release and Dhaka date).
+- Admin: `admin/e2e/tour-pages.spec.ts` (make, preview link, promote, publish).
+- Website: unit tests (`tour-booking.test.ts`: the Book link's date, the brochure's Dhaka date; `website-features.test.ts`).
+- Real renders on the developer's PC (Bangla and English): Mustang-like content, an introduction with day photos, long
+  itinerary text with a day longer than a page; fallbacks for a missing photo and a renderer failure. A headless-browser
+  check of the preview: banner, token gone from the address and from every request, noindex, no analytics, bad link
+  refused.
+- Not run: the website's browser tests (`web/e2e`) — this PC lacks the memory for the Next build, and there is no CI.

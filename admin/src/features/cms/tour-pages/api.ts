@@ -134,4 +134,6 @@ export const tourPageActions = {
   update: (id: number, form: TourPageForm) => api.put<Data<TourPage>>(`admin/tour-landing-pages/${id}`, payload(form)),
   transition: (id: number, action: 'publish' | 'unpublish') => api.post<Data<TourPage>>(`admin/tour-landing-pages/${id}/${action}`),
   remove: (id: number) => api.delete(`admin/tour-landing-pages/${id}`),
+  // A 30-minute link to the page as saved, draft or not (docs/tour-landing-pages.md §6).
+  previewLink: (id: number) => api.post<Data<{ url_bn: string; url_en: string; expires_at: string }>>(`admin/tour-landing-pages/${id}/preview-link`),
 }

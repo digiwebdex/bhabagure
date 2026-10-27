@@ -162,6 +162,9 @@ export interface SiteViews {
     blurUrl: string;
     packageSlug: string | null;
     packageTitle: string | null;
+    /** The photo's own shape, for the printed brochure's grid (docs/tour-landing-pages.md §7); null for stock URLs. */
+    width: number | null;
+    height: number | null;
   }[];
   /** Group tours' landing pages whose package is on the website (docs/tour-landing-pages.md). */
   tourPages: TourPageView[];
@@ -229,15 +232,20 @@ function tourPhotoSrcSet(img: Pick<ContentImage, 'variants'>): string | null {
 }
 
 function tourPhotoViews(photos: ContentBundle['tourPhotos'], locale: AppLocale): SiteViews['tourPhotos'] {
-  return photos.filter((p) => p.image).map((p) => ({
-    caption: pick(p.caption, locale),
-    month: p.month,
-    image: image(p.image!, locale),
-    srcSet: tourPhotoSrcSet(p.image!),
-    blurUrl: p.image!.variants?.thumb?.url ?? p.image!.url,
-    packageSlug: p.package?.slug ?? null,
-    packageTitle: p.package ? pick(p.package.title, locale) : null,
-  }));
+  return photos.filter((p) => p.image).map((p) => {
+    const largest = p.image!.variants?.full ?? p.image!.variants?.detail ?? p.image!.variants?.card;
+    return {
+      caption: pick(p.caption, locale),
+      month: p.month,
+      image: image(p.image!, locale),
+      srcSet: tourPhotoSrcSet(p.image!),
+      blurUrl: p.image!.variants?.thumb?.url ?? p.image!.url,
+      packageSlug: p.package?.slug ?? null,
+      packageTitle: p.package ? pick(p.package.title, locale) : null,
+      width: largest?.width ?? null,
+      height: largest?.height ?? null,
+    };
+  });
 }
 
 function photoView(img: Parameters<typeof image>[0] & Pick<ContentImage, 'variants'>, locale: AppLocale): PhotoView {

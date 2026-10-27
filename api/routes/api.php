@@ -180,6 +180,8 @@ Route::prefix('v1')->group(function () {
             Route::get('offers', 'offers');
             Route::get('tour-photos', 'tourPhotos');
             Route::get('tour-pages', 'tourPages');
+            // A staff preview of a saved page, draft or not: the token in the X-Preview-Token header (docs/tour-landing-pages.md §6).
+            Route::get('tour-pages/preview', 'tourPagePreview');
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');
@@ -784,6 +786,7 @@ Route::prefix('v1')->group(function () {
                 Route::delete('tour-landing-pages/{id}', 'destroy')->whereNumber('id');
                 Route::post('tour-landing-pages/{id}/publish', 'publish')->whereNumber('id');
                 Route::post('tour-landing-pages/{id}/unpublish', 'unpublish')->whereNumber('id');
+                Route::post('tour-landing-pages/{id}/preview-link', 'previewLink')->whereNumber('id');
             });
 
             // The home page's hero video (docs/hero-video.md): uploaded in pieces, or a direct link.

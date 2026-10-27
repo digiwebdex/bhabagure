@@ -9,6 +9,8 @@ use App\Http\Resources\AdminContent;
 use App\Models\PackageDeparture;
 use App\Models\TourLandingPage;
 use App\Models\TourPackage;
+use App\Services\AuditLogger;
+use App\Support\LandingPreviewToken;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -107,6 +109,24 @@ class TourLandingPageController extends Controller
         return $this->saved($request, $page, 'updated');
     }
 
+    /**
+     * A link to see the page as saved, draft or not, for 30 minutes (docs/tour-landing-pages.md §6). The token is in the
+     * link's #hash, which browsers never send to a server; it is not kept here or in the audit log.
+     */
+    public function previewLink(Request $request, int $id): JsonResponse
+    {
+        $page = TourLandingPage::query()->findOrFail($id);
+        ['token' => $token, 'expiresAt' => $expiresAt] = LandingPreviewToken::issue($page);
+        app(AuditLogger::class)->record('cms.tour_landing_page.preview_link', $request->user('staff'), $page, ['expires_at' => $expiresAt->toIso8601String()]);
+        $site = rtrim((string) config('bhabaghure.web_url'), '/');
+
+        return response()->json(['data' => [
+            'url_bn' => "{$site}/tours/preview#{$token}",
+            'url_en' => "{$site}/en/tours/preview#{$token}",
+            'expires_at' => $expiresAt->toIso8601String(),
+        ]], 201)->header('Cache-Control', 'no-store, private');
+    }
+
     public function destroy(Request $request, int $id): JsonResponse
     {
         $page = TourLandingPage::query()->findOrFail($id);
@@ -154,7 +174,8 @@ class TourLandingPageController extends Controller
         $packageId = (int) $request->input('tour_package_id');
 
         $data = $request->validate([
-            'slug' => ['required', 'string', 'max:190', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('tour_landing_pages', 'slug')->ignore($page?->id)],
+            // "preview" is the website's staff preview (/tours/preview), not a page's address.
+            'slug' => ['required', 'string', 'max:190', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::notIn(['preview']), Rule::unique('tour_landing_pages', 'slug')->ignore($page?->id)],
             'tour_package_id' => [
                 'required', 'integer', Rule::exists('tour_packages', 'id')->whereNull('deleted_at'), Rule::unique('tour_landing_pages', 'tour_package_id')->ignore($page?->id),
                 // A landing page is for a group tour: its departures give the countdown and Book Now its date.

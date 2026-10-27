@@ -207,6 +207,24 @@ class BrochurePhotos
         }
     }
 
+    /**
+     * The photo as JPEG bytes for a PDF (the landing-page brochure's prepared copies, docs/tour-landing-pages.md §7), or
+     * null when its file is missing or isn't an image GD reads — so a brochure never goes out with a photo missing.
+     */
+    public static function jpeg(Media $media, MediaVariant $variant = MediaVariant::Detail): ?string
+    {
+        $path = self::variant($media, $variant)['path'] ?? null;
+        $disk = Storage::disk($media->disk);
+        if ($path === null || ! $disk->exists($path)) {
+            return null;
+        }
+        try {
+            return (string) ImageManager::usingDriver(GdDriver::class)->decodeBinary((string) $disk->get($path))->encode(new JpegEncoder(quality: 82, strip: true));
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     /** @return array{path: string, width: int, height: int}|null */
     private static function variant(Media $media, MediaVariant $variant): ?array
     {
