@@ -41,3 +41,14 @@ descriptions and distances only as far as the day texts give them; two Bangla da
   in the brochure, no empty brochure section; duplicate copies what it should and not photos or dates, the original
   untouched, next free code and address, draft not on the website, only packages.manage.
 - `admin/e2e/package-page.spec.ts`: write an overview, save, duplicate, land on the new draft.
+- **Not run: the website's browser tests (`web/e2e`).** Their Next.js build needs about 7 GB of free virtual memory; the
+  developer's PC had 3.7 GB, and the project has no CI (no `.github/workflows`, no workflow runs). Checked instead on
+  the live site, signed out: Mustang's page has the photo section with 5 photos and captions in both languages and no
+  link to itself; Kashmir (no linked photos) has none; no package has an overview yet, so none is shown. The overview
+  on the page is therefore not yet seen with real text.
+- **Intermittent admin test, cause not established.** In one run of `cms`, `group-tours`, `package-page` and
+  `price-grid` (2026-10-28), `group-tours.spec.ts:65` ("a group tour's dates each have a price…") failed at
+  `rows.nth(1).getByRole('radio').check()` with "Clicking the checkbox did not change its state" (the departure's
+  "Show on the card" choice). Run again with `group-tours` and `package-page` only, it passed. That rerun left out
+  `cms.spec.ts`, so neither slowness on that PC nor data left by an earlier spec is ruled out. Nothing in this change
+  touches the departures panel; to settle it, run the four specs together again, more than once.
