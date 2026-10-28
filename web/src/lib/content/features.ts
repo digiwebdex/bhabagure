@@ -23,7 +23,16 @@ export function withFeatures(bundle: ContentBundle): ContentBundle {
     partners: on('partners') ? bundle.partners : [],
     offers: on('offers') ? bundle.offers : [],
     tourPhotos: on('tourPhotos') ? bundle.tourPhotos : [],
-    // A landing page stays; its earlier-trip memories are the gallery's and go with it (docs/tour-landing-pages.md).
-    ...(on('tourPhotos') ? {} : { tourPages: (bundle.tourPages ?? []).map((page) => ({ ...page, memories: [] })) }),
+    // A landing page stays; its earlier-trip memories are the gallery's and go with it, its reviews with the reviews
+    // (docs/tour-landing-pages.md).
+    ...(on('tourPhotos') && on('reviews')
+      ? {}
+      : {
+          tourPages: (bundle.tourPages ?? []).map((page) => ({
+            ...page,
+            ...(on('tourPhotos') ? {} : { memories: [] }),
+            ...(on('reviews') ? {} : { reviews: [] }),
+          })),
+        }),
   };
 }

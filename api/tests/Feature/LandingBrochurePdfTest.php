@@ -7,6 +7,7 @@ use App\Models\Download;
 use App\Models\Media;
 use App\Models\PackageDeparture;
 use App\Models\PackageImage;
+use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\TourLandingPage;
 use App\Models\TourPackage;
@@ -136,8 +137,12 @@ class LandingBrochurePdfTest extends TestCase
     public function any_change_to_what_is_printed_makes_it_again(): void
     {
         $customer = $this->lead();
+        // Mid-morning in Dhaka, a minute between downloads: within the download limit, and the day unchanged until the
+        // last change moves it.
+        $this->travelTo(now('Asia/Dhaka')->setTime(10, 0));
         $download = function () use ($customer) {
             $this->actingAsApi($customer)->get('/api/v1/portal/downloads/packages/'.self::MUSTANG.'?locale=bn')->assertOk();
+            $this->travel(61)->seconds();
 
             return count($this->printed);
         };
@@ -149,6 +154,9 @@ class LandingBrochurePdfTest extends TestCase
             'a day photo' => fn () => $this->page->dayPhotos()->create(['day_number' => 2, 'media_id' => $this->media('day-2')->id, 'sort_order' => 1]),
             'the banner' => fn () => $this->page->forceFill(['hero_media_id' => $this->media('banner')->id])->saveQuietly(),
             'the introduction' => fn () => $this->page->forceFill(['intro_en' => 'Our words.'])->saveQuietly(),
+            // A review of the tour published, and a video added: the page shows both (§9).
+            'a review' => fn () => Review::query()->create(['quote_bn' => 'চমৎকার', 'reviewer_name' => 'Rina', 'rating' => 5, 'tour_package_id' => $this->package->id, 'status' => 'published']),
+            'a video' => fn () => $this->page->videos()->create(['section' => 'vlog', 'provider' => 'youtube', 'url' => 'https://youtu.be/dQw4w9WgXcQ', 'youtube_id' => 'dQw4w9WgXcQ']),
             // The package's content, a day's text alone.
             'a day of the itinerary' => fn () => $this->package->itineraryDays()->first()->update(['body_en' => 'A changed day.']),
             // A gallery photo's caption.

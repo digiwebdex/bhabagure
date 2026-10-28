@@ -42,5 +42,7 @@ return [
         'not_group_tour' => 'A landing page is for a group tour (a package with fixed departures).',
         'departure_not_of_package' => 'Choose one of this tour’s own departures.',
         'too_many_day_photos' => 'Up to three photos per day.',
+        'video_url' => 'Paste a YouTube or Facebook video link (https://…).',
+        'too_many_videos' => 'Up to twelve videos in each section.',
     ],
 ];

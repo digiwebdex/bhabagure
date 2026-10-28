@@ -12,6 +12,7 @@ import type { Media } from '../../../lib/api/types'
 import { useFormat } from '../../../lib/useFormat'
 import { ImageField } from '../lists/ImageField'
 import { MediaPicker, MediaThumb } from '../media/media'
+import { FeaturedReviewsCard, VideosCard } from './TourPageExtras'
 import { emptyTourPage, toTourPageForm, tourPageActions, useTourPage, useTourPageMutation, useTourPageOptions, type TourPage, type TourPageForm } from './api'
 
 const SITE_URL = (import.meta.env.VITE_SITE_URL ?? '').replace(/\/$/, '')
@@ -208,6 +209,15 @@ function Editor({ page }: { page: TourPage | null }) {
                   {t('tourPages.editGallery')} →
                 </Link>
               </Card>
+
+              <FeaturedReviewsCard
+                choices={page.review_choices}
+                featured={form.featured_review_ids}
+                onChange={(ids) => set('featured_review_ids', ids)}
+                error={error('featured_review_ids') ?? form.featured_review_ids.map((_, i) => error(`featured_review_ids.${i}`)).find(Boolean)}
+              />
+              <VideosCard section="guest" videos={form.guest_videos} offset={0} onChange={(videos) => set('guest_videos', videos)} error={error} />
+              <VideosCard section="vlog" videos={form.vlogs} offset={form.guest_videos.length} onChange={(videos) => set('vlogs', videos)} error={error} />
             </>
           ) : (
             <p className="m-0 text-13 text-app-muted">{t('tourPages.saveToContinue')}</p>

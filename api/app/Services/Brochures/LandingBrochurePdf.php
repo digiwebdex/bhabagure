@@ -6,7 +6,9 @@ use App\Enums\ContentStatus;
 use App\Enums\MediaVariant;
 use App\Enums\PackageStatus;
 use App\Http\Controllers\Api\V1\Public\SiteSettingKeys;
+use App\Http\Resources\PublicContent;
 use App\Models\Media;
+use App\Models\Review;
 use App\Models\SiteSetting;
 use App\Models\TourLandingDayPhoto;
 use App\Models\TourLandingPage;
@@ -142,6 +144,9 @@ class LandingBrochurePdf
             BrochurePhotos::fingerprint($package),
             [$config->slabs, $config->singleRoomSupplementPercent, $config->serviceChargePercent],
             SiteSetting::query()->whereIn('key', SiteSettingKeys::PUBLIC)->orderBy('key')->get(['key', 'value', 'updated_at'])->toArray(),
+            // The reviews and videos it prints (§9).
+            array_map(fn (Review $review) => [$review->id, $review->updated_at?->getTimestamp()], PublicContent::landingReviews($page)),
+            $page->videos()->get(['section', 'url', 'title_en', 'title_bn', 'sort_order'])->toArray(),
             Brand::fingerprint(),
         ]));
     }

@@ -405,6 +405,9 @@
   --animate-float: bh-float 3.6s ease-in-out infinite;
   /* The travel host's photo ring (docs/travel-host.md): a slow turn, used as motion-safe:animate-ring-spin. */
   --animate-ring-spin: bh-spin 7s linear infinite;
+  /* "Booking open" on the home page's group tour banner (docs/tour-landing-pages.md §9): a soft ring that widens and
+     fades — no blinking. Used as motion-safe:animate-soft-pulse. */
+  --animate-soft-pulse: bh-soft-pulse 2.4s ease-out infinite;
 
   @keyframes bh-rise-26 {
     from { opacity: 0; transform: translateY(26px); }
@@ -428,6 +431,10 @@
   }
   @keyframes bh-spin {
     to { transform: rotate(1turn); }
+  }
+  @keyframes bh-soft-pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-orange) 55%, transparent); }
+    70%, 100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-orange) 0%, transparent); }
   }
 }
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Media;
 use App\Models\PackageDeparture;
+use App\Models\Review;
 use App\Models\TourLandingPage;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
@@ -140,6 +141,68 @@ class TourLandingPageTest extends TestCase
 
         $this->actingAsApi($admin)->deleteJson("/api/v1/admin/media/{$hero->id}")->assertStatus(409);
         $this->actingAsApi($admin)->deleteJson("/api/v1/admin/media/{$day->id}")->assertStatus(409);
+    }
+
+    #[Test]
+    public function a_page_shows_its_tours_reviews_featured_first_and_its_videos_by_section(): void
+    {
+        $admin = $this->staff('admin');
+        Review::query()->delete();
+        $review = fn (string $name, string $status = 'published', ?int $package = null, int $order = 0) => Review::query()->create([
+            'quote_bn' => "{$name} এর কথা", 'quote_en' => "{$name} says", 'reviewer_name' => $name, 'rating' => 5,
+            'tour_package_id' => $package ?? $this->package->id, 'status' => $status, 'sort_order' => $order,
+        ]);
+        [$first, $second, $third] = [$review('Rina', order: 1), $review('Karim', order: 2), $review('Tania', order: 3)];
+        $draft = $review('Draft', 'draft');
+        $otherTour = $review('Elsewhere', package: TourPackage::query()->whereKeyNot($this->package->id)->value('id'));
+        $thumb = $this->media('thumb');
+
+        // Only published reviews may be featured; only YouTube and Facebook links are taken.
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/tour-landing-pages', [
+            'slug' => 'mustang', 'tour_package_id' => $this->package->id, 'featured_review_ids' => [$draft->id],
+            'videos' => [['section' => 'guest', 'url' => 'https://vimeo.com/12345'], ['section' => 'other', 'url' => 'https://youtu.be/dQw4w9WgXcQ']],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['featured_review_ids.0', 'videos.0.url', 'videos.1.section']);
+        $this->actingAsApi($admin)->postJson('/api/v1/admin/tour-landing-pages', [
+            'slug' => 'mustang', 'tour_package_id' => $this->package->id,
+            'videos' => array_fill(0, 13, ['section' => 'vlog', 'url' => 'https://youtu.be/dQw4w9WgXcQ']),
+        ])->assertUnprocessable()->assertJsonValidationErrors(['videos']);
+
+        $page = $this->actingAsApi($admin)->postJson('/api/v1/admin/tour-landing-pages', [
+            'slug' => 'mustang', 'tour_package_id' => $this->package->id,
+            // A review of another tour may be featured too: staff chose it.
+            'featured_review_ids' => [$third->id, $otherTour->id],
+            'videos' => [
+                ['section' => 'vlog', 'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10', 'title_en' => '  Our Mustang vlog  '],
+                ['section' => 'guest', 'url' => 'https://www.facebook.com/watch/?v=1234567890', 'title_bn' => 'রিনার কথা', 'thumbnail_media_id' => $thumb->id],
+                ['section' => 'guest', 'url' => 'https://youtu.be/abcdefghijk'],
+            ],
+        ])->assertCreated()->json('data');
+
+        $this->assertSame([$third->id, $otherTour->id], $page['featured_review_ids']);
+        $this->assertSame([['guest', 'facebook', null], ['guest', 'youtube', 'abcdefghijk'], ['vlog', 'youtube', 'dQw4w9WgXcQ']], array_map(fn ($v) => [$v['section'], $v['provider'], $v['youtube_id']], $page['videos']));
+        $this->assertSame('Our Mustang vlog', $page['videos'][2]['title_en']);
+        // The editor lists every published review to pick from, this tour's first.
+        $choices = $page['review_choices'];
+        $this->assertEqualsCanonicalizing([$first->id, $second->id, $third->id], array_column(array_slice($choices, 0, 3), 'id'));
+        $this->assertSame([[true, true, true, false], $otherTour->id], [array_column($choices, 'this_tour'), $choices[3]['id']]);
+        // A thumbnail in use stays in the media library.
+        $this->actingAsApi($admin)->deleteJson("/api/v1/admin/media/{$thumb->id}")->assertStatus(409);
+
+        $this->actingAsApi($admin)->postJson("/api/v1/admin/tour-landing-pages/{$page['id']}/publish")->assertOk();
+        $public = $this->getJson('/api/v1/public/tour-pages')->assertOk()->json('data.0');
+        // The featured first, in the order chosen; then the tour's other published reviews in their usual order.
+        $this->assertSame(['Tania', 'Elsewhere', 'Rina', 'Karim'], array_column($public['reviews'], 'reviewerName'));
+        $this->assertSame(['guest', 'facebook', null, 'রিনার কথা'], [$public['videos'][0]['section'], $public['videos'][0]['provider'], $public['videos'][0]['youtubeId'], $public['videos'][0]['title']['bn']]);
+        $this->assertNotNull($public['videos'][0]['thumbnail']);
+        $this->assertSame('dQw4w9WgXcQ', $public['videos'][2]['youtubeId']);
+
+        // A featured review taken off the website leaves the page; emptied lists empty the sections.
+        $third->update(['status' => 'draft']);
+        $this->assertSame(['Elsewhere', 'Rina', 'Karim'], array_column($this->getJson('/api/v1/public/tour-pages')->json('data.0.reviews'), 'reviewerName'));
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/tour-landing-pages/{$page['id']}", ['slug' => 'mustang', 'tour_package_id' => $this->package->id, 'featured_review_ids' => [], 'videos' => []])->assertOk();
+        Review::query()->whereKey([$first->id, $second->id])->update(['status' => 'draft']);
+        $public = $this->getJson('/api/v1/public/tour-pages')->json('data.0');
+        $this->assertSame([[], []], [$public['reviews'], $public['videos']]);
     }
 
     #[Test]

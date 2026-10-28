@@ -20,6 +20,7 @@ use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourLandingDayPhoto;
 use App\Models\TourLandingPage;
+use App\Models\TourLandingVideo;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
@@ -301,6 +302,25 @@ final class AdminContent
                 'media_id' => $photo->media_id,
                 'image' => self::media($photo->media),
             ])->values(),
+            // Reviews and videos (§9).
+            'featured_review_ids' => $page->relationLoaded('featuredReviews') ? $page->featuredReviews->pluck('id')->values() : [],
+            'videos' => $page->relationLoaded('videos') ? $page->videos->map(fn (TourLandingVideo $video) => [
+                ...$video->only(['section', 'provider', 'url', 'youtube_id', 'title_en', 'title_bn', 'thumbnail_media_id']),
+                'thumbnail' => self::media($video->thumbnail),
+            ])->values() : [],
+            // Every published review, to choose the ones put first: this tour's (shown on the page anyway) before the rest.
+            'review_choices' => Review::query()->published()->with('package:id,title_en')
+                ->when($package !== null, fn ($query) => $query->orderByRaw('tour_package_id <=> ? desc', [$package->id]))
+                ->orderByDesc('travelled_on')->orderByDesc('id')->get(['id', 'tour_package_id', 'reviewer_name', 'rating', 'quote_en', 'quote_bn', 'travelled_on'])
+                ->map(fn (Review $review) => [
+                    'id' => $review->id,
+                    'reviewer_name' => $review->reviewer_name,
+                    'rating' => $review->rating,
+                    'quote' => mb_strimwidth((string) ($review->quote_en ?: $review->quote_bn), 0, 140, '…'),
+                    'travelled_on' => $review->travelled_on?->toDateString(),
+                    'this_tour' => $package !== null && $review->tour_package_id === $package->id,
+                    'package_title' => $review->package?->title_en,
+                ])->values(),
             'package' => $package === null ? null : [
                 'id' => $package->id,
                 'slug' => $package->slug,

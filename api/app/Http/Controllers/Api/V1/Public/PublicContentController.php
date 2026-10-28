@@ -83,7 +83,7 @@ class PublicContentController extends Controller
     {
         $private = ['Cache-Control' => 'no-store, private', 'X-Robots-Tag' => 'noindex, nofollow'];
         $id = LandingPreviewToken::pageId($request->header('X-Preview-Token'));
-        $page = $id === null ? null : TourLandingPage::query()->with(['hero', 'countdownDeparture', 'dayPhotos.media'])->find($id);
+        $page = $id === null ? null : TourLandingPage::query()->with(['hero', 'countdownDeparture', 'dayPhotos.media', 'videos.thumbnail'])->find($id);
         $package = $page === null ? null : TourPackage::query()->with(['destination', 'itineraryDays', 'inclusions', 'tags', 'images.media'])->find($page->tour_package_id);
         if ($page === null || $package === null) {
             return response()->json(['message' => 'Not found.'], 404)->withHeaders($private);
@@ -172,7 +172,7 @@ class PublicContentController extends Controller
     {
         $pages = TourLandingPage::query()->published()
             ->whereHas('tourPackage', fn (Builder $query) => $query->published())
-            ->with(['tourPackage', 'hero', 'countdownDeparture', 'dayPhotos.media'])
+            ->with(['tourPackage', 'hero', 'countdownDeparture', 'dayPhotos.media', 'videos.thumbnail'])
             ->orderBy('sort_order')->orderBy('id')
             ->get();
 

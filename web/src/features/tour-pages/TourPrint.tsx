@@ -196,6 +196,54 @@ export async function TourPrint({ page, views, locale, asOf }: { page: TourPageV
           </section>
         ) : null}
 
+        {/* Reviews as quote cards, without their photos: the renderer loads only the page's own (§9). */}
+        {page.reviews.length > 0 ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="tp-head text-22 font-bold">{t('printReviewsHeading')}</h2>
+            <div className="grid grid-cols-2 items-start gap-3" data-testid="tour-print-reviews">
+              {page.reviews.map((review, i) => (
+                <figure key={`${i}-${review.reviewerName}`} className="tp-keep m-0 flex flex-col gap-2 rounded-14 bg-paper-alt px-4.5 py-4">
+                  <Stars rating={review.rating} />
+                  <blockquote className="m-0 text-13 leading-1.65 whitespace-pre-line">“{shortQuote(review.quote)}”</blockquote>
+                  <figcaption className="text-12 text-muted">
+                    <span className="font-semibold text-ink">{review.reviewerName}</span>
+                    {review.tripLabel ? ` · ${review.tripLabel}` : ''}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Videos as a list of links: a printed page can't play them. */}
+        {page.guestVideos.length + page.vlogs.length > 0 ? (
+          <section className="tp-keep flex flex-col gap-3" data-testid="tour-print-videos">
+            <h2 className="tp-head text-22 font-bold">{t('printVideosHeading')}</h2>
+            {(
+              [
+                [t('printGuestVideos'), page.guestVideos],
+                [t('printVlogs'), page.vlogs],
+              ] as const
+            )
+              .filter(([, videos]) => videos.length > 0)
+              .map(([heading, videos]) => (
+                <div key={heading} className="flex flex-col gap-1.5">
+                  <h3 className="tp-head text-15 font-bold">{heading}</h3>
+                  <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                    {videos.map((video, i) => (
+                      <li key={`${i}-${video.url}`} className="tp-row flex flex-col text-13">
+                        <span className="font-semibold">{video.title ?? (video.provider === 'youtube' ? t('printYoutubeVideo') : t('printFacebookVideo'))}</span>
+                        <a href={video.url} className={`${link} break-all`}>
+                          {video.url.replace(/^https?:\/\/(www\.)?/, '')}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+          </section>
+        ) : null}
+
         <section className="grid grid-cols-2 items-start gap-4">
           {rooms && countdown ? (
             <div className="tp-keep flex flex-col gap-1.5 rounded-16 border border-hairline p-5">
@@ -301,6 +349,28 @@ function Mark({ kind }: { kind: 'yes' | 'no' }) {
       <span className="absolute top-[5px] left-[3px] h-[2px] w-[6px] bg-amber" />
     </span>
   );
+}
+
+/** Drawn stars for the same reason: no font on the server has ★. */
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span aria-label={`${rating}/5`} className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} viewBox="0 0 20 20" aria-hidden className={`size-3.5 ${n <= rating ? 'fill-orange' : 'fill-hairline'}`}>
+          <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
+/** A long review stops near 520 characters, at a word: a card is kept on one page. */
+export function shortQuote(quote: string, max = 520): string {
+  const text = quote.trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
 
 function PhoneRow({ label, phone, className }: { label: string; phone: string; className: string }) {

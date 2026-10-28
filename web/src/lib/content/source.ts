@@ -112,8 +112,9 @@ async function loadFromApi(): Promise<ContentBundle> {
     get<ContentBundle['partners']>('partners', 'partners', { empty: [] }),
     get<ContentBundle['offers']>('offers', 'offers', { empty: [] }),
     get<ContentBundle['tourPhotos']>('tour-photos', 'tour-photos', { empty: [] }),
-    // Their memories are the gallery's and their countdown a package's departure: any of those changing refreshes them.
-    get<ContentBundle['tourPages']>('tour-pages', ['tour-pages', 'tour-photos', 'packages', 'departures'], { empty: [] }),
+    // Their memories are the gallery's, their countdown a package's departure and their reviews the reviews' (§9): any of
+    // those changing refreshes them.
+    get<ContentBundle['tourPages']>('tour-pages', ['tour-pages', 'tour-photos', 'packages', 'departures', 'reviews'], { empty: [] }),
     get<ContentBundle['pricing']>('pricing', 'settings'),
     get<ContentBundle['settings']>('settings', 'settings'),
   ]);

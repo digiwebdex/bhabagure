@@ -20,6 +20,7 @@ use App\Models\Tag;
 use App\Models\TeamMember;
 use App\Models\TourLandingDayPhoto;
 use App\Models\TourLandingPage;
+use App\Models\TourLandingVideo;
 use App\Models\TourPackage;
 use App\Models\TourPhoto;
 use App\Models\VisaService;
@@ -214,7 +215,31 @@ final class PublicContent
             ])->values()->all(),
             // Earlier trips, captioned, by the gallery rule the brochure uses (docs/group-tour-brochures.md §2).
             'memories' => array_values(array_map(self::tourPhoto(...), array_filter(BrochurePhotos::gallery($page->tourPackage), fn (TourPhoto $photo) => ! in_array($photo->media_id, $used, true)))),
+            // Reviews and videos (docs/tour-landing-pages.md §9).
+            'reviews' => array_map(self::review(...), self::landingReviews($page)),
+            'videos' => $page->videos->map(fn (TourLandingVideo $video) => [
+                'section' => $video->section,
+                'provider' => $video->provider,
+                'url' => $video->url,
+                'youtubeId' => $video->youtube_id,
+                'title' => $video->localizedOrNull('title'),
+                'thumbnail' => self::image($video->thumbnail, MediaVariant::Card),
+            ])->values()->all(),
         ];
+    }
+
+    /** A landing page's reviews: the published ones staff put first, then the tour's other published reviews; twelve at most. */
+    public const LANDING_REVIEWS = 12;
+
+    /** @return list<Review> */
+    public static function landingReviews(TourLandingPage $page): array
+    {
+        $featured = $page->featuredReviews()->published()->with(['package', 'photos.image'])->get();
+        $others = Review::query()->published()->where('tour_package_id', $page->tour_package_id)->whereNotIn('id', $featured->pluck('id'))
+            ->with(['package', 'photos.image'])->orderBy('sort_order')->orderBy('id')
+            ->limit(max(0, self::LANDING_REVIEWS - $featured->count()))->get();
+
+        return [...$featured->take(self::LANDING_REVIEWS)->all(), ...$others->all()];
     }
 
     /** An airline the agency books: its name, its logo and, when it has one, a link to it. */

@@ -13,7 +13,7 @@ const lastLine = (output: string) => output.trim().split(/\r?\n/).pop()!
  */
 test('a landing page is made for a group tour, promoted and published', async ({ page }) => {
   const before = JSON.parse(lastLine(artisan('tinker', `--execute=echo json_encode(App\\Models\\TourPackage::query()->where('slug', '${KATHMANDU}')->firstOrFail()->only(['id', 'trip_type', 'status']));`)))
-  artisan('tinker', `--execute=App\\Models\\TourPackage::query()->whereKey(${before.id})->update(['trip_type' => 'group_fixed', 'status' => 'published']); echo 'ok';`)
+  artisan('tinker', `--execute=App\\Models\\TourPackage::query()->whereKey(${before.id})->update(['trip_type' => 'group_fixed', 'status' => 'published']); App\\Models\\Review::query()->create(['quote_bn' => 'চমৎকার ট্যুর', 'reviewer_name' => 'E2E Rina', 'rating' => 5, 'tour_package_id' => ${before.id}, 'status' => 'published']); echo 'ok';`)
   try {
     await signIn(page, 'admin')
     await page.goto('/tour-pages')
@@ -34,20 +34,30 @@ test('a landing page is made for a group tour, promoted and published', async ({
     await expect(links).toContainText('works until')
     await expect(links.getByRole('link', { name: /Open preview \(English\)/ })).toHaveAttribute('href', /\/en\/tours\/preview#[\w-]+\.[\w-]+$/)
     await expect(links.getByRole('link', { name: /Open preview \(Bangla\)/ })).toHaveAttribute('href', /\/tours\/preview#[\w-]+\.[\w-]+$/)
+    // A review put first, and a vlog: only a YouTube or Facebook link is taken (§9).
+    await page.getByLabel('Put a review first').selectOption({ label: 'E2E Rina · ★★★★★' })
+    await expect(page.getByTestId('tour-page-featured-reviews')).toContainText('E2E Rina')
+    await page.getByTestId('tour-page-add-video-vlog').click()
+    const vlogs = page.getByTestId('tour-page-videos-vlog')
+    await vlogs.getByLabel('YouTube or Facebook link').fill('https://vimeo.com/12345')
+    await vlogs.getByLabel('Title (English, optional)').fill('Our Kathmandu vlog')
+    await page.getByRole('button', { name: 'Save', exact: true }).first().click()
+    await expect(vlogs.getByText('Paste a YouTube or Facebook video link (https://…).')).toBeVisible()
+    await vlogs.getByLabel('YouTube or Facebook link').fill('https://youtu.be/dQw4w9WgXcQ')
     await page.getByLabel('Show in "Upcoming group tours" on the home page').check()
     await page.getByRole('button', { name: 'Save', exact: true }).first().click()
     await expect(page.getByRole('button', { name: 'Saved', exact: true }).first()).toBeVisible()
     await page.getByRole('button', { name: 'Publish', exact: true }).click()
     await expect(page.getByText('Published — the page is on the website.')).toBeVisible()
 
-    const listed = lastLine(artisan('tinker', `--execute=echo json_encode(collect(app(App\\Http\\Controllers\\Api\\V1\\Public\\PublicContentController::class)->tourPages()->getData(true)['data'])->map(fn ($p) => [$p['slug'], $p['packageSlug'], $p['promote']]));`))
-    expect(JSON.parse(listed)).toEqual([['kathmandu-pokhara-group-tour', KATHMANDU, true]])
+    const listed = lastLine(artisan('tinker', `--execute=echo json_encode(collect(app(App\\Http\\Controllers\\Api\\V1\\Public\\PublicContentController::class)->tourPages()->getData(true)['data'])->map(fn ($p) => [$p['slug'], $p['packageSlug'], $p['promote'], $p['reviews'][0]['reviewerName'], array_map(fn ($v) => [$v['section'], $v['youtubeId'], $v['title']['en']], $p['videos'])]));`))
+    expect(JSON.parse(listed)).toEqual([['kathmandu-pokhara-group-tour', KATHMANDU, true, 'E2E Rina', [['vlog', 'dQw4w9WgXcQ', 'Our Kathmandu vlog']]]])
 
     await page.goto('/tour-pages')
     const row = page.locator('li').filter({ hasText: '/tours/kathmandu-pokhara-group-tour' })
     await expect(row).toContainText('On home page', FIRST_LOAD)
     await expect(row).toContainText('Published')
   } finally {
-    artisan('tinker', `--execute=App\\Models\\TourLandingPage::query()->delete(); App\\Models\\TourPackage::query()->whereKey(${before.id})->update(['trip_type' => '${before.trip_type}', 'status' => '${before.status}']); echo 'ok';`)
+    artisan('tinker', `--execute=App\\Models\\TourLandingPage::query()->delete(); App\\Models\\Review::query()->where('reviewer_name', 'E2E Rina')->delete(); App\\Models\\TourPackage::query()->whereKey(${before.id})->update(['trip_type' => '${before.trip_type}', 'status' => '${before.status}']); echo 'ok';`)
   }
 })

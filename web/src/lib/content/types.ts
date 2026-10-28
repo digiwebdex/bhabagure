@@ -219,6 +219,21 @@ export interface TourPage {
   days: { day: number; photos: ContentImage[] }[];
   /** The Group Tour Gallery's photos for this tour, in the brochure's order (docs/group-tour-brochures.md §2). */
   memories: TourPhoto[];
+  /** Reviews: staff's featured picks first, then the tour's own published ones (docs/tour-landing-pages.md §9). */
+  reviews: Review[];
+  /** Guests' video feedback and travel vlogs, in staff's order; each section hidden when empty. */
+  videos: TourVideo[];
+}
+
+export interface TourVideo {
+  section: 'guest' | 'vlog';
+  /** YouTube plays in the page after a click; Facebook opens on Facebook. */
+  provider: 'youtube' | 'facebook';
+  url: string;
+  youtubeId: string | null;
+  title: Localized | null;
+  /** Staff's own picture for the card; null for YouTube's (or a plain card for Facebook). */
+  thumbnail: ContentImage | null;
 }
 
 /** An airline the agency books, shown as a logo above the footer (docs/partners-and-payments.md). */

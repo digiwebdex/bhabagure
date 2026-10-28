@@ -15,6 +15,7 @@ use App\Models\SiteSetting;
 use App\Models\TeamMember;
 use App\Models\TourLandingDayPhoto;
 use App\Models\TourLandingPage;
+use App\Models\TourLandingVideo;
 use App\Models\TourPhoto;
 use App\Services\AuditLogger;
 use App\Services\Media\ImageUploader;
@@ -82,6 +83,7 @@ class MediaController extends Controller
             // A landing page's banner and day photos (docs/tour-landing-pages.md).
             || TourLandingPage::query()->where('hero_media_id', $media->id)->exists()
             || TourLandingDayPhoto::query()->where('media_id', $media->id)->exists()
+            || TourLandingVideo::query()->where('thumbnail_media_id', $media->id)->exists()
             || ReviewPhoto::query()->where('media_id', $media->id)->exists()
             // The travel host's photos and covers live in a site setting, not a column (docs/travel-host.md).
             || in_array($media->id, CreatorProfile::mediaIds(SiteSetting::get(CreatorProfile::KEY)), true)

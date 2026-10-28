@@ -7,6 +7,7 @@ use App\Models\Concerns\HasLocalizedFields;
 use App\Models\Concerns\HasPublicationStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -45,5 +46,16 @@ class TourLandingPage extends Model
     public function dayPhotos(): HasMany
     {
         return $this->hasMany(TourLandingDayPhoto::class)->orderBy('day_number')->orderBy('sort_order');
+    }
+
+    /** The reviews staff put first on the page, in their order; the tour's other published reviews follow (§9). */
+    public function featuredReviews(): BelongsToMany
+    {
+        return $this->belongsToMany(Review::class, 'tour_landing_reviews')->withPivot('sort_order')->withTimestamps()->orderByPivot('sort_order');
+    }
+
+    public function videos(): HasMany
+    {
+        return $this->hasMany(TourLandingVideo::class)->orderBy('section')->orderBy('sort_order');
     }
 }

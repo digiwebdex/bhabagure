@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { buttonClass } from '@/components/ui/button';
 import { pricedOn } from '@/features/booking/departures';
 import { DownloadButton } from '@/features/downloads/DownloadButton';
+import { ReviewCards } from '@/features/reviews/ReviewCarousel';
 import { TourPhotoSlideshow } from '@/features/tour-photos/TourPhotoSlideshow';
 import type { AppLocale } from '@/i18n/routing';
 import type { PhotoView, SiteViews, TourPageView } from '@/lib/content/views';
@@ -13,6 +14,7 @@ import { roomPercent, roomPricesFor } from '@/lib/package-price';
 import { BookFromLink } from './BookFromLink';
 import { BookNow } from './BookNow';
 import { Countdown } from './Countdown';
+import { TourVideos } from './TourVideos';
 
 /** A photo at its own shape: no stretching, no cropping. From the API's own sizes, not the website's image optimiser. */
 function Photo({ photo, sizes, className = '', priority = false }: { photo: PhotoView; sizes: string; className?: string; priority?: boolean }) {
@@ -224,6 +226,37 @@ export async function TourLandingPage({ page, views, locale }: { page: TourPageV
               <p className="text-14 text-muted">{t('memoriesNote')}</p>
             </div>
             <TourPhotoSlideshow photos={page.memories} linkToTour={false} />
+          </section>
+        ) : null}
+
+        {/* What travellers say: the reviews staff featured first, then the tour's own (§9). */}
+        {page.reviews.length > 0 ? (
+          <section className="flex flex-col gap-4" data-testid="tour-reviews">
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow>{t('reviewsEyebrow')}</Eyebrow>
+              <h2 className="text-fluid-20-26 font-bold tracking-heading">{t('reviewsHeading')}</h2>
+            </div>
+            <ReviewCards reviews={page.reviews} />
+          </section>
+        ) : null}
+
+        {page.guestVideos.length > 0 ? (
+          <section className="flex flex-col gap-4" data-testid="tour-guest-videos">
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow>{t('guestVideosEyebrow')}</Eyebrow>
+              <h2 className="text-fluid-20-26 font-bold tracking-heading">{t('guestVideosHeading')}</h2>
+            </div>
+            <TourVideos videos={page.guestVideos} testId="tour-guest-video-list" />
+          </section>
+        ) : null}
+
+        {page.vlogs.length > 0 ? (
+          <section className="flex flex-col gap-4" data-testid="tour-vlogs">
+            <div className="flex flex-col gap-1.5">
+              <Eyebrow>{t('vlogsEyebrow')}</Eyebrow>
+              <h2 className="text-fluid-20-26 font-bold tracking-heading">{t('vlogsHeading')}</h2>
+            </div>
+            <TourVideos videos={page.vlogs} testId="tour-vlog-list" />
           </section>
         ) : null}
 

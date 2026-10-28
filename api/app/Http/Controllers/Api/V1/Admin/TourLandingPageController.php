@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminContent;
 use App\Models\PackageDeparture;
 use App\Models\TourLandingPage;
+use App\Models\TourLandingVideo;
 use App\Models\TourPackage;
 use App\Services\AuditLogger;
 use App\Support\LandingPreviewToken;
@@ -26,7 +27,10 @@ class TourLandingPageController extends Controller
 {
     use ManagesPublishedList;
 
-    private const RELATIONS = ['hero', 'dayPhotos.media', 'tourPackage.itineraryDays', 'tourPackage.departures', 'tourPackage.images.media'];
+    private const RELATIONS = ['hero', 'dayPhotos.media', 'tourPackage.itineraryDays', 'tourPackage.departures', 'tourPackage.images.media', 'featuredReviews', 'videos.thumbnail'];
+
+    /** Lists sent with the page and saved apart from its own fields. */
+    private const LISTS = ['day_photos', 'featured_review_ids', 'videos'];
 
     protected function modelClass(): string
     {
@@ -81,11 +85,11 @@ class TourLandingPageController extends Controller
         $data = $this->validated($request, null);
         $page = DB::transaction(function () use ($request, $data) {
             $page = TourLandingPage::query()->create([
-                ...collect($data)->except('day_photos')->all(),
+                ...collect($data)->except(self::LISTS)->all(),
                 'sort_order' => (int) TourLandingPage::query()->max('sort_order') + 1,
             ]);
             $page->forceFill(['status' => 'draft', 'created_by_staff_id' => $request->user('staff')->id, 'updated_by_staff_id' => $request->user('staff')->id])->save();
-            $this->saveDayPhotos($page, $data['day_photos'] ?? []);
+            $this->saveLists($page, $data);
 
             return $page;
         });
@@ -98,10 +102,10 @@ class TourLandingPageController extends Controller
         $page = TourLandingPage::query()->findOrFail($id);
         $data = $this->validated($request, $page);
         DB::transaction(function () use ($request, $page, $data) {
-            $page->fill(collect($data)->except('day_photos')->all());
+            $page->fill(collect($data)->except(self::LISTS)->all());
             $page->forceFill(['updated_by_staff_id' => $request->user('staff')->id])->save();
-            if (array_key_exists('day_photos', $data)) {
-                $this->saveDayPhotos($page, $data['day_photos'] ?? []);
+            if (array_intersect(self::LISTS, array_keys($data)) !== []) {
+                $this->saveLists($page, $data);
                 $page->touch();
             }
         });
@@ -149,6 +153,34 @@ class TourLandingPageController extends Controller
         }
 
         return $problems;
+    }
+
+    /** The day photos, featured reviews and videos sent, each list replaced as a whole; untouched when not sent. */
+    private function saveLists(TourLandingPage $page, array $data): void
+    {
+        if (array_key_exists('day_photos', $data)) {
+            $this->saveDayPhotos($page, $data['day_photos'] ?? []);
+        }
+        if (array_key_exists('featured_review_ids', $data)) {
+            $page->featuredReviews()->sync(collect($data['featured_review_ids'] ?? [])->values()->mapWithKeys(fn ($id, $i) => [(int) $id => ['sort_order' => $i + 1]])->all());
+        }
+        if (array_key_exists('videos', $data)) {
+            $page->videos()->delete();
+            $position = [];
+            foreach ($data['videos'] ?? [] as $video) {
+                $known = TourLandingVideo::recognise(trim($video['url']));
+                $position[$video['section']] = ($position[$video['section']] ?? 0) + 1;
+                $page->videos()->create([
+                    'section' => $video['section'],
+                    ...$known,
+                    'url' => trim($video['url']),
+                    'title_en' => filled($video['title_en'] ?? null) ? trim($video['title_en']) : null,
+                    'title_bn' => filled($video['title_bn'] ?? null) ? trim($video['title_bn']) : null,
+                    'thumbnail_media_id' => $video['thumbnail_media_id'] ?? null,
+                    'sort_order' => $position[$video['section']],
+                ]);
+            }
+        }
     }
 
     /** @param list<array{day_number: int, media_id: int}> $photos */
@@ -202,7 +234,27 @@ class TourLandingPageController extends Controller
             'day_photos' => ['sometimes', 'array', 'max:180'],
             'day_photos.*.day_number' => ['required', 'integer', 'between:1,60'],
             'day_photos.*.media_id' => ['required', 'integer', 'exists:media,id'],
+            // Reviews put first (docs/tour-landing-pages.md §9): published ones only.
+            'featured_review_ids' => ['sometimes', 'array', 'max:12'],
+            'featured_review_ids.*' => ['integer', 'distinct', Rule::exists('reviews', 'id')->where('status', 'published')],
+            // Guests' video feedback and travel vlogs: YouTube or Facebook links.
+            'videos' => ['sometimes', 'array', 'max:24'],
+            'videos.*.section' => ['required', Rule::in(TourLandingVideo::SECTIONS)],
+            'videos.*.url' => ['required', 'string', 'max:500', function (string $attribute, mixed $value, \Closure $fail) {
+                if (! is_string($value) || TourLandingVideo::recognise($value) === null) {
+                    $fail(__('cms.landing_page.video_url'));
+                }
+            }],
+            'videos.*.title_en' => ['nullable', 'string', 'max:160'],
+            'videos.*.title_bn' => ['nullable', 'string', 'max:160'],
+            'videos.*.thumbnail_media_id' => ['nullable', 'integer', 'exists:media,id'],
         ]);
+
+        // Up to twelve videos in each section.
+        $perSection = collect($data['videos'] ?? [])->countBy('section');
+        if ($perSection->max() > 12) {
+            throw ValidationException::withMessages(['videos' => [__('cms.landing_page.too_many_videos')]]);
+        }
 
         // Up to three photos beside a day.
         $perDay = collect($data['day_photos'] ?? [])->countBy(fn (array $photo) => (int) $photo['day_number']);

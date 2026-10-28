@@ -7,7 +7,7 @@ import { gridCategories, listPrice, savingPercent, type HotelCategory, type Pric
 import type { AppLocale } from '@/i18n/routing';
 import { shownDeparture } from '@/lib/departures';
 
-import type { BlogCategory, ContentBundle, ContentImage, Localized, TourPackage } from './types';
+import type { BlogCategory, ContentBundle, ContentImage, Localized, TourPackage, TourVideo } from './types';
 
 export interface ImageView {
   url: string;
@@ -84,6 +84,8 @@ export interface PackageDepartureView {
   price: number;
   /** Staff chose it for the card ("Show on the card"); see shownDeparture(). */
   featured: boolean;
+  /** Staff marked it as going ahead whatever the numbers. */
+  isGuaranteed: boolean;
 }
 
 export interface DepartureView {
@@ -199,6 +201,20 @@ export interface TourPageView {
   /** Every day of the package's itinerary, with the photos staff put beside it. */
   days: { day: number; title: string; body: string; photos: PhotoView[] }[];
   memories: SiteViews['tourPhotos'];
+  /** Featured reviews first, then the tour's own (docs/tour-landing-pages.md §9); each section hidden when empty. */
+  reviews: ReviewView[];
+  guestVideos: TourVideoView[];
+  vlogs: TourVideoView[];
+}
+
+/** A guest's video feedback or a travel vlog: YouTube plays in the page after a click, Facebook opens on Facebook. */
+export interface TourVideoView {
+  provider: 'youtube' | 'facebook';
+  url: string;
+  youtubeId: string | null;
+  title: string | null;
+  /** Null: a Facebook video without a picture of staff's, shown as a plain card. */
+  thumbnail: string | null;
 }
 
 /** The travel host and the videos staff picked (docs/travel-host.md). */
@@ -253,6 +269,33 @@ function photoView(img: Parameters<typeof image>[0] & Pick<ContentImage, 'varian
   return { image: image(img, locale), srcSet: tourPhotoSrcSet(img), width: largest?.width ?? null, height: largest?.height ?? null };
 }
 
+function reviewView(r: ContentBundle['reviews'][number], locale: AppLocale): ReviewView {
+  return {
+    quote: pick(r.quote, locale),
+    reviewerName: r.reviewerName,
+    tripLabel: pick(r.tripLabel, locale),
+    rating: r.rating,
+    packageSlug: r.packageSlug ?? null,
+    verified: r.verified === true,
+    photos: (r.photos ?? []).map((photo) => ({
+      thumb: photo.variants?.thumb?.url ?? photo.url,
+      large: photo.variants?.detail?.url ?? photo.url,
+      alt: pick(photo.alt, locale),
+    })),
+  };
+}
+
+function tourVideoView(video: TourVideo, locale: AppLocale): TourVideoView {
+  return {
+    provider: video.provider,
+    url: video.url,
+    youtubeId: video.youtubeId,
+    title: video.title ? pick(video.title, locale) || null : null,
+    // Staff's own picture first; YouTube's still otherwise (an image only — the player loads on the click).
+    thumbnail: video.thumbnail?.url ?? (video.youtubeId ? `https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg` : null),
+  };
+}
+
 /** docs/tour-landing-pages.md: each page over its package's view; a page whose package isn't on the website is left out. */
 function tourPageViews(bundle: ContentBundle, packages: PackageView[], locale: AppLocale): TourPageView[] {
   const bySlug = new Map(packages.map((p) => [p.slug, p]));
@@ -276,6 +319,9 @@ function tourPageViews(bundle: ContentBundle, packages: PackageView[], locale: A
         order: page.order,
         days: pkg.itinerary.map((d) => ({ ...d, photos: (photosByDay.get(d.day) ?? []).map((img) => photoView(img, locale)) })),
         memories: tourPhotoViews(page.memories, locale),
+        reviews: (page.reviews ?? []).map((r) => reviewView(r, locale)),
+        guestVideos: (page.videos ?? []).filter((v) => v.section === 'guest').map((v) => tourVideoView(v, locale)),
+        vlogs: (page.videos ?? []).filter((v) => v.section === 'vlog').map((v) => tourVideoView(v, locale)),
       },
     ];
   });
@@ -316,6 +362,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
             seatsLeft: Math.max(0, d.seatsTotal - d.seatsBooked),
             price: d.price ?? listPrice(p),
             featured: d.featured === true,
+            isGuaranteed: d.isGuaranteed === true,
           }))
           .sort((a, b) => a.departsOn.localeCompare(b.departsOn))
       : [];
@@ -428,19 +475,7 @@ export function buildViews(bundle: ContentBundle, locale: AppLocale): SiteViews 
       .filter((m) => m.isVisible)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((m) => ({ employeeCode: m.employeeCode, name: pick(m.name, locale), role: pick(m.role, locale), roleEn: m.role.en, photo: m.photo ? image(m.photo, locale) : null })),
-    reviews: bundle.reviews.map((r) => ({
-      quote: pick(r.quote, locale),
-      reviewerName: r.reviewerName,
-      tripLabel: pick(r.tripLabel, locale),
-      rating: r.rating,
-      packageSlug: r.packageSlug ?? null,
-      verified: r.verified === true,
-      photos: (r.photos ?? []).map((photo) => ({
-        thumb: photo.variants?.thumb?.url ?? photo.url,
-        large: photo.variants?.detail?.url ?? photo.url,
-        alt: pick(photo.alt, locale),
-      })),
-    })),
+    reviews: bundle.reviews.map((r) => reviewView(r, locale)),
     gallery: bundle.gallery.map((g) => ({
       kind: g.kind,
       url: g.url,

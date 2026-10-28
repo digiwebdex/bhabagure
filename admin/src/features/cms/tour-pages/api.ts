@@ -41,7 +41,46 @@ export interface TourPage extends TourPageSummary {
   countdown_departure_id: number | null
   day_photos: { day_number: number; media_id: number; image: Media | null }[]
   package: TourPagePackage | null
+  /** Staff's picks, shown first on the page (docs/tour-landing-pages.md §9). */
+  featured_review_ids: number[]
+  videos: TourPageVideo[]
+  /** Every published review, this tour's first. */
+  review_choices: ReviewChoice[]
 }
+
+export type VideoSection = 'guest' | 'vlog'
+
+export interface TourPageVideo {
+  section: VideoSection
+  provider: 'youtube' | 'facebook'
+  url: string
+  youtube_id: string | null
+  title_en: string | null
+  title_bn: string | null
+  thumbnail_media_id: number | null
+  thumbnail: Media | null
+}
+
+export interface ReviewChoice {
+  id: number
+  reviewer_name: string
+  rating: number
+  quote: string
+  travelled_on: string | null
+  this_tour: boolean
+  package_title: string | null
+}
+
+/** A video as edited: a YouTube or Facebook link, optional titles and an optional picture. */
+export interface VideoForm {
+  url: string
+  title_bn: string
+  title_en: string
+  thumbnail: Media | null
+}
+
+export const VIDEOS_PER_SECTION = 12
+export const FEATURED_REVIEWS = 12
 
 export interface TourPageOption {
   id: number
@@ -63,6 +102,9 @@ export interface TourPageForm {
   countdown_departure_id: number | null
   promote_on_home: boolean
   day_photos: { day_number: number; media: Media }[]
+  featured_review_ids: number[]
+  guest_videos: VideoForm[]
+  vlogs: VideoForm[]
 }
 
 export const emptyTourPage = (): TourPageForm => ({
@@ -76,7 +118,12 @@ export const emptyTourPage = (): TourPageForm => ({
   countdown_departure_id: null,
   promote_on_home: false,
   day_photos: [],
+  featured_review_ids: [],
+  guest_videos: [],
+  vlogs: [],
 })
+
+const toVideoForm = (video: TourPageVideo): VideoForm => ({ url: video.url, title_bn: video.title_bn ?? '', title_en: video.title_en ?? '', thumbnail: video.thumbnail })
 
 export const toTourPageForm = (page: TourPage): TourPageForm => ({
   slug: page.slug,
@@ -89,6 +136,10 @@ export const toTourPageForm = (page: TourPage): TourPageForm => ({
   countdown_departure_id: page.countdown_departure_id,
   promote_on_home: page.promote_on_home,
   day_photos: page.day_photos.filter((p) => p.image).map((p) => ({ day_number: p.day_number, media: p.image! })),
+  // A pick since taken off the website isn't shown on the page, and can't be saved again.
+  featured_review_ids: page.featured_review_ids.filter((id) => page.review_choices.some((choice) => choice.id === id)),
+  guest_videos: page.videos.filter((v) => v.section === 'guest').map(toVideoForm),
+  vlogs: page.videos.filter((v) => v.section === 'vlog').map(toVideoForm),
 })
 
 const payload = (form: TourPageForm) => ({
@@ -102,6 +153,20 @@ const payload = (form: TourPageForm) => ({
   countdown_departure_id: form.countdown_departure_id,
   promote_on_home: form.promote_on_home,
   day_photos: form.day_photos.map((p) => ({ day_number: p.day_number, media_id: p.media.id })),
+  featured_review_ids: form.featured_review_ids,
+  // Guests' videos first, then the vlogs: the editor finds each one's errors at videos.<n> in this order.
+  videos: [
+    ...form.guest_videos.map((v) => videoPayload('guest', v)),
+    ...form.vlogs.map((v) => videoPayload('vlog', v)),
+  ],
+})
+
+const videoPayload = (section: VideoSection, video: VideoForm) => ({
+  section,
+  url: video.url.trim(),
+  title_bn: video.title_bn,
+  title_en: video.title_en,
+  thumbnail_media_id: video.thumbnail?.id ?? null,
 })
 
 export const useTourPages = () =>
