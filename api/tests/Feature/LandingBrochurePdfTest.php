@@ -243,6 +243,40 @@ class LandingBrochurePdfTest extends TestCase
         @unlink($out);
     }
 
+    #[Test]
+    public function staff_download_a_drafts_brochure_from_its_preview_with_the_pdf_off_for_customers(): void
+    {
+        config(['bhabaghure.brochures.landing_pdf' => false]);
+        $this->page->forceFill(['status' => 'draft'])->save();
+        $token = LandingPreviewToken::issue($this->page)['token'];
+        $url = '/api/v1/public/tour-pages/preview/brochure?locale=en';
+
+        // No token, or a bad one: nothing of the draft, nothing printed.
+        $this->get($url)->assertNotFound();
+        $this->get($url, ['X-Preview-Token' => $token.'x'])->assertNotFound();
+        $this->assertSame([], $this->printed);
+
+        $response = $this->get($url, ['X-Preview-Token' => $token])->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertSame('%PDF landing page', $response->getContent());
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('bhabaghure-mustang-valley-trip-preview-en.pdf', (string) $response->headers->get('Content-Disposition'));
+        // The draft's own print view, with its day photo — the token in a header, never in the address.
+        $manifest = $this->printed[0];
+        $this->assertSame('http://127.0.0.1:3340/en/tours/preview/print?asOf='.now('Asia/Dhaka')->toDateString(), $manifest['url']);
+        $this->assertNotEmpty(array_filter(array_keys($manifest['assets']), fn ($url) => str_contains($url, '/day-1-')));
+        $this->assertSame([], Storage::disk('local')->allFiles('brochures/landing'), 'Nothing stored.');
+        // Customers still get the photo brochure.
+        $this->actingAsApi($this->lead())->get('/api/v1/portal/downloads/packages/'.self::MUSTANG.'?locale=en')->assertOk()->assertContent('%PDF photo brochure');
+
+        // A failed render says so; a few a minute at most.
+        $this->rendererFails = true;
+        $this->get($url, ['X-Preview-Token' => $token])->assertStatus(503)->assertJsonPath('code', 'render_failed');
+        $this->rendererFails = false;
+        $this->get($url, ['X-Preview-Token' => $token])->assertOk();
+        $this->get($url, ['X-Preview-Token' => $token])->assertOk();
+        $this->get($url, ['X-Preview-Token' => $token])->assertStatus(429);
+    }
+
     private function lead(): Customer
     {
         return Customer::query()->forceCreate(['name' => 'Tanvir Hasan', 'phone' => '8801711000400', 'stage' => 'lead', 'source' => 'website_form']);

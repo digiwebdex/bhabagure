@@ -33,10 +33,11 @@ page at once. Only group tours (fixed departures) get a landing page, one each; 
 5. **Day by day:** a large "Day N", the day's title and text as on the package, and its photos — one large, two side
    by side, or one large and two beneath — alternating sides; a day without photos is text only. Then "Ready to join
    this tour?" with Book Now.
-6. **Trip memories:** the gallery's photos in the brochure's order and rule (docs/group-tour-brochures.md §2), in the
-   home page's slideshow, each captioned, under "From our earlier group tours" — never presented as the days above. A
-   photo already on the page (banner or beside a day) is not repeated. With the gallery switched off in Site settings,
-   the section goes.
+6. **Trip memories:** only the gallery's published photos **linked to this tour** (Website → Group tour photos → Tour),
+   never another tour's or an unlinked one (client, 2026-10-29; docs/group-tour-brochures.md §2), in the home page's
+   slideshow, each captioned, under "From our earlier group tours" — never presented as the days above. A photo already
+   on the page (banner or beside a day) is not repeated. None linked, or the gallery switched off in Site settings: the
+   section goes.
 6a. **What travellers say**, **What other guests say about us** (আমাদের সম্পর্কে অন্যান্য গেস্টরা কী বলেন) and **Watch
    vlogs about this tour** (এই সম্পর্কিত ভ্লগ দেখুন): reviews and videos, each hidden when empty (§9).
 7. **Prices and inclusions:** room prices for the countdown's departure (the package page's own calculation), included,
@@ -128,6 +129,15 @@ countdown date), the reviews it shows and the videos it lists (§9), the package
 captions it shows, prices and room supplements, the office's contact details, the logo, the release deployed (the
 website's design: `App\Support\Release`, the repository's commit) and the Dhaka date.
 
+**From the staff preview (2026-10-29):** on `/tours/preview`, **Download brochure (preview PDF)** prints the page as
+saved, draft or not, through the same renderer and allowlist — whatever `BROCHURE_LANDING_PDF` says, which still decides
+only what customers get. The browser asks the website's `/api/tour-preview/brochure?locale=…`, which sends the preview
+cookie's token as the `X-Preview-Token` header to `GET /public/tour-pages/preview/brochure` (never in an address);
+without a valid token: 404, nothing printed. Made fresh each time (up to a minute), never stored, never cached; four a
+minute per page; a failure says so. Logged as "Landing page preview brochure printed" with the page id, never the token.
+(Before this, Download brochure on the preview gave the customer's file — the photo brochure — which is what the client
+saw on 2026-10-29: no day photos, other tours' gallery photos.)
+
 **Review renders** (on the server's command line only; drafts through the preview, never a public address; nothing
 stored for customers): `php artisan brochures:landing-pdf <slug> bn|en --out=<file>`.
 
@@ -151,10 +161,17 @@ order, each with optional Bangla and English titles and an optional picture from
 (`youtube.com/watch`, `youtu.be`, `shorts`, `live`, `embed`) and Facebook (`facebook.com`, `m.`/`web.`, `fb.watch`)
 links are taken.
 
-- **YouTube:** a still (staff's picture, else YouTube's own `i.ytimg.com` image) and a play button. Nothing of YouTube's
-  player loads until the visitor clicks; then it plays in the card from `youtube-nocookie.com`.
-- **Facebook:** a card (staff's picture, else a plain blue card) that opens the video on Facebook in a new tab — its
-  player can't be embedded without Facebook's script, which the website doesn't load.
+Both play **in the page**, never sending the visitor to Facebook or YouTube (client, 2026-10-29):
+
+- **Guests' videos:** a row of tall 9:16 cards like the home page's "Stories from the road" — four or five across on a
+  wide screen, swiped on a phone, the title beneath. A Facebook reel or video is Facebook's own embedded player
+  (`facebook.com/plugins/video.php`, no Facebook script), loaded as the row nears the screen, exactly as on the home
+  page; it plays in the card. The video must be public, or Facebook shows "unavailable" in the card. A YouTube video is
+  a still (staff's picture, else YouTube's `i.ytimg.com` image) and a play button; nothing of YouTube's player loads
+  until the click, then it plays in the card from `youtube-nocookie.com`.
+- **Travel vlogs:** one large player, centred, up to 960 px wide (the page's width on a phone), 16:9, with the first
+  vlog's still, title and a large play button; the others beneath as small cards (two, three or four across) that load
+  into the large player when clicked, the one playing ringed. Nothing from YouTube or Facebook loads before a click.
 
 **In the PDF:** reviews as quote cards (stars drawn, the reviewer and trip; a long review stops near 520 characters at
 a word, with "…"; no customer photos — the renderer loads only the page's own photos), and the videos as a list of
@@ -183,6 +200,14 @@ shape) and `videos` (`section`, `provider`, `url`, `youtubeId`, `title`, `thumbn
 - Headless Chrome on the developer's PC (2026-10-29), phone (390 px) and desktop (1366 px): the home banner and smaller
   card, the reviews, both video sections and the print view's quote cards and links; no sideways scrolling; no request
   to YouTube or Facebook before a click, and the click loads the `youtube-nocookie.com` player.
+- Second round (2026-10-29, the client's video review): the guests' row of 9:16 cards with a real Facebook reel playing
+  in its card; the large vlog player and a second vlog chosen from beneath it (no YouTube request before); the preview
+  PDF from the API in Bangla and English (~3.5 s each) with the day photos on exactly the days assigned and no memories
+  for a tour with no linked gallery photos; the preview's button sending the cookie as the header. Locally the button's
+  full round trip can't finish — PHP's built-in server answers one request at a time on Windows, so the render's own
+  page waits on it — which php-fpm (6 workers) doesn't share; checked on the live server instead. API tests: the preview
+  PDF (draft, flag off, token only, nothing stored, customers unchanged, failure, limit) and own-photos-only for the
+  landing page and both kinds of brochure.
 - Real renders on the developer's PC (Bangla and English): Mustang-like content, an introduction with day photos, long
   itinerary text with a day longer than a page; fallbacks for a missing photo and a renderer failure. A headless-browser
   check of the preview: banner, token gone from the address and from every request, noindex, no analytics, bad link

@@ -23,6 +23,7 @@ use App\Models\TourPhoto;
 use App\Models\VisaService;
 use App\Services\Analytics\AnalyticsSettings;
 use App\Services\Booking\PhoneCheck;
+use App\Services\Brochures\LandingBrochurePdf;
 use App\Services\Cms\LegalPages;
 use App\Services\Media\HeroVideo;
 use App\Support\Brand;
@@ -35,6 +36,11 @@ use App\Support\WebsiteFeatures;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Read-only website content. Only published rows are ever returned: drafts (the unfinished Thai 02
@@ -95,6 +101,41 @@ class PublicContentController extends Controller
             'package' => PublicContent::package($package),
             'departures' => $this->upcomingDepartures()->where('tour_package_id', $package->id)->get()->map(PublicContent::departure(...)),
         ]])->withHeaders($private);
+    }
+
+    /**
+     * The page as saved, draft or not, printed as its brochure — for staff checking it from the preview's Download
+     * brochure (docs/tour-landing-pages.md §6, §7). Only with a valid preview token in the X-Preview-Token header, and
+     * whatever BROCHURE_LANDING_PDF says: customers' downloads don't change. Never stored, never cached; a few a minute.
+     */
+    public function tourPagePreviewBrochure(Request $request, LandingBrochurePdf $brochures): Response|JsonResponse
+    {
+        $private = ['Cache-Control' => 'no-store, private', 'X-Robots-Tag' => 'noindex, nofollow'];
+        $id = LandingPreviewToken::pageId($request->header('X-Preview-Token'));
+        $page = $id === null ? null : TourLandingPage::query()->find($id);
+        if ($page === null || $page->tourPackage === null) {
+            return response()->json(['message' => 'Not found.'], 404)->withHeaders($private);
+        }
+        if (blank(config('bhabaghure.brochures.website_internal_url'))) {
+            return response()->json(['message' => 'The brochure printer is not set up.', 'code' => 'unavailable'], 503)->withHeaders($private);
+        }
+        if (RateLimiter::attempt("landing-preview-pdf|{$page->id}", 4, fn () => true, 60) === false) {
+            return response()->json(['message' => 'Too many at once.', 'code' => 'rate_limited'], 429)->withHeaders($private);
+        }
+        $locale = $request->query('locale') === 'en' ? 'en' : 'bn';
+        try {
+            $bytes = $brochures->render($page, $locale, preview: true);
+        } catch (Throwable $exception) {
+            Log::warning('Landing page preview brochure failed.', ['landing_page_id' => $page->id, 'locale' => $locale, 'error' => Str::limit($exception->getMessage(), 1000)]);
+
+            return response()->json(['message' => 'The brochure could not be made.', 'code' => 'render_failed'], 503)->withHeaders($private);
+        }
+        Log::info('Landing page preview brochure printed.', ['landing_page_id' => $page->id, 'locale' => $locale]);
+
+        return response($bytes, 200, $private + [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"bhabaghure-{$page->slug}-preview-{$locale}.pdf\"",
+        ]);
     }
 
     /** Scheduled departures from today, with the seats taken. */

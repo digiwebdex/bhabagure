@@ -109,15 +109,17 @@ class TourLandingPageTest extends TestCase
         TourPhoto::query()->create(['media_id' => $this->media('unlinked')->id, 'caption_en' => 'Dhaka airport', 'caption_bn' => 'ঢাকা', 'status' => 'published', 'sort_order' => 1]);
         TourPhoto::query()->create(['media_id' => $this->media('draft')->id, 'caption_en' => 'Not yet', 'caption_bn' => 'না', 'status' => 'draft', 'sort_order' => 0]);
         // Already beside day 2: not shown again among the memories.
-        TourPhoto::query()->create(['media_id' => $dayPhoto->id, 'caption_en' => 'Same photo', 'caption_bn' => 'একই ছবি', 'status' => 'published', 'sort_order' => 3]);
+        TourPhoto::query()->create(['media_id' => $dayPhoto->id, 'caption_en' => 'Same photo', 'caption_bn' => 'একই ছবি', 'tour_package_id' => $this->package->id, 'status' => 'published', 'sort_order' => 3]);
+        // Another tour's: never on this page.
+        TourPhoto::query()->create(['media_id' => $this->media('thailand')->id, 'caption_en' => 'Phi Phi', 'caption_bn' => 'ফি ফি', 'tour_package_id' => TourPackage::query()->whereKeyNot($this->package->id)->value('id'), 'status' => 'published', 'sort_order' => 0]);
 
         $page = $this->getJson('/api/v1/public/tour-pages')->assertOk()->assertJsonCount(1, 'data')->json('data.0');
         $this->assertSame(['mustang-valley-trip', self::MUSTANG, null, $this->departure->departs_on->toDateString(), false], [$page['slug'], $page['packageSlug'], $page['title'], $page['countdownDepartsOn'], $page['promote']]);
         $this->assertSame(['bn' => 'Our own words for this page.', 'en' => 'Our own words for this page.'], $page['intro']);
         $this->assertSame([2], array_column($page['days'], 'day'));
         $this->assertCount(1, $page['days'][0]['photos']);
-        // The gallery's published photos, this tour's first; each with its caption.
-        $this->assertSame(['Mustang 2025', 'Dhaka airport'], array_column(array_column($page['memories'], 'caption'), 'en'));
+        // Only the gallery's published photos of this tour, each with its caption: not the unlinked one (client, 2026-10-29).
+        $this->assertSame(['Mustang 2025'], array_column(array_column($page['memories'], 'caption'), 'en'));
         $this->assertSame(self::MUSTANG, $page['memories'][0]['package']['slug']);
         $this->assertSame($linked->tripMonthValue(), $page['memories'][0]['month']);
 

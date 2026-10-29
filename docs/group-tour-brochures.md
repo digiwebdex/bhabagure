@@ -37,9 +37,11 @@ country and those linked to no tour, never another country's trip.
 
 ## 2. The photos (`App\Services\Brochures\BrochurePhotos`)
 
-- **Which, in this order:** the package's own photos after the cover; gallery photos linked to this package; linked to
-  another package to the same destination (country); linked to no package. A group tour then takes the rest of the
-  gallery (other countries' trips) as well; a customized trip does not. Each photo once; a draft never.
+- **Which, in this order:** the package's own photos after the cover; then the Group Tour Gallery's published photos
+  **linked to this package** (Website → Group tour photos → Tour). Never another tour's, of the same country or not,
+  and never an unlinked one (client, 2026-10-29: Thailand trips had reached the Mustang brochure; before, the rule also
+  took same-country and unlinked photos, and for a group tour the rest of the gallery). Each photo once; a draft never.
+  None linked: the brochure has the package's own photos only.
 - **Order:** within each group, shuffled by the package (a CRC of package id and media id). Two brochures differ, but
   the same brochure is the same on every download. A new gallery photo finds its own place.
 - **Never stretched, never cut:** photos sit in *justified rows*: one height per row, each photo at its own width for

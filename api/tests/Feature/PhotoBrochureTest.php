@@ -38,7 +38,7 @@ class PhotoBrochureTest extends TestCase
     }
 
     #[Test]
-    public function every_published_gallery_photo_is_printed_once_in_an_order_that_never_changes(): void
+    public function each_of_the_tours_published_gallery_photos_is_printed_once_in_an_order_that_never_changes(): void
     {
         $cover = $this->media('cover', 1600, 900);
         PackageImage::query()->where('tour_package_id', $this->package->id)->update(['is_cover' => false]);
@@ -46,9 +46,9 @@ class PhotoBrochureTest extends TestCase
         $sizes = [[1280, 960], [959, 1280], [900, 1600], [1600, 720], [2048, 1536], [1440, 1034], [1226, 880], [1600, 1200], [1280, 960], [1440, 1080]];
         $published = [];
         foreach ($sizes as $i => [$width, $height]) {
-            $published[] = $this->photo("trip-{$i}", $width, $height, $i === 7 ? $this->package->id : null);
+            $published[] = $this->photo("trip-{$i}", $width, $height, $this->package->id);
         }
-        $draft = $this->photo('draft', 1280, 960, null, 'draft');
+        $draft = $this->photo('draft', 1280, 960, $this->package->id, 'draft');
 
         $html = $this->brochure();
 
@@ -61,11 +61,6 @@ class PhotoBrochureTest extends TestCase
             $this->assertStringContainsString($photo->caption_en, $html);
         }
         $this->assertStringNotContainsString($this->src($draft->caption_en, 'card'), $html);
-        // The gallery's photo of this tour comes before the rest of the gallery.
-        $first = strpos($html, $this->src('trip-7', 'card'));
-        foreach ($published as $photo) {
-            $this->assertGreaterThanOrEqual($first, strpos($html, $this->src($photo->caption_en, 'card')));
-        }
         // Departure and return.
         $this->assertStringContainsString(' – ', $html);
         $this->assertStringContainsString('Day-by-day itinerary', $html);
@@ -73,11 +68,12 @@ class PhotoBrochureTest extends TestCase
     }
 
     #[Test]
-    public function a_customized_trip_shows_its_countrys_photos_and_unlinked_ones_but_not_another_countrys(): void
+    public function a_brochure_shows_only_its_own_tours_gallery_photos(): void
     {
         $this->package->update(['trip_type' => 'customized']);
         $sameCountry = TourPackage::query()->where('destination_id', $this->package->destination_id)->whereKeyNot($this->package->id)->firstOrFail();
         $otherCountry = TourPackage::query()->where('destination_id', '!=', $this->package->destination_id)->firstOrFail();
+        $this->photo('this-trip', 1280, 960, $this->package->id);
         $this->photo('nepal-trip', 1280, 960, $sameCountry->id);
         $this->photo('no-trip', 1280, 960, null);
         $this->photo('other-country', 1280, 960, $otherCountry->id);
@@ -87,12 +83,16 @@ class PhotoBrochureTest extends TestCase
         $this->assertStringContainsString('Customized Trip', $html);
         $this->assertStringContainsString('Price per person by', $html);
         $this->assertStringNotContainsString('Departure dates', $html);
-        $this->assertLessThan(strpos($html, $this->src('no-trip', 'card')), strpos($html, $this->src('nepal-trip', 'card')), 'The same country first.');
-        $this->assertStringNotContainsString($this->src('other-country', 'card'), $html);
-
-        // A group tour takes the rest of the gallery too.
-        $this->package->update(['trip_type' => TourPackage::GROUP_FIXED]);
-        $this->assertStringContainsString($this->src('other-country', 'card'), $this->brochure());
+        // Only the photos linked to this tour (client, 2026-10-29): not another tour's in the same country, an unlinked
+        // one or another country's — for a group tour too.
+        foreach ([TourPackage::GROUP_FIXED, 'customized'] as $type) {
+            $this->package->update(['trip_type' => $type]);
+            $html = $this->brochure();
+            $this->assertStringContainsString($this->src('this-trip', 'card'), $html, $type);
+            foreach (['nepal-trip', 'no-trip', 'other-country'] as $other) {
+                $this->assertStringNotContainsString($this->src($other, 'card'), $html, "{$type}: {$other}");
+            }
+        }
     }
 
     #[Test]
@@ -105,7 +105,7 @@ class PhotoBrochureTest extends TestCase
         Storage::disk('public')->put('media/real-card.webp', (string) ob_get_clean());
         $media = Media::query()->create(['disk' => 'public', 'mime' => 'image/webp', 'width' => 40, 'height' => 30, 'is_placeholder' => false,
             'variants' => ['card' => ['path' => 'media/real-card.webp', 'width' => 40, 'height' => 30]]]);
-        TourPhoto::query()->create(['media_id' => $media->id, 'caption_en' => 'Real', 'caption_bn' => 'Real', 'status' => 'published', 'sort_order' => 0]);
+        TourPhoto::query()->create(['media_id' => $media->id, 'caption_en' => 'Real', 'caption_bn' => 'Real', 'tour_package_id' => $this->package->id, 'status' => 'published', 'sort_order' => 0]);
 
         $html = $this->brochure();
 

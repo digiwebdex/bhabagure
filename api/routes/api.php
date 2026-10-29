@@ -182,6 +182,8 @@ Route::prefix('v1')->group(function () {
             Route::get('tour-pages', 'tourPages');
             // A staff preview of a saved page, draft or not: the token in the X-Preview-Token header (docs/tour-landing-pages.md §6).
             Route::get('tour-pages/preview', 'tourPagePreview');
+            // That page printed as its brochure, for staff checking it (§7): the same header, nothing stored.
+            Route::get('tour-pages/preview/brochure', 'tourPagePreviewBrochure');
             Route::get('visas', 'visas');
             Route::get('pricing', 'pricing');
             Route::get('settings', 'settings');

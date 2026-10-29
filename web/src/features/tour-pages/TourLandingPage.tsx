@@ -14,7 +14,8 @@ import { roomPercent, roomPricesFor } from '@/lib/package-price';
 import { BookFromLink } from './BookFromLink';
 import { BookNow } from './BookNow';
 import { Countdown } from './Countdown';
-import { TourVideos } from './TourVideos';
+import { PreviewBrochureButton } from './PreviewBrochureButton';
+import { GuestVideos, VlogPlayer } from './TourVideos';
 
 /** A photo at its own shape: no stretching, no cropping. From the API's own sizes, not the website's image optimiser. */
 function Photo({ photo, sizes, className = '', priority = false }: { photo: PhotoView; sizes: string; className?: string; priority?: boolean }) {
@@ -43,7 +44,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
  * departure with a countdown, each day beside its own photos, earlier trips, prices and what is included — with Book
  * Now along the way. Every word, price and date is the package's; a section with nothing behind it is left out.
  */
-export async function TourLandingPage({ page, views, locale }: { page: TourPageView; views: SiteViews; locale: AppLocale }) {
+export async function TourLandingPage({ page, views, locale, preview = false }: { page: TourPageView; views: SiteViews; locale: AppLocale; preview?: boolean }) {
   const t = await getTranslations({ locale, namespace: 'tourPage' });
   const td = await getTranslations({ locale, namespace: 'detail' });
   const tb = await getTranslations({ locale, namespace: 'booking' });
@@ -58,7 +59,10 @@ export async function TourLandingPage({ page, views, locale }: { page: TourPageV
   const air = pkg.includesAirfare === true ? t('airIncluded') : pkg.includesAirfare === false ? t('landOnly') : t('airAsk');
   const date = countdown?.departsOn ?? null;
   const book = (label = t('bookNow')) => <BookNow packageSlug={pkg.slug} departsOn={date} label={label} />;
-  const brochure = (
+  // On the staff preview, the draft's own printed page (§7); on the website, the customer's download.
+  const brochure = preview ? (
+    <PreviewBrochureButton className={buttonClass('outlineInk', 'lg', 'px-5')} />
+  ) : (
     <DownloadButton
       path={`portal/downloads/packages/${pkg.slug}?${new URLSearchParams({ pax: '2', locale })}`}
       filename={`bhabaghure-${pkg.slug}.pdf`}
@@ -246,7 +250,7 @@ export async function TourLandingPage({ page, views, locale }: { page: TourPageV
               <Eyebrow>{t('guestVideosEyebrow')}</Eyebrow>
               <h2 className="text-fluid-20-26 font-bold tracking-heading">{t('guestVideosHeading')}</h2>
             </div>
-            <TourVideos videos={page.guestVideos} testId="tour-guest-video-list" />
+            <GuestVideos videos={page.guestVideos} />
           </section>
         ) : null}
 
@@ -256,7 +260,7 @@ export async function TourLandingPage({ page, views, locale }: { page: TourPageV
               <Eyebrow>{t('vlogsEyebrow')}</Eyebrow>
               <h2 className="text-fluid-20-26 font-bold tracking-heading">{t('vlogsHeading')}</h2>
             </div>
-            <TourVideos videos={page.vlogs} testId="tour-vlog-list" />
+            <VlogPlayer videos={page.vlogs} />
           </section>
         ) : null}
 

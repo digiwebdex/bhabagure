@@ -55,7 +55,7 @@ class BrochurePhotos
 
         $caption = fn (TourPhoto $photo) => ($locale === 'en' ? ($photo->caption_en ?: $photo->caption_bn) : ($photo->caption_bn ?: $photo->caption_en)) ?: null;
 
-        // The tour's own photos lead, then the gallery's; each shuffled by the package, so two brochures differ but one
+        // The package's own photos lead, then its gallery photos; each shuffled by the package, so two brochures differ but one
         // brochure never changes between downloads.
         $candidates = array_map(fn (Media $media) => [$media, null], self::shuffled($own, $package->id, fn (Media $media) => $media->id));
         foreach (self::gallery($package) as $photo) {
@@ -78,39 +78,29 @@ class BrochurePhotos
     }
 
     /**
-     * The Group Tour Gallery's published photos for this tour, in order — the brochure's and the landing page's memories
-     * (docs/tour-landing-pages.md). By how close they are: of this package, of another tour to the same country, of no
-     * tour. A group tour then takes the rest of the gallery too (client, 2026-10-27); a customized trip doesn't, so a
-     * Nepal brochure shows no Thailand trip (client, 2026-10-27). Within each group, shuffled by the package.
+     * The Group Tour Gallery's published photos of this tour — the brochure's and the landing page's memories
+     * (docs/tour-landing-pages.md §2): only those staff linked to this package, never another tour's or an unlinked one
+     * (client, 2026-10-29: no Thailand trip in a Mustang brochure). Shuffled by the package, so two brochures differ but
+     * one never changes between downloads. None: no memories.
      *
      * @return list<TourPhoto> with image loaded
      */
     public static function gallery(TourPackage $package): array
     {
-        $gallery = TourPhoto::query()->published()->with(['image', 'tourPackage:id,destination_id,slug,status,title_en,title_bn'])->get()
-            ->filter(fn (TourPhoto $photo) => $photo->image !== null);
-        $groups = $gallery->groupBy(fn (TourPhoto $photo) => match (true) {
-            $photo->tour_package_id === $package->id => 0,
-            $photo->tour_package_id !== null && $photo->tourPackage?->destination_id === $package->destination_id => 1,
-            $photo->tour_package_id === null => 2,
-            default => 3,
-        });
+        $own = TourPhoto::query()->published()->where('tour_package_id', $package->id)
+            ->with(['image', 'tourPackage:id,destination_id,slug,status,title_en,title_bn'])->get()
+            ->filter(fn (TourPhoto $photo) => $photo->image !== null)->values()->all();
 
-        $ordered = [];
-        foreach ($package->isGroupTour() ? [0, 1, 2, 3] : [0, 1, 2] as $level) {
-            array_push($ordered, ...self::shuffled($groups->get($level, collect())->values()->all(), $package->id, fn (TourPhoto $photo) => $photo->media_id));
-        }
-
-        return $ordered;
+        return self::shuffled($own, $package->id, fn (TourPhoto $photo) => $photo->media_id);
     }
 
     /** Changes when a photo the brochure prints does, so stored PDFs are made again. */
     public static function fingerprint(TourPackage $package): string
     {
-        $gallery = TourPhoto::query()->published()->with('tourPackage:id,destination_id')->orderBy('id')->get(['id', 'media_id', 'tour_package_id', 'caption_bn', 'caption_en', 'updated_at']);
+        $gallery = TourPhoto::query()->published()->where('tour_package_id', $package->id)->orderBy('id')->get(['id', 'media_id', 'caption_bn', 'caption_en', 'updated_at']);
         $own = $package->images()->get(['id', 'media_id', 'is_cover', 'sort_order']);
 
-        return sha1(json_encode([$gallery->map(fn (TourPhoto $photo) => [$photo->id, $photo->media_id, $photo->tour_package_id, $photo->tourPackage?->destination_id, $photo->caption_bn, $photo->caption_en, $photo->updated_at?->getTimestamp()]), $own->toArray()]));
+        return sha1(json_encode([$gallery->map(fn (TourPhoto $photo) => [$photo->id, $photo->media_id, $photo->caption_bn, $photo->caption_en, $photo->updated_at?->getTimestamp()]), $own->toArray()]));
     }
 
     /**

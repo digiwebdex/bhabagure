@@ -36,7 +36,7 @@ export default async function TourPreviewPage({ params }: PageProps<'/[locale]/s
           <div role="status" className="sticky top-0 z-40 bg-amber px-section-x py-2.5 text-center text-14 font-bold text-white" data-testid="tour-preview-banner">
             {t('previewBanner')}
           </div>
-          <TourLandingPage page={shown.page} views={views} locale={locale} />
+          <TourLandingPage page={shown.page} views={views} locale={locale} preview />
         </>
       ) : null}
       <PreviewStart showInvalid={!shown?.page} />
