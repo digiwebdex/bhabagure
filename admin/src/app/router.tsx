@@ -40,6 +40,7 @@ const InvoicesPage = page(() => import('../features/invoices/InvoicesPage'), 'In
 const InvoiceFormPage = page(() => import('../features/invoices/InvoiceForm'), 'InvoiceForm')
 const InvoiceProductsPage = page(() => import('../features/invoices/ProductsPage'), 'ProductsPage')
 const CustomerAccountsPage = page(() => import('../features/customer-accounts/CustomerAccountsPage'), 'CustomerAccountsPage')
+const TripProfitPage = page(() => import('../features/trip-profit/TripProfitPage'), 'TripProfitPage')
 const CouponsPage = page(() => import('../features/coupons/CouponsPage'), 'CouponsPage')
 const CouponReportPage = page(() => import('../features/coupons/CouponReportPage'), 'CouponReportPage')
 const ChartOfAccountsPage = page(() => import('../features/accounts/ChartOfAccountsPage'), 'ChartOfAccountsPage')
@@ -131,6 +132,7 @@ export const router = createBrowserRouter([
       { path: 'journal', element: <Require permissions={['accounts.view']}><JournalPage /></Require> },
       { path: 'reports/account-transactions', element: <Require permissions={['accounts.view']}><AccountTransactionsPage /></Require> },
       { path: 'reports/general-ledger', element: <Require permissions={['accounts.view']}><GeneralLedgerPage /></Require> },
+      { path: 'trip-profit', element: <Require permissions={['trip_profit.view']}><TripProfitPage /></Require> },
       { path: 'air-ticketing', element: <Require permissions={['air_inquiries.view']}><AirTicketingPage /></Require> },
       { path: 'hotel-requests', element: <Require permissions={['hotel_inquiries.view']}><HotelRequestsPage /></Require> },
       { path: 'documents', element: <Require permissions={bookings}><DocumentsPage /></Require> },

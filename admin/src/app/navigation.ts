@@ -53,6 +53,8 @@ export const NAV_GROUPS: { key: string; heading?: false; items: NavItem[] }[] = 
       { key: 'journal', path: '/journal', icon: 'J', permissions: ['accounts.view'] },
       { key: 'account_transactions', path: '/reports/account-transactions', icon: 'T', permissions: ['accounts.view'] },
       { key: 'general_ledger', path: '/reports/general-ledger', icon: 'L', permissions: ['accounts.view'] },
+      // Each trip's costs, collected and profit, entered by hand and tied to no booking (docs/trip-profit.md).
+      { key: 'trip_profit', path: '/trip-profit', icon: '৳', permissions: ['trip_profit.view'] },
     ],
   },
   {

@@ -334,6 +334,7 @@
       "journal": "Journal entries",
       "account_transactions": "Account transactions",
       "general_ledger": "General ledger",
+      "trip_profit": "Trip profit",
       "coupons": "Coupons",
       "coupon_report": "Coupon report"
     }
@@ -892,6 +893,72 @@
     "previewReady": "Preview link ready — works until {{time}} (30 minutes). Shows the page as saved, marked \"Preview — not public\". Don't share it with customers.",
     "previewBangla": "Open preview (Bangla)",
     "previewEnglish": "Open preview (English)"
+  },
+  "tripProfit": {
+    "title": "Trip profit",
+    "subtitle": "Each trip's costs, what was collected and the profit — entered here by hand, separate from bookings and invoices.",
+    "add": "Add trip",
+    "editTrip": "Edit trip",
+    "edit": "Edit",
+    "editNamed": "Edit {{title}}",
+    "deleteNamed": "Delete {{title}}",
+    "confirmDelete": "Delete “{{title}}”? It leaves the list and the totals. The audit log keeps what it was.",
+    "export": "Download CSV",
+    "exporting": "Preparing…",
+    "exportFailed": "The CSV couldn't be downloaded. Try again.",
+    "period": "Period",
+    "allTime": "All time",
+    "wholeYear": "{{year}} (whole year)",
+    "search": "Search",
+    "searchPlaceholder": "Trip title…",
+    "type": "Trip type",
+    "allTypes": "All",
+    "types": {
+      "group_tour": "Group tour",
+      "custom_trip": "Custom trip",
+      "other": "Other"
+    },
+    "totalTrips": "Trips",
+    "paxNote_one": "{{pax}} traveller",
+    "paxNote_other": "{{pax}} travellers",
+    "totalCollected": "Collected",
+    "totalCost": "Trip costs",
+    "totalProfit": "Net profit",
+    "empty": "No trips for this period",
+    "emptyNote": "Add a trip with its costs and what was collected; total cost and profit are worked out for you.",
+    "columns": {
+      "trip": "Trip",
+      "date": "Date",
+      "pax": "Pax",
+      "cost": "Total cost",
+      "collected": "Collected",
+      "profit": "Profit",
+      "actions": "Actions"
+    },
+    "breakdown": "Cost breakdown",
+    "costs": {
+      "flight": "Flight cost",
+      "land": "Land package cost",
+      "other": "Other cost"
+    },
+    "pageOf": "Page {{page}} of {{pages}}",
+    "loss": "Loss",
+    "perPerson": "{{amount}} per person",
+    "fields": {
+      "title": "Trip title / package name",
+      "titlePlaceholder": "e.g. Mustang Valley Trip — October",
+      "type": "Trip type (optional)",
+      "noType": "No type",
+      "date": "Trip date",
+      "dateHint": "The day the trip leaves; the month filter uses it.",
+      "pax": "Travellers (pax)",
+      "flightHint": "Air tickets for the whole group.",
+      "landHint": "Hotels, transport, guide, land package.",
+      "otherHint": "Visa, entry fees, anything else.",
+      "collected": "Total collected",
+      "collectedHint": "Everything received from the travellers.",
+      "notes": "Notes (optional)"
+    }
   },
   "tourPhotos": {
     "title": "Group tour photos",

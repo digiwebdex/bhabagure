@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\V1\Admin\SupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\TeamMemberController;
 use App\Http\Controllers\Api\V1\Admin\TourLandingPageController;
 use App\Http\Controllers\Api\V1\Admin\TourPhotoController;
+use App\Http\Controllers\Api\V1\Admin\TripProfitController;
 use App\Http\Controllers\Api\V1\Admin\VisaServiceController;
 use App\Http\Controllers\Api\V1\Agent\AttendanceAgentController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
@@ -403,6 +404,19 @@ Route::prefix('v1')->group(function () {
             Route::post('holidays/copy', 'copy');
             Route::put('holidays/{group}', 'update')->whereUuid('group');
             Route::delete('holidays/{group}', 'destroy')->whereUuid('group');
+        });
+        // Finance → Trip profit (docs/trip-profit.md): costs, collected and profit per trip, entered by hand and tied to no
+        // booking. Reading and the CSV with trip_profit.view; changes with trip_profit.manage (admins by default).
+        Route::controller(TripProfitController::class)->group(function () {
+            Route::middleware('permission:trip_profit.view,staff')->group(function () {
+                Route::get('trip-profits', 'index');
+                Route::get('trip-profits/export', 'export');
+            });
+            Route::middleware('permission:trip_profit.manage,staff')->group(function () {
+                Route::post('trip-profits', 'store');
+                Route::put('trip-profits/{id}', 'update')->whereNumber('id');
+                Route::delete('trip-profits/{id}', 'destroy')->whereNumber('id');
+            });
         });
         // Everyone's own attendance and leave: no permission, and no staff id to point elsewhere.
         Route::controller(MyAttendanceController::class)->group(function () {

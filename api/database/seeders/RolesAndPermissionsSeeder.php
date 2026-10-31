@@ -58,6 +58,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'ledger.view_company_balance' => ['finance', 'কোম্পানির ব্যালেন্স দেখা', 'View company balance'],
         'accounts.view' => ['finance', 'হিসাবের তালিকা ও খাতা দেখা', 'View the chart of accounts and ledger'],
         'accounts.manage' => ['finance', 'হিসাব যোগ ও সম্পাদনা', 'Add and edit accounts'],
+        // Finance → Trip profit (docs/trip-profit.md): hand-entered trip costing, for admins (the client, 2026-10-31).
+        'trip_profit.view' => ['finance', 'ট্রিপ ওয়াইজ হিসাব দেখা ও ডাউনলোড', 'View and download trip profit'],
+        'trip_profit.manage' => ['finance', 'ট্রিপ ওয়াইজ হিসাব যোগ, সম্পাদনা ও মুছে ফেলা', 'Add, edit and delete trip profit'],
         'journal.post' => ['finance', 'জার্নাল এন্ট্রি দেওয়া', 'Post journal entries'],
         'staff.manage' => ['staff', 'স্টাফ ব্যবস্থাপনা', 'Manage staff'],
         'bonus.manage' => ['staff', 'বোনাস ব্যবস্থাপনা', 'Manage bonuses'],
@@ -109,7 +112,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cms.manage', 'reports.view', 'reports.export', 'reports.profit_loss', 'system.audit_view',
             'notifications.send', 'notifications.manage', 'support.manage', 'coupons.view', 'coupons.manage',
             'vouchers.view', 'vouchers.manage', 'inbox.view', 'inbox.reply', 'inbox.manage',
-            'analytics.view', 'analytics.export',
+            'analytics.view', 'analytics.export', 'trip_profit.view', 'trip_profit.manage',
         ]],
         'sales_agent' => ['সেলস এজেন্ট', 'Sales agent', [
             'bookings.view_own', 'bookings.create', 'bookings.update', 'customers.view', 'customers.manage', 'b2b_rates.manage',
