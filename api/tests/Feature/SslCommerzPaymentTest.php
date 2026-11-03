@@ -17,6 +17,7 @@ use App\Services\Payments\SslCommerz\SslCommerzGateway;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
@@ -44,6 +45,8 @@ class SslCommerzPaymentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The trips here leave on 31 October 2026: the clock stays before them, whatever today's date is.
+        $this->travelTo(Carbon::parse('2026-10-01 10:00', 'Asia/Dhaka'));
         $this->seed(ContentSeeder::class);
         config([
             'bhabaghure.sslcommerz.mode' => 'sandbox',

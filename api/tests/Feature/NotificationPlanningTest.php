@@ -39,6 +39,8 @@ class NotificationPlanningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The trips here leave on 31 October 2026: the clock stays before them, whatever today's date is.
+        $this->travelTo(Carbon::parse('2026-10-01 10:00', 'Asia/Dhaka'));
         $this->sendNotifications();
     }
 

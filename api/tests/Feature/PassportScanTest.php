@@ -15,6 +15,7 @@ use Aws\Textract\TextractClient;
 use Database\Seeders\ContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
@@ -30,6 +31,8 @@ class PassportScanTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The trip here leaves on 31 October 2026: the clock stays before it, whatever today's date is.
+        $this->travelTo(Carbon::parse('2026-10-01 10:00', 'Asia/Dhaka'));
         Storage::fake('local');
     }
 
