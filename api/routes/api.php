@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\V1\Admin\ReferencePresetController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
+use App\Http\Controllers\Api\V1\Admin\ServiceRecordController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
 use App\Http\Controllers\Api\V1\Admin\StaffBookingController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
@@ -490,6 +491,12 @@ Route::prefix('v1')->group(function () {
             Route::post('customers/{id}/assign', 'assign')->whereNumber('id');
         });
 
+        // What issued invoices sold: the Tickets of Air ticketing and the Bookings of Hotel requests (docs/invoice-services.md).
+        // Which queue's permission applies is checked in the controller.
+        Route::middleware('permission:air_inquiries.view|hotel_inquiries.view|air_inquiries.manage|hotel_inquiries.manage|invoices.manage,staff')->controller(ServiceRecordController::class)->group(function () {
+            Route::get('service-records', 'index');
+            Route::put('service-records/{id}', 'update')->whereNumber('id');
+        });
         // Quotation-request queues: Air ticketing (§4.7) and Hotel requests (Phase 8 §4.B). Per-action permissions are
         // checked in the controller (WorksQuoteRequests).
         foreach (['air-inquiries' => [AirInquiryController::class, 'air_inquiries'], 'hotel-inquiries' => [HotelInquiryController::class, 'hotel_inquiries']] as $path => [$controller, $permission]) {

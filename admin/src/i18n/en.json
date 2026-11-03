@@ -894,6 +894,96 @@
     "previewBangla": "Open preview (Bangla)",
     "previewEnglish": "Open preview (English)"
   },
+  "serviceRecords": {
+    "air": {
+      "tab": "Tickets",
+      "enquiriesTab": "Enquiries",
+      "subtitle": "Tickets sold on invoices: PNR, dates and status, with the next departure on top",
+      "search": "Search by name, phone, PNR, route or invoice…",
+      "empty": "No tickets here",
+      "emptyNote": "An invoice line marked Air Ticket shows here once the invoice is saved."
+    },
+    "hotel": {
+      "tab": "Bookings",
+      "enquiriesTab": "Requests",
+      "subtitle": "Hotel bookings sold on invoices: reservation number, dates and status",
+      "search": "Search by name, phone, hotel, reservation or invoice…",
+      "empty": "No bookings here",
+      "emptyNote": "An invoice line marked Hotel Booking shows here once the invoice is saved."
+    },
+    "filters": {
+      "upcoming": "Upcoming",
+      "soon": "Departure soon",
+      "changed": "Schedule changed",
+      "past": "Past",
+      "cancelled": "Cancelled",
+      "all": "All"
+    },
+    "columns": {
+      "passenger": "Passenger",
+      "guest": "Guest",
+      "route": "Route and dates",
+      "hotel": "Hotel and dates",
+      "pnr": "PNR",
+      "reservation": "Reservation no.",
+      "invoice": "Invoice"
+    },
+    "statuses": {
+      "booked": "Booked",
+      "confirmed": "Confirmed",
+      "schedule_changed": "Schedule changed"
+    },
+    "types": {
+      "other": "Other",
+      "air_ticket": "Air Ticket",
+      "hotel_booking": "Hotel Booking",
+      "tour_package": "Tour Package"
+    },
+    "tripTypes": {
+      "round_trip": "Round trip",
+      "one_way": "One way"
+    },
+    "departureSoon_one": "Departure soon · {{n}} day left",
+    "departureSoon_other": "Departure soon · {{n}} days left",
+    "departsToday": "Departure soon · today",
+    "noReference": "Not yet",
+    "invoiceCancelled": "Invoice cancelled",
+    "noPermission": "You don't have permission to change this",
+    "update": "Update status",
+    "updateTicket": "Update ticket",
+    "updateBooking": "Update hotel booking",
+    "airHint": "Shows in Air ticketing once the invoice is saved. The PNR, dates and status can be changed there later.",
+    "hotelHint": "Shows in Hotel requests once the invoice is saved. The reservation number, dates and status can be changed there later.",
+    "printed": {
+      "departure": "Departure {{date}}",
+      "return": "Return {{date}}",
+      "checkIn": "Check-in {{date}}",
+      "checkOut": "Check-out {{date}}"
+    },
+    "fields": {
+      "whatFor": "This line is for",
+      "from": "From",
+      "to": "To",
+      "tripType": "Trip type",
+      "pnr": "PNR number",
+      "departure": "Departure date",
+      "return": "Return date",
+      "ticketStatus": "Ticket status",
+      "bookingStatus": "Booking status",
+      "passenger": "Passenger name",
+      "guest": "Guest name",
+      "sameAsCustomer": "Same as the customer",
+      "hotelName": "Hotel name",
+      "roomType": "Room type",
+      "reservation": "Reservation / confirmation no.",
+      "checkIn": "Check-in date",
+      "checkOut": "Check-out date",
+      "packageName": "Package name",
+      "sameAsLine": "Same as the item",
+      "scheduleNote": "New schedule",
+      "scheduleNoteHint": "The new flight time or details. The WhatsApp message tells the customer this."
+    }
+  },
   "tripProfit": {
     "title": "Trip profit",
     "subtitle": "Each trip's costs, what was collected and the profit — entered here by hand, separate from bookings and invoices.",

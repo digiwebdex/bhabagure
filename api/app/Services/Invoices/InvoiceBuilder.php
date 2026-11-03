@@ -2,10 +2,12 @@
 
 namespace App\Services\Invoices;
 
+use App\Http\Resources\AdminServiceRecord;
 use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\ServiceRecord;
 use App\Models\Staff;
 use App\Services\AuditLogger;
 use App\Services\Documents\DocumentNumbers;
@@ -157,7 +159,10 @@ final class InvoiceBuilder
     {
         $subtotal = 0;
         $vat = 0;
+        // What the lines sold outlives them: a correction rewrites the lines, and each record finds its own by its key.
+        $records = ServiceRecord::query()->where('invoice_id', $invoice->id)->get()->keyBy('line_key');
         foreach (array_values($data['lines']) as $index => $line) {
+            $lineKey = empty($line['service']) ? null : $this->writeService($invoice, $line, $records->pull($line['service']['line_key'] ?? ''), $staff);
             $gross = LedgerService::paisa($line['quantity'] * $line['unit_price']);
             $discount = min(LedgerService::paisa($line['discount_amount'] ?? 0), $gross);
             $net = $gross - $discount;
@@ -166,6 +171,7 @@ final class InvoiceBuilder
 
             $invoice->items()->create([
                 'kind' => 'deal',
+                'line_key' => $lineKey,
                 'title_en' => $line['title'],
                 'title_bn' => $line['title'],
                 'detail' => $line['detail'] ?? null,
@@ -180,6 +186,14 @@ final class InvoiceBuilder
             ]);
             $subtotal += $net;
             $vat += $lineVat;
+        }
+
+        // A line taken off the invoice, or no longer a ticket or a booking: its record goes, and the log keeps what it was.
+        foreach ($records as $removed) {
+            if ($invoice->invoice_number !== null) {
+                $this->audit->record('service_record.removed', $staff, $invoice, AdminServiceRecord::fields($removed));
+            }
+            $removed->delete();
         }
 
         $documentDiscount = min(LedgerService::paisa($data['discount_amount'] ?? 0), $subtotal);
@@ -200,6 +214,52 @@ final class InvoiceBuilder
             'total_amount' => LedgerService::amount($subtotal - $documentDiscount + $vat + $delivery),
             'updated_by_staff_id' => $staff->id,
         ])->save();
+    }
+
+    /**
+     * What a line sold (docs/invoice-services.md). A correction keeps the record and what has happened to it since: a
+     * status of Schedule changed and its note are set in the service lists, never overwritten from the invoice form.
+     *
+     * @param  array<string, mixed>  $line
+     * @return string the key that ties the record to its line
+     */
+    private function writeService(Invoice $invoice, array $line, ?ServiceRecord $record, Staff $staff): string
+    {
+        $service = $line['service'];
+        $type = $service['type'];
+        $record ??= new ServiceRecord(['invoice_id' => $invoice->id, 'line_key' => (string) Str::ulid()]);
+        $text = fn (string $field) => isset($service[$field]) && trim((string) $service[$field]) !== '' ? trim((string) $service[$field]) : null;
+
+        $status = in_array($service['status'] ?? null, [ServiceRecord::BOOKED, ServiceRecord::CONFIRMED], true)
+            ? $service['status']
+            : ($record->status ?? ServiceRecord::BOOKED);
+        $allowed = ServiceRecord::statusesFor($type);
+        if (! in_array($status, $allowed, true)) {
+            $status = $allowed[0] ?? null;
+        }
+        $air = $type === ServiceRecord::AIR;
+        $oneWay = $air && ($service['trip_type'] ?? null) === ServiceRecord::ONE_WAY;
+
+        $record->fill([
+            'type' => $type,
+            'passenger_name' => $text('passenger_name'),
+            'reference' => $type === ServiceRecord::TOUR ? null : ($air ? ($text('reference') === null ? null : mb_strtoupper($text('reference'))) : $text('reference')),
+            'trip_type' => $air ? $service['trip_type'] : null,
+            'route_from' => $air ? $text('route_from') : null,
+            'route_to' => $air ? $text('route_to') : null,
+            'starts_on' => $service['starts_on'] ?? null,
+            'ends_on' => $oneWay ? null : ($service['ends_on'] ?? null),
+            'hotel_name' => $type === ServiceRecord::HOTEL ? $text('hotel_name') : null,
+            'room_type' => $type === ServiceRecord::HOTEL ? $text('room_type') : null,
+            'package_name' => $type === ServiceRecord::TOUR ? ($text('package_name') ?? $line['title']) : null,
+            'tour_package_id' => $type === ServiceRecord::TOUR ? ($service['tour_package_id'] ?? null) : null,
+            'status' => $status,
+            'schedule_note' => $status === ServiceRecord::SCHEDULE_CHANGED ? $record->schedule_note : null,
+            'schedule_changed_at' => $status === ServiceRecord::SCHEDULE_CHANGED ? $record->schedule_changed_at : null,
+            'updated_by_staff_id' => $staff->id,
+        ])->save();
+
+        return $record->line_key;
     }
 
     /**
@@ -235,6 +295,7 @@ final class InvoiceBuilder
             'vat_rate' => (float) $item->vat_rate,
             'vat_amount' => (float) $item->vat_amount,
             'line_total' => (float) $item->line_total,
+            'service' => $item->line_key !== null && $item->serviceRecord !== null ? AdminServiceRecord::fields($item->serviceRecord) : null,
         ];
     }
 }

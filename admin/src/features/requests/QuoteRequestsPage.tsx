@@ -50,7 +50,7 @@ function readFilters(params: URLSearchParams): RequestFilters {
  * requests, oldest open ones first, flagged after 24 hours. Staff claim one from the pool, send the customer a reply
  * (WhatsApp and email, logged) or write from their own WhatsApp or email, and mark it quoted.
  */
-export function QuoteRequestsPage<T extends QuoteRequest>({ spec }: { spec: RequestSpec<T> }) {
+export function QuoteRequestsPage<T extends QuoteRequest>({ spec, tabs }: { spec: RequestSpec<T>; tabs?: ReactNode }) {
   const { t } = useTranslation()
   const format = useFormat()
   const { number, relativeAge, digits } = format
@@ -187,6 +187,7 @@ export function QuoteRequestsPage<T extends QuoteRequest>({ spec }: { spec: Requ
   return (
     <>
       <PageHeader title={t(`${ns}.title`)} subtitle={t(`${ns}.subtitle`)} />
+      {tabs}
 
       <div className="flex flex-wrap gap-x-5 gap-y-2.5">
         <Chips label={t('common.status')} value={filters.state} onChange={(state) => set({ state, stale: state === 'open' ? filters.stale : false })} options={STATES.map((value) => ({ value, label: t(`${ns}.states.${value}`) }))} />

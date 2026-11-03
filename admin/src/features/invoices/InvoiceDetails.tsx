@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useAuth } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
 import { Dialog, ErrorNotice, useToast } from '../../components/ui/feedback'
 import { Badge, Loading } from '../../components/ui/layout'
 import { downloadDocument } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
+import { serviceSummary, statusTone, type ServiceFields } from '../services/api'
+import { ServiceStatusDialog } from '../services/ServiceStatusDialog'
 import { printPath, useInvoice, type PrintSize } from './api'
 
 /**
@@ -16,6 +20,8 @@ export function InvoiceDetails({ id, onClose }: { id: number; onClose: () => voi
   const { bdt, date } = useFormat()
   const toast = useToast()
   const invoice = useInvoice(id)
+  const { can } = useAuth()
+  const [updating, setUpdating] = useState<(ServiceFields & { id: number }) | null>(null)
 
   // Saved under the invoice's number, e.g. INV-1065.pdf (client, 2026-10-01).
   const print = async (size: PrintSize) => {
@@ -95,6 +101,22 @@ export function InvoiceDetails({ id, onClose }: { id: number; onClose: () => voi
                 <td className="p-2">
                   {line.title}
                   {line.detail ? <span className="block text-12 text-app-muted">{line.detail}</span> : null}
+                  {line.service ? (
+                    <span className="mt-1 flex flex-col items-start gap-1" data-testid="invoice-line-service">
+                      <span className="text-12 text-app-muted">{serviceSummary(line.service, date, t)}</span>
+                      {line.service.status ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Badge tone={statusTone(line.service.status)}>{t(`serviceRecords.statuses.${line.service.status}`)}</Badge>
+                          {data.status === 'issued' && (can('invoices.manage') || can(line.service.type === 'air_ticket' ? 'air_inquiries.manage' : 'hotel_inquiries.manage')) ? (
+                            <button type="button" className={buttonClass('outline', 'sm', 'px-2 py-0.5 text-12')} onClick={() => setUpdating(line.service)}>
+                              {t('serviceRecords.update')}
+                            </button>
+                          ) : null}
+                        </span>
+                      ) : null}
+                      {line.service.status === 'schedule_changed' && line.service.schedule_note ? <span className="text-12 text-app-muted">{line.service.schedule_note}</span> : null}
+                    </span>
+                  ) : null}
                 </td>
                 <td className="p-2 text-center font-display">{line.quantity}</td>
                 <td className="p-2 text-right font-display">{bdt(line.unit_price)}</td>
@@ -159,6 +181,7 @@ export function InvoiceDetails({ id, onClose }: { id: number; onClose: () => voi
           </button>
         </div>
       </div>
+      {updating ? <ServiceStatusDialog key={updating.id} record={updating} onClose={() => setUpdating(null)} /> : null}
     </Dialog>
   )
 }

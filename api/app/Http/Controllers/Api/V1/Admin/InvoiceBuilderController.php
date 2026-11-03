@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\ServiceRecord;
 use App\Models\SiteSetting;
 use App\Models\Transaction;
 use App\Services\AuditLogger;
@@ -87,7 +88,7 @@ class InvoiceBuilderController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $invoice = Invoice::query()->with(['items', 'customer:id,name,phone,email', 'issuedBy:id,name', 'updatedBy:id,name'])->findOrFail($id);
+        $invoice = Invoice::query()->with(['items.serviceRecord', 'customer:id,name,phone,email', 'issuedBy:id,name', 'updatedBy:id,name'])->findOrFail($id);
 
         return response()->json(['data' => self::detail($invoice) + [
             'payments' => self::payments($invoice),
@@ -106,7 +107,7 @@ class InvoiceBuilderController extends Controller
         $data = $this->validated($request);
         $invoice = $this->builder->createDraft($this->party($data), $data, $request->user('staff'));
 
-        return response()->json(['data' => self::detail($invoice->load('items'))], 201);
+        return response()->json(['data' => self::detail($invoice->load('items.serviceRecord'))], 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -123,7 +124,7 @@ class InvoiceBuilderController extends Controller
             return response()->json(['message' => __('invoices.issued_frozen'), 'code' => 'invoice_issued'], 409);
         }
 
-        return response()->json(['data' => self::detail($updated->load('items'))]);
+        return response()->json(['data' => self::detail($updated->load('items.serviceRecord'))]);
     }
 
     public function issue(Request $request, int $id): JsonResponse
@@ -136,7 +137,7 @@ class InvoiceBuilderController extends Controller
             return response()->json(['message' => __('invoices.needs_a_line'), 'code' => 'invoice_empty'], 409);
         }
 
-        return response()->json(['data' => self::detail($issued->load('items'))]);
+        return response()->json(['data' => self::detail($issued->load('items.serviceRecord'))]);
     }
 
     /**
@@ -266,7 +267,36 @@ class InvoiceBuilderController extends Controller
             'lines.*.unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'lines.*.discount_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'lines.*.vat_rate' => ['nullable', 'numeric', 'between:0,100'],
-        ], ['customer.phone.regex' => __('invoices.phone_invalid')]);
+            // What the line is for (docs/invoice-services.md); none for anything else, as every line was before.
+            'lines.*.service' => ['nullable', 'array'],
+            'lines.*.service.type' => ['required_with:lines.*.service', Rule::in(ServiceRecord::TYPES)],
+            'lines.*.service.line_key' => ['nullable', 'string', 'size:26'],
+            'lines.*.service.passenger_name' => ['nullable', 'string', 'max:160'],
+            'lines.*.service.reference' => ['nullable', 'string', 'max:60'],
+            'lines.*.service.trip_type' => ['required_if:lines.*.service.type,'.ServiceRecord::AIR, 'nullable', Rule::in([ServiceRecord::ONE_WAY, ServiceRecord::ROUND_TRIP])],
+            'lines.*.service.route_from' => ['required_if:lines.*.service.type,'.ServiceRecord::AIR, 'nullable', 'string', 'max:80'],
+            'lines.*.service.route_to' => ['required_if:lines.*.service.type,'.ServiceRecord::AIR, 'nullable', 'string', 'max:80'],
+            'lines.*.service.starts_on' => ['required_if:lines.*.service.type,'.ServiceRecord::AIR.','.ServiceRecord::HOTEL, 'nullable', 'date_format:Y-m-d'],
+            'lines.*.service.ends_on' => [
+                'required_if:lines.*.service.type,'.ServiceRecord::HOTEL,
+                'required_if:lines.*.service.trip_type,'.ServiceRecord::ROUND_TRIP,
+                'nullable', 'date_format:Y-m-d', 'after_or_equal:lines.*.service.starts_on',
+            ],
+            'lines.*.service.hotel_name' => ['required_if:lines.*.service.type,'.ServiceRecord::HOTEL, 'nullable', 'string', 'max:160'],
+            'lines.*.service.room_type' => ['nullable', 'string', 'max:80'],
+            'lines.*.service.package_name' => ['nullable', 'string', 'max:160'],
+            'lines.*.service.tour_package_id' => ['nullable', 'integer', 'exists:tour_packages,id'],
+            'lines.*.service.status' => ['nullable', Rule::in([ServiceRecord::BOOKED, ServiceRecord::CONFIRMED, ServiceRecord::SCHEDULE_CHANGED])],
+        ], [
+            'customer.phone.regex' => __('invoices.phone_invalid'),
+            'lines.*.service.trip_type.required_if' => __('services.field.trip_type'),
+            'lines.*.service.route_from.required_if' => __('services.field.route_from'),
+            'lines.*.service.route_to.required_if' => __('services.field.route_to'),
+            'lines.*.service.starts_on.required_if' => __('services.field.starts_on'),
+            'lines.*.service.ends_on.required_if' => __('services.field.ends_on'),
+            'lines.*.service.ends_on.after_or_equal' => __('services.field.ends_after'),
+            'lines.*.service.hotel_name.required_if' => __('services.field.hotel_name'),
+        ]);
     }
 
     /** @return array<string, mixed> */

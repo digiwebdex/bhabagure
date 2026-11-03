@@ -3,6 +3,7 @@
 namespace App\Services\Invoices;
 
 use App\Models\Invoice;
+use App\Models\ServiceRecord;
 use App\Support\Brand;
 use App\Support\Payments\PaymentOptions;
 use Illuminate\Support\Facades\Cache;
@@ -35,6 +36,8 @@ class InvoicePdf
         $key = sha1(implode('|', [
             InvoiceView::TEMPLATE_VERSION, $invoice->id, $invoice->invoice_number, $invoice->status, $invoice->paid_amount,
             $invoice->payment_status, $invoice->updated_at?->getTimestamp(), (int) $header, $locale, (int) $maskPassports, $size, PaymentOptions::fingerprint(), Brand::fingerprint(),
+            // A PNR or a new date, changed after issue in Air ticketing or Hotel requests, prints too.
+            ServiceRecord::query()->where('invoice_id', $invoice->id)->orderBy('id')->get(['reference', 'passenger_name', 'route_from', 'route_to', 'trip_type', 'starts_on', 'ends_on', 'hotel_name', 'room_type', 'package_name'])->toJson(),
         ]));
         $path = "invoices/{$invoice->id}/{$key}.pdf";
         $disk = Storage::disk('local');

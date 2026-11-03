@@ -225,7 +225,7 @@
       @foreach ($items as $i => $item)
         <tr>
           <td class="sl num">{{ \App\Support\Numerals::localizeDigits((string) ($i + 1), $locale) }}</td>
-          <td><span class="what">{{ $item['title'] }}</span>@if ($item['note'])<span class="note">{{ $item['note'] }}</span>@endif</td>
+          <td><span class="what">{{ $item['title'] }}</span>@if ($item['service'] ?? null)<span class="note">{{ $item['service'] }}</span>@endif @if ($item['note'])<span class="note">{{ $item['note'] }}</span>@endif</td>
           <td class="qty num">{{ $item['quantity'] }}</td>
           <td class="rate num">{{ $item['rate'] }}</td>
           <td class="amount num">{{ $item['amount'] }}</td>

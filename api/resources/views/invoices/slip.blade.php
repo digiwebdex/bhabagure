@@ -87,7 +87,7 @@
     <tbody>
       @foreach ($items as $item)
         <tr>
-          <td>{{ $item['title'] }}@if ($item['note'])<span class="note">{{ $item['note'] }}</span>@endif</td>
+          <td>{{ $item['title'] }}@if ($item['service'])<span class="note">{{ $item['service'] }}</span>@endif @if ($item['note'])<span class="note">{{ $item['note'] }}</span>@endif</td>
           <td class="c num">{{ $item['quantity'] }}</td>
           @unless ($delivery)<td class="r num">{{ $item['amount'] }}</td>@endunless
         </tr>

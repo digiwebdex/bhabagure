@@ -306,7 +306,7 @@ function EnquiriesCard({ customer }: { customer: CustomerDetail }) {
             </span>
             {enquiry.message ? <span className="text-14 whitespace-pre-line">{enquiry.message}</span> : null}
             {enquiry.type === 'air_quote' ? (
-              <Link to="/air-ticketing" className="self-start text-12">
+              <Link to="/air-ticketing?state=all" className="self-start text-12">
                 {t('customers.openAirTicketing')}
               </Link>
             ) : enquiry.type === 'hotel_quote' ? (

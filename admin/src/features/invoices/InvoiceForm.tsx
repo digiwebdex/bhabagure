@@ -9,13 +9,15 @@ import { Badge, Card, CardTitle, Loading, PageHeader } from '../../components/ui
 import { ApiError } from '../../lib/api/client'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
 import { whatsAppNumber } from '../inbox/phone'
+import { cleanService, serviceForPickedPackage } from '../services/api'
 import { invoiceActions, invoiceTotals, lineTotals, useInvoice, useInvoiceAction, type InvoiceDetail, type InvoiceInput } from './api'
 import { CustomerFinder } from './CustomerFinder'
 import { ItemCombobox } from './ItemPicker'
+import { LineServiceFields } from './LineServiceFields'
 
 type Line = InvoiceInput['lines'][number]
 
-const blankLine = (): Line => ({ title: '', detail: null, quantity: 1, unit_price: 0, discount_amount: 0, vat_rate: 0 })
+const blankLine = (): Line => ({ title: '', detail: null, quantity: 1, unit_price: 0, discount_amount: 0, vat_rate: 0, service: null })
 
 /**
  * Writing an invoice (docs/phase-9-accounts.md §5), on a page of its own because it is a page of work: who it is for,
@@ -72,6 +74,7 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
       unit_price: line.unit_price,
       discount_amount: line.discount_amount,
       vat_rate: line.vat_rate,
+      service: line.service,
     })) ?? [blankLine()],
   )
   // The line just added with Add New Item, whose Item box takes the focus (and opens its list).
@@ -102,7 +105,7 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
     discount_amount: form.discount_amount || 0,
     delivery_charge: showDelivery ? form.delivery_charge || 0 : 0,
     vat_rate: form.vat_rate || 0,
-    lines: lines.filter((line) => line.title.trim()).map((line) => ({ ...line, title: line.title.trim(), detail: line.detail?.trim() || null })),
+    lines: lines.filter((line) => line.title.trim()).map((line) => ({ ...line, title: line.title.trim(), detail: line.detail?.trim() || null, service: line.service ? cleanService(line.service) : null })),
   })
 
   const done = () => navigate('/invoices')
@@ -182,30 +185,33 @@ function Editor({ detail }: { detail: InvoiceDetail | null }) {
           {lines.map((line, index) => {
             const { net, vat } = lineTotals(line)
             return (
-              <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.7fr)_auto]">
-                <ItemCombobox
-                  label={t('invoices.line.title')}
-                  value={line.title}
-                  // Typed over, it is no longer the picked package: its detail goes.
-                  onChange={(title) => setLine(index, { title, detail: null })}
-                  onPick={(item) => setLine(index, { title: item.title, detail: item.detail, unit_price: item.unit_price })}
-                  disabled={frozen}
-                  error={fieldError(`lines.${index}.title`)}
-                  hint={line.detail}
-                  autoFocus={index === focusLine}
-                />
-                <NumberInput label={t('invoices.line.quantity')} value={line.quantity} onChange={(quantity) => setLine(index, { quantity: quantity ?? 1 })} disabled={frozen} error={fieldError(`lines.${index}.quantity`)} />
-                <NumberInput label={t('invoices.line.price')} value={line.unit_price} onChange={(unit_price) => setLine(index, { unit_price: unit_price ?? 0 })} disabled={frozen} error={fieldError(`lines.${index}.unit_price`)} />
-                <NumberInput label={t('invoices.line.discount')} value={line.discount_amount} onChange={(discount_amount) => setLine(index, { discount_amount: discount_amount ?? 0 })} disabled={frozen} />
-                <NumberInput label={t('invoices.line.vat')} value={line.vat_rate} onChange={(vat_rate) => setLine(index, { vat_rate: vat_rate ?? 0 })} disabled={frozen} />
-                <span className="flex items-end gap-1.5 pb-1">
-                  <span className="font-display text-13 whitespace-nowrap">{bdt(net + vat)}</span>
-                  {!frozen && lines.length > 1 ? (
-                    <button type="button" className={buttonClass('outline', 'sm', 'px-2 py-1 text-12')} aria-label={t('invoices.removeLine')} onClick={() => setLines((all) => all.filter((_, i) => i !== index))}>
-                      ✕
-                    </button>
-                  ) : null}
-                </span>
+              <div key={index} className="flex flex-col gap-2 border-b border-app-line pb-3">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,0.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.7fr)_auto]">
+                  <ItemCombobox
+                    label={t('invoices.line.title')}
+                    value={line.title}
+                    // Typed over, it is no longer the picked package: its detail goes.
+                    onChange={(title) => setLine(index, { title, detail: null })}
+                    onPick={(item) => setLine(index, { title: item.title, detail: item.detail, unit_price: item.unit_price, service: item.package_id ? serviceForPickedPackage(line.service, item.title, item.package_id) : line.service })}
+                    disabled={frozen}
+                    error={fieldError(`lines.${index}.title`)}
+                    hint={line.detail}
+                    autoFocus={index === focusLine}
+                  />
+                  <NumberInput label={t('invoices.line.quantity')} value={line.quantity} onChange={(quantity) => setLine(index, { quantity: quantity ?? 1 })} disabled={frozen} error={fieldError(`lines.${index}.quantity`)} />
+                  <NumberInput label={t('invoices.line.price')} value={line.unit_price} onChange={(unit_price) => setLine(index, { unit_price: unit_price ?? 0 })} disabled={frozen} error={fieldError(`lines.${index}.unit_price`)} />
+                  <NumberInput label={t('invoices.line.discount')} value={line.discount_amount} onChange={(discount_amount) => setLine(index, { discount_amount: discount_amount ?? 0 })} disabled={frozen} />
+                  <NumberInput label={t('invoices.line.vat')} value={line.vat_rate} onChange={(vat_rate) => setLine(index, { vat_rate: vat_rate ?? 0 })} disabled={frozen} />
+                  <span className="flex items-end gap-1.5 pb-1">
+                    <span className="font-display text-13 whitespace-nowrap">{bdt(net + vat)}</span>
+                    {!frozen && lines.length > 1 ? (
+                      <button type="button" className={buttonClass('outline', 'sm', 'px-2 py-1 text-12')} aria-label={t('invoices.removeLine')} onClick={() => setLines((all) => all.filter((_, i) => i !== index))}>
+                        ✕
+                      </button>
+                    ) : null}
+                  </span>
+                </div>
+                <LineServiceFields value={line.service} onChange={(service) => setLine(index, { service })} disabled={frozen} error={(field) => fieldError(`lines.${index}.service.${field}`)} />
               </div>
             )
           })}

@@ -40,6 +40,7 @@ use App\Models\PaymentAttempt;
 use App\Models\Quotation;
 use App\Models\ReferencePreset;
 use App\Models\Review;
+use App\Models\ServiceRecord;
 use App\Models\SiteSetting;
 use App\Models\Staff;
 use App\Models\StaffDocument;
@@ -182,6 +183,7 @@ class AppServiceProvider extends ServiceProvider
             'tour_photo' => TourPhoto::class,
             'tour_landing_page' => TourLandingPage::class,
             'trip_profit' => TripProfit::class,
+            'service_record' => ServiceRecord::class,
             'booking_voucher' => BookingVoucher::class,
             'legal_page_version' => LegalPageVersion::class,
             'invoice_product' => InvoiceProduct::class,

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '../../lib/api/client'
 import type { Data } from '../../lib/api/types'
+import type { ServiceFields } from '../services/api'
 
 /** docs/phase-9-accounts.md §5: invoices staff write themselves, beside the ones a booking issues. */
 export const INVOICE_STATES = ['all', 'draft', 'unpaid', 'partial', 'paid', 'overdue', 'void'] as const
@@ -18,6 +19,8 @@ export type InvoiceLine = {
   vat_rate: number
   vat_amount: number
   line_total: number
+  /** What it is for, when it is a ticket, a hotel booking or a tour package (docs/invoice-services.md). */
+  service: (ServiceFields & { id: number }) | null
 }
 
 /** What an invoice can be printed on (docs/phase-9-accounts.md §5). */
@@ -125,7 +128,7 @@ export type InvoiceInput = {
   discount_label: string | null
   discount_amount: number
   vat_rate: number
-  lines: { title: string; detail: string | null; quantity: number; unit_price: number; discount_amount: number; vat_rate: number }[]
+  lines: { title: string; detail: string | null; quantity: number; unit_price: number; discount_amount: number; vat_rate: number; service: ServiceFields | null }[]
 }
 
 export const invoiceActions = {

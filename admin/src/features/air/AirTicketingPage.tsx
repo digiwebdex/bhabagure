@@ -1,5 +1,8 @@
+import { useSearchParams } from 'react-router'
+
 import type { AirInquiry } from '../requests/api'
 import { QuoteRequestsPage, type RequestSpec } from '../requests/QuoteRequestsPage'
+import { ServiceRecordsPage, ServiceTabs } from '../services/ServiceRecordsPage'
 
 const route = (row: AirInquiry) => `${row.from ?? '?'} → ${row.to ?? '?'}`
 
@@ -25,10 +28,11 @@ const AIR: RequestSpec<AirInquiry> = {
 }
 
 /**
- * Air ticketing — the enquiry queue (docs/phase-5-admin-core.md §4.7). Staff reply from here (WhatsApp and email, logged)
- * or from their own WhatsApp or email, and mark the enquiry quoted; fares, PNRs and airline commission come with the rest
- * of air ticketing.
+ * Air ticketing: the tickets invoices sold (docs/invoice-services.md), and the enquiry queue (docs/phase-5-admin-core.md
+ * §4.7), where staff reply (WhatsApp and email, logged) or write from their own WhatsApp or email, and mark the enquiry
+ * quoted. The queue's filters are in the address (the sidebar badge opens ?state=open&stale=1), which is what opens it.
  */
 export function AirTicketingPage() {
-  return <QuoteRequestsPage spec={AIR} />
+  const [params] = useSearchParams()
+  return params.has('state') ? <QuoteRequestsPage spec={AIR} tabs={<ServiceTabs kind="air" active="enquiries" />} /> : <ServiceRecordsPage kind="air" />
 }

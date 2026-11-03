@@ -1,0 +1,37 @@
+<?php
+
+return [
+    'invoice_cancelled' => 'This invoice has been cancelled, so its record can no longer be changed.',
+    'schedule_note_required' => 'Write what the new schedule is.',
+    'field' => [
+        'trip_type' => 'Choose one way or round trip.',
+        'route_from' => 'Enter where the flight leaves from.',
+        'route_to' => 'Enter where the flight goes to.',
+        'starts_on' => 'Choose the departure or check-in date.',
+        'ends_on' => 'Choose the return or check-out date.',
+        'ends_after' => 'The return or check-out date can\'t be before the departure or check-in date.',
+        'hotel_name' => 'Enter the hotel name.',
+    ],
+    'whatsapp' => [
+        'greeting' => 'Dear :name,',
+        'air_changed' => 'The schedule of your flight has changed.',
+        'air_details' => 'Here are your flight details.',
+        'hotel_details' => 'Here are your hotel booking details.',
+        'passenger' => 'Passenger: :value',
+        'pnr' => 'PNR: :value',
+        'route' => 'Route: :from → :to',
+        'new_schedule' => 'New schedule: :value',
+        'departure' => 'Departure: :date',
+        'return' => 'Return: :date',
+        'hotel' => 'Hotel: :value',
+        'room' => 'Room: :value',
+        'reservation' => 'Reservation number: :value',
+        'check_in' => 'Check-in: :date',
+        'check_out' => 'Check-out: :date',
+        'status' => 'Status: :value',
+        'statuses' => ['booked' => 'Booked', 'confirmed' => 'Confirmed', 'schedule_changed' => 'Schedule changed'],
+        'be_ready' => 'Please keep your passport and tickets ready.',
+        'help' => 'For any help, call us: :phone',
+        'thanks' => 'Thank you, :brand',
+    ],
+];

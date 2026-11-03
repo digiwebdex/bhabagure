@@ -2,6 +2,7 @@
 
 namespace App\Services\Invoices;
 
+use App\Http\Resources\AdminServiceRecord;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\SiteSetting;
@@ -25,9 +26,10 @@ final class InvoiceView
      * 5: English only (2026-09-19); 6: a smaller logo (2026-09-23); 7: notes of any length run on to further pages, and a
      * line's detail prints under it (2026-10-01); 8: the signatures at the foot of the last page (2026-10-01); 9: reversed
      * payments and their reversals left off (2026-10-16); 10: payment dates in Dhaka time (2026-10-22); 11: the refund policy link at the
-     * foot (2026-10-22). A stored PDF from before is made again.
+     * foot (2026-10-22); 12: what a line sold, its PNR or reservation number and dates, under it (2026-11-04). A stored PDF
+     * from before is made again.
      */
-    public const TEMPLATE_VERSION = '11';
+    public const TEMPLATE_VERSION = '12';
 
     /**
      * Printed at the foot of every invoice (the client, 2026-10-22): a reference only, never a claim the customer agreed
@@ -45,7 +47,7 @@ final class InvoiceView
         // A printed invoice is in English only — words, digits and dates — whatever the customer's language (the
         // client's decision, 2026-09-19). The parameter stays for the callers; it no longer changes the page.
         $locale = 'en';
-        $invoice->loadMissing('items');
+        $invoice->loadMissing('items.serviceRecord');
         $n = fn ($value) => Numerals::number($value, $locale);
         // "BDT", not the ৳ sign: an English-only document (2026-09-19).
         $bdt = fn ($value) => Numerals::bdt($value, $locale, 'auto', 'code');
@@ -141,6 +143,8 @@ final class InvoiceView
             // then its own discount and VAT, which the amount would otherwise not read as quantity × rate.
             'items' => $invoice->items->map(fn (InvoiceItem $item) => [
                 'title' => $item->title_en ?: $item->title_bn,
+                // What it sold, as it stands today: a PNR or a new date reaches the customer's copy (docs/invoice-services.md).
+                'service' => $item->line_key !== null && $item->serviceRecord !== null ? AdminServiceRecord::printedLine($item->serviceRecord) : null,
                 'note' => implode(' · ', array_filter([
                     $item->detail,
                     $item->note,

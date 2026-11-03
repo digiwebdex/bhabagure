@@ -5,13 +5,14 @@ namespace App\Models;
 use App\Exceptions\InvoiceFrozen;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class InvoiceItem extends Model
 {
     /** The longest detail or note under a line (a TEXT column takes about four times as much). */
     public const TEXT_MAX = 2000;
 
-    protected $fillable = ['kind', 'title_en', 'title_bn', 'detail', 'note', 'quantity', 'unit_price', 'discount_amount', 'vat_rate', 'vat_amount', 'line_total', 'sort_order'];
+    protected $fillable = ['kind', 'line_key', 'title_en', 'title_bn', 'detail', 'note', 'quantity', 'unit_price', 'discount_amount', 'vat_rate', 'vat_amount', 'line_total', 'sort_order'];
 
     protected function casts(): array
     {
@@ -34,5 +35,11 @@ class InvoiceItem extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    /** What the line sold, when it is an air ticket, a hotel booking or a tour package (docs/invoice-services.md). */
+    public function serviceRecord(): HasOne
+    {
+        return $this->hasOne(ServiceRecord::class, 'line_key', 'line_key');
     }
 }

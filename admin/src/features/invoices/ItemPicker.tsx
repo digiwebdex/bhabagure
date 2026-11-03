@@ -11,7 +11,8 @@ import { useFormat } from '../../lib/useFormat'
 import { useCatalogue, useSaveProduct, type CatalogueItem } from './products'
 import { useDismiss } from './useDismiss'
 
-export type PickedItem = { title: string; detail: string | null; unit_price: number }
+/** `package_id`: picked from the packages, so the line is a tour package (docs/invoice-services.md). */
+export type PickedItem = { title: string; detail: string | null; unit_price: number; package_id?: number | null }
 
 /** The panel under a box: the list it offers. */
 export function Dropdown({ children, testId }: { children: ReactNode; testId?: string }) {
@@ -115,7 +116,7 @@ export function ItemCombobox({ label, value, onChange, onPick, error, hint, disa
               <div key={group.key} className="flex flex-col">
                 <span className="px-2 pt-2 pb-1 font-display text-11 tracking-eyebrow text-app-muted uppercase">{group.label}</span>
                 {group.items.map((item) => (
-                  <Option key={item.key} item={item} price={bdt(item.unit_price)} onPick={() => pick({ title: item.name, detail: item.description, unit_price: item.unit_price })} />
+                  <Option key={item.key} item={item} price={bdt(item.unit_price)} onPick={() => pick({ title: item.name, detail: item.description, unit_price: item.unit_price, package_id: item.kind === 'package' ? item.id : null })} />
                 ))}
               </div>
             ))}

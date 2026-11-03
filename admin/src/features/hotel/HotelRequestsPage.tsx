@@ -1,5 +1,8 @@
+import { useSearchParams } from 'react-router'
+
 import type { HotelInquiry } from '../requests/api'
 import { QuoteRequestsPage, type RequestSpec } from '../requests/QuoteRequestsPage'
+import { ServiceRecordsPage, ServiceTabs } from '../services/ServiceRecordsPage'
 
 const HOTEL: RequestSpec<HotelInquiry> = {
   kind: 'hotel',
@@ -33,9 +36,11 @@ const HOTEL: RequestSpec<HotelInquiry> = {
 }
 
 /**
- * Hotel requests (docs/phase-8-visa-quotes-pricing-downloads.md §4.B): the website's hotel quotation requests. Staff send
- * the quotation as a reply (WhatsApp and email, logged) and mark the request quoted.
+ * Hotel requests: the bookings invoices sold (docs/invoice-services.md), and the website's hotel quotation requests
+ * (docs/phase-8-visa-quotes-pricing-downloads.md §4.B), where staff send the quotation as a reply (WhatsApp and email,
+ * logged) and mark the request quoted.
  */
 export function HotelRequestsPage() {
-  return <QuoteRequestsPage spec={HOTEL} />
+  const [params] = useSearchParams()
+  return params.has('state') ? <QuoteRequestsPage spec={HOTEL} tabs={<ServiceTabs kind="hotel" active="enquiries" />} /> : <ServiceRecordsPage kind="hotel" />
 }
