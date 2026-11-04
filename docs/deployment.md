@@ -21,6 +21,7 @@ systemd units named `bhabaghure-*`.
 | Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **enabled and running** 2026-09-14 |
 | Queue worker | `bhabaghure-queue.service` → `php artisan queue:work redis` (one worker, §5) | **running** 2026-09-14, preflight passed |
 | Invoice PDFs | Chrome for Testing in `/var/www/Bhabagure/tools` | **installed** |
+| Inbox voice notes | `/usr/bin/ffmpeg` from the shared box's own packages, not installed by this project (`docs/admin-inbox.md` §9) | **used** since 2026-11-04 |
 | MySQL | database `bhabaghure` (utf8mb4_unicode_ci), user `bhabaghure_user@127.0.0.1` with privileges on `bhabaghure.*` only; the password was generated on the server and exists only in `api/.env` | **created** 2026-09-14 |
 | Redis | the box's shared Redis 7.0 (localhost, 16 databases): **database 12 = queue, 13 = cache**, prefix `bhabaghure_`, client Predis | **reserved** — 0 and 3 hold other sites' keys; the worker refuses anything else |
 

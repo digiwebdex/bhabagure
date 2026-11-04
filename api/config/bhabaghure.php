@@ -154,6 +154,12 @@ return [
             'graph_url' => env('META_GRAPH_URL', 'https://graph.facebook.com/v21.0'),
             // Photos, PDFs and voice notes staff attach or customers send, in kilobytes.
             'max_attachment_kb' => 16384,
+            // Voice notes recorded in the reply box (docs/admin-inbox.md §9), converted with ffmpeg for the channel. The
+            // full path: php-fpm clears the environment, so its workers have no PATH to find it by. The upload limit
+            // is php-fpm's own (deploy/php-fpm/bhabaghure.conf); the admin stops recording at the length limit.
+            'ffmpeg' => env('INBOX_FFMPEG', '/usr/bin/ffmpeg'),
+            'voice_note_max_seconds' => 300,
+            'voice_note_max_kb' => 6144,
             // WhatsApp chats staff may start with new numbers in a day, for the whole office (client, 2026-10-01;
             // docs/admin-inbox.md §8): WhatsApp restricts a number that messages many people who haven't saved it.
             'new_chats_per_day' => (int) env('INBOX_NEW_CHATS_PER_DAY', 30),

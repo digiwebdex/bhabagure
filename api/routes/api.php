@@ -686,6 +686,8 @@ Route::prefix('v1')->group(function () {
                     // A WhatsApp chat with a number typed in (docs/admin-inbox.md §8).
                     Route::post('conversations', 'start')->middleware('throttle:inbox-replies');
                     Route::post('conversations/{id}/messages', 'reply')->whereNumber('id')->middleware('throttle:inbox-replies');
+                    Route::post('conversations/{id}/send-audio', 'sendAudio')->whereNumber('id')->middleware('throttle:inbox-replies');
+                    Route::post('conversations/{id}/mark-unread', 'markUnread')->whereNumber('id');
                     Route::post('conversations/{id}/assign', 'assign')->whereNumber('id');
                     Route::post('conversations/{id}/{action}', 'status')->whereNumber('id')->whereIn('action', ['close', 'reopen']);
                     Route::post('conversations/{id}/customer', 'linkCustomer')->whereNumber('id');

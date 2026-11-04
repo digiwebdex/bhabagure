@@ -55,7 +55,9 @@ SMS is not in the inbox: bulksmsbd.net only sends, it cannot receive replies.
   says so and suggests a call.
 
 **Replies** (`SendInboxMessage`, on the notifications queue):
-- Text, and optionally a photo, PDF or voice note of up to 16 MB.
+- Text, and optionally a photo, PDF or audio file. Up to 6 MB in practice: the rule in the code allows 16 MB, but
+  php-fpm (`deploy/php-fpm/bhabaghure.conf`) stops an upload at 6 MB and nginx at 8 MB first.
+- Or a voice note recorded in the reply box (§9).
 - The provider fetches the file once through a 30-minute signed link, `/api/v1/public/inbox-files/…`.
 - A reply that can't go shows "Not sent" with the reason.
 - Answering reads the chat (and, once the reply has gone, sends the customer blue ticks), and an unassigned chat
@@ -75,7 +77,8 @@ SMS is not in the inbox: bulksmsbd.net only sends, it cannot receive replies.
 - The customer panel shows the linked customer and their latest bookings, with **Start booking** (New booking with
   the customer picked). Or it offers **Create lead** from the chat (the WhatsApp number is filled in; on Messenger
   staff ask for it), or linking an existing customer.
-- Chat actions: take or release it; admins assign it; close or reopen it (a new message reopens it).
+- Chat actions: take or release it; admins assign it; mark it as unread (§10); close or reopen it (a new message
+  reopens it).
 - **Inbox → Settings** (admins): the WhatsApp connection's state, webhook URL and events; the Facebook Page connection
   with Meta's steps, the callback URL and verify token; the quick-reply editor. The Page token and App secret are
   checked with Facebook, stored encrypted and never shown again.
@@ -193,3 +196,56 @@ a number that has no chat offers **Start a chat with +880…**, which opens the 
 Tests: `InboxTest` (a new number, the list, the customer's answer and the name; an existing and a privacy-id chat; a
 wrong number, "not on WhatsApp", another country's number, the daily limit and the next day, permissions, the inbox off)
 and `admin/e2e/inbox.spec.ts` (from the search, the same number again, a number without its code).
+
+## 9. Voice notes from the reply box (client, 2026-11-04)
+
+Staff with `inbox.reply` record a voice note in the browser and send it to the customer. Decided with the owner: Stop,
+listen, then Send, with no sending straight from the recording, because it goes from the company's main number; and
+5 minutes at most, when recording stops by itself.
+
+**In the reply box:** 🎤 beside 📎. While recording: Cancel, the time, the microphone's level, Stop. After Stop: Delete, a
+player, **Send voice note**. What was being typed stays in the box. The microphone is released when recording stops, and
+when staff cancel or leave the chat; a recording not sent is gone with it. A browser that can't record shows no 🎤. A
+blocked or missing microphone gets a message saying what to do.
+
+**`POST /admin/inbox/conversations/{id}/send-audio`** (field `audio`, shares the replies' rate limit). Browsers record
+different formats and WaSender doesn't list WebM, so `VoiceNotes` converts every recording with ffmpeg, in the request:
+
+| Channel | Sent as | How it goes |
+|---|---|---|
+| WhatsApp | one channel of Opus in Ogg, 32 kbit/s (`.ogg`, `audio/ogg`) | WaSender's `audioUrl`, which its documentation says is "sent as voice note" |
+| Messenger | one channel of AAC in M4A, 64 kbit/s (`.m4a`, `audio/mp4`) | an `audio` attachment, inside the 24-hour window. Meta's public pages don't list the audio formats it accepts, so this needs a real send to confirm |
+
+- The input is read as what its first bytes say it is (WebM, Ogg or MP4; never the name or type the browser gave), and
+  ffmpeg is limited to that one file. Anything else is refused without running ffmpeg.
+- A recording that can't be converted, or ffmpeg missing from the server, is refused with a message saying to record
+  again, and logged as `Inbox voice note not converted`. Nothing is kept or sent.
+- After that it is a reply like any other: encrypted on the private disk, paced with the other replies, fetched once
+  through the signed link, with ticks, "Not sent" and a player bubble. Answering reads and takes the chat.
+
+**On the server:** `/usr/bin/ffmpeg` comes from the shared box's own packages, and this project didn't install it. If it
+is ever removed, voice notes stop with the message above and everything else carries on. `INBOX_FFMPEG` overrides the
+path. A real 4-second Chrome recording took about 0.1 s and 50 MB to convert (checked on the server, 2026-11-04).
+
+**Older Safari:** it may not play Ogg Opus, which is also the format of every customer voice note here. A note recorded
+in Safari still goes to the customer; staff on such a Safari may just not be able to play the Ogg bubbles.
+
+Tests: `InboxTest` (WhatsApp and Messenger formats, the signed link, the echo, Firefox and Safari containers, what is
+refused, the window, permissions) and `admin/e2e/inbox-voice.spec.ts` (Chrome's fake microphone: cancel, record, delete,
+send, and the microphone let go). On Windows the e2e API uses `scripts/e2e-fake-ffmpeg.cmd`, which copies the file,
+because there is no ffmpeg there.
+
+## 10. Mark as unread (client, 2026-11-04)
+
+**Mark as unread** in the chat's header (`inbox.reply`; `POST /admin/inbox/conversations/{id}/mark-unread`) flags a chat
+to come back to later, and returns to the list as WhatsApp does.
+
+- **For the whole office** (the owner's choice), on the same `unread_count` as new messages: the list, the Unread filter
+  and the sidebar badge all count it. Whoever opens it next clears it. A count above zero stays as it is. The person who
+  marks it sees the badge change at once; colleagues within a minute, as with new messages.
+- **A closed chat reopens**, or it wouldn't show under Unread.
+- **Nothing reaches the customer.** Blue ticks they already have can't be taken back.
+- It is in the audit log (`inbox.marked_unread`).
+
+A chat now clears its count only when it is opened, or when a customer's new message arrives while it is open. Before,
+it cleared whenever the count was above zero, so a chat left open on a colleague's screen would have undone this at once.

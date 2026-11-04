@@ -119,11 +119,32 @@ class InboxController extends Controller
         return response()->json(['data' => self::message($message->load('staff'))], Response::HTTP_CREATED);
     }
 
+    /** POST /admin/inbox/conversations/{id}/send-audio: a voice note recorded in the reply box (docs/admin-inbox.md §9). */
+    public function sendAudio(Request $request, int $id, InboxDesk $desk): JsonResponse
+    {
+        $tooBig = __('inbox.voice_note_too_big');
+        $request->validate(
+            ['audio' => ['required', 'file', 'max:'.config('bhabaghure.notifications.inbox.voice_note_max_kb')]],
+            // "uploaded": over php-fpm's own upload limit, which refuses it before the rule above can.
+            ['audio.max' => $tooBig, 'audio.uploaded' => $tooBig],
+        );
+        $message = $desk->voiceNote(Conversation::query()->findOrFail($id), $request->user('staff'), $request->file('audio'));
+
+        return response()->json(['data' => self::message($message->load('staff'))], Response::HTTP_CREATED);
+    }
+
     public function read(int $id, InboxDesk $desk): JsonResponse
     {
         $desk->markRead(Conversation::query()->findOrFail($id));
 
         return response()->json(['data' => null]);
+    }
+
+    public function markUnread(Request $request, int $id, InboxDesk $desk): JsonResponse
+    {
+        $desk->markUnread(Conversation::query()->findOrFail($id), $request->user('staff'));
+
+        return $this->show($request, $id);
     }
 
     public function assign(Request $request, int $id, InboxDesk $desk): JsonResponse

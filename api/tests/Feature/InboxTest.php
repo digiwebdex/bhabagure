@@ -8,15 +8,18 @@ use App\Models\Customer;
 use App\Models\CustomerLoginCode;
 use App\Models\NotificationMessage;
 use App\Models\SiteSetting;
+use App\Models\Staff;
 use App\Services\Inbox\MessengerSettings;
 use App\Services\Notifications\NotificationDelivery;
 use App\Services\Notifications\NotificationSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -32,6 +35,9 @@ class InboxTest extends TestCase
     private const SECRET = 'wasender-webhook-secret-for-tests';
 
     private const WASENDER = 'https://www.wasenderapi.com/api';
+
+    /** A recording's first bytes, as Chrome writes them: the WebM (EBML) signature. */
+    private const WEBM = "\x1A\x45\xDF\xA3recording";
 
     protected function setUp(): void
     {
@@ -480,6 +486,201 @@ class InboxTest extends TestCase
         config(['bhabaghure.notifications.inbox.whatsapp' => false]);
         $start('01711000004')->assertUnprocessable()->assertJsonPath('errors.phone.0', __('inbox.whatsapp_off'));
         $this->assertSame(3, Conversation::query()->count());
+    }
+
+    #[Test]
+    public function a_recorded_voice_note_is_converted_to_ogg_opus_and_whatsapp_fetches_it_as_audio(): void
+    {
+        Http::fake([self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 7101]])]);
+        Process::fake(self::ffmpegWrites('OGG-OPUS-BYTES'));
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Ektu bolben?')])->assertOk();
+        $conversation = Conversation::query()->sole();
+        $agent = $this->staff('sales_agent');
+
+        // Chrome's recording, called by a name that means nothing: its first bytes decide how it is read.
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('anything.bin', self::WEBM))
+            ->assertCreated()
+            ->assertJsonPath('data.origin', 'staff')
+            ->assertJsonPath('data.attachment.kind', 'audio')
+            ->assertJsonPath('data.attachment.mime', 'audio/ogg')
+            ->assertJsonPath('data.attachment.bytes', 14);
+
+        Process::assertRan(function (PendingProcess $process) {
+            $args = (array) $process->command;
+
+            return $args[0] === config('bhabaghure.notifications.inbox.ffmpeg')
+                && self::argAfter($args, '-f') === 'matroska' && self::argAfter($args, '-protocol_whitelist') === 'file'
+                && self::argAfter($args, '-c:a') === 'libopus' && self::argAfter($args, '-ac') === '1' && self::argAfter($args, '-t') === '305';
+        });
+
+        $note = ConversationMessage::query()->where('origin', 'staff')->sole();
+        $this->assertSame('sent', $note->status);
+        $this->assertNull($note->body);
+        $this->assertMatchesRegularExpression('/^voice-note-\d{8}-\d{6}\.ogg$/', (string) $note->attachment_name);
+        $this->assertStringNotContainsString('OGG-OPUS-BYTES', (string) Storage::disk('local')->get((string) $note->attachment_path), 'kept encrypted');
+        $this->assertSame('🎤 Voice message', $conversation->fresh()->last_message_preview);
+        // Answering reads the chat and takes it, as any reply does.
+        $this->assertSame([0, $agent->id], [$conversation->fresh()->unread_count, $conversation->fresh()->assigned_staff_id]);
+
+        // WaSender is given the short signed link as audioUrl, with no caption, and gets the converted file from it.
+        $url = null;
+        Http::assertSent(function (HttpRequest $request) use (&$url) {
+            if ($request->url() !== self::WASENDER.'/send-message') {
+                return false; // the read receipt that follows the reply
+            }
+            $url = $request['audioUrl'] ?? null;
+
+            return $request['to'] === '+8801711000001' && ! isset($request['text']);
+        });
+        $this->assertStringEndsWith('.ogg', (string) parse_url((string) $url, PHP_URL_PATH));
+        $file = $this->get(parse_url((string) $url, PHP_URL_PATH).'?'.parse_url((string) $url, PHP_URL_QUERY))->assertOk()->assertHeader('Content-Type', 'audio/ogg');
+        $this->assertSame('OGG-OPUS-BYTES', $file->getContent());
+
+        // WaSender echoes it back as the phone's own voice message: linked to this one, not filed twice.
+        $this->wasender('message.sent', ['msgId' => 7101, 'key' => ['id' => 'OUTV1', 'fromMe' => true, 'remoteJid' => '+8801711000001'], 'success' => true])->assertOk();
+        $this->wasender('messages.upsert', ['messages' => [['key' => ['id' => 'OUTV1', 'fromMe' => true, 'remoteJid' => '8801711000001@s.whatsapp.net'], 'message' => ['audioMessage' => ['mimetype' => 'audio/ogg; codecs=opus', 'ptt' => true]]]]])->assertOk();
+        $this->assertSame(2, ConversationMessage::query()->count());
+        $this->assertSame('OUTV1', $note->fresh()->external_message_id);
+    }
+
+    #[Test]
+    public function firefox_and_safari_recordings_are_read_by_what_they_are(): void
+    {
+        Http::fake([self::WASENDER.'/send-message' => Http::response(['success' => true, 'data' => ['msgId' => 7102]])]);
+        Process::fake(self::ffmpegWrites('CONVERTED'));
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Hi')])->assertOk();
+        $conversation = Conversation::query()->sole();
+        $agent = $this->staff('sales_agent');
+
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.ogg', "OggS\x00\x02recording"))->assertCreated();
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.m4a', "\x00\x00\x00\x20ftypM4A recording"))->assertCreated();
+
+        Process::assertRan(fn (PendingProcess $process) => self::argAfter((array) $process->command, '-f') === 'ogg');
+        Process::assertRan(fn (PendingProcess $process) => self::argAfter((array) $process->command, '-f') === 'mov');
+    }
+
+    #[Test]
+    public function on_messenger_a_voice_note_is_aac_in_m4a_and_goes_as_an_audio_attachment_inside_the_24_hours(): void
+    {
+        Http::fake(['https://graph.facebook.com/*' => Http::response(['message_id' => 'm_VOICE1'])]);
+        Process::fake(self::ffmpegWrites('M4A-BYTES'));
+        $agent = $this->staff('sales_agent');
+        MessengerSettings::save('PAGE1', 'Bhabaghure Holidays', 'EAAG-page-token-1234567890', 'app-secret-1234567890', $agent);
+        $conversation = Conversation::query()->create(['channel' => 'messenger', 'external_id' => 'PSID1', 'name' => 'Mim Akter', 'status' => 'open', 'unread_count' => 0, 'last_incoming_at' => now()->subHour()]);
+
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.webm', self::WEBM))
+            ->assertCreated()->assertJsonPath('data.attachment.mime', 'audio/mp4')->assertJsonPath('data.attachment.kind', 'audio');
+
+        Process::assertRan(fn (PendingProcess $process) => self::argAfter((array) $process->command, '-c:a') === 'aac');
+        $note = ConversationMessage::query()->sole();
+        $this->assertStringEndsWith('.m4a', (string) $note->attachment_name);
+        Http::assertSent(fn (HttpRequest $request) => str_contains($request->url(), '/me/messages') && $request['message']['attachment']['type'] === 'audio'
+            && str_contains((string) $request['message']['attachment']['payload']['url'], '/api/v1/public/inbox-files/'));
+        $this->assertSame('m_VOICE1', $note->external_message_id);
+
+        // Past Meta's window it is refused before anything is converted.
+        $this->travel(25)->hours();
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.webm', self::WEBM))->assertUnprocessable()->assertJsonPath('errors.body.0', __('inbox.messenger_window'));
+        Process::assertRanTimes(fn () => true, 1);
+        $this->assertSame(1, ConversationMessage::query()->count());
+    }
+
+    #[Test]
+    public function a_recording_that_cant_be_converted_says_so_and_nothing_is_sent_or_kept(): void
+    {
+        Http::fake();
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Hi')])->assertOk();
+        $conversation = Conversation::query()->sole();
+        $agent = $this->staff('sales_agent');
+        $unreadable = fn ($response) => $response->assertUnprocessable()->assertJsonPath('errors.audio.0', __('inbox.voice_note_unreadable'));
+
+        // Not a recording at all, whatever it is called: ffmpeg is never given it.
+        Process::fake();
+        $unreadable($this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.webm', "#EXTM3U\nhttp://169.254.169.254/latest")));
+        $unreadable($this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.ogg', '')));
+        Process::assertNothingRan();
+
+        // ffmpeg fails, or produces nothing.
+        Process::fake(fn () => Process::result('', 'Output file does not contain any stream', 1));
+        $unreadable($this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.webm', self::WEBM)));
+        Process::fake(fn () => Process::result());
+        $unreadable($this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.webm', self::WEBM)));
+
+        // Too big, and no file.
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->create('voice.webm', 7000))->assertUnprocessable()->assertJsonPath('errors.audio.0', __('inbox.voice_note_too_big'));
+        $this->actingAsApi($agent)->postJson("/api/v1/admin/inbox/conversations/{$conversation->id}/send-audio")->assertUnprocessable()->assertJsonValidationErrors('audio');
+
+        $this->assertSame(1, ConversationMessage::query()->count());
+        $this->assertSame(1, $conversation->fresh()->unread_count, 'still waiting for an answer');
+        $this->assertSame([], Storage::disk('local')->allFiles('inbox'));
+        Http::assertNothingSent();
+
+        // Only those who may reply; with the WhatsApp inbox off it can't go.
+        $this->sendAudio($this->staff('accountant'), $conversation, UploadedFile::fake()->createWithContent('voice.webm', self::WEBM))->assertForbidden();
+        config(['bhabaghure.notifications.inbox.whatsapp' => false]);
+        $this->sendAudio($agent, $conversation, UploadedFile::fake()->createWithContent('voice.webm', self::WEBM))->assertUnprocessable()->assertJsonPath('errors.body.0', __('inbox.whatsapp_off'));
+    }
+
+    #[Test]
+    public function a_chat_marked_as_unread_is_on_the_shared_count_until_someone_opens_it_and_the_customer_hears_nothing(): void
+    {
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN1', 'Bali package?')])->assertOk();
+        $conversation = Conversation::query()->sole();
+        $agent = $this->staff('sales_agent');
+        $colleague = $this->staff('sales_agent');
+        $url = "/api/v1/admin/inbox/conversations/{$conversation->id}";
+        $this->actingAsApi($agent)->postJson("{$url}/read")->assertOk();
+        $this->actingAsApi($agent)->getJson('/api/v1/admin/inbox/conversations?view=unread')->assertJsonPath('meta.total', 0);
+        Http::fake();
+
+        $this->actingAsApi($agent)->postJson("{$url}/mark-unread")->assertOk()->assertJsonPath('data.unread_count', 1);
+
+        // Everyone sees it: the Unread filter, its count, the chat's channel and the sidebar badge.
+        $list = $this->actingAsApi($colleague)->getJson('/api/v1/admin/inbox/conversations?view=unread')->assertOk();
+        $list->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $conversation->id)->assertJsonPath('meta.counts.unread', 1)->assertJsonPath('meta.unread_by_channel.whatsapp', 1);
+        $this->actingAsApi($colleague)->getJson('/api/v1/admin/nav-counts')->assertOk()->assertJsonPath('data.inbox.count', 1);
+
+        // Nothing goes to WhatsApp, and it's on record who did it.
+        Http::assertNothingSent();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'inbox.marked_unread', 'auditable_id' => $conversation->id]);
+
+        // A chat already unread keeps its count; a new message adds to it; opening it clears it.
+        $this->wasender('messages.received', ['messages' => $this->incoming('IN2', 'Ache?')])->assertOk();
+        $this->actingAsApi($agent)->postJson("{$url}/mark-unread")->assertOk()->assertJsonPath('data.unread_count', 2);
+        $this->actingAsApi($colleague)->postJson("{$url}/read")->assertOk();
+        $this->assertSame(0, $conversation->fresh()->unread_count);
+
+        // A closed chat reopens, or it wouldn't show under Unread.
+        $this->actingAsApi($agent)->postJson("{$url}/close")->assertOk();
+        $this->actingAsApi($agent)->postJson("{$url}/mark-unread")->assertOk()->assertJsonPath('data.status', 'open')->assertJsonPath('data.unread_count', 1);
+        $this->actingAsApi($agent)->getJson('/api/v1/admin/inbox/conversations?view=unread')->assertJsonPath('meta.total', 1);
+
+        // Staff without the inbox can't.
+        $this->actingAsApi($this->staff('accountant'))->postJson("{$url}/mark-unread")->assertForbidden();
+    }
+
+    /** ffmpeg as the tests see it: the last argument is the file it writes. */
+    private static function ffmpegWrites(string $bytes): \Closure
+    {
+        return function (PendingProcess $process) use ($bytes) {
+            $args = (array) $process->command;
+            file_put_contents((string) end($args), $bytes);
+
+            return Process::result();
+        };
+    }
+
+    /** @param list<string> $args */
+    private static function argAfter(array $args, string $flag): ?string
+    {
+        $at = array_search($flag, $args, true);
+
+        return $at === false ? null : ($args[$at + 1] ?? null);
+    }
+
+    private function sendAudio(Staff $staff, Conversation $conversation, UploadedFile $file)
+    {
+        return $this->actingAsApi($staff)->post("/api/v1/admin/inbox/conversations/{$conversation->id}/send-audio", ['audio' => $file], ['Accept' => 'application/json']);
     }
 
     /** @param array<string, mixed> $data */

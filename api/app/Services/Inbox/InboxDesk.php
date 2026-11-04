@@ -19,7 +19,7 @@ use Throwable;
 /** What staff do in the inbox (docs/admin-inbox.md): start a chat, reply, read, assign, close, and tie a chat to a customer. */
 final class InboxDesk
 {
-    public function __construct(private readonly InboxRecorder $recorder, private readonly AuditLogger $audit) {}
+    public function __construct(private readonly InboxRecorder $recorder, private readonly AuditLogger $audit, private readonly VoiceNotes $voiceNotes) {}
 
     /**
      * A reply: text, a file, or both. It is saved at once as pending and sent by SendInboxMessage; the one replying
@@ -33,6 +33,32 @@ final class InboxDesk
         if (($body === null || $body === '') && $file === null) {
             throw ValidationException::withMessages(['body' => [__('inbox.empty_reply')]]);
         }
+        $this->refuseIfRepliesCantGo($conversation);
+
+        return $this->send($conversation, $staff, $body, $file === null ? null : [
+            'bytes' => (string) file_get_contents($file->getRealPath()),
+            'mime' => (string) $file->getMimeType(),
+            'name' => basename($file->getClientOriginalName()),
+            'size' => (int) $file->getSize(),
+        ]);
+    }
+
+    /**
+     * A voice note recorded in the reply box (docs/admin-inbox.md §9): converted for the chat's channel, then sent like
+     * any reply with a file.
+     *
+     * @throws ValidationException
+     */
+    public function voiceNote(Conversation $conversation, Staff $staff, UploadedFile $recording): ConversationMessage
+    {
+        $this->refuseIfRepliesCantGo($conversation);
+
+        return $this->send($conversation, $staff, null, $this->voiceNotes->convert((string) $recording->getRealPath(), $conversation->channel));
+    }
+
+    /** @throws ValidationException */
+    private function refuseIfRepliesCantGo(Conversation $conversation): void
+    {
         if (! $conversation->canReply()) {
             throw ValidationException::withMessages(['body' => [__('inbox.messenger_window')]]);
         }
@@ -42,22 +68,25 @@ final class InboxDesk
         if ($conversation->channel === Conversation::MESSENGER && ! MessengerSettings::connected()) {
             throw ValidationException::withMessages(['body' => [__('inbox.messenger_off')]]);
         }
+    }
 
-        $path = $file === null ? null : InboxFiles::store((string) file_get_contents($file->getRealPath()));
+    /** @param  array{bytes: string, mime: string, name: string, size: int}|null  $file */
+    private function send(Conversation $conversation, Staff $staff, ?string $body, ?array $file): ConversationMessage
+    {
+        $path = $file === null ? null : InboxFiles::store($file['bytes']);
         try {
             $message = DB::transaction(function () use ($conversation, $staff, $body, $file, $path) {
                 $locked = Conversation::query()->whereKey($conversation->id)->lockForUpdate()->firstOrFail();
-                $mime = $file === null ? null : (string) $file->getMimeType();
                 $message = $locked->messages()->create([
                     'direction' => ConversationMessage::OUT,
                     'origin' => ConversationMessage::STAFF,
                     'staff_id' => $staff->id,
                     'body' => $body === '' ? null : $body,
-                    'attachment_kind' => $mime === null ? null : InboxFiles::kind($mime),
+                    'attachment_kind' => $file === null ? null : InboxFiles::kind($file['mime']),
                     'attachment_path' => $path,
-                    'attachment_mime' => $mime === null ? null : Str::limit($mime, 100, ''),
-                    'attachment_name' => $file === null ? null : Str::limit(basename($file->getClientOriginalName()), 180, ''),
-                    'attachment_bytes' => $file?->getSize(),
+                    'attachment_mime' => $file === null ? null : Str::limit($file['mime'], 100, ''),
+                    'attachment_name' => $file === null ? null : Str::limit($file['name'], 180, ''),
+                    'attachment_bytes' => $file['size'] ?? null,
                     'status' => 'pending',
                     'sent_at' => now(),
                 ]);
@@ -189,6 +218,20 @@ final class InboxDesk
             return;
         }
         $conversation->forceFill(['unread_count' => 0])->save();
+    }
+
+    /**
+     * "Mark as unread", to come back to a chat later (docs/admin-inbox.md §10): flagged for the whole office, on the same
+     * shared count as new messages, until someone next opens it. A closed chat reopens, or it wouldn't show under Unread.
+     * Nothing goes to the customer, and blue ticks they already have stay.
+     */
+    public function markUnread(Conversation $conversation, Staff $by): void
+    {
+        if ($conversation->status === Conversation::CLOSED) {
+            $this->setStatus($conversation, Conversation::OPEN, $by);
+        }
+        $conversation->forceFill(['unread_count' => max(1, $conversation->unread_count)])->save();
+        $this->audit->record('inbox.marked_unread', $by, $conversation);
     }
 
     public function assign(Conversation $conversation, ?Staff $to, Staff $by): void

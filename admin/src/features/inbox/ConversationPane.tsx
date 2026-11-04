@@ -8,12 +8,16 @@ import { ErrorNotice } from '../../components/ui/feedback'
 import { Loading } from '../../components/ui/layout'
 import { ApiError, fetchDocument } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
-import { olderMessages, useAssign, useAttachmentUrl, useCannedReplies, useConversation, useMarkRead, useReply, useSetStatus, type ConversationDetail, type InboxMessage } from './api'
+import { olderMessages, useAssign, useAttachmentUrl, useCannedReplies, useConversation, useMarkRead, useMarkUnread, useReply, useSetStatus, type ConversationDetail, type InboxMessage } from './api'
 import { CustomerPanel } from './CustomerPanel'
 import { PackagePicker } from './PackagePicker'
 import { Avatar, ChannelBadge } from './parts'
+import { canRecordVoice } from './voice'
+import { VoiceRecorder } from './VoiceRecorder'
 
 const ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,.mp3,.ogg,.m4a,.aac,.mp4'
+/** 📎 and 🎤 beside the reply box: the Send button's height, easy to see and to tap on a phone. */
+const REPLY_TOOL = 'flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-10 border border-app-line text-16 hover:border-blue focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue'
 
 /** One chat: the thread, the reply box with canned replies and attachments, and the customer beside it. */
 export function ConversationPane({ id, onBack }: { id: number; onBack: () => void }) {
@@ -22,12 +26,16 @@ export function ConversationPane({ id, onBack }: { id: number; onBack: () => voi
   const [older, setOlder] = useState<InboxMessage[]>([])
   const [hasOlder, setHasOlder] = useState<boolean | null>(null)
   const unread = query.data?.data.unread_count ?? 0
+  const lastIncoming = query.data?.data.messages.findLast((message) => message.direction === 'in')?.id
+  const fetched = query.isFetchedAfterMount
 
   // Opening a chat with unread messages clears the unread count here only: the customer gets blue ticks with a reply.
+  // Only on opening (with data from now, not what was cached) and when a customer's new message comes in: a chat a
+  // colleague marks as unread stays that way even if it is left open on this screen (docs/admin-inbox.md §10).
   useEffect(() => {
-    if (unread > 0 && !markRead.isPending) markRead.mutate(undefined)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when new messages arrive
-  }, [unread])
+    if (fetched && unread > 0) markRead.mutate(undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on those two moments, not whenever the count changes
+  }, [fetched, lastIncoming])
 
   if (query.isPending) return <Loading />
   if (query.isError) return <ErrorNotice error={query.error} />
@@ -61,6 +69,7 @@ function ChatHeader({ conversation, onBack }: { conversation: ConversationDetail
   const me = session.state === 'signed-in' ? session.staff : null
   const assign = useAssign(conversation.id)
   const setStatus = useSetStatus(conversation.id)
+  const markUnread = useMarkUnread(conversation.id)
   const name = conversation.name ?? (conversation.phone ? digits(`+${conversation.phone}`) : t('inbox.unknown'))
 
   return (
@@ -69,7 +78,8 @@ function ChatHeader({ conversation, onBack }: { conversation: ConversationDetail
         ←
       </button>
       <Avatar name={name} channel={conversation.channel} size="lg" />
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* A minimum width, so the buttons go to a row of their own rather than squeezing the name in a narrow pane. */}
+      <div className="flex min-w-40 flex-1 flex-col">
         <h2 className="m-0 truncate text-16 font-bold">{name}</h2>
         <span className="flex flex-wrap items-center gap-1.5 text-12 text-app-muted">
           <ChannelBadge channel={conversation.channel} />
@@ -103,14 +113,28 @@ function ChatHeader({ conversation, onBack }: { conversation: ConversationDetail
           )
         ) : null}
         {can('inbox.reply') ? (
-          <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setStatus.mutate(conversation.status === 'open' ? 'close' : 'reopen')}>
-            {conversation.status === 'open' ? t('inbox.close') : t('inbox.reopen')}
-          </button>
+          <>
+            {/* Back to the list, as in WhatsApp: the chat waits there, marked, for someone to open it again. */}
+            <button
+              type="button"
+              className={buttonClass('outline', 'sm')}
+              title={t('inbox.markUnreadHint')}
+              aria-disabled={markUnread.isPending}
+              onClick={() => {
+                if (!markUnread.isPending) markUnread.mutate(undefined, { onSuccess: onBack })
+              }}
+            >
+              {t('inbox.markUnread')}
+            </button>
+            <button type="button" className={buttonClass('outline', 'sm')} onClick={() => setStatus.mutate(conversation.status === 'open' ? 'close' : 'reopen')}>
+              {conversation.status === 'open' ? t('inbox.close') : t('inbox.reopen')}
+            </button>
+          </>
         ) : null}
       </div>
-      {assign.error || setStatus.error ? (
+      {assign.error || setStatus.error || markUnread.error ? (
         <div className="basis-full">
-          <ErrorNotice error={assign.error ?? setStatus.error} />
+          <ErrorNotice error={assign.error ?? setStatus.error ?? markUnread.error} />
         </div>
       ) : null}
     </header>
@@ -236,6 +260,7 @@ function Composer({ conversation }: { conversation: ConversationDetail }) {
   const [body, setBody] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [picking, setPicking] = useState(false)
+  const [recording, setRecording] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
 
@@ -274,6 +299,15 @@ function Composer({ conversation }: { conversation: ConversationDetail }) {
   }
   const fieldError = reply.error instanceof ApiError ? (reply.error.field('body') ?? reply.error.field('file')) : undefined
 
+  // Recording takes the whole reply box; whatever was being typed is still there afterwards.
+  if (recording) {
+    return (
+      <div className="border-t border-app-line px-3 py-3">
+        <VoiceRecorder conversationId={conversation.id} onClose={() => setRecording(false)} />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2 border-t border-app-line px-3 py-3">
       {conversation.reply_window_ends_at ? <span className="text-11 text-app-muted">{t('inbox.windowUntil', { time: dateTime(conversation.reply_window_ends_at) })}</span> : null}
@@ -297,9 +331,14 @@ function Composer({ conversation }: { conversation: ConversationDetail }) {
       ) : null}
       <div className="flex items-end gap-2">
         <input ref={fileInput} type="file" accept={ACCEPT} className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} data-testid="attach-input" />
-        <button type="button" className={buttonClass('ghost', 'icon', 'shrink-0')} aria-label={t('inbox.attach')} title={t('inbox.attach')} onClick={() => fileInput.current?.click()}>
+        <button type="button" className={REPLY_TOOL} aria-label={t('inbox.attach')} title={t('inbox.attach')} onClick={() => fileInput.current?.click()}>
           📎
         </button>
+        {canRecordVoice() ? (
+          <button type="button" className={REPLY_TOOL} aria-label={t('inbox.voice.record')} title={t('inbox.voice.record')} onClick={() => setRecording(true)}>
+            🎤
+          </button>
+        ) : null}
         <textarea
           ref={textarea}
           value={body}

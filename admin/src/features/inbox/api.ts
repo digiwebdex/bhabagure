@@ -128,6 +128,14 @@ export const useReply = (id: number) =>
     return upload<Data<InboxMessage>>(`admin/inbox/conversations/${id}/messages`, form, () => undefined)
   })
 
+/** A voice note recorded in the reply box (docs/admin-inbox.md §9); the API converts it for the chat's channel. */
+export const useSendAudio = (id: number) =>
+  useInboxMutation(id, (recording: Blob) => {
+    const form = new FormData()
+    form.append('audio', recording, 'voice-note')
+    return upload<Data<InboxMessage>>(`admin/inbox/conversations/${id}/send-audio`, form, () => undefined)
+  })
+
 /** A started (or reopened) chat: `existing` when the number had a chat already. */
 export type StartedChat = ConversationRow & { existing: boolean }
 
@@ -144,6 +152,7 @@ export function useStartChat() {
 }
 
 export const useMarkRead = (id: number) => useInboxMutation(id, () => api.post(`admin/inbox/conversations/${id}/read`))
+export const useMarkUnread = (id: number) => useInboxMutation(id, () => api.post(`admin/inbox/conversations/${id}/mark-unread`))
 export const useAssign = (id: number) => useInboxMutation(id, (staffId: number | null) => api.post(`admin/inbox/conversations/${id}/assign`, { staff_id: staffId }))
 export const useSetStatus = (id: number) => useInboxMutation(id, (action: 'close' | 'reopen') => api.post(`admin/inbox/conversations/${id}/${action}`))
 export const useLinkCustomer = (id: number) => useInboxMutation(id, (customerId: number | null) => api.post(`admin/inbox/conversations/${id}/customer`, { customer_id: customerId }))

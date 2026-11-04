@@ -71,6 +71,8 @@ export function writeE2eEnv({ origins, webUrl = '', portalUrl = '', adminUrl = '
     WASENDER_WEBHOOK_SECRET: E2E_WASENDER_SECRET,
     WASENDER_BASE_URL: 'http://127.0.0.1:9/api',
     META_GRAPH_URL: 'http://127.0.0.1:9',
+    // A voice note's conversion on Windows, where there is no ffmpeg: see e2e-fake-ffmpeg.cmd.
+    ...(process.platform === 'win32' ? { INBOX_FFMPEG: resolve(API_DIR, '../scripts/e2e-fake-ffmpeg.cmd') } : {}),
   }
   const lines = base
     .split(/\r?\n/)

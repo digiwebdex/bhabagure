@@ -8,5 +8,7 @@ return [
     'page_token_invalid' => 'Facebook didn’t accept this Page access token and App secret. Facebook says: “:reason”. Generate the token again next to the Page in the Meta app, and copy the App secret of the same app.',
     'invalid_number' => 'Enter a WhatsApp number: a Bangladeshi mobile (01711-000000), or another country’s with its code (+977 981-2345678).',
     'not_on_whatsapp' => 'This number isn’t on WhatsApp. Check it, or call the customer.',
+    'voice_note_unreadable' => 'This recording couldn’t be prepared for sending. Please record it again.',
+    'voice_note_too_big' => 'This recording is too big to send. Please record a shorter one.',
     'new_chat_limit' => 'The office has started :limit new WhatsApp chats today, the most in a day so WhatsApp doesn’t flag the number as spam. Try again tomorrow; chats customers start are not limited.',
 ];
