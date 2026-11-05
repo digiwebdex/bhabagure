@@ -6,7 +6,8 @@ customer go on to the payment page.
 
 **Decided with the client (2026-09-24):** built with an on/off switch, **left off until SMS works**, so website bookings
 keep working meanwhile. The client adds 187.77.144.38 to the bulksmsbd IP whitelist; once a test code arrives, the
-switch goes on.
+switch goes on. **Since 2026-11-06 the server is 201.18.220.51** (docs/deployment.md §8): that is the address the
+whitelist needs now.
 
 ## 1. What exists
 

@@ -1,11 +1,11 @@
 # /etc/systemd/system/bhabaghure-php.service
 #
-# PHP-FPM for the Bhabaghure API: its own master, separate from the shared php8.3-fpm (see
-# deploy/php-fpm/bhabaghure.conf for why). nginx reaches it at /run/bhabaghure-php/php-fpm.sock.
-# Reload (deploy.sh) tests the pool file first; an invalid file leaves the running workers untouched.
+# PHP-FPM 8.5 for the Bhabaghure API: its own master (see deploy/php-fpm/bhabaghure.conf for why). nginx reaches it
+# at /run/bhabaghure-php/php-fpm.sock. Reload (deploy.sh) tests the pool file first; an invalid file leaves the running
+# workers untouched.
 
 [Unit]
-Description=Bhabaghure API PHP-FPM (own master, not the shared php8.3-fpm)
+Description=Bhabaghure API PHP-FPM (own master, PHP 8.5)
 Documentation=https://github.com/digiwebdex/bhabagure/blob/main/docs/deployment.md
 After=network-online.target mysql.service redis-server.service
 Wants=network-online.target
@@ -22,9 +22,9 @@ RuntimeDirectoryMode=0750
 WorkingDirectory=/var/www/Bhabagure/api
 SyslogIdentifier=bhabaghure-php
 
-ExecStartPre=/usr/sbin/php-fpm8.3 --test --fpm-config /var/www/Bhabagure/deploy/php-fpm/bhabaghure.conf -d opcache.memory_consumption=96
-ExecStart=/usr/sbin/php-fpm8.3 --nodaemonize --fpm-config /var/www/Bhabagure/deploy/php-fpm/bhabaghure.conf -d opcache.memory_consumption=96
-ExecReload=/usr/sbin/php-fpm8.3 --test --fpm-config /var/www/Bhabagure/deploy/php-fpm/bhabaghure.conf -d opcache.memory_consumption=96
+ExecStartPre=/usr/sbin/php-fpm8.5 --test --fpm-config /var/www/Bhabagure/deploy/php-fpm/bhabaghure.conf -d opcache.memory_consumption=96
+ExecStart=/usr/sbin/php-fpm8.5 --nodaemonize --fpm-config /var/www/Bhabagure/deploy/php-fpm/bhabaghure.conf -d opcache.memory_consumption=96
+ExecReload=/usr/sbin/php-fpm8.5 --test --fpm-config /var/www/Bhabagure/deploy/php-fpm/bhabaghure.conf -d opcache.memory_consumption=96
 ExecReload=/bin/kill -USR2 $MAINPID
 
 Restart=on-failure

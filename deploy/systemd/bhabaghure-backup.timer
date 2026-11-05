@@ -1,0 +1,14 @@
+# Nightly at 21:30 UTC, 03:30 in Dhaka, when nobody is booking. Persistent: a night missed while the server was off runs
+# at the next boot.
+
+[Unit]
+Description=Run the Bhabaghure backup every night
+
+[Timer]
+OnCalendar=*-*-* 21:30:00 UTC
+Persistent=true
+RandomizedDelaySec=10min
+Unit=bhabaghure-backup.service
+
+[Install]
+WantedBy=timers.target

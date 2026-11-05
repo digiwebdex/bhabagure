@@ -1,0 +1,15 @@
+# /etc/systemd/system/bhabaghure-backup.service — the nightly backup (deploy/backup.sh, docs/handover.md §8), started by
+# bhabaghure-backup.timer. Runs as root: it reads both databases over MySQL's socket and writes /var/backups/bhabaghure.
+
+[Unit]
+Description=Bhabaghure nightly backup (databases, uploaded files, settings)
+After=mysql.service
+ConditionPathExists=/var/www/Bhabagure/deploy/backup.sh
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /var/www/Bhabagure/deploy/backup.sh
+SyslogIdentifier=bhabaghure-backup
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=2h

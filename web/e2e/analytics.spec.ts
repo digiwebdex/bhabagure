@@ -99,7 +99,8 @@ test('with Google Analytics connected, its tag loads only after Accept, and Cook
     await page.getByTestId('cookie-consent').getByRole('button', { name: 'Accept' }).click();
     await expect.poll(() => tagRequests.length).toBe(1);
     expect(tagRequests[0]).toContain('id=G-E2ETEST123');
-    const sent = await page.evaluate(() => JSON.stringify((window as unknown as { dataLayer: unknown[] }).dataLayer));
+    // gtag queues each call's `arguments` object, which JSON writes as {"0":"config",…}: read each one as a list.
+    const sent = await page.evaluate(() => JSON.stringify((window as unknown as { dataLayer: ArrayLike<unknown>[] }).dataLayer.map((entry) => Array.from(entry))));
     expect(sent).toContain('"config","G-E2ETEST123"');
     expect(sent).toContain('"page_view"');
     // Accepted before: the next visit loads it straight away, without asking.

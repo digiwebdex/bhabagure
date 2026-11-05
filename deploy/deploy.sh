@@ -10,11 +10,11 @@
 #   /var/www/Bhabagure/deploy/deploy.sh --reload-config  after editing api/.env: re-cache config, reload our PHP-FPM,
 #                                                        restart our queue worker (no pull, no build)
 #
-# Shared-server rules (docs/deployment.md): it touches only /var/www/Bhabagure and bhabaghure-* units. It never
-# restarts a shared service; nginx is only ever reloaded by --install-nginx, and only after `nginx -t` passes (a file
-# that fails is removed again, so the shared nginx is never left with a config it cannot load). Builds run in a
-# capped systemd scope so they cannot starve the other sites. Nothing is edited by hand in /var/www/Bhabagure: a
-# tracked file changed on the server stops the deploy.
+# Rules kept from the shared server it first ran on (docs/deployment.md; the project's own VPS since 2026-11-06, §8):
+# it touches only /var/www/Bhabagure and bhabaghure-* units. It never restarts nginx, MySQL or Redis; nginx is only ever
+# reloaded by --install-nginx, and only after `nginx -t` passes (a file that fails is removed again, so nginx is never
+# left with a config it cannot load). Builds run in a capped systemd scope so they cannot starve the live site.
+# Nothing is edited by hand in /var/www/Bhabagure: a tracked file changed on the server stops the deploy.
 #
 # Order: pull → install → build (into directories nothing serves yet) → migrate → reload our PHP-FPM → restart our
 # queue worker → switch the admin build and the website slot → health checks. A failed install or build stops before
@@ -33,7 +33,8 @@ SITE_HOST=bhabaghure.com.bd
 NGINX_SRC=$ROOT/deploy/nginx/bhabaghure.conf
 NGINX_DST=/etc/nginx/sites-available/bhabaghure.conf
 NGINX_LINK=/etc/nginx/sites-enabled/bhabaghure.conf
-UNITS=(bhabaghure-php.service bhabaghure-web.service bhabaghure-queue.service bhabaghure-scheduler.service bhabaghure-scheduler.timer)
+UNITS=(bhabaghure-php.service bhabaghure-web.service bhabaghure-queue.service bhabaghure-scheduler.service bhabaghure-scheduler.timer
+  bhabaghure-backup.service bhabaghure-backup.timer)
 
 say() { printf '\n== %s\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
@@ -281,7 +282,7 @@ build_and_release() {
     API_DOWN=0
   fi
 
-  say "Reload bhabaghure-php (tests the pool file first; the shared php8.3-fpm is not touched)"
+  say "Reload bhabaghure-php (tests the pool file first)"
   if systemctl is-active --quiet bhabaghure-php.service; then
     systemctl reload bhabaghure-php.service
   else

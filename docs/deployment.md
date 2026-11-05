@@ -1,5 +1,10 @@
 # Deployment notes
 
+**Since 2026-11-06 the project runs on its own VPS, `root@201.18.220.51`** (Hostinger, Ubuntu 26.04: PHP 8.5,
+MySQL 8.4, Redis 8, Node 22 from NodeSource, nginx 1.28). The move is §8. Sections 1–7 describe the first server, a
+shared one at 187.77.144.38; the layout, units, deploy and certificate steps are the same on the new one, and the
+shared-server rules no longer bind it.
+
 **Status (2026-09-15): live on every host** — the website, `customer.`, `admin.`, `api.` and `www.`; `wallet.` answers
 403 until its allow-list exists (§7.6). Deployed with `deploy.sh` (§7.2). Day-to-day operation (settings,
 units, schedules, rollback, backups, the WhatsApp ban runbook) is `docs/handover.md`. Certificate: Let's Encrypt by
@@ -21,7 +26,7 @@ systemd units named `bhabaghure-*`.
 | Scheduler | `bhabaghure-scheduler.timer` → `php artisan schedule:run` every minute | **enabled and running** 2026-09-14 |
 | Queue worker | `bhabaghure-queue.service` → `php artisan queue:work redis` (one worker, §5) | **running** 2026-09-14, preflight passed |
 | Invoice PDFs | Chrome for Testing in `/var/www/Bhabagure/tools` | **installed** |
-| Inbox voice notes | `/usr/bin/ffmpeg` from the shared box's own packages, not installed by this project (`docs/admin-inbox.md` §9) | **used** since 2026-11-04 |
+| Inbox voice notes | `/usr/bin/ffmpeg` (`docs/admin-inbox.md` §9): on the shared box its own package; on the project's VPS installed for the project (ffmpeg 8.0) | **used** since 2026-11-04 |
 | MySQL | database `bhabaghure` (utf8mb4_unicode_ci), user `bhabaghure_user@127.0.0.1` with privileges on `bhabaghure.*` only; the password was generated on the server and exists only in `api/.env` | **created** 2026-09-14 |
 | Redis | the box's shared Redis 7.0 (localhost, 16 databases): **database 12 = queue, 13 = cache**, prefix `bhabaghure_`, client Predis | **reserved** — 0 and 3 hold other sites' keys; the worker refuses anything else |
 
@@ -234,7 +239,7 @@ Locally (Phases 5–7 are built and tested against the local database first):
 ```bash
 npm run lint && npm test && npm run test:api       # plus the e2e suites for the screens you touched
 git push origin main
-ssh root@187.77.144.38 /var/www/Bhabagure/deploy/deploy.sh
+ssh root@201.18.220.51 /var/www/Bhabagure/deploy/deploy.sh        # the project's VPS since 2026-11-06 (§8)
 ```
 
 What `deploy.sh` does on the server, in order, stopping at the first failure:
@@ -348,3 +353,48 @@ allow-list files are no longer needed, and the staff email and password alone op
 |---|---|---|
 | MySQL database `bhabaghure_wallet`, user `bhabaghure_wallet@127.0.0.1` (wallet-database.sh) | wallet isolation enforced by MySQL | `DROP DATABASE bhabaghure_wallet; DROP USER 'bhabaghure_wallet'@'127.0.0.1';` and remove the `WALLET_*` lines |
 | `/etc/nginx/bhabaghure-wallet/allow*.conf` | the front door | remove the directory; the wallet then answers 403 to everyone |
+
+## 8. The project's own VPS (moved 2026-11-06)
+
+**Where:** `root@201.18.220.51` (Hostinger, hostname `srv2132267`), 2 CPUs, 7.7 GB memory, 96 GB disk, 2 GB swap. Same
+path, `/var/www/Bhabagure`, so every file in `deploy/` works unchanged; the only edit was `php-fpm8.3` → `php-fpm8.5` in
+`bhabaghure-php.service`. SSH is by key only (password sign-in switched off at the owner's choice). Without a key,
+the console in Hostinger's VPS panel still reaches the machine: it isn't SSH.
+
+**Installed for the project** (Ubuntu 26.04 packages unless noted): nginx 1.28, PHP 8.5 (fpm, cli, bcmath, curl, gd,
+intl, mbstring, mysql, xml, zip, xsl; the distribution's `php8.5-fpm` is disabled, `bhabaghure-php` is the only master),
+MySQL 8.4, Redis 8.0, Node 22 **from NodeSource** (the same repository and signing key as the first server; Ubuntu's own
+Node build can't run the `.ts` unit tests), composer, ffmpeg 8, certbot with the nginx plugin, Chrome's libraries, the
+same 16 font packages (Bangla in the PDFs), fail2ban, unattended security updates, and `ufw` allowing 22, 80 and 443
+only. MySQL and Redis listen on localhost only.
+
+**Differences from the first server:**
+
+| | First server | Own VPS |
+|---|---|---|
+| PHP | 8.3 | 8.5 — the API suite passed on it before the switch (536 passed, 3 skipped), no deprecation in the e2e API log |
+| Redis | shared, no password (`REDIS_PASSWORD=null`) | the project's own, with a password (in this server's `api/.env` only), `noeviction`, 512 MB |
+| Backups | the server admin's nightly job and Google Drive copy | `deploy/backup.sh` nightly + Hostinger's VPS backups (`docs/handover.md` §8) |
+| Certificate | Let's Encrypt via the first server's account | a new Let's Encrypt account on this server (no email); the same six names; renewal tested with `--dry-run` |
+| `listen … http2` | nginx 1.24, no warning | nginx 1.28 warns that it is deprecated; it still works |
+
+**How it moved** (owner's choices: Cloudflare changed by the owner, late at night, backups as above):
+1. The server was built and tested while the first one stayed live: code cloned from GitHub at the live commit; the
+   three settings files, the certificate and `tools/` copied across through the developer's PC (nothing was written
+   on the shared server); databases and the 1.4 GB of uploaded files copied as a rehearsal; the smoke test passed
+   94/94 against the new IP; the queue worker and scheduler stayed off, so only one server ever sent messages.
+2. The switch, 2026-11-05 23:16–23:24 UTC (05:16–05:24 in Dhaka): the first server's scheduler and worker stopped, its
+   API into maintenance (503); both databases dumped and loaded again (row counts compared, identical), the 3 files
+   changed since the rehearsal copied; the worker and scheduler started here; the owner pointed the six Cloudflare A
+   records at 201.18.220.51. The smoke test through Cloudflare then passed 94/94, and the first server's access logs
+   went quiet. Its Redis queue was empty, so no job was left behind; sessions are `array`, so nobody was signed out.
+
+**The first server since then:** our four units are stopped and disabled, its API is still in maintenance, and the
+checkout (3 GB), both databases, the nginx file and the certificate are kept, so it can be brought back. Removing them
+needs the owner's word. **To go back:** stop the worker and scheduler here and put this API into maintenance, copy the
+databases back the same way, on the first server `systemctl enable --now bhabaghure-php bhabaghure-web
+bhabaghure-queue bhabaghure-scheduler.timer` and `php artisan up`, then point Cloudflare at 187.77.144.38 again.
+
+**Outside this server:** bulksmsbd's IP whitelist must hold 201.18.220.51 once SMS is switched on
+(docs/booking-phone-verification.md). WaSender's and Meta's webhooks, and SSLCommerz's return addresses, use the domain
+names, so the move didn't touch them.

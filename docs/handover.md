@@ -78,7 +78,9 @@ and authorised signature lines. It is the shared view, so booking invoices and q
 | `api.bhabaghure.com.bd` | Laravel API for all of the above | PHP-FPM, its own master (`bhabaghure-php`); also on 127.0.0.1:3341, loopback only |
 | `wallet.bhabaghure.com.bd` | Super admin wallet | static `wallet/dist` and the wallet API, behind the IP allow-list and its own sign-in |
 
-- **Server:** the shared VPS, `root@187.77.144.38`. Other clients' sites run on it, so follow the rules in §3.
+- **Server:** the project's own VPS, `root@201.18.220.51` (Hostinger, Ubuntu 26.04, PHP 8.5), since 2026-11-06; SSH
+  by key only. Until then it was a shared VPS, 187.77.144.38, where our copy is now stopped but kept
+  (`docs/deployment.md` §8).
 - **Code:** `/var/www/Bhabagure`, a git checkout of `main` from the public repository `digiwebdex/bhabagure`.
   Nothing there is edited by hand; changes arrive through `deploy/deploy.sh`.
 - **Data:** MySQL databases `bhabaghure` (the company) and `bhabaghure_wallet` (the wallet; its own user, no grant either
@@ -96,8 +98,8 @@ and authorised signature lines. It is the shared view, so booking invoices and q
 | `WALLET_KEY` | `api/.env` | **Yes, offline, held by the super admin.** It encrypts the wallet's evidence files. |
 | `DB_PASSWORD`, `WALLET_DB_PASSWORD`, `JWT_SECRET`, `REVALIDATE_SECRET` | `api/.env` (`REVALIDATE_SECRET` also in `web/.env.production.local`) | No. They were generated on the server and can be regenerated. |
 | SendGrid, SSLCommerz, WaSender, bulksmsbd, AWS keys | `api/.env`, once set | The providers' dashboards are the source; rotate there. |
-| Backup decryption key | not on this server | The server admin holds it. |
-| Cloudflare, domain registrar, SSH root | the client and the server admin | Change the root password that was shared during the build. |
+| Backups | `/var/backups/bhabaghure` on the VPS (§8), and Hostinger's VPS backups | The nightly copy includes the settings files, so it is as secret as `api/.env`. |
+| Cloudflare, domain registrar, Hostinger, SSH keys | the client | The VPS root password was shared in a chat on 2026-11-06: change it in Hostinger's panel. |
 
 ## 1. Waiting before real customers
 
@@ -338,16 +340,17 @@ Attendance screen (rotate), and is entered with `agent.exe set-token`. Everythin
 
 ## 3. Services (systemd)
 
-Rules on this shared server: our units are all named `bhabaghure-*`. Shared services (nginx, MySQL, Redis, the shared
-`php8.3-fpm`) are **reloaded, never restarted**, and nginx only after `nginx -t` passes. Nothing outside
-`/var/www/Bhabagure` changes without the server admin's agreement.
+Our units are all named `bhabaghure-*`. nginx, MySQL and Redis are **reloaded, never restarted** by the deploy, and
+nginx only after `nginx -t` passes. Those rules came from the shared server; the VPS is the project's own since
+2026-11-06, but the deploy still keeps them.
 
 | Unit | What it runs | As | Limits | If it stops |
 |---|---|---|---|---|
-| `bhabaghure-php.service` | PHP-FPM 8.3, its own master with 6 workers, socket `/run/bhabaghure-php/php-fpm.sock`, pool `deploy/php-fpm/bhabaghure.conf` | www-data | 800 MB, 1 CPU, 256 tasks (PDF renders use Chrome in the request), 75 s per request | The API, admin and portal stop; the website shows cached pages. `systemctl reload bhabaghure-php` (tests the pool file first) |
+| `bhabaghure-php.service` | PHP-FPM 8.5, its own master with 6 workers, socket `/run/bhabaghure-php/php-fpm.sock`, pool `deploy/php-fpm/bhabaghure.conf` | www-data | 800 MB, 1 CPU, 256 tasks (PDF renders use Chrome in the request), 75 s per request | The API, admin and portal stop; the website shows cached pages. `systemctl reload bhabaghure-php` (tests the pool file first) |
 | `bhabaghure-web.service` | Next.js on 127.0.0.1:3340: the website and portal, from the slot in `.deploy/web-slot.env` | www-data | 600 MB, 1 CPU | Both hosts give 502. `systemctl restart bhabaghure-web` is ours, so a restart is fine |
 | `bhabaghure-queue.service` | `php artisan queue:work redis --queue=notifications,default`, one worker. Its preflight refuses Redis databases other than 12/13 | www-data | 600 MB, half a CPU, 120 s per job | Messages wait (nothing is lost); after 15 minutes the scheduler emails the notification managers. `systemctl restart bhabaghure-queue` |
 | `bhabaghure-scheduler.service` + `.timer` | `php artisan schedule:run` every minute (§4) | www-data | nice 10 | Reminders, reconciliation and alerts stop. `systemctl start bhabaghure-scheduler.timer` |
+| `bhabaghure-backup.service` + `.timer` | `deploy/backup.sh`, nightly at 21:30 UTC (03:30 Dhaka), §8 | root | nice 15, idle I/O | No new backup that night; the timer catches up at the next boot. `systemctl start bhabaghure-backup` runs one now |
 
 - **Transient, during a deploy:** `bhabaghure-build-*` scopes (1.6 GB, 1.5 CPUs) for composer, npm and the builds.
 - **Transient, during a test run:** `bhabaghure-testrun-install` and `bhabaghure-testrun` (§6.2).
@@ -362,8 +365,9 @@ Rules on this shared server: our units are all named `bhabaghure-*`. Shared serv
 - **nginx:** `/var/log/nginx/bhabaghure-{web,admin,api}.access.log`.
 - **Deploys:** `.deploy/logs/`.
 
-**Shared services we depend on:** `nginx` (`/etc/nginx/sites-available/bhabaghure.conf` and `000-catch-all.conf`),
-`mysql`, `redis-server`, and the `php8.3` binaries.
+**System services we depend on:** `nginx` (`/etc/nginx/sites-available/bhabaghure.conf` and `000-catch-all.conf`),
+`mysql`, `redis-server` (password in `api/.env`; `/etc/redis/conf.d/bhabaghure.conf`), the `php8.5` binaries,
+`/usr/bin/node` (NodeSource) and `/usr/bin/ffmpeg`.
 
 ## 4. Scheduled jobs
 
@@ -402,7 +406,7 @@ Every change goes through git. Build and test locally, push, then deploy:
 ```bash
 npm run lint && npm test && npm run test:api        # plus the e2e suites for the screens you touched
 git push origin main
-ssh root@187.77.144.38 /var/www/Bhabagure/deploy/deploy.sh
+ssh root@201.18.220.51 /var/www/Bhabagure/deploy/deploy.sh
 bash deploy/smoke.sh                                 # from your machine, afterwards (§6.1)
 ```
 
@@ -488,7 +492,7 @@ Checked on 2026-09-15, all read-only (SELECT queries, service status and logs):
 ```bash
 git revert <commit>            # locally; several commits: git revert <oldest>^..<newest>
 git push origin main
-ssh root@187.77.144.38 /var/www/Bhabagure/deploy/deploy.sh
+ssh root@201.18.220.51 /var/www/Bhabagure/deploy/deploy.sh
 ```
 
 - **Migrations only go forward.** Reverting a commit doesn't undo a migration that already ran. Write a new migration
@@ -513,40 +517,39 @@ ssh root@187.77.144.38 /var/www/Bhabagure/deploy/deploy.sh
 
 ## 8. Backups and restore
 
-### 8.1 What is backed up
+### 8.1 What is backed up (the project's VPS, since 2026-11-06)
 
-The server-wide nightly job `/opt/backup/backup.sh` belongs to the server admin, not this project. It runs at 02:30
-UTC and finds every database on the server by itself:
+`deploy/backup.sh`, run by `bhabaghure-backup.timer` every night at 21:30 UTC (03:30 in Dhaka), as root:
 
-| What | Where | Kept |
+| What | Where (root only) | Kept |
 |---|---|---|
-| `bhabaghure`: `mysqldump --single-transaction --routines`, gzip | `/var/backups/auto/daily/<date>/mysql-bhabaghure.sql.gz` (root-only) | 14 daily, 8 weekly (Sundays), 12 monthly (the 1st) |
-| `bhabaghure_wallet`, the same way, from the first run after it was created (2026-09-16) | `…/mysql-bhabaghure_wallet.sql.gz` | same |
-| Uploaded files, `api/storage/app`, from 2026-09-16: a manifest entry, `files \| bhabaghure-storage \| /var/www/Bhabagure/api/storage/app`, added 2026-09-15 (approved; the manifest's previous copy is `manifest.conf.before-bhabaghure-2026-09-15`) | `/var/backups/auto/uploads/<date>/bhabaghure-storage/`, hard-linked between nights | 14 days |
-| An encrypted copy of each night's dumps (age), and of the file snapshots on Sundays | the server admin's Google Drive | about 90 days; the decryption key is **not** on this server |
+| `bhabaghure`: `mysqldump --single-transaction --routines --triggers`, gzip | `/var/backups/bhabaghure/daily/<date>/mysql-bhabaghure.sql.gz` | 14 days |
+| `bhabaghure_wallet`, the same way | `…/daily/<date>/mysql-bhabaghure_wallet.sql.gz` | 14 days |
+| The settings files `api/.env`, `web/.env.production.local`, `admin/.env.production.local` | `…/daily/<date>/settings.tar.gz` | 14 days |
+| Uploaded files, `api/storage/app` | `/var/backups/bhabaghure/files/<date>/`, hard-linked to the night before (only new files take space) | 14 days |
+| A copy of the whole machine | **Hostinger's VPS backups**, switched on in its panel by the owner | Hostinger's schedule |
 
-To check last night's run: `grep bhabaghure /var/log/backup/backup.log | tail -3`, or `/opt/backup/restore.sh list`.
+These nightly copies sit on the same disk as the data, so they don't survive losing the VPS: Hostinger's backup is
+the copy that does. Check: `/var/www/Bhabagure/deploy/backup.sh list`, and `journalctl -u bhabaghure-backup -n 20`
+for the last run. `systemctl start bhabaghure-backup` takes one now.
 
-### 8.2 What is not backed up: act on this
+Before 2026-11-06, on the shared server, the server admin's own nightly job (`/opt/backup/backup.sh`, with an encrypted
+copy on their Google Drive) backed the project up; those copies stay with that server.
 
-- **The uploaded files, before 2026-09-16.** The backup job only finds directories named `uploads`. Our files (passport
-  scans and photos, e-ticket PDFs, payment receipts, staff documents, wallet evidence, website images) were covered only
-  once the manifest line above was added. Check the first run: `grep bhabaghure-storage /var/log/backup/backup.log`.
-  - Passport scans, traveller documents, e-tickets and staff documents are encrypted with `APP_KEY`, and wallet
-    evidence with `WALLET_KEY`, so restoring them needs those keys too. Payment receipts and website images aren't
-    encrypted.
-- **The settings files:** `api/.env`, `web/.env.production.local`, `admin/.env.production.local`.
-  - Keep them in the client's password manager.
-  - Without `APP_KEY`, restored passport numbers and encrypted files can't be read.
-  - Without `WALLET_KEY`, the wallet's evidence can't be read.
+### 8.2 What only you can keep
+
+- **`APP_KEY` and `WALLET_KEY`**, which are in `api/.env`, and so in each night's `settings.tar.gz`. Keep a copy of the
+  three settings files in the client's password manager too, so that losing the VPS and its backups together doesn't
+  leave the passport scans, e-tickets, staff documents and wallet evidence unreadable.
 
 ### 8.3 Restoring
 
 **Look before overwriting.** This restores into a separate database, readable by root only:
 
 ```bash
-/opt/backup/restore.sh dates
-/opt/backup/restore.sh mysql-bhabaghure 2026-09-20            # → database bhabaghure_restored
+/var/www/Bhabagure/deploy/backup.sh list
+mysql -e "CREATE DATABASE bhabaghure_restored"
+gunzip -c /var/backups/bhabaghure/daily/<date>/mysql-bhabaghure.sql.gz | mysql bhabaghure_restored
 mysql bhabaghure_restored -e "SELECT reference, status, paid_amount FROM bookings ORDER BY id DESC LIMIT 10"
 mysql -e "DROP DATABASE bhabaghure_restored"                  # when done
 ```
@@ -557,8 +560,8 @@ invoices, messages, attendance. Do it only when the live data is worse than that
 1. Tell staff to stop working, and note the time.
 2. `systemctl stop bhabaghure-scheduler.timer bhabaghure-queue.service`
 3. `cd /var/www/Bhabagure/api && runuser -u www-data -- php artisan down --retry=60`
-4. Keep today's state, in case: `mysqldump --single-transaction --routines bhabaghure | gzip > /var/backups/auto/manual/bhabaghure-before-restore-$(date +%F-%H%M).sql.gz`
-5. `/opt/backup/restore.sh mysql-bhabaghure <date> --overwrite` (it asks for confirmation)
+4. Keep today's state, in case: `mysqldump --single-transaction --routines bhabaghure | gzip > /var/backups/bhabaghure/bhabaghure-before-restore-$(date +%F-%H%M).sql.gz`
+5. `gunzip -c /var/backups/bhabaghure/daily/<date>/mysql-bhabaghure.sql.gz | mysql bhabaghure`
 6. `runuser -u www-data -- php artisan migrate --force && runuser -u www-data -- php artisan optimize`
 7. `runuser -u www-data -- php artisan up`, then `systemctl start bhabaghure-queue.service bhabaghure-scheduler.timer`
 8. `deploy/deploy.sh --force`, which also refreshes the website's cached content.
@@ -569,21 +572,15 @@ invoices, messages, attendance. Do it only when the live data is worse than that
    Messages sent in that window aren't in the log, and scheduled ones may go out a second time. If that matters, set
    `WASENDER_MODE=off` and `BULKSMSBD_MODE=off` until the message log has been checked.
 
-**The wallet database:** the same steps with `mysql-bhabaghure_wallet`, and with the wallet not in use.
-It needs the same `WALLET_KEY`.
+**The wallet database:** the same steps with `mysql-bhabaghure_wallet.sql.gz` into `bhabaghure_wallet`, and with the
+wallet not in use. It needs the same `WALLET_KEY`.
 
-**From the off-site copy** (the server is lost or the local backups are gone):
-1. `/opt/backup/restore.sh fetch mysql-bhabaghure <date>` downloads the encrypted file.
-2. Decrypt it with `age -d -i <key file>` wherever the server admin keeps the key.
-3. Load it with `gunzip -c mysql-bhabaghure.sql.gz | mysql bhabaghure`.
+**The VPS is lost:** restore Hostinger's backup of the machine. Without one, set a new server up as
+`docs/deployment.md` §8 describes, with the saved settings files, then restore the databases, then the files.
 
-On a new server, first set the server up as `docs/deployment.md` §7, with the saved `.env` files. Then restore the
-databases, then the files.
-
-**Files**, once they're in the backup:
-1. `/opt/backup/restore.sh files/bhabaghure-storage <date>` shows the snapshot's path.
-2. `rsync -a <snapshot>/ /var/www/Bhabagure/api/storage/app/`
-3. `chown -R www-data:www-data /var/www/Bhabagure/api/storage/app`
+**Files:**
+1. `rsync -a /var/backups/bhabaghure/files/<date>/ /var/www/Bhabagure/api/storage/app/`
+2. `chown -R www-data:www-data /var/www/Bhabagure/api/storage/app`
 
 **Practise once a quarter:** restore into `bhabaghure_restored`, look at the latest bookings and payments, then drop it.
 
