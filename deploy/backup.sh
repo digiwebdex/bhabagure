@@ -54,7 +54,15 @@ previous=$(find "$DEST/files" -mindepth 1 -maxdepth 1 -type d ! -name "$TODAY" |
 rsync -a --delete ${previous:+--link-dest="$previous"} "$API/storage/app/" "$DEST/files/$TODAY/"
 
 say "older than $KEEP_DAYS days: removed"
-find "$DEST/daily" "$DEST/files" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -print -exec rm -rf {} +
+# By the date in the name, never the folder's own time: rsync -a gives the files snapshot the time of api/storage/app,
+# which is older than 14 days, so a time-based clean-up deleted the snapshot it had just made (2026-11-05).
+cutoff=$(date -u -d "-$KEEP_DAYS days" +%F)
+for dir in "$DEST"/daily/* "$DEST"/files/*; do
+  name=$(basename "$dir")
+  [[ -d $dir && $name =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && $name < $cutoff ]] || continue
+  printf '   %s\n' "$dir"
+  rm -rf -- "$dir"
+done
 
 say "done $(date -u +%FT%TZ)"
 du -sh "$day" | sed 's/^/   /'
