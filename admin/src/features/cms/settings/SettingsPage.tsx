@@ -13,6 +13,7 @@ import { useFormat } from '../../../lib/useFormat'
 import { MediaPicker } from '../media/media'
 import { EmiRatesEditor } from './EmiRatesEditor'
 import { HeroVideoCard } from './HeroVideoCard'
+import { SecurityCard } from './SecurityCard'
 
 type Key = keyof SiteSettings
 
@@ -30,6 +31,7 @@ export function SettingsPage() {
     <>
       <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
       <div className="grid-auto-fit-half-320 grid items-start gap-4.5">
+        <SecurityCard />
         <HeroVideoCard />
         <SettingCard settingKey="contact" title="Contact" initial={data.contact ?? { phone: '', phoneAlt: '', whatsapp: '', email: '', facebook: '', instagram: '', website: '' }}>
           {(value, set, error) => (

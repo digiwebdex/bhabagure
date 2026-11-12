@@ -8,16 +8,23 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 
-/** Wallet sign-in with the staff password (no authenticator code since 2026-10-09); sign-out; who is signed in. */
+/**
+ * Wallet sign-in with the staff password, and the authenticator code for someone who has two-step sign-in on
+ * (docs/two-step-sign-in.md, since 2026-11-13); sign-out; who is signed in.
+ */
 final class AuthController extends WalletController
 {
     public function password(Request $request, WalletAuth $auth): JsonResponse
     {
-        $data = $request->validate(['email' => ['required', 'string', 'max:190'], 'password' => ['required', 'string', 'max:200']]);
+        $data = $request->validate([
+            'email' => ['required', 'string', 'max:190'],
+            'password' => ['required', 'string', 'max:200'],
+            'code' => ['nullable', 'string', 'max:20'],
+        ]);
 
-        // The password alone opens the session (docs/personal-wallets.md: no authenticator code since 2026-10-09).
+        // The password opens the session; with two-step sign-in on, the code too (code_required asks the page for it).
         return $this->attempt(fn () => response()->json(['data' => ['signed_in' => true]])
-            ->withCookie(self::cookie($auth->password($data['email'], $data['password'], $request), (int) config('wallet.session.absolute_minutes'))));
+            ->withCookie(self::cookie($auth->password($data['email'], $data['password'], $request, $data['code'] ?? null), (int) config('wallet.session.absolute_minutes'))));
     }
 
     public function signOut(Request $request, WalletAuth $auth): JsonResponse

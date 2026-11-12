@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Staff;
+use App\Services\Auth\TwoFactor;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,6 +22,9 @@ class StaffResource extends JsonResource
             'status' => $this->status->value,
             'locale' => $this->locale,
             'must_change_password' => $this->must_change_password,
+            // docs/two-step-sign-in.md: on for this person; and whether the super admin's rule makes them set it up first.
+            'two_factor_enabled' => $this->resource->hasTwoFactor(),
+            'two_factor_setup_required' => TwoFactor::mustSetUp($this->resource),
             'role' => $this->getRoleNames()->first(),
             // A custom role (docs/phase-7-hr-attendance-bonus-wallet.md §4.1) has no fixed label in the admin.
             'role_name_en' => $this->roles->first()?->name_en,

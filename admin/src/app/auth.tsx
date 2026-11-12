@@ -11,7 +11,10 @@ type Session =
 
 type AuthContextValue = {
   session: Session
-  signIn: (email: string, password: string) => Promise<Staff>
+  /** With two-step sign-in on, the API answers 401 two_factor_required until the code comes too (docs/two-step-sign-in.md). */
+  signIn: (email: string, password: string, code?: string) => Promise<{ staff: Staff; recoveryCodesLeft?: number }>
+  /** The signed-in staff member again, after something changed their own record (two-step sign-in turned on or off). */
+  reloadStaff: () => Promise<void>
   signOut: () => Promise<void>
   changePassword: (current: string, next: string, confirmation: string) => Promise<void>
   /** Sets the password from an invitation or reset link and signs in (docs/phase-7-hr-attendance-bonus-wallet.md §4.1). */
@@ -61,9 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return {
       session,
-      signIn: async (email, password) => {
+      signIn: async (email, password, code) => {
         // The language chosen on this device (login screen or sidebar) is kept; the profile locale doesn't override it.
-        return accept(await api.post<TokenResponse>('staff/auth/login', { email, password }))
+        const response = await api.post<TokenResponse>('staff/auth/login', code ? { email, password, code } : { email, password })
+        return { staff: accept(response), recoveryCodesLeft: response.recovery_codes_left }
+      },
+      reloadStaff: async () => {
+        setSession({ state: 'signed-in', staff: await api.get<Staff>('staff/auth/me') })
       },
       signOut: async () => {
         try {

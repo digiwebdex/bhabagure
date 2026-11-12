@@ -9,6 +9,8 @@ use App\Models\Staff;
 use App\Models\StaffInvitation;
 use App\Services\AuditLogger;
 use App\Services\Auth\RefreshTokens;
+use App\Services\Auth\TwoFactor;
+use App\Services\Auth\TwoFactorRefused;
 use App\Services\Hr\StaffInvitations;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +23,7 @@ class StaffAuthController extends Controller
 {
     use IssuesTokens;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(private readonly AuditLogger $audit, private readonly TwoFactor $twoFactor) {}
 
     protected function guardName(): string
     {
@@ -33,6 +35,8 @@ class StaffAuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email', 'max:190'],
             'password' => ['required', 'string', 'max:255'],
+            // Two-step sign-in (docs/two-step-sign-in.md): the authenticator app's code, or a recovery code.
+            'code' => ['nullable', 'string', 'max:20'],
         ]);
 
         $key = $this->throttleKey($credentials['email'], $request);
@@ -53,11 +57,32 @@ class StaffAuthController extends Controller
             return response()->json(['message' => __('auth.suspended'), 'code' => 'account_suspended'], Response::HTTP_FORBIDDEN);
         }
 
+        // The password was right; with two-step sign-in on, the code from the app is needed too. The sign-in screen
+        // then asks for it and sends email, password and code together: nothing half signed-in is kept here.
+        $via = null;
+        if ($staff->hasTwoFactor()) {
+            if (blank($credentials['code'] ?? null)) {
+                return response()->json(['message' => __('auth.two_factor.code_required'), 'code' => 'two_factor_required'], Response::HTTP_UNAUTHORIZED);
+            }
+            try {
+                $via = $this->twoFactor->check($staff, (string) $credentials['code']);
+            } catch (TwoFactorRefused $refused) {
+                return response()->json(['message' => $refused->message(), 'code' => 'two_factor_locked'], $refused->status());
+            }
+            if ($via === null) {
+                RateLimiter::hit($key, 60);
+
+                return response()->json(['message' => __('auth.two_factor.invalid_code'), 'code' => 'two_factor_invalid'], Response::HTTP_UNAUTHORIZED);
+            }
+        }
+
         RateLimiter::clear($key);
         $staff->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->save();
-        $this->audit->record('auth.staff.login', $staff, $staff);
+        $this->audit->record('auth.staff.login', $staff, $staff, $via === null ? null : ['two_factor' => $via]);
 
-        return $this->tokenResponse($staff, $request, ['staff' => new StaffResource($staff)]);
+        return $this->tokenResponse($staff, $request, ['staff' => new StaffResource($staff)]
+            // A recovery code was used up: the screen says how many are left.
+            + ($via === 'recovery' ? ['recovery_codes_left' => TwoFactor::recoveryCodesLeft($staff)] : []));
     }
 
     public function refresh(Request $request, RefreshTokens $tokens): JsonResponse

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\Totp;
 use App\Wallet\Models\AuditLog;
 use App\Wallet\Models\Session;
 use PHPUnit\Framework\Attributes\Test;
@@ -39,6 +40,29 @@ class WalletSignInTest extends TestCase
         $this->wallet('POST', 'auth/sign-out', session: $cookie->getValue())->assertOk();
         $this->wallet('GET', 'summary', session: $cookie->getValue())->assertUnauthorized()->assertJsonPath('code', 'signed_out');
         $this->assertSame(['sign_in_refused', 'signed_in', 'signed_out'], AuditLog::query()->orderBy('id')->pluck('action')->all());
+    }
+
+    #[Test]
+    public function with_two_step_sign_in_on_the_wallet_asks_for_the_code_too_and_a_code_works_once_across_both(): void
+    {
+        // docs/two-step-sign-in.md (owner, 2026-11-13): otherwise the wallet would be the way in with the password alone.
+        $owner = $this->staff('super_admin');
+        $secret = $this->actingAsApi($owner)->postJson('/api/v1/staff/auth/two-factor/setup')->assertOk()->json('data.secret');
+        $code = fn () => Totp::code($secret, Totp::step(now()->getTimestamp()));
+        $this->actingAsApi($owner)->postJson('/api/v1/staff/auth/two-factor/confirm', ['code' => $code()])->assertOk();
+        $this->flushHeaders();
+
+        $this->travel(31)->seconds();
+        $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery'])->assertUnauthorized()->assertJsonPath('code', 'code_required');
+        $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'wrong', 'code' => $code()])->assertUnauthorized()->assertJsonPath('code', 'invalid_credentials');
+        $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery', 'code' => '000000'])->assertUnauthorized()->assertJsonPath('code', 'invalid_code');
+        $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery', 'code' => $code()])->assertOk()->assertJsonPath('data.signed_in', true);
+
+        // A code the admin has just accepted doesn't open the wallet as well.
+        $this->travel(31)->seconds();
+        $this->resetAuthState();
+        $this->postJson('/api/v1/staff/auth/login', ['email' => $owner->email, 'password' => 'correct-horse-battery', 'code' => $used = $code()])->assertOk();
+        $this->wallet('POST', 'auth/password', ['email' => $owner->email, 'password' => 'correct-horse-battery', 'code' => $used])->assertUnauthorized()->assertJsonPath('code', 'invalid_code');
     }
 
     #[Test]

@@ -21,7 +21,8 @@ function forgotPasswordUrl(): string {
 
 /**
  * The wallet's sign-in (docs/personal-wallets.md): the staff email and password (with "Forgot password?", reset on the
- * admin panel) open the wallet. There is no authenticator code since 2026-10-09, at the owner's request.
+ * admin panel) open the wallet. For someone with two-step sign-in on (docs/two-step-sign-in.md, since 2026-11-13) the
+ * code from their authenticator app too: the API answers code_required and the form asks for it.
  */
 export function SignIn({
   onSignedIn,
@@ -38,20 +39,30 @@ export function SignIn({
     notice ? t(`signIn.notices.${notice}`) : null,
   );
   const [busy, setBusy] = useState(false);
+  // null until the API asks for the authenticator code.
+  const [code, setCode] = useState<string | null>(null);
 
   const submitPassword = (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError(null);
     void actions
-      .password({ email: email.trim(), password })
+      .password({
+        email: email.trim(),
+        password,
+        ...(code !== null && code.trim() !== "" ? { code: code.trim() } : {}),
+      })
       .then(() => {
         setMessage(null);
         onSignedIn();
       })
-      .catch((e: unknown) =>
-        setError(e instanceof ApiError ? e.message : t("errors.network")),
-      )
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.body?.code === "code_required") {
+          setCode("");
+          return;
+        }
+        setError(e instanceof ApiError ? e.message : t("errors.network"));
+      })
       .finally(() => setBusy(false));
   };
 
@@ -77,8 +88,10 @@ export function SignIn({
           <PasswordForm
             email={email}
             password={password}
+            code={code}
             onEmail={setEmail}
             onPassword={setPassword}
+            onCode={setCode}
             onSubmit={submitPassword}
             busy={busy}
             error={error}
@@ -92,16 +105,21 @@ export function SignIn({
 function PasswordForm({
   email,
   password,
+  code,
   onEmail,
   onPassword,
+  onCode,
   onSubmit,
   busy,
   error,
 }: {
   email: string;
   password: string;
+  /** null: not asked for (two-step sign-in is off for this person, or the password hasn't been checked yet). */
+  code: string | null;
   onEmail: (value: string) => void;
   onPassword: (value: string) => void;
+  onCode: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
   busy: boolean;
   error: string | null;
@@ -184,11 +202,35 @@ function PasswordForm({
           </span>
         )}
       </div>
+      {code !== null ? (
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor={`${id}-code`}
+            className="text-13 font-semibold text-wallet-muted"
+          >
+            {t("signIn.code")}
+          </label>
+          <input
+            id={`${id}-code`}
+            className={`${inputClass} min-h-12 text-15`}
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => onCode(e.target.value)}
+            aria-describedby={`${id}-code-note`}
+            maxLength={20}
+            autoFocus
+            required
+          />
+          <span id={`${id}-code-note`} className="text-12 text-wallet-muted">
+            {t("signIn.codeHint")}
+          </span>
+        </div>
+      ) : null}
       {error ? <Notice tone="out">{error}</Notice> : null}
       <PrimaryButton
         type="submit"
         className="min-h-12 text-15"
-        disabled={busy || !email || !password}
+        disabled={busy || !email || !password || (code !== null && !code.trim())}
       >
         {busy ? t("signIn.checking") : t("signIn.open")}
       </PrimaryButton>

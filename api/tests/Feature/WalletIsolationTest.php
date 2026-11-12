@@ -55,8 +55,11 @@ class WalletIsolationTest extends TestCase
             $this->assertDoesNotMatchRegularExpression("/connection\\(\\s*'wallet'|setConnection\\(\\s*'wallet'|'database'\\s*=>\\s*'wallet'/", $source, "{$relative} opens the wallet connection.");
         }
 
-        // The wallet reads the staff account to check the password, and nothing else of the company's.
-        $permitted = ['App\\Models\\Staff', 'App\\Models\\Concerns\\AppendOnly', 'App\\Enums\\StaffStatus', 'App\\Http\\Controllers\\Controller'];
+        // The wallet reads the staff account to check the password, and its two-step code (docs/two-step-sign-in.md: the
+        // owner's choice of 2026-11-13, so the wallet is never the way in with the password alone; the code is the staff
+        // account's, shared with the admin), and nothing else of the company's.
+        $permitted = ['App\\Models\\Staff', 'App\\Models\\Concerns\\AppendOnly', 'App\\Enums\\StaffStatus', 'App\\Http\\Controllers\\Controller',
+            'App\\Services\\Auth\\TwoFactor', 'App\\Services\\Auth\\TwoFactorRefused'];
         foreach ($this->php("{$root}/app/Wallet") as $file) {
             preg_match_all('/^use (App\\\\[^;]+);/m', (string) file_get_contents($file), $imports);
             foreach ($imports[1] as $import) {

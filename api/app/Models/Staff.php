@@ -22,7 +22,7 @@ class Staff extends Authenticatable implements JWTSubject
 
     protected $fillable = ['employee_code', 'name', 'email', 'phone', 'password', 'status', 'software_access', 'must_change_password', 'locale'];
 
-    protected $hidden = ['password', 'whatsapp_code_hash'];
+    protected $hidden = ['password', 'whatsapp_code_hash', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_last_step'];
 
     /** As the column's default: everyone signs in unless added without software access (docs/staff-without-access.md). */
     protected $attributes = ['software_access' => true];
@@ -38,7 +38,19 @@ class Staff extends Authenticatable implements JWTSubject
             'whatsapp_verified_at' => 'datetime',
             'whatsapp_code_expires_at' => 'datetime',
             'whatsapp_code_attempts' => 'integer',
+            // Two-step sign-in (docs/two-step-sign-in.md): the authenticator secret encrypted with APP_KEY, recovery codes
+            // as keyed hashes only.
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_recovery_codes' => 'array',
+            'two_factor_last_step' => 'integer',
         ];
+    }
+
+    /** Signs in with a code from an authenticator app as well as the password: set up and confirmed. */
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_confirmed_at !== null && $this->two_factor_secret !== null;
     }
 
     /** The number staff alerts go to — only once the staff member has confirmed it with a code sent there. */

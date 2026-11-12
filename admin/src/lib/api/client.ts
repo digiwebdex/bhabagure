@@ -75,7 +75,13 @@ export async function request<T>(path: string, { method = 'GET', body, signal, r
 
   const text = await response.text()
   const json = text ? (JSON.parse(text) as unknown) : null
-  if (!response.ok) throw new ApiError(response.status, json as ConstructorParameters<typeof ApiError>[1])
+  if (!response.ok) {
+    const error = new ApiError(response.status, json as ConstructorParameters<typeof ApiError>[1])
+    // The super admin has just required two-step sign-in (docs/two-step-sign-in.md) and this screen was open before: the
+    // setup page, where the app reloads the staff member and keeps them until it is set up.
+    if (error.code === 'two_factor_setup_required' && window.location.pathname !== '/two-step-setup') window.location.assign('/two-step-setup')
+    throw error
+  }
 
   return json as T
 }

@@ -2,6 +2,9 @@
 
 return [
     'invalid_credentials' => 'That email and password don’t open the wallet.',
+    'code_required' => 'Enter the 6-digit code from your authenticator app.',
+    'invalid_code' => 'That code isn’t right, or it was already used. Enter the newest code from your authenticator app, or a recovery code.',
+    'too_many_attempts' => 'Too many wrong codes. Wait 15 minutes, then try again.',
     'signed_out' => 'Signed out of the wallet.',
     'header_missing' => 'This request didn’t come from the wallet.',
     'foreign_origin' => 'The wallet only answers its own page.',

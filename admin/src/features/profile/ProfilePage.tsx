@@ -11,6 +11,7 @@ import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
 import { myWhatsAppActions, useMyWhatsApp, useMyWhatsAppAction, type MyWhatsApp } from '../notifications/api'
 import { useMyRecord } from '../staff/api'
+import { TwoStepCard } from './TwoStepCard'
 
 export function ProfilePage() {
   const { t } = useTranslation()
@@ -28,6 +29,7 @@ export function ProfilePage() {
             {t('profile.changePassword')}
           </Link>
         </Card>
+        <TwoStepCard />
         <MyRecordCard />
       </div>
     </>

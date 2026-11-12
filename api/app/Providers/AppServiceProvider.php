@@ -314,6 +314,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth-refresh', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
         // Staff invitation and reset links are 256-bit tokens; this only stops one address hammering the endpoint.
         RateLimiter::for('staff-invitations', fn (Request $request) => Limit::perMinute(10)->by('staff-invitations|'.$request->ip()));
+        // Setting up and managing two-step sign-in (docs/two-step-sign-in.md): a person does it a few times at most; wrong
+        // codes are also counted per account by TwoFactor itself.
+        RateLimiter::for('staff-two-factor', fn (Request $request) => Limit::perMinute(10)->by('staff-two-factor|'.($request->user('staff')?->id ?? $request->ip())));
         // "Forgot password?" on the admin sign-in: a person asks once or twice; more is someone flooding a staff phone.
         RateLimiter::for('staff-forgot-password', fn (Request $request) => [
             Limit::perMinute(3)->by('staff-forgot-minute|'.$request->ip()),

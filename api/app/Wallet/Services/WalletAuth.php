@@ -4,6 +4,8 @@ namespace App\Wallet\Services;
 
 use App\Enums\StaffStatus;
 use App\Models\Staff;
+use App\Services\Auth\TwoFactor;
+use App\Services\Auth\TwoFactorRefused;
 use App\Wallet\Models\AuditLog;
 use App\Wallet\Models\Member;
 use App\Wallet\Models\Session;
@@ -26,12 +28,28 @@ final class WalletAuth
      *
      * @throws WalletRefused
      */
-    public function password(string $email, string $password, Request $request): string
+    public function password(string $email, string $password, Request $request, ?string $code = null): string
     {
         $staff = Staff::query()->where('email', trim($email))->first();
         if ($staff === null || ! Hash::check($password, $staff->password) || ! self::allowed($staff)) {
             AuditLog::record('sign_in_refused', $staff?->id);
             throw new WalletRefused('invalid_credentials', 401);
+        }
+        // Two-step sign-in (docs/two-step-sign-in.md, owner's choice 2026-11-13): someone who has it on for the admin needs
+        // the code here too, or the wallet would be the way in with the password alone. Each code works once, across both.
+        if ($staff->hasTwoFactor()) {
+            if ($code === null || trim($code) === '') {
+                throw new WalletRefused('code_required', 401);
+            }
+            try {
+                $via = app(TwoFactor::class)->check($staff, $code);
+            } catch (TwoFactorRefused) {
+                throw new WalletRefused('too_many_attempts', 429);
+            }
+            if ($via === null) {
+                AuditLog::record('sign_in_refused', $staff->id);
+                throw new WalletRefused('invalid_code', 401);
+            }
         }
 
         $token = bin2hex(random_bytes(32));

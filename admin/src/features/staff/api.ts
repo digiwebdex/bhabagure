@@ -60,7 +60,9 @@ export type StaffDetail = StaffRow & {
   locale: 'bn' | 'en'
   profile: StaffProfile
   documents: StaffDocument[] | null
-  actions: Record<'edit' | 'change_email' | 'change_role' | 'suspend' | 'reactivate' | 'reinvite' | 'password_reset' | 'grant_access' | 'upload_documents', boolean>
+  /** docs/two-step-sign-in.md: on or off; the secret never leaves the server. */
+  two_factor_enabled: boolean
+  actions: Record<'edit' | 'change_email' | 'change_role' | 'suspend' | 'reactivate' | 'reinvite' | 'password_reset' | 'grant_access' | 'upload_documents' | 'reset_two_factor', boolean>
 }
 
 export const DOCUMENT_TYPES = ['passport', 'nid', 'driving_licence', 'cv', 'appointment_letter', 'contract', 'certificate', 'photo', 'other'] as const
@@ -156,6 +158,8 @@ export const staffActions = {
   reactivate: (id: number) => () => api.post<Data<StaffDetail>>(`admin/staff/${id}/reactivate`),
   reinvite: (id: number) => () => api.post<Data<StaffDetail> & { invitation: Invitation }>(`admin/staff/${id}/invitation`),
   grantAccess: (id: number) => (body: { email: string; role: string }) => api.post<Data<StaffDetail> & { invitation: Invitation }>(`admin/staff/${id}/access`, body),
+  // A lost phone: the super admin clears someone's two-step sign-in and signs them out (docs/two-step-sign-in.md).
+  resetTwoFactor: (id: number) => () => api.post<Data<StaffDetail>>(`admin/staff/${id}/two-factor/reset`),
 }
 
 export function usePasswordReset(id: number) {

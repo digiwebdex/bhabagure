@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\V1\Admin\ReferencePresetController;
 use App\Http\Controllers\Api\V1\Admin\ReviewController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
+use App\Http\Controllers\Api\V1\Admin\SecurityController;
 use App\Http\Controllers\Api\V1\Admin\ServiceRecordController;
 use App\Http\Controllers\Api\V1\Admin\SiteSettingController;
 use App\Http\Controllers\Api\V1\Admin\StaffBookingController;
@@ -71,6 +72,7 @@ use App\Http\Controllers\Api\V1\Agent\AttendanceAgentController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
 use App\Http\Controllers\Api\V1\Auth\StaffInvitationController;
+use App\Http\Controllers\Api\V1\Auth\TwoFactorController;
 use App\Http\Controllers\Api\V1\Payments\FakeGatewayController;
 use App\Http\Controllers\Api\V1\Payments\SslCommerzCallbackController;
 use App\Http\Controllers\Api\V1\Portal\DownloadController;
@@ -110,6 +112,15 @@ Route::prefix('v1')->group(function () {
         Route::middleware('auth:staff')->group(function () {
             Route::get('me', 'me');
             Route::post('change-password', 'changePassword');
+        });
+        // Two-step sign-in, the person's own (docs/two-step-sign-in.md): reachable while the super admin's rule still
+        // makes them set it up, so outside staff.can-work.
+        Route::middleware(['auth:staff', 'throttle:staff-two-factor'])->prefix('two-factor')->controller(TwoFactorController::class)->group(function () {
+            Route::get('', 'show');
+            Route::post('setup', 'setup');
+            Route::post('confirm', 'confirm');
+            Route::post('recovery-codes', 'recoveryCodes');
+            Route::post('disable', 'disable');
         });
         // Invitation and password-reset links (docs/phase-7-hr-attendance-bonus-wallet.md §4.1).
         Route::middleware('throttle:staff-invitations')->controller(StaffInvitationController::class)->group(function () {
@@ -350,7 +361,12 @@ Route::prefix('v1')->group(function () {
             Route::post('staff/{id}/password-reset', 'passwordReset')->whereNumber('id');
             // Software access for someone added without it (docs/staff-without-access.md).
             Route::post('staff/{id}/access', 'grantAccess')->whereNumber('id');
+            // A lost phone: the super admin clears someone's two-step sign-in (docs/two-step-sign-in.md; checked inside).
+            Route::post('staff/{id}/two-factor/reset', 'resetTwoFactor')->whereNumber('id');
         });
+        // Security: the super admin requires two-step sign-in for everyone (docs/two-step-sign-in.md; checked inside).
+        Route::get('security', [SecurityController::class, 'show']);
+        Route::put('security', [SecurityController::class, 'update']);
         Route::middleware('permission:system.roles_manage,staff')->controller(RoleController::class)->group(function () {
             Route::get('roles', 'index');
             Route::post('roles', 'store');

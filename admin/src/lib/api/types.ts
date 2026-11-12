@@ -12,6 +12,9 @@ export type Staff = {
   status: 'invited' | 'active' | 'suspended'
   locale: 'bn' | 'en'
   must_change_password: boolean
+  /** Two-step sign-in (docs/two-step-sign-in.md): on for this person, and whether the super admin's rule makes them set it up first. */
+  two_factor_enabled: boolean
+  two_factor_setup_required: boolean
   role: string | null
   /** A custom role's own name; system roles are labelled from the admin's translations. */
   role_name_en: string | null
@@ -20,7 +23,8 @@ export type Staff = {
   permissions: string[]
 }
 
-export type TokenResponse = { access_token: string; expires_in: number; staff: Staff }
+/** recovery_codes_left: present when sign-in used up a recovery code. */
+export type TokenResponse = { access_token: string; expires_in: number; staff: Staff; recovery_codes_left?: number }
 
 export type MediaVariant = { url: string; width: number; height: number }
 

@@ -12,6 +12,8 @@ use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\StaffInvitation;
 use App\Models\StaffProfile;
+use App\Services\Auth\TwoFactor;
+use App\Services\Auth\TwoFactorRefused;
 use App\Services\Bonus\BonusDesk;
 use App\Services\Hr\HrRefused;
 use App\Services\Hr\StaffDirectory;
@@ -23,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * HR → Staff & bonus (docs/phase-7-hr-attendance-bonus-wallet.md §4.1): the staff list and a person's record, adding and
@@ -221,6 +224,25 @@ class StaffController extends Controller
         return response()->json(['data' => $this->detail($staff, $request->user('staff')), 'invitation' => $this->invitationData($staff, $token, $invitations)]);
     }
 
+    /**
+     * The super admin clears someone's two-step sign-in (docs/two-step-sign-in.md): a lost phone with no recovery codes
+     * left. They are signed out everywhere and set it up again; it is in the audit log.
+     */
+    public function resetTwoFactor(Request $request, int $id, TwoFactor $twoFactor): JsonResponse
+    {
+        $staff = self::find($id);
+        $by = $request->user('staff');
+        abort_if($staff->is($by), Response::HTTP_FORBIDDEN, __('auth.two_factor.reset_own'));
+
+        try {
+            $twoFactor->reset($staff, $by);
+        } catch (TwoFactorRefused $refused) {
+            return response()->json(['message' => $refused->message(), 'code' => "two_factor_{$refused->reason}"], $refused->status());
+        }
+
+        return response()->json(['data' => $this->detail($staff->refresh(), $by)]);
+    }
+
     /** A fresh invitation for someone who hasn't set a password: emailed, and its link shown once to copy. */
     public function invite(Request $request, int $id, StaffDirectory $directory, StaffInvitations $invitations): JsonResponse
     {
@@ -316,6 +338,8 @@ class StaffController extends Controller
                     'payout_account' => $profile?->payout_account,
                     'salary_basis' => $profile?->salary_basis ?? 'attendance',
                 ],
+                // docs/two-step-sign-in.md: whether it is on; never the secret or the codes.
+                'two_factor_enabled' => $staff->hasTwoFactor(),
                 'documents' => $documents?->map(fn (StaffDocument $document) => StaffDocumentController::row($document, $today))->values()->all(),
                 'actions' => [
                     'edit' => $may,
@@ -326,6 +350,8 @@ class StaffController extends Controller
                     'reactivate' => $may && $staff->status === StaffStatus::Suspended,
                     'reinvite' => $may && $staff->status === StaffStatus::Invited,
                     'password_reset' => $may && ! $mine && $staff->status === StaffStatus::Active && $staff->software_access,
+                    // A lost phone: the super admin clears someone else's two-step sign-in (their own goes through their profile).
+                    'reset_two_factor' => $viewer->isSuperAdmin() && ! $mine && ($staff->two_factor_secret !== null || $staff->two_factor_confirmed_at !== null),
                     'upload_documents' => $viewer->can('staff_documents.manage'),
                 ],
             ];

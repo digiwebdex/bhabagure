@@ -189,7 +189,8 @@ export function useBookChange<TVariables, TResponse>(
 }
 
 export const actions = {
-  password: (body: { email: string; password: string }) =>
+  // `code`: the authenticator app's, for someone with two-step sign-in on (docs/two-step-sign-in.md).
+  password: (body: { email: string; password: string; code?: string }) =>
     api.post<Data<{ signed_in: boolean }>>("auth/password", body),
   signOut: () => api.post<Data<{ signed_in: boolean }>>("auth/sign-out"),
   record: (form: FormData) => api.post<Data<Entry>>("transactions", form),

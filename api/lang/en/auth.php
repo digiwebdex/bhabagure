@@ -11,6 +11,21 @@ return [
     'unauthenticated' => 'Please sign in.',
     'forbidden' => 'You do not have permission to do this.',
 
+    // Two-step sign-in with an authenticator app (docs/two-step-sign-in.md). The admin is English only.
+    'two_factor' => [
+        'code_required' => 'Enter the 6-digit code from your authenticator app.',
+        'invalid_code' => 'That code isn’t right, or it was already used. Enter the newest code from your authenticator app, or a recovery code.',
+        'too_many_attempts' => 'Too many wrong codes. Try again in :seconds seconds.',
+        'setup_required' => 'Set up two-step sign-in before continuing: the super admin requires it.',
+        'already_on' => 'Two-step sign-in is already on.',
+        'not_started' => 'Start the setup first: scan the QR code, then enter a code.',
+        'not_on' => 'Two-step sign-in isn’t on.',
+        'wrong_password' => 'That password isn’t right.',
+        'required_by_policy' => 'The super admin requires two-step sign-in, so it can’t be turned off. If your phone is lost, ask the super admin to reset it.',
+        'super_admin_only' => 'Only the super admin can reset someone’s two-step sign-in.',
+        'reset_own' => 'Turn your own off from your profile, with a code; or ask another super admin.',
+    ],
+
     // Neutral on purpose: never confirm that a number or address belongs to a customer.
     'code_throttled' => 'A code was sent recently. You can ask for another in :seconds seconds.',
     'code_undeliverable' => 'We can\'t send sign-in codes right now. Please call or WhatsApp our office.',

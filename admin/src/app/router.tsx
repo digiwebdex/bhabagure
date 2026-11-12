@@ -31,6 +31,7 @@ const BookingDetailPage = page(() => import('../features/bookings/BookingDetailP
 const BookingListPage = page(() => import('../features/bookings/BookingListPage'), 'BookingListPage')
 const NewBookingPage = page(() => import('../features/bookings/NewBookingPage'), 'NewBookingPage')
 const ChangePasswordPage = page(() => import('../features/auth/ChangePasswordPage'), 'ChangePasswordPage')
+const TwoStepSetupPage = page(() => import('../features/auth/TwoStepSetupPage'), 'TwoStepSetupPage')
 const CustomerProfilePage = page(() => import('../features/customers/CustomerProfilePage'), 'CustomerProfilePage')
 const CustomersPage = page(() => import('../features/customers/CustomersPage'), 'CustomersPage')
 const DashboardPage = page(() => import('../features/dashboard/DashboardPage'), 'DashboardPage')
@@ -101,6 +102,15 @@ export const router = createBrowserRouter([
     element: (
       <Require>
         <ChangePasswordPage />
+      </Require>
+    ),
+  },
+  // The super admin requires two-step sign-in (docs/two-step-sign-in.md): set up before anything else.
+  {
+    path: '/two-step-setup',
+    element: (
+      <Require>
+        <TwoStepSetupPage />
       </Require>
     ),
   },

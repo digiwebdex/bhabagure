@@ -15,6 +15,11 @@ authenticator code is gone. The staff email and password alone open a wallet; th
 no "Reset authenticator". The code (`Totp`, the `Authenticator` model, `auth/code`, `members/{id}/reset-authenticator`,
 `wallet:reset-authenticator`) was removed; the old `wallet_authenticators` table is left in place, unread.
 
+**Since 2026-11-13** (docs/two-step-sign-in.md): someone who has turned on the staff account's two-step sign-in in their
+admin profile is asked for the code here too, after the password (`code_required`), so the wallet is never the way in
+with the password alone. It is the staff account's authenticator, shared with the admin, not a wallet-only one; people
+without it sign in with the password as before.
+
 ## What people do
 
 - **The super admin** has an **Access** tab beside **My wallet**. It lists active staff; for each:

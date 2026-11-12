@@ -24,6 +24,8 @@
     "hide": "Hide",
     "passwordHint": "The same password as the admin panel.",
     "capsLock": "Caps Lock is on.",
+    "code": "Code from your authenticator app",
+    "codeHint": "You have two-step sign-in on: enter the 6-digit code, or one of your recovery codes.",
     "checking": "Checking…",
     "forgot": "Forgot your password?",
     "forgotLink": "Reset it on the admin panel",

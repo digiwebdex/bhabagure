@@ -14,6 +14,8 @@ export function Require({ permissions, children }: { permissions?: string[]; chi
   if (session.state === 'loading') return <Loading />
   if (session.state === 'signed-out') return <Navigate to="/login" replace state={{ from: location.pathname }} />
   if (session.staff.must_change_password && location.pathname !== '/change-password') return <Navigate to="/change-password" replace />
+  // The super admin requires two-step sign-in and this person hasn't set it up (docs/two-step-sign-in.md).
+  if (!session.staff.must_change_password && session.staff.two_factor_setup_required && location.pathname !== '/two-step-setup') return <Navigate to="/two-step-setup" replace />
   if (permissions && !can(...permissions)) return <EmptyState title={t('errors.forbiddenTitle')} note={t('errors.forbiddenNote')} />
 
   return children

@@ -202,8 +202,9 @@ function AccessCard({ staff }: { staff: StaffDetail }) {
   const reactivate = useStaffAction(staff.id, staffActions.reactivate(staff.id))
   const reinvite = useStaffAction(staff.id, staffActions.reinvite(staff.id))
   const reset = usePasswordReset(staff.id)
+  const resetTwoFactor = useStaffAction(staff.id, staffActions.resetTwoFactor(staff.id))
   const roles = options.data?.data.roles ?? []
-  const actionError = changeRole.error ?? reactivate.error ?? reinvite.error ?? reset.error
+  const actionError = changeRole.error ?? reactivate.error ?? reinvite.error ?? reset.error ?? resetTwoFactor.error
 
   return (
     <Card>
@@ -237,7 +238,27 @@ function AccessCard({ staff }: { staff: StaffDetail }) {
         </p>
       )}
 
+      {staff.software_access ? (
+        <p className="m-0 flex flex-wrap items-center gap-2 text-13" data-testid="staff-two-step">
+          <span className="text-app-muted">{t('twoStep.title')}</span>
+          <Badge tone={staff.two_factor_enabled ? 'green' : 'slate'}>{staff.two_factor_enabled ? t('twoStep.on') : t('twoStep.off')}</Badge>
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
+        {staff.actions.reset_two_factor ? (
+          <button
+            type="button"
+            className={buttonClass('outline', 'sm')}
+            disabled={resetTwoFactor.isPending}
+            onClick={async () => {
+              if (!(await confirm(t('twoStep.resetConfirm', { name: staff.name })))) return
+              resetTwoFactor.mutate(undefined, { onSuccess: () => toast(t('twoStep.resetDone', { name: staff.name })) })
+            }}
+          >
+            {t('twoStep.reset')}
+          </button>
+        ) : null}
         {staff.actions.reinvite ? (
           <button type="button" className={buttonClass('outline', 'sm')} disabled={reinvite.isPending} onClick={() => reinvite.mutate(undefined, { onSuccess: (response) => setInvitation(response.invitation) })}>
             {t('staff.resendInvite')}
