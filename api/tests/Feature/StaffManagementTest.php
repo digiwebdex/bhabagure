@@ -265,6 +265,40 @@ class StaffManagementTest extends TestCase
     }
 
     #[Test]
+    public function the_fingerprint_device_switch_is_on_by_default_and_hr_turns_it_off(): void
+    {
+        $admin = $this->staff('admin');
+        $driver = $this->staff('tour_operator');
+        $added = $this->actingAsApi($admin)->postJson('/api/v1/admin/staff', ['name' => 'Karim Driver', 'email' => 'karim@example.test', 'role' => 'tour_operator'])
+            ->assertCreated()->assertJsonPath('data.profile.uses_attendance_device', true)->assertJsonPath('data.uses_attendance_device', true);
+
+        // No HR record yet counts as on.
+        $this->getJson("/api/v1/admin/staff/{$driver->id}")->assertOk()->assertJsonPath('data.profile.uses_attendance_device', true);
+        $this->putJson("/api/v1/admin/staff/{$driver->id}", ['uses_attendance_device' => 'maybe'])->assertUnprocessable()->assertJsonValidationErrors('uses_attendance_device');
+        $this->putJson("/api/v1/admin/staff/{$driver->id}", ['uses_attendance_device' => false])->assertOk()
+            ->assertJsonPath('data.profile.uses_attendance_device', false)->assertJsonPath('data.uses_attendance_device', false);
+        $this->assertFalse((bool) DB::table('staff_profiles')->where('staff_id', $driver->id)->value('uses_attendance_device'));
+        $this->assertSame(['uses_attendance_device'], AuditLog::query()->where('action', 'staff.updated')->where('auditable_id', $driver->id)->sole()->changes['fields']);
+        $this->assertFalse(collect($this->getJson('/api/v1/admin/staff?status=all')->json('data'))->firstWhere('id', $driver->id)['uses_attendance_device']);
+        // Other fields saved later leave it as it is; the person sees it on their own record.
+        $this->putJson("/api/v1/admin/staff/{$driver->id}", ['designation' => 'Driver'])->assertOk()->assertJsonPath('data.profile.uses_attendance_device', false);
+        $this->actingAsApi($driver)->getJson('/api/v1/admin/profile/record')->assertOk()->assertJsonPath('data.uses_attendance_device', false);
+
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/staff/{$driver->id}", ['uses_attendance_device' => true])->assertOk()->assertJsonPath('data.profile.uses_attendance_device', true);
+        $this->assertTrue((bool) DB::table('staff_profiles')->where('staff_id', $added->json('data.id'))->value('uses_attendance_device'));
+
+        // Off, attendance no longer cuts pay: nobody but the super admin switches their own, though the rest of their
+        // record still saves with it unchanged.
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/staff/{$admin->id}", ['uses_attendance_device' => false])->assertForbidden()
+            ->assertJsonPath('code', 'own_attendance_device')->assertJsonPath('message', 'Someone else decides whether you use the fingerprint device.');
+        $this->assertTrue($admin->refresh()->usesAttendanceDevice());
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/staff/{$admin->id}", ['uses_attendance_device' => true, 'designation' => 'Office admin'])->assertOk()
+            ->assertJsonPath('data.profile.designation', 'Office admin');
+        $owner = $this->staff('super_admin');
+        $this->actingAsApi($owner)->putJson("/api/v1/admin/staff/{$owner->id}", ['uses_attendance_device' => false])->assertOk()->assertJsonPath('data.profile.uses_attendance_device', false);
+    }
+
+    #[Test]
     public function the_list_filters_by_status_and_counts_sales_closed_this_month(): void
     {
         $admin = $this->staff('admin');

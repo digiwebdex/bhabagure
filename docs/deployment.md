@@ -354,6 +354,32 @@ allow-list files are no longer needed, and the staff email and password alone op
 | MySQL database `bhabaghure_wallet`, user `bhabaghure_wallet@127.0.0.1` (wallet-database.sh) | wallet isolation enforced by MySQL | `DROP DATABASE bhabaghure_wallet; DROP USER 'bhabaghure_wallet'@'127.0.0.1';` and remove the `WALLET_*` lines |
 | `/etc/nginx/bhabaghure-wallet/allow*.conf` | the front door | remove the directory; the wallet then answers 403 to everyone |
 
+### 7.7 Attendance agent package (Phase 7 step 2)
+
+The office PC downloads the attendance agent from Attendance → the device card
+(docs/phase-7-hr-attendance-bonus-wallet.md §5.2). The zip is built on Windows and never committed (the repository is
+public), so each new version is uploaded by hand:
+
+1. **Build** on a Windows PC with the `py` launcher and 64-bit Python 3.12 or newer: in `agent/`, run `.\build.ps1` in
+   PowerShell. It runs the agent's tests and writes `agent/dist/BhabaghureAttendanceAgent-<version>.zip`, the version
+   being `VERSION` in `agent/bhabaghure_attendance/__init__.py`.
+2. **Upload** from the repository in Git Bash: `bash deploy/upload-agent-package.sh`, or with a version
+   (`bash deploy/upload-agent-package.sh 1.1.0`). It uses ssh and scp with your key and never asks for a password. The
+   zip's SHA-256 is checked again on the server, and the script prints what it uploaded.
+
+**On the server** the package is in `/var/www/Bhabagure/api/storage/app/private/attendance-agent/`:
+- the zip, and `latest.json` beside it: version, file name, size, SHA-256 and upload time;
+- both `www-data`, 640, in a folder (`www-data`, 750) the script creates the first time.
+
+The zip arrives under a temporary name and is renamed into place once its SHA-256 matches; `latest.json` is renamed in
+last. The API offers only the zip `latest.json` names, and only at the size it states, so the card never offers half a
+file. Until a package is there, the card says "Not on the server yet" and the download answers 404
+`agent_package_missing`. Nothing is deleted: an earlier version's zip stays until someone removes it. Removing
+`latest.json` withdraws the package.
+
+**`deploy.sh` doesn't touch it.** The folder is in `api/storage`, which git ignores, so a deploy neither brings a new
+package nor removes the one there. Upload again after each agent build.
+
 ## 8. The project's own VPS (moved 2026-11-06)
 
 **Where:** `root@201.18.220.51` (Hostinger, hostname `srv2132267`), 2 CPUs, 7.7 GB memory, 96 GB disk, 2 GB swap. Same

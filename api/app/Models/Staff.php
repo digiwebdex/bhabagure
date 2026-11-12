@@ -59,6 +59,12 @@ class Staff extends Authenticatable implements JWTSubject
         return $this->hasOne(StaffProfile::class);
     }
 
+    /** Punches on the fingerprint device, so attendance counts for them. On unless their HR record turns it off. */
+    public function usesAttendanceDevice(): bool
+    {
+        return $this->profile?->uses_attendance_device ?? true;
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(StaffDocument::class);

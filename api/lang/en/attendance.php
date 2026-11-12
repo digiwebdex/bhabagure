@@ -1,12 +1,15 @@
 <?php
 
 return [
-    'token_refused' => 'This device token isn’t valid. Copy the current token from the Attendance screen.',
+    'token_refused' => 'This device token isn’t valid. Make a new one with Rotate token on the Attendance screen, and store it on the office PC with agent.exe set-token.',
     'too_many_attempts' => 'Too many refused tokens from this address. Try again in a minute.',
     'device_changed' => 'This token belongs to a different device. If the device was replaced, confirm it on the Attendance screen.',
     'report_first' => 'The agent must report the device before it sends punches.',
     'device_revoked' => 'This device’s token is revoked. Rotate it to use the device again.',
     'no_report_yet' => 'The agent hasn’t reported this device yet, so its clock can’t be set.',
+    'device_address_private' => 'Enter the device’s address on the office network: a private IPv4 address such as 192.168.10.116 (10.x.x.x, 172.16–31.x.x or 192.168.x.x).',
+    'device_port_range' => 'The device’s port is between :min and :max; ZKTeco devices use 4370 unless it was changed on the device.',
+    'agent_package_missing' => 'The agent package isn’t on the server yet. The developer uploads it with deploy/upload-agent-package.sh.',
     'leave_overlaps' => 'This leave overlaps a request that is pending or approved.',
     'leave_decided' => 'This request has already been decided.',
     'leave_not_approved' => 'Only approved leave can be revoked.',

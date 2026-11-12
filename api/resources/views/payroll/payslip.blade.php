@@ -10,6 +10,8 @@
     $monthName = $date($month->format('Y-m-d'));
     $monthLabel = preg_replace('/^\S+\s/u', '', $monthName);
     $totals = $item->totals;
+    // False for someone who doesn't use the fingerprint device: no attendance counts and no attendance cuts (PayrollDesk).
+    $tracked = ($totals['attendance_tracked'] ?? true) !== false;
     $dayRate = (float) $item->day_rate;
     $reduced = (float) ($totals['reduced_days'] ?? 0);
     $pay = (int) ($rules['late_early_pay_percent'] ?? 50);
@@ -65,9 +67,14 @@
     </div>
     <div class="box">
       <span class="label">{{ $l('উপস্থিতি', 'Attendance') }}</span>
+      @if ($tracked)
       <span>{{ $l('কর্মদিবস', 'Working days') }}: <span class="num">{{ $number($totals['working_days'] ?? 0) }}</span> · {{ $l('পূর্ণ', 'Full') }}: <span class="num">{{ $number($totals['full'] ?? 0) }}</span></span>
       <span>{{ $l('দেরি বা আগে', 'Late or early') }}: <span class="num">{{ $number($reduced) }}</span> · {{ $l('অনুপস্থিত', 'Absent') }}: <span class="num">{{ $number($totals['absent_days'] ?? 0) }}</span></span>
       <span>{{ $l('বেতনসহ ছুটি', 'Paid leave') }}: <span class="num">{{ $number($totals['leave_paid'] ?? 0) }}</span> · {{ $l('বেতনবিহীন ছুটি', 'Unpaid leave') }}: <span class="num">{{ $number($totals['leave_unpaid'] ?? 0) }}</span></span>
+      @else
+      <span>{{ $l('কর্মদিবস', 'Working days') }}: <span class="num">{{ $number($totals['working_days'] ?? 0) }}</span></span>
+      <span class="muted">{{ $l('ফিঙ্গারপ্রিন্ট ডিভাইস ব্যবহার করেন না, তাই হাজিরার জন্য কোনো কর্তন নেই।', 'Doesn’t use the fingerprint device, so nothing is cut for attendance.') }}</span>
+      @endif
     </div>
   </div>
 
@@ -93,7 +100,11 @@
     <p class="muted">{{ $l('পরিশোধ', 'Paid') }}: {{ $date($item->paid_at->timezone('Asia/Dhaka')->toDateString()) }}@if ($item->transaction?->reference_label) · {{ $item->transaction->reference_label }}@endif</p>
   @endif
 
+  @if ($tracked)
   <p class="foot">{{ $l('এই পে-স্লিপ হাজিরা ডিভাইসের পাঞ্চ ও মাসের নিয়ম থেকে তৈরি, মাস চূড়ান্ত করার সময়ের হিসাবে।', 'This payslip is figured from the attendance device’s punches and the month’s rules, as they stood when the month was finalised.') }}</p>
+  @else
+  <p class="foot">{{ $l('এই পে-স্লিপ মূল বেতন, চাকরির তারিখ ও মাসের নিয়ম থেকে তৈরি, মাস চূড়ান্ত করার সময়ের হিসাবে।', 'This payslip is figured from the base salary, the employment dates and the month’s rules, as they stood when the month was finalised.') }}</p>
+  @endif
 </div>
 </body>
 </html>

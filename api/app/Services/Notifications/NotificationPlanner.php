@@ -194,7 +194,7 @@ final class NotificationPlanner
      * The attendance device has been silent for an hour of duty time: once per outage (the outage is named by the last good
      * pull), to the alert's list or, with nobody on it, everyone active who manages attendance.
      *
-     * @param  string  $reason  pc_silent · device_unreachable
+     * @param  string  $reason  pc_silent · device_unreachable · no_address
      */
     public function attendanceDeviceOffline(AttendanceDevice $device, string $reason): void
     {

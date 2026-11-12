@@ -3,4 +3,4 @@
 docs/phase-7-hr-attendance-bonus-wallet.md §5.2. Runs once a minute from Windows Task Scheduler, does its work, exits.
 """
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"

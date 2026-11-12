@@ -1,0 +1,3 @@
+# cmd.exe can misread a batch file with bare LF line endings (a goto finds no label), so install.cmd is always CRLF,
+# whatever the checkout platform.
+*.cmd text eol=crlf

@@ -185,6 +185,56 @@ class PayrollTest extends TestCase
     }
 
     #[Test]
+    public function someone_who_doesnt_use_the_device_is_paid_without_attendance_cuts_and_invited_staff_are_on_the_payroll(): void
+    {
+        Mail::fake();
+        $admin = $this->staff('admin');
+        // Never punches: switched off on his staff record. A month without punches would otherwise be 26 absences, ৳ 0.
+        $driver = $this->person('Karim Driver', '40', 26000);
+        $this->actingAsApi($admin)->putJson("/api/v1/admin/staff/{$driver->id}", ['uses_attendance_device' => false])->assertOk();
+        // Off too, and joined on Wednesday 16 September: only the 13 working days before joining are cut.
+        $cook = $this->person('Rahim Cook', '41', 26000, joinedOn: '2026-09-16');
+        StaffProfile::query()->where('staff_id', $cook->id)->update(['uses_attendance_device' => false]);
+        // Invited, no login yet, punching every working day: on the payroll like anyone else (client, 2026-10-03).
+        $rumana = $this->person('Rumana Akter', '42', 26000);
+        $rumana->forceFill(['status' => 'invited'])->save();
+        foreach ($this->workingDays('2026-09') as $date) {
+            $this->punch('42', $date, '10:55:00', '19:05:00');
+            // The driver's old device ID still taps sometimes: it counts for nothing.
+            $this->punch('40', $date, '13:00:00');
+        }
+
+        $rows = collect($this->actingAsApi($admin)->getJson('/api/v1/admin/payroll?month=2026-09')->assertOk()->json('data.rows'))->keyBy('staff.id');
+        $this->assertSame([false, null, 0, 0, 26000], [$rows[$driver->id]['attendance_tracked'], $rows[$driver->id]['totals'],
+            $rows[$driver->id]['figures']['deduction_days'], $rows[$driver->id]['figures']['deductions'], $rows[$driver->id]['figures']['payable']]);
+        $this->assertSame([false, null, 13, 13000], [$rows[$cook->id]['attendance_tracked'], $rows[$cook->id]['totals'], $rows[$cook->id]['figures']['deduction_days'], $rows[$cook->id]['figures']['payable']]);
+        $this->assertSame([true, 'invited', 26, 26000], [$rows[$rumana->id]['attendance_tracked'], $rows[$rumana->id]['staff']['status'], $rows[$rumana->id]['totals']['full'], $rows[$rumana->id]['figures']['payable']]);
+        // The attendance month leaves the two out; Rumana is in it.
+        $month = array_column(array_column($this->getJson('/api/v1/admin/attendance/month?month=2026-09')->assertOk()->json('data.rows'), 'staff'), 'id');
+        $this->assertSame([false, false, true], [in_array($driver->id, $month, true), in_array($cook->id, $month, true), in_array($rumana->id, $month, true)]);
+        // Adjustments reach them like anyone on the sheet.
+        $this->postJson('/api/v1/admin/payroll/2026-09/adjustments', ['staff_id' => $rumana->id, 'amount' => 500, 'reason' => 'Mobile allowance'])->assertOk();
+
+        // Finalised as it stood: the frozen month keeps them untracked whatever their record says later.
+        $this->postJson('/api/v1/admin/payroll/2026-09/finalise')->assertOk();
+        $item = PayrollItem::query()->where('staff_id', $driver->id)->sole();
+        $this->assertSame(['26000.00', '0.00', false, []], [$item->payable, $item->deductions, $item->totals['attendance_tracked'], $item->days]);
+        $this->assertSame('26500.00', PayrollItem::query()->where('staff_id', $rumana->id)->value('payable'));
+        StaffProfile::query()->where('staff_id', $driver->id)->update(['uses_attendance_device' => true]);
+        $frozen = collect($this->actingAsApi($admin)->getJson('/api/v1/admin/payroll?month=2026-09')->assertOk()->assertJsonPath('data.status', 'finalised')->json('data.rows'))->keyBy('staff.id');
+        $this->assertSame([false, null, 0, 26000], [$frozen[$driver->id]['attendance_tracked'], $frozen[$driver->id]['totals'], $frozen[$driver->id]['figures']['deduction_days'], $frozen[$driver->id]['figures']['payable']]);
+        $this->assertSame([false, 13, 13000], [$frozen[$cook->id]['attendance_tracked'], $frozen[$cook->id]['figures']['deduction_days'], $frozen[$cook->id]['figures']['payable']]);
+        $this->assertSame([true, 26], [$frozen[$rumana->id]['attendance_tracked'], $frozen[$rumana->id]['totals']['full']]);
+
+        // The payslip says why nothing was cut, and the joiner's says what was.
+        $payslip = app(PayslipPdf::class);
+        $html = $payslip->html($item, 'en');
+        $this->assertStringContainsString('Doesn’t use the fingerprint device, so nothing is cut for attendance.', $html);
+        $this->assertStringNotContainsString('Absence', $html);
+        $this->assertStringContainsString('Working days before joining or after leaving', $payslip->html(PayrollItem::query()->where('staff_id', $cook->id)->sole(), 'en'));
+    }
+
+    #[Test]
     public function nobody_handles_their_own_pay_and_a_salary_cash_out_reversed_in_the_cash_book_leaves_the_month_unpaid(): void
     {
         Mail::fake();

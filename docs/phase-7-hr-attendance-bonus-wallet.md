@@ -3,7 +3,10 @@
 **Status (2026-09-15): steps 1–5 built and live, with automatic commission from the client's rules (§12 step 4). Waiting:
 - the My commission layout check, because the design copy here is still the 2026-09-13 one;
 - the wallet, which opens once its allow-list is in place on the server (§12, docs/deployment.md §7.6). Its database
-  exists.
+  exists;
+- the attendance agent's first install on the office PC. It had never been installed by 2026-10-03; that day the
+  device's address moved to the device card and the agent became a download installed with a double-click (§12,
+  step 2).
 
 Operations: docs/handover.md.**
 
@@ -97,7 +100,8 @@ Screens: HR → Staff & bonus, and System → Roles & audit.
   - designation, joining and leaving dates, date of birth;
   - NID number, encrypted with a lookup hash;
   - address and emergency contact;
-  - the account salary is paid to (bank or bKash number), encrypted.
+  - the account salary is paid to (bank or bKash number), encrypted;
+  - "Uses the fingerprint device", on unless switched off (client, 2026-10-03; §5.1).
 
   Seen and edited with `staff.manage`. Each staff member sees their own record, read-only, in Profile.
 - **Suspend and reactivate:**
@@ -142,11 +146,41 @@ Screens: HR → Staff & bonus, and System → Roles & audit.
 ### 5.1 In the company app
 
 - **Device card** (Attendance screen):
-  - Shows the device's name and what the agent last reported: model, serial, firmware, address, enrolled users and fingerprints, records on the device, clock drift, agent version.
+  - Shows the device's name and what the agent last reported: model, serial, firmware, enrolled users and
+    fingerprints, records on the device, clock drift, agent version.
   - Also shows the last check-in, the last pull and its result, and the sync log.
   - Buttons: Sync now, Test link, Set device clock (shown when the drift is over 2 minutes), Rotate token, Revoke.
+  - **The device's address on the office network** (client, 2026-10-03): its fixed address and port (4370 unless it was
+    changed on the device). It is kept here, edited with `attendance.manage`, and handed to the agent at its next
+    check-in, so a new address needs nobody at the office PC.
+    - Only a private IPv4 address is accepted: 10.x.x.x, 172.16–31.x.x or 192.168.x.x.
+    - Each change goes into the sync log and the audit log (`attendance.device_address_set`).
+    - If the agent last tried the device at another address, the card says "The agent is using …".
+    - With no address here and none on the office PC, the state reads "No device address: set it below".
+  - **The agent for the office PC** (`attendance.manage` only): "Download the agent" fetches the install zip the
+    developer uploaded (docs/deployment.md §7.7) and shows its version and size. Until there is one, the button is
+    disabled with "Not on the server yet".
+    - Three steps sit beside it: download and unzip the agent on the office PC; double-click `install.cmd` and allow the
+      Windows prompt; paste the device token when it asks.
+    - The token dialog offers the same download, so nobody closes it to fetch the agent and loses the token.
 - **Device users:** the device's user list (the ID and the name as enrolled), each matched to a staff member or marked "ignore".
   Punches from unmapped IDs are kept, and count once the ID is mapped. A finalised payroll month isn't changed.
+  - Invited staff, who haven't signed in yet, can be chosen too. They are marked "(hasn't signed in yet)".
+  - **IDs seen only in punches** (2026-10-03): an ID that punches without being in the device's user list (deleted from
+    the device since, say) gets a row of its own, with no name, to be matched or ignored like the others.
+  - An ID missing from the latest user list the device sent is marked "Not on the device any more".
+- **Who is counted** (client, 2026-10-03):
+  - Everyone employed on some day of the month, between their joining and leaving dates, **invited staff included**.
+    Someone who hasn't signed in yet still works and punches.
+  - **"Uses the fingerprint device"**, a switch on the staff record, is on by default. Switched off, the person is left
+    out of the monthly table and its KPIs, and their salary has no attendance cuts (§6). Their own month and My
+    attendance say their days count for nothing.
+  - Nobody but the super admin switches their own, since it decides cuts to their own pay: the screen disables it, and
+    the API refuses a save that changes it (403 `own_attendance_device`), the whole save. The screen sends the switch
+    only when it was changed, so saving the rest of your own record works.
+  - Switched off, the person is paid as a fixed monthly salary (docs/staff-without-access.md), whatever their own
+    salary basis says: there is no attendance to cut from. The switch isn't dated: a change applies to every month not
+    finalised yet, and the screen says so.
 - **Daily attendance** is computed from punches in office time (Asia/Dhaka) and never stored as editable state:
   - in = first punch, out = last punch;
   - statuses:
@@ -165,6 +199,10 @@ Screens: HR → Staff & bonus, and System → Roles & audit.
   - Every step is logged, and the HR badge counts pending requests, as in the design.
 - **Alerts:** if no pull succeeds for 60 minutes within duty hours on a working day, the Attendance alert list gets one
   message per outage. It says whether the office PC stopped checking in or the device stopped answering.
+  - Since 2026-10-03 this also covers a device the agent has never read: an hour after the agent's first check-in, an
+    agent that can't read the device (no address, a wrong one, the device busy) alerts like an outage. With no address
+    the message says so and points to the Attendance screen, rather than to the device's power and cable.
+  - A device whose agent never checked in doesn't alert: its card already says "Waiting for the agent".
 - **Permissions:** `attendance.view_all` (Admin, Accountant) and `attendance.manage` (Admin). "My attendance" needs no
   permission and shows only the person signed in.
 
@@ -188,22 +226,46 @@ alternatives were rejected:
 
 **Every minute**, Windows Task Scheduler starts the agent, never two at once. Each run:
 1. **Checks in** with `POST /check-in`, sending its version, the PC clock and the last pull result.
-   - The reply carries the pull interval (15 minutes) and any pending command from an admin: sync now, test link or set
-     clock.
+   - The reply carries the pull interval (15 minutes), the device's address and port as set on the device card, and any
+     pending command from an admin: sync now, test link or set clock.
+   - **The device's address** (client, 2026-10-03):
+     - A new address from the card is written to the PC's `agent.ini`, logged, and used in the same run, which reads
+       the device straight away.
+     - The agent takes only a private IPv4 address and a port of 1–65535 from the reply, and ignores anything else.
+     - With no address on the card, it uses the one in `agent.ini`: the last one the card gave, or the installer's
+       `-DeviceAddress` fallback. So clearing the address on the card doesn't stop an agent that already has one.
+     - With no address anywhere, it leaves the device alone and reports `no_address`, once per 15 minutes rather than
+       every minute. An address set on the card is still tried at once.
    - If the API can't be reached, the agent logs that and exits. Punches wait on the device.
-2. **Pulls**, if 15 minutes have passed since the last good pull or a command asks for one:
-   1. Connects to the device, with a 10-second timeout and the device's Comm Key if one is set.
+2. **Pulls**, if 15 minutes have passed since the last good pull, a command asks for one, or the address has just
+   changed:
+   1. Connects to the device: a plain TCP connection first, then pyzk's handshake with the device's Comm Key if one is
+      set, each with a 10-second timeout. The TCP step tells "nothing at that address" apart from "a device that
+      doesn't answer" (see the failure cases below).
    2. Reads the serial, model, firmware, clock, record counts, the user list (IDs and names only) and the attendance log.
+      The whole read gets 180 seconds; one still going then counts as the device unreachable.
    3. Sends the device report with `POST /device`: device info, user list, clock drift and the result. Test link stops
       here.
    4. Sends the punches the server hasn't acknowledged, 500 per request, with `POST /punches`. A punch counts as
-      acknowledged only after a 2xx reply.
-3. **Exits.** Anything that failed is retried the next minute, because the records are still on the device.
+      acknowledged only after a 2xx reply that is the API's own answer (`{"data": …}`). Any other answer, from a
+      captive portal or a proxy in between, counts as no answer.
+3. **Exits.** A failed pull is tried again, because the records are still on the device: after 1, 2, 4 and 8 minutes,
+   then every 15 (2026-10-03). A device busy for a moment is read again quickly, and one switched off for the night
+   leaves eight sync-log rows in its first hour and four an hour after that, not one a minute. Sync now still reads at
+   once, and the first good pull resets the count; the 15 minutes then count from that good pull.
+
+**Test link and runs by hand** (2026-10-03):
+- Test link reads the device and reports, and isn't counted as a pull: the punches stay due.
+- A hand-run `agent.exe test` answers only a pending Test link. A pending Sync now or Set device clock is left for the
+  next scheduled run, which does it, and the test says so. It records no pull.
+- A hand-run `agent.exe pull` reads the device and sends its punches even while Test link is pending, and answers it.
+- A hand-run `test` or `pull` that finds another run in progress says so and exits with an error.
 
 **What the agent never does to the device:**
 - It never disables the device, so staff can punch during a read. A record added mid-read comes with the next pull.
 - It never clears the log or changes users.
-- It never reads fingerprint or face templates, passwords or card numbers.
+- It never reads fingerprint or face templates. The user list the device sends carries each user's password and card
+  number as well; the agent keeps only the ID and the name, and never logs or sends the rest.
 
 The only write is the clock, and only when an admin presses "Set device clock". The time comes from the PC, which Windows
 keeps in sync.
@@ -224,55 +286,106 @@ keeps in sync.
 | Situation | Result |
 |---|---|
 | Office internet down, PC off overnight, or API down | Punches wait on the device, which holds tens of thousands of records. The next good run sends them, dated when they happened. |
-| Device unreachable (power, cable, LAN) | The device report says so, and the card shows "offline since". The alert rule in §5.1 applies. |
+| Device unreachable (power, cable, LAN) | The device report says so, and the card shows "offline since". The alert rule in §5.1 applies. Nothing answers the TCP connection, so the message reads "no network connection to *address*:*port*: check the device is on, its cable, its address, and that this PC is on the device's network". |
+| Another program, such as ZKTeco's Attendance Management, connected to the device | The connection is accepted but the device doesn't answer, so the report reads "the device accepted the connection but didn't answer: another program (such as ZKTeco Attendance Management) may be connected to it; disconnect it". The agent tries again after 1, 2, 4 and 8 minutes, then every 15, or at once on Sync now; punches wait on the device. See "Beside ZKTeco's program" below. |
+| Wrong Comm Key | "the device refused this PC's Comm Key (Unauthenticated)", with where to find the device's key. `install.cmd -CommKey <key>` on the PC sets it. |
+| A read that never finishes (a very slow device or network) | Given up after 180 seconds and reported as unreachable; tried again like any failed pull. |
+| No device address on the card or the PC | The device is left alone and `no_address` is reported once per 15 minutes. The card reads "No device address: set it below". |
 | A batch fails, or the agent crashes mid-send | Those punches aren't acknowledged, so they are sent again. The server counts them as duplicates. |
+| Something in front of the API (Cloudflare, an office proxy) blocks the agent | A 403 that isn't the API's own answer is `api_blocked`, told apart from a refused token (401), so nobody rotates a token that was never the problem. Nothing reaches the server, so the card shows the office PC as silent. Punches wait on the device. |
 | Two agents holding the same token | The punch keys are the same, so each punch counts once. The sync log shows both agents checking in. |
 | Device clock wrong (reset after a power cut, say) | The card shows the drift. Impossible times (in the future, or long before the device was registered) are rejected with that reason and not retried; those days are corrected by hand. The card offers Set device clock. |
+
+The card shows the agent's last error while the device is unreachable, and `agent.exe test` prints it.
+
+**Beside ZKTeco's program** (2026-10-03): ZKTeco's own Attendance Management program runs on an office PC and was
+connected to the device. The device is expected to answer one program at a time; whether the K40 does is still to be
+seen at the office (not tried yet). If it does, then while that program holds the device the agent should find it
+unreachable (above) and try again after 1, 2, 4 and 8 minutes, then once an interval, and nothing is lost. So:
+- keep that program disconnected from the device, or closed, when nobody is using it;
+- never turn on its option to delete the device's records after downloading them, and never clear the log by hand:
+  punches cleared before the agent read them never reach the admin.
+
+The agent changes nothing on the device except the clock, on request, so the program's own data isn't affected.
+
+**Language** (2026-10-03): everything the agent shows is in English. The API answers `/api/v1/attendance-agent/*` in
+English whatever the request asks, as it does for the staff screens, and the agent asks for English (`X-Locale: en`).
+Before, a refused token came back in Bangla.
 
 **Security:**
 - **Token:**
   - 256-bit random, shown once when the device is added, and stored as a SHA-256 hash.
   - Rotated or revoked from the card.
-  - It reaches only the three agent endpoints, for its own device. Replies carry counts and commands, never staff data.
+  - It reaches only the three agent endpoints, for its own device. Replies carry counts, commands and the device's
+    address on the office network, never staff data.
 - **Transport:** HTTPS only, with certificates verified. No inbound port is opened on the PC or the router.
 - **On the PC:**
   - The config and token live in `C:\ProgramData\Bhabaghure\Attendance`, readable only by SYSTEM and Administrators.
   - The token is encrypted with Windows DPAPI, and the task runs as SYSTEM.
+  - The device's Comm Key is kept only there, in `agent.ini`. The server never has it.
   - Anyone with administrator rights on that PC could post invented punches, so use a PC whose administrator password
     staff don't have.
 - **Abuse:** rate limits per token, and per IP for failed tokens. Every check-in, report and batch goes into the sync log.
 - **Updates:** there is no auto-update, because a compromised update channel would run code inside the office. New
-  versions are installed by hand, and the card shows the running version.
-- **Cloudflare:** `api` is proxied. If bot protection challenges the agent, a WAF skip rule for
-  `/api/v1/attendance-agent/*` is needed. The install test shows whether it is.
+  versions are downloaded from the device card and installed by hand, and the card shows the running version.
+- **Cloudflare:** `api` is proxied, and a request with the agent's User-Agent passed without a challenge (2026-09-15).
+  If Cloudflare ever blocks the agent, it reports `api_blocked` (above). A WAF rule can't skip Bot Fight Mode: turn
+  that off, or allow the office's public address with an IP Access rule (`agent/README.md`).
 
 **Build and install:**
 - **Code:** `agent/` in the repo, written in Python with the standard library plus **pyzk**, pinned by hash.
   - pyzk is the most widely used open-source ZK protocol library, and the K40/ID is on its tested list.
   - pyzk is GPL-2.0, so `agent/` carries that licence. The agent is a separate program talking to the API over HTTPS,
     so nothing else in the repo is affected.
-  - pyzk's last release is 0.9 (2019). It is pinned, and would be vendored if a fix were ever needed.
+  - pyzk's last release is 0.9 (2019). It is pinned, and the installed package is never edited.
+  - **The one fix needed so far** (2026-10-03) is swapped in at run time instead: `pyzk_fixes.py` replaces pyzk's
+    receive loop when the agent connects. pyzk's own loop spun at full CPU for ever when the device closed the
+    connection mid-transfer, until Task Scheduler stopped the run after 10 minutes. The replacement fails the read, and
+    the next run tries again.
+  - The agent also closes pyzk's connection when the handshake fails, so it never leaves a half-open one on the device.
 - **Packaging:** PyInstaller, as a folder rather than a single file because it starts faster, which matters once a
-  minute. The folder is zipped for install. The build isn't committed to the public repo; it can be rebuilt from the
-  pinned requirements.
-- **`install.ps1`**, run as administrator on the office PC:
-  - asks for the API address, the device's address and port, the Comm Key and the token;
-  - stores the token with DPAPI;
-  - registers the task: every minute and at start-up, whether or not anyone is signed in, never two at once;
-  - runs `agent.exe test`, which prints whether the device was reached (serial, users, records), whether the API was
-    reached and accepted the token, and the clock drift.
-- **Support:** `agent.exe test`, `agent.exe status` and `agent.exe pull --full`. Logs are kept 7 days and hold counts
-  and errors only.
+  minute. The folder is zipped with `install.cmd`, `install.ps1`, the README and pyzk's licence. The build isn't
+  committed to the public repo; it can be rebuilt from the pinned requirements. The developer uploads each new zip to
+  the server (docs/deployment.md §7.7), and the device card offers it for download.
+- **Installing** (client, 2026-10-03: a download and a double-click). On the office PC, download the zip from the
+  device card and unzip it, double-click **`install.cmd`**, answer Yes to Windows' administrator prompt, and paste the
+  device token when it asks. `agent/README.md` has the steps, and what to do when Windows warns about the unsigned
+  program.
+  - **`install.cmd`** checks for administrator rights. Without them it starts itself again through Windows' prompt
+    (UAC), with the same arguments. It then runs `install.ps1` with PowerShell's execution policy bypassed for that run
+    only, since the default policy blocks scripts, and keeps the window open at the end.
+  - **`install.ps1`:**
+    - unblocks the downloaded files;
+    - disables the scheduled task and gives a run in progress up to 60 seconds; one still busy then is stopped;
+    - copies the program to Program Files, unless it is being run from there;
+    - restricts the data folder to SYSTEM and Administrators;
+    - writes the settings. Only those given (`-DeviceAddress`, `-DevicePort`, `-CommKey`, `-ApiUrl`) change, so an
+      update keeps the Comm Key;
+    - asks for the token (Enter keeps the stored one) and stores it with DPAPI;
+    - registers the task: every minute and at start-up, whether or not anyone is signed in, never two at once;
+    - enables the task again whatever happened, then runs `agent.exe test`.
+  - **The device's address** comes from the device card. `-DeviceAddress` only sets a fallback, used while the card
+    has none. A device with a Comm Key needs `install.cmd -CommKey <key>`, run from a Command Prompt in the unzipped
+    folder.
+  - **Updates:** download the new version from the card, double-click its `install.cmd` and press Enter at the token
+    prompt. Every setting stays as it was.
+  - **A new token** after Rotate token: run `install.cmd` again and paste it, or `agent.exe set-token`.
+  - **Removing:** `install.cmd -Uninstall` removes the task, the program, its settings and the stored token.
+- **`agent.exe test`** prints the device address it used and where it came from (the Attendance screen or `agent.ini`),
+  whether the API was reached and accepted the token, and what it read: serial, model, firmware, users and fingerprints,
+  records, and the device's clock against the PC's, with a hint to press Set device clock past 2 minutes of drift.
+- **Support:** `agent.exe test`, `agent.exe status` (which now shows the device address), `agent.exe pull` and
+  `agent.exe pull --full`. Logs are kept 7 days and hold counts and errors only.
 - **The PC:** 64-bit Windows 10 or 11, on the office LAN, switched on during office hours.
 
 ### 5.3 Data (company database)
 
 | Table | Holds |
 |---|---|
-| `attendance_devices` | Name, bound serial, model, firmware, reported address, token hash, last check-in, last pull and its result, drift, counts, agent version, pending command, revoked at. |
-| `attendance_device_users` | Device, device user ID, name on the device, staff member or ignored, who mapped it and when. |
+| `attendance_devices` | Name, the device's address and port as set on the card (2026-10-03), bound serial, model, firmware, reported address, token hash, first and last check-in, last pull and its result, drift, counts, agent version, pending command, revoked at. |
+| `attendance_device_users` | Device, device user ID, name on the device, staff member or ignored, who mapped it and when, when the device last listed it (never, for an ID seen only in punches). |
 | `attendance_punches` | **Append-only.** Device, device user ID, device time, verify type, punch state, batch. Unique on (device, user ID, time). |
-| `attendance_sync_events` | **Append-only.** The sync log: check-ins, reports and batches, with counts and errors. |
+| `attendance_sync_events` | **Append-only.** The sync log: reports, batches, commands, token changes and device address changes, with counts and errors. |
 | `attendance_corrections` | **Append-only.** Staff member, date, kind (in time, out time, worked), time, reason, by. Reversals are rows too. |
 | `leave_requests`, `leave_request_events` | The request: staff member, from, to, reason, status, paid. The events (**append-only**): filed, approved, rejected, revoked, with who, when and the reason. |
 | `attendance_rules`, `holidays` | The rules by effective month (§6), and holiday dates with names. |
@@ -301,10 +414,15 @@ payslips.
 
 Approved paid leave, days off and holidays deduct nothing.
 
+**Someone who doesn't use the fingerprint device** (the switch on their staff record, §5.1; client, 2026-10-03) has no
+attendance cuts: no absent days and no late-or-early days. Only working days outside their employment are deducted:
+day rate × working days not employed.
+
 **Payroll run** (Attendance → Generate salary):
 1. **Draft for a month:**
-   - one row per person employed that month with a base salary, as in the design's table: full, late, early, leave,
-     absent, base, payable, cut;
+   - one row per person employed that month with a base salary, invited staff included (2026-10-03), as in the
+     design's table: full, late, early, leave, absent, base, payable, cut;
+   - for someone who doesn't use the device, "Not tracked" in place of the attendance counts;
    - a day-by-day breakdown;
    - adjustments with reasons (an allowance, an advance recovered).
 
@@ -560,6 +678,9 @@ through the API (`role_name_en` / `role_name_bn`).
 
 ### Step 2 — biometric attendance (2026-09-15)
 
+Changed on 2026-10-03 for the office device; see "The office device, the agent download and who counts" at the end of
+this step.
+
 **The agent** (`agent/`, Python with pyzk 0.9 and its dependency `future` 1.0.0, both pinned by hash; see
 `agent/README.md`), built as designed in §5.2:
 - **Schedule:** Task Scheduler runs `agent.exe run` every minute as SYSTEM. It checks in, and every 15 minutes or on a
@@ -645,6 +766,134 @@ through the API (`role_name_en` / `role_name_bn`).
     mark.
   - A request with the agent's User-Agent reaches the production API through Cloudflare without a challenge.
   - Still to do at the office: `agent.exe test` against the real K40.
+
+#### The office device, the agent download and who counts (2026-10-03)
+
+**Where things stood on 2026-10-03:**
+- **The office device** is a ZKTeco K40 at 192.168.10.116, TCP port 4370, serial PAS4254700756. It held 7 users and 203
+  logs, as the client's ZKTeco Attendance Management program showed them.
+- **The agent had never been installed.** The live device record had never checked in, so no device users or punches
+  had reached the admin.
+- **A review before the first install** found nothing that blocked a first pull: a stand-in K40 gave 7 users and 203
+  punches correctly. It did find the following, all fixed below:
+  - the PowerShell install command was blocked by Windows' default execution policy;
+  - a hand-run test swallowed a pending Sync now;
+  - pyzk could spin for ever when the device closed the connection mid-transfer;
+  - "timed out" couldn't tell a device that is off from one held by ZKTeco's program;
+  - the API's refusals reached the agent in Bangla;
+  - IDs seen only in punches couldn't be matched;
+  - an installed agent that never read the device raised no alert;
+  - a failed read waited 15 minutes for its retry.
+
+**The client's decisions (2026-10-03),** each as recommended:
+1. **The device's address is kept in the admin,** on the device card, and handed to the agent. Private IPv4 addresses
+   only.
+2. **The agent is downloaded from the Attendance card,** and installed by double-clicking `install.cmd` and pasting the
+   token.
+3. **Invited staff count** in attendance and salary, though they haven't signed in yet.
+4. **Each staff record has a "Uses the fingerprint device" switch.** Off leaves the person out of attendance, and their
+   salary has no attendance cuts.
+
+**The API:**
+- **Migration** `2026_10_03_120000_attendance_device_address_and_tracking`: columns with defaults only, so everything
+  existing works as before. `attendance_devices` gains `device_address`, `device_port` (4370) and `first_check_in_at`;
+  `staff_profiles` gains `uses_attendance_device` (on).
+- **The address:** `PUT admin/attendance/devices/{id}/address` (`attendance.manage`) takes a dotted private IPv4
+  address, or null to clear it, and a port of 1–65535 (4370 when left out). Anything else is a 422 on the field.
+  - A change writes a sync-log row (`config`, `address_set`, with from and to) and the audit entry
+    `attendance.device_address_set`. Saving the same again records nothing.
+  - The check-in reply carries `device: {address, port}`. The first check-in sets `first_check_in_at`.
+  - `no_address` is a report status, and a device state, checked after the PC-silent one and before device
+    unreachable.
+- **The agent package** (`AgentPackage`):
+  - `GET admin/attendance/agent-package` (`attendance.manage`) sends the zip as an attachment, never cached. With no
+    package it answers 404 `agent_package_missing`.
+  - The devices list carries `meta.agent_package` (version, file name, size, SHA-256, upload time), or null.
+  - The manifest is believed only for a file named `BhabaghureAttendanceAgent-<version>.zip` in its own folder, and only
+    once that file is there at the stated size, so a half-finished upload is never handed out.
+- **IDs seen only in punches** get a device-user row with no name. Each user row says `on_device`: whether its ID was
+  in the latest user list the device sent. An empty list means nobody is on the device.
+- **English** on `/api/v1/attendance-agent/*`, whatever the request asks (`SetRequestLocale`). The token-refused
+  message now says to make a new token with Rotate token and store it on the office PC.
+- **The offline alert** (`attendance:watch-devices`) also covers a device not bound yet, once its agent first checked in
+  over an hour ago and it has had no good pull. Still once per outage.
+- **Who counts:** `AttendanceController::employedIn` includes invited staff, and drives the payroll. `trackedIn` keeps
+  only those who use the device, and drives the attendance month and its KPIs. The staff choices for device users list
+  everyone, with their status.
+- **The switch** is saved through the existing `PUT admin/staff/{id}` (`uses_attendance_device`). It is shown on the
+  staff list and record, and on `GET admin/profile/record`.
+- **Payroll** (`PayrollDesk`): each row says `attendance_tracked`.
+  - For someone untracked, the absent and late-or-early cuts are skipped; working days outside their employment still
+    cut their pay. Their row carries no attendance counts.
+  - Finalising freezes that. Their item keeps the working days, `attendance_tracked: false` and no days, so a later
+    change to the switch doesn't alter a finalised month. Items from before count as tracked.
+  - Their payslip says nothing was cut for attendance.
+- **Fixed along the way:** an update that creates someone's first HR record no longer names `staff_id` among the
+  changed fields in the audit log.
+
+**The agent (1.1.0):**
+- the address from the check-in, saved to `agent.ini` (UTF-8 without a byte-order mark, replaced in one step) and used
+  at once; `no_address` reported once per 15 minutes;
+- the 15 minutes counted from the last good pull, and a failed pull tried again after 1, 2, 4 and 8 minutes, then every
+  15;
+- `test`, `pull` and Test link as in §5.2;
+- `pyzk_fixes.py`, the 180-second deadline on a device read, and pyzk's connection closed after a failed handshake;
+- the plain TCP check and the failure messages in §5.2; `api_blocked`; a 2xx that isn't the API's taken as no answer;
+- `X-Locale: en`, and console output that escapes a character the console can't show instead of stopping;
+- `agent.ini` read with or without a byte-order mark; anything wrong with it, a port out of range included, is "Not
+  ready" (exit 2) instead of a crash;
+- a refused call's status on the PC is `rejected:<code>`: a check-in with a rotated token is `rejected:token_refused`,
+  a report from a replaced device `rejected:device_changed`;
+- `agent.exe test` and `agent.exe status` as in §5.2;
+- `install.cmd` (new; `agent/.gitattributes` keeps its Windows line endings) and `install.ps1` as in §5.2, with
+  `build.ps1` adding `install.cmd` to the zip;
+- `agent/README.md` rewritten for the download and the double-click, with a section on running beside ZKTeco's program.
+
+**The admin:**
+- **Device card:** the address form, the "The agent is using …" line, the "No device address" state, and address
+  changes in the sync log ("Device address set to …", "changed from … to …", "cleared"). Pasting "address:port"
+  fills both fields, and the API's message shows on the field.
+- **Download the agent,** with the three install steps, on the card and in the token dialog, for `attendance.manage`.
+  The token dialog and the Rotate token confirmation no longer mention PowerShell.
+- **Device users:** "Not on the device any more", and invited staff marked "(hasn't signed in yet)".
+- **Staff record:** the "Uses the fingerprint device" switch. It is sent only when changed, and disabled on your own
+  record unless you are the super admin.
+- **Salary:** an untracked row shows "Not tracked" under Full and a dash under Late, Early, Leave and Absent. Its Days
+  action is disabled ("Doesn't use the fingerprint device").
+- **A person's month and My attendance** say so for someone untracked, since every day would otherwise read Absent.
+
+**Tests:**
+- **Agent:** 56 unit tests (16 before; 3 added with the review fixes of 2026-11-13: a PC clock put back, a new address
+  a test run doesn't use up, an `agent.ini` that can't be written). In the build's environment they include the real pyzk 0.9: a device that hangs
+  up mid-transfer fails the read instead of spinning, and one that never answers gives the busy message.
+- **API:**
+  - `AttendanceAgentTest`: the card's address reaching the check-in; `no_address` reported in English and shown on the
+    card; a punch-only ID and `on_device`; the package download;
+  - `AttendanceDaysTest`: invited staff matched and counted; the switch taking someone out of the month and its KPIs;
+  - `LeaveRequestsTest`: the alert for an installed agent that never reads the device, once, and none for one never
+    installed;
+  - `PayrollTest`: no attendance cuts for someone untracked, and invited staff on the payroll;
+  - `StaffManagementTest`: the switch on by default and turned off by HR, audited.
+- **Admin e2e, `attendance.spec.ts`:**
+  - the address: a public one refused on the field, a private one saved and handed to the agent, then cleared to "No
+    device address";
+  - the download: disabled until a package exists, and not offered to an accountant;
+  - an invited newcomer matched to a punch-only ID and counted; switched off, out of attendance and "Not tracked" on
+    Salary.
+- **`deploy/upload-agent-package.sh`:** its refusals, and a dry run against stand-in `ssh` and `scp` whose `latest.json`
+  the API accepted.
+
+**Still to do:**
+- Deploy, then build the 1.1.0 zip and upload it (docs/deployment.md §7.7). Set the device's address on the card:
+  192.168.10.116, port 4370.
+- At the office: install the agent on a PC that stays on during office hours, with the Comm Key if the device has one
+  (not known yet). Run `agent.exe test` against the K40, then match the device's users to staff.
+- Watch whether ZKTeco's program, connected to the device, keeps the agent out (§5.2, "Beside ZKTeco's program").
+- Not yet run for real: `install.cmd`'s Windows prompt, `install.ps1` end to end, and agent 1.1.0 against the K40.
+- Invited staff on live now count. One without a joining date counts as employed all month, so days before they started
+  read absent until HR sets the date.
+- **Closed before release:** the API refuses the switch on your own record too (only the super admin changes their own),
+  and a `no_address` device's alert points to the Attendance screen instead of the device's power and cable.
 
 ### Step 3 — salary from attendance (2026-09-15)
 

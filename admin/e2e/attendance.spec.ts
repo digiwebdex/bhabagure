@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { API_URL, FIRST_LOAD, signIn } from './helpers'
+import { API_URL, FIRST_LOAD, signIn, staffApi } from './helpers'
 
 /**
  * docs/phase-7-hr-attendance-bonus-wallet.md §5: a device added in the admin, its token used the way the office agent uses
- * it (check-in, device report, punches), a device user matched, a day corrected, a command picked up, and leave asked for
- * by a staff member and decided by an admin.
+ * it (check-in, device report, punches), a device user matched, a day corrected, a command picked up, the device address
+ * set on the card and handed to the agent, the agent downloaded, and leave asked for by a staff member and decided by an
+ * admin. Someone who hasn't signed in yet counts; someone switched off the device leaves attendance (client, 2026-10-03).
  */
 test.describe.configure({ mode: 'serial' })
 
@@ -29,6 +30,8 @@ async function asAgent(page: Page, token: string, path: string, data: unknown) {
 }
 
 const deviceCard = (page: Page) => page.locator('section').filter({ has: page.getByRole('heading', { name: 'Attendance device' }) }).first()
+/** The card's state badge: "Connected" is also in its install steps, so the card's whole text proves nothing. */
+const deviceState = (page: Page) => deviceCard(page).getByTestId('device-state')
 let token = ''
 let serial = ''
 
@@ -47,8 +50,15 @@ test('a device is added, the agent syncs with its token, a user is matched and a
   const tokenDialog = page.getByRole('dialog', { name: `Token for ZKTeco · E2E ${suffix}` })
   token = await tokenDialog.getByTestId('device-token').inputValue()
   expect(token).toMatch(/^bhatt_[0-9a-f]{64}$/)
+  // Installing is a download and a double-click: nobody types PowerShell on the office PC. The address comes first, and
+  // Windows' SmartScreen warning on the downloaded file is explained.
+  await expect(tokenDialog).toContainText('Set the device’s address on its card first.')
+  await expect(tokenDialog).toContainText('double-click install.cmd (if Windows says “Windows protected your PC”, press More info, then Run anyway')
+  await expect(tokenDialog).toContainText('paste this token when it asks')
+  await expect(tokenDialog).not.toContainText('PowerShell')
+  await expect(tokenDialog.getByRole('button', { name: 'Download the agent' })).toBeVisible()
   await tokenDialog.getByRole('button', { name: 'Done' }).click()
-  await expect(card).toContainText('Waiting for the agent')
+  await expect(deviceState(page)).toHaveText('Waiting for the agent')
 
   // The office agent: check in, report the device and its users, send punches — twice, and the replay stores nothing.
   await asAgent(page, token, 'check-in', { agent_version: '1.0.0' })
@@ -61,7 +71,7 @@ test('a device is added, the agent syncs with its token, a user is matched and a
   expect(await asAgent(page, token, 'punches', { serial, punches })).toEqual({ stored: 0, duplicates: 2, rejected: [] })
 
   await page.reload()
-  await expect(card).toContainText('Connected', FIRST_LOAD)
+  await expect(deviceState(page)).toHaveText('Connected', FIRST_LOAD)
   await expect(card).toContainText(serial)
   await expect(card.getByTestId('sync-log')).toContainText('2 punches sent: 0 new, 2 already here, 0 refused')
 
@@ -108,6 +118,86 @@ test('Sync now waits for the office PC, which picks it up at its next check-in a
   await expect(card).not.toContainText('waiting for the office PC')
 })
 
+test('the device address is kept on the card, private addresses only, and reaches the agent at its next check-in', async ({ page }) => {
+  test.skip(token === '', 'needs the device from the first test')
+  // Nothing set on the card yet: the agent keeps to the address in its own agent.ini.
+  expect((await asAgent(page, token, 'check-in', { agent_version: '1.1.0' })).device).toEqual({ address: null, port: 4370 })
+
+  await signIn(page, 'admin')
+  await page.goto('/attendance')
+  const card = deviceCard(page)
+  const address = card.getByLabel('Address on the office network')
+  await expect(address).toHaveValue('', FIRST_LOAD)
+  await expect(card.getByLabel('Port', { exact: true })).toHaveValue('4370')
+
+  // A public address is refused on the field: the device is on the office network.
+  await address.fill('8.8.8.8')
+  await card.getByRole('button', { name: 'Save address' }).click()
+  await expect(address).toHaveAttribute('aria-invalid', 'true')
+
+  await address.fill('192.168.10.116')
+  await card.getByRole('button', { name: 'Save address' }).click()
+  await expect(page.getByText('Device address saved: the office PC picks it up within a minute')).toBeVisible()
+  await expect(card.getByTestId('sync-log')).toContainText('Device address set to 192.168.10.116:4370')
+  await expect(address).toHaveValue('192.168.10.116')
+  await expect(address).toHaveAttribute('aria-invalid', 'false')
+  // The agent last read the device at the address the first test reported, until it reads it at the new one.
+  await expect(card.getByTestId('agent-address')).toHaveText('The agent is using 192.0.2.10:4370.')
+
+  expect((await asAgent(page, token, 'check-in', { agent_version: '1.1.0' })).device).toEqual({ address: '192.168.10.116', port: 4370 })
+  await asAgent(page, token, 'device', { status: 'ok', serial, address: '192.168.10.116:4370', users: [{ id: '41', name: 'E2E Agent' }] })
+  await page.reload()
+  await expect(deviceState(page)).toHaveText('Connected', FIRST_LOAD)
+  await expect(address).toHaveValue('192.168.10.116')
+  await expect(card.getByTestId('agent-address')).toHaveCount(0)
+
+  // Cleared, and with none in its agent.ini either, the agent says it has no address: the card asks for one.
+  await address.fill('')
+  await card.getByRole('button', { name: 'Save address' }).click()
+  await expect(page.getByText('Device address cleared', { exact: true })).toBeVisible()
+  await expect(card.getByTestId('sync-log')).toContainText('Device address cleared (was 192.168.10.116:4370)')
+  expect((await asAgent(page, token, 'check-in', { agent_version: '1.1.0' })).device).toEqual({ address: null, port: 4370 })
+  await asAgent(page, token, 'device', { status: 'no_address', error: 'No device address: none from the server and none in agent.ini' })
+  await page.reload()
+  await expect(deviceState(page)).toHaveText('No device address: set it below', FIRST_LOAD)
+  await expect(card.getByTestId('sync-log')).toContainText('No device address on the office PC')
+  // Where it last read the device is history now, not where it looks.
+  await expect(card.getByTestId('agent-address')).toHaveCount(0)
+})
+
+test('the agent is downloaded from the device card, by those who manage attendance only', async ({ page }) => {
+  test.skip(token === '', 'needs the device from the first test')
+  const admin = await staffApi(page, 'admin')
+  const { meta } = await admin.get<{ meta: { agent_package: { version: string; filename: string } | null } }>('admin/attendance/devices')
+
+  await signIn(page, 'admin')
+  await page.goto('/attendance')
+  const card = deviceCard(page)
+  const download = card.getByRole('button', { name: 'Download the agent' })
+  await expect(download).toBeVisible(FIRST_LOAD)
+  const steps = card.getByTestId('agent-install-steps')
+  await expect(steps).toContainText('First set the device’s address above.')
+  await expect(steps).toContainText('If Windows says “Windows protected your PC”, press More info, then Run anyway')
+  if (meta.agent_package === null) {
+    // Nothing uploaded to this API (deploy/upload-agent-package.sh puts it on the server): the button says so.
+    await expect(download).toBeDisabled()
+    await expect(card.getByTestId('agent-download')).toContainText('Not on the server yet')
+  } else {
+    await expect(card.getByTestId('agent-download')).toContainText(`Version ${meta.agent_package.version}`)
+    const saving = page.waitForEvent('download')
+    await download.click()
+    expect((await saving).suggestedFilename()).toBe(meta.agent_package.filename)
+  }
+
+  // The accountant sees everyone's attendance, but neither the download nor a way to change the address.
+  await signIn(page, 'accountant')
+  await page.goto('/attendance')
+  await expect(deviceState(page)).toBeVisible(FIRST_LOAD)
+  await expect(card.getByLabel('Address on the office network')).toBeDisabled()
+  await expect(card.getByRole('button', { name: 'Save address' })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: 'Download the agent' })).toHaveCount(0)
+})
+
 test('a staff member asks for leave and an admin approves it as unpaid; the badge follows', async ({ page, browser }) => {
   const future = new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10)
   const reason = `Sister’s wedding ${String(Date.now()).slice(-4)}`
@@ -146,4 +236,55 @@ test('a staff member asks for leave and an admin approves it as unpaid; the badg
   await staff.reload()
   await expect(staff.getByTestId('my-leave')).toContainText('Approved · unpaid', FIRST_LOAD)
   await context.close()
+})
+
+test('someone who hasn’t signed in yet is matched and counts; switched off the device, they leave attendance and salary shows them as not tracked', async ({ page }) => {
+  test.skip(token === '', 'needs the device from the first test')
+  const suffix = String(Date.now()).slice(-5)
+  const name = `Shirin Akter ${suffix}`
+  const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date()).slice(0, 7)
+  // Invited this month, so on this month's sheets only; she never signs in.
+  const admin = await staffApi(page, 'admin')
+  const newcomer = (await admin.post<{ data: { id: number; employee_code: string } }>('admin/staff', { name, email: `shirin.${suffix}@e2e.test`, role: 'sales_agent', designation: 'Front desk', joined_on: `${month}-01`, locale: 'en' })).data
+  const choice = `${name} · ${newcomer.employee_code} (hasn’t signed in yet)`
+  // ID 42 punches without being in the device's user list (deleted from the device since, say).
+  await asAgent(page, token, 'punches', { serial, punches: [{ user_id: '42', time: `${recentWorkingDay()} 10:50:00` }] })
+
+  await signIn(page, 'admin')
+  await page.goto('/attendance')
+  const card = deviceCard(page)
+  await card.getByRole('button', { name: /^Device users/ }).click(FIRST_LOAD)
+  const users = page.getByRole('dialog', { name: /^Users on / })
+  const id42 = users.getByTestId('device-users').locator('li').filter({ hasText: 'ID 42' })
+  await expect(id42).toContainText('Not on the device any more')
+  await expect(users.getByTestId('device-users').locator('li').filter({ hasText: 'ID 41' })).not.toContainText('Not on the device any more')
+  await expect(id42.getByLabel('Staff member').locator('option', { hasText: name })).toHaveText(choice)
+  await id42.getByLabel('Staff member').selectOption({ label: choice })
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await users.getByRole('button', { name: 'Done' }).click()
+
+  // In this month's attendance until switched off on her record.
+  await page.goto(`/attendance?month=${month}`)
+  const table = page.getByTestId('attendance-month-table')
+  await expect(table.locator('tbody tr').filter({ hasText: name })).toHaveCount(1, FIRST_LOAD)
+
+  await page.goto(`/staff/${newcomer.id}`)
+  const uses = page.getByRole('switch', { name: /Uses the fingerprint device/ })
+  await expect(uses).toHaveAttribute('aria-checked', 'true', FIRST_LOAD)
+  await expect(page.getByText('Off: left out of attendance, and paid as a fixed monthly salary (no attendance cuts). A change applies to every month not finalised yet.')).toBeVisible()
+  await uses.click()
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('switch', { name: /Uses the fingerprint device/ })).toHaveAttribute('aria-checked', 'false', FIRST_LOAD)
+
+  await page.goto(`/attendance?month=${month}`)
+  await expect(table.locator('tbody tr').filter({ hasText: 'E2E sales_agent' })).toHaveCount(1, FIRST_LOAD)
+  await expect(table.locator('tbody tr').filter({ hasText: name })).toHaveCount(0)
+
+  // Still on the salary sheet, with no attendance counts and nothing to open day by day.
+  await page.goto(`/payroll?month=${month}`)
+  const row = page.getByTestId('payroll-table').locator('tbody tr').filter({ hasText: name })
+  await expect(row).toContainText('Not tracked', FIRST_LOAD)
+  await expect(row.getByRole('button', { name: `Days — ${name} (Doesn’t use the fingerprint device)` })).toBeDisabled()
 })

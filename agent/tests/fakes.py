@@ -1,5 +1,6 @@
 """A fake ZKTeco connection (the shape pyzk returns) and a fake API that behaves like the server: a punch is unique on
-device serial, user and time, so replays store nothing."""
+device serial, user and time, so replays store nothing, and a command is handed out at every check-in until a report
+answers it."""
 
 from datetime import datetime, timedelta
 from types import SimpleNamespace
@@ -20,6 +21,8 @@ class FakeConnection:
             for index in range(records)
         ]
         self.clock = datetime(2026, 9, 15, 10, 0, 0)
+        # Set to a threading.Event to make get_attendance hang until it is set: a device that never finishes a transfer.
+        self.hang = None
 
     # Allowed calls.
     def read_sizes(self):
@@ -48,6 +51,8 @@ class FakeConnection:
 
     def get_attendance(self):
         self.calls.append("get_attendance")
+        if self.hang is not None:
+            self.hang.wait(10)
         return list(self._attendance)
 
     def set_time(self, moment):
@@ -72,9 +77,12 @@ class FakeConnection:
 
 
 class FakeApi:
-    def __init__(self, command: str | None = None, interval_minutes: int = 15):
+    def __init__(self, command: str | None = None, interval_minutes: int = 15, device_address: str | None = None, device_port: int = 4370):
         self.command = command
         self.interval_minutes = interval_minutes
+        # What the Attendance screen holds for the device; the check-in carries it.
+        self.device_address = device_address
+        self.device_port = device_port
         self.check_ins = 0
         self.reports: list[dict] = []
         self.batches: list[list[dict]] = []
@@ -88,13 +96,19 @@ class FakeApi:
         if self.fail_check_in:
             raise self.fail_check_in
         self.check_ins += 1
-        command, self.command = self.command, None
-        return {"pull_interval_minutes": self.interval_minutes, "command": {"type": command} if command else None}
+        return {
+            "pull_interval_minutes": self.interval_minutes,
+            "command": {"type": self.command} if self.command else None,
+            "device": {"address": self.device_address, "port": self.device_port},
+        }
 
     def report(self, body):
         if self.fail_report:
             raise self.fail_report
         self.reports.append(body)
+        # Like the server: the pending command ends when a report answers it, ok or failed, and not before.
+        if (body.get("command") or {}).get("type") == self.command:
+            self.command = None
         return {}
 
     def punches(self, serial, punches):

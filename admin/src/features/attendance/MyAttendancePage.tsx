@@ -39,6 +39,11 @@ export function MyAttendancePage() {
         <ErrorNotice error={data.error} />
       ) : (
         <>
+          {data.data.data.attendance_tracked === false ? (
+            <p role="note" className="m-0 rounded-10 bg-app-surface-2 px-3 py-2.5 text-13 text-app-muted">
+              {t('myAttendance.notTracked')}
+            </p>
+          ) : null}
           <TotalsStrip totals={data.data.data.totals} />
           <p className="m-0 text-12.5 text-app-muted">{t('attendance.rules.note', { start: data.data.data.rules.duty_start, end: data.data.data.rules.duty_end, grace: number(data.data.data.rules.grace_minutes), percent: number(data.data.data.rules.late_early_pay_percent) })}</p>
         </>

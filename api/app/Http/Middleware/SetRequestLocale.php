@@ -16,8 +16,9 @@ class SetRequestLocale
     public function handle(Request $request, Closure $next): Response
     {
         // Staff software is English only (the client's decision, 2026-09-16), so its screens get English messages
-        // whatever the caller asks for. Everything customers touch stays Bangla first.
-        $staffArea = $request->is('api/v1/admin/*', 'api/v1/staff/*', 'api/v1/wallet/*');
+        // whatever the caller asks for, and so does the office attendance agent, which shows them to whoever installs
+        // it (2026-10-03). Everything customers touch stays Bangla first.
+        $staffArea = $request->is('api/v1/admin/*', 'api/v1/staff/*', 'api/v1/wallet/*', 'api/v1/attendance-agent/*');
         $locale = $staffArea ? 'en' : (collect([$request->header('X-Locale'), $request->input('locale')])
             ->first(fn ($candidate) => in_array($candidate, ['bn', 'en'], true)) ?? 'bn');
 

@@ -1,23 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
-import { api } from '../../lib/api/client'
+import { useToast } from '../../components/ui/feedback'
+import { api, ApiError, downloadDocument } from '../../lib/api/client'
 import type { Data, Paginated } from '../../lib/api/types'
-import type { StaffRole } from '../staff/api'
+import type { StaffRole, StaffStatus } from '../staff/api'
 
 /** Shapes from api/app/Http/Controllers/Api/V1/Admin/{Attendance,AttendanceDevice,LeaveRequest,MyAttendance}Controller.php (docs/phase-7-hr-attendance-bonus-wallet.md §5). */
 
-export type DeviceState = 'revoked' | 'waiting_for_agent' | 'pc_silent' | 'device_unreachable' | 'ok'
+/** no_address: the agent's latest report says it has no device address, neither from here nor in its agent.ini. */
+export type DeviceState = 'revoked' | 'waiting_for_agent' | 'pc_silent' | 'no_address' | 'device_unreachable' | 'ok'
 export type DeviceCommand = 'pull' | 'test' | 'set_clock'
 
 export type SyncEvent = {
   id: number
-  kind: 'report' | 'punches' | 'command' | 'token'
+  /** config: the device address set on the card (status address_set, detail from and to as "address:port" or null). */
+  kind: 'report' | 'punches' | 'command' | 'token' | 'config'
   status: string | null
   received: number
   stored: number
   duplicates: number
   rejected: number
-  detail: Record<string, string | number | Record<string, number>> | null
+  detail: Record<string, string | number | null | Record<string, number>> | null
   created_at: string | null
 }
 
@@ -28,6 +32,10 @@ export type AttendanceDevice = {
   serial_number: string | null
   model: string | null
   firmware: string | null
+  /** The device's address on the office network as set on the card; the agent picks it up at its next check-in. */
+  device_address: string | null
+  device_port: number
+  /** What the agent last read the device at, "address:port". */
   reported_address: string | null
   agent_version: string | null
   last_check_in_at: string | null
@@ -52,8 +60,17 @@ export type AttendanceDevice = {
   events: SyncEvent[]
 }
 
-export type DeviceUser = { id: number; device_user_id: string; name_on_device: string | null; staff: { id: number; name: string; employee_code: string } | null; ignored: boolean; last_listed_at: string | null }
-export type DeviceUsers = { users: DeviceUser[]; staff: { id: number; name: string; employee_code: string; status: string }[] }
+/** The office agent's zip on the server (storage/app/private/attendance-agent/latest.json), or null when none is there. */
+export type AgentPackage = { version: string; filename: string; bytes: number; sha256: string; uploaded_at: string }
+export type DeviceList = Data<AttendanceDevice[]> & { meta: { agent_package: AgentPackage | null } }
+
+/**
+ * on_device: the ID was in the device's user list at its latest report with one. An ID known only from punches (deleted
+ * from the device, say) has no name and isn't on the device.
+ */
+export type DeviceUser = { id: number; device_user_id: string; name_on_device: string | null; on_device: boolean; staff: { id: number; name: string; employee_code: string } | null; ignored: boolean; last_listed_at: string | null }
+/** Who an ID can be matched to: invited staff too, who haven't signed in yet but already punch. */
+export type DeviceUsers = { users: DeviceUser[]; staff: { id: number; name: string; employee_code: string; status: StaffStatus }[] }
 
 export type DayStatus = 'full' | 'late' | 'early' | 'late_early' | 'single_punch' | 'leave' | 'absent' | 'off' | 'holiday' | 'worked_off' | 'not_employed' | 'in_progress' | 'upcoming'
 
@@ -142,7 +159,8 @@ export type LeaveRow = {
   events?: { action: string; by: string | null; note: string | null; at: string | null }[]
 }
 
-export type PersonMonth = { staff: Person; month: string; rules: Rules; days: Day[]; totals: Totals; corrections: Correction[]; leave: LeaveRow[] }
+/** attendance_tracked false: their staff record says they don't use the fingerprint device, so these days count for nothing. */
+export type PersonMonth = { staff: Person; month: string; attendance_tracked: boolean; rules: Rules; days: Day[]; totals: Totals; corrections: Correction[]; leave: LeaveRow[] }
 
 export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
 
@@ -154,7 +172,26 @@ export function shiftMonth(month: string, by: number): string {
 }
 
 export function useDevices() {
-  return useQuery({ queryKey: ['attendance-devices'], queryFn: ({ signal }) => api.get<Data<AttendanceDevice[]>>('admin/attendance/devices', signal), refetchInterval: 30_000 })
+  return useQuery({ queryKey: ['attendance-devices'], queryFn: ({ signal }) => api.get<DeviceList>('admin/attendance/devices', signal), refetchInterval: 30_000 })
+}
+
+/**
+ * Saves the office agent's zip under the name the API sends (BhabaghureAttendanceAgent-<version>.zip); attendance.manage
+ * only. It comes through the API with the staff token, so it can't be a plain link. If it has gone from the server
+ * since the card loaded, the card is refreshed and says so.
+ */
+export function useAgentDownload() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const client = useQueryClient()
+  return async (fallback: string) => {
+    try {
+      await downloadDocument('admin/attendance/agent-package', fallback)
+    } catch (error) {
+      toast(t(error instanceof ApiError && error.code === 'agent_package_missing' ? 'attendance.agent.gone' : 'attendance.agent.failed'), 'error')
+      void client.invalidateQueries({ queryKey: ['attendance-devices'] })
+    }
+  }
 }
 
 export function useDeviceAction<TVariables, TResponse>(send: (variables: TVariables) => Promise<TResponse>) {
@@ -168,6 +205,8 @@ export const deviceActions = {
   revoke: (id: number) => api.post<Data<AttendanceDevice>>(`admin/attendance/devices/${id}/revoke`),
   command: ({ id, command }: { id: number; command: DeviceCommand }) => api.post<Data<AttendanceDevice>>(`admin/attendance/devices/${id}/commands`, { command }),
   allowReplacement: (id: number) => api.post<Data<AttendanceDevice>>(`admin/attendance/devices/${id}/allow-replacement`),
+  /** A private IPv4 address, or null to clear it; the port defaults to 4370 when left out. */
+  setAddress: ({ id, address, port }: { id: number; address: string | null; port?: number }) => api.put<Data<AttendanceDevice>>(`admin/attendance/devices/${id}/address`, { address, port }),
 }
 
 export function useDeviceUsers(id: number) {

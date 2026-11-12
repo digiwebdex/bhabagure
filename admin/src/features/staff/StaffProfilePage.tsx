@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router'
 import { useAuth, useStaff } from '../../app/auth'
 import { buttonClass } from '../../components/ui/button'
 import { Dialog, ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
-import { Pair, SelectInput, TextArea, TextInput } from '../../components/ui/fields'
+import { Pair, SelectInput, Switch, TextArea, TextInput } from '../../components/ui/fields'
 import { Badge, Card, CardTitle, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { ApiError } from '../../lib/api/client'
 import { useFormat } from '../../lib/useFormat'
@@ -69,8 +69,12 @@ export function StaffProfilePage() {
 
 function RecordForm({ staff }: { staff: StaffDetail }) {
   const { t } = useTranslation()
+  const me = useStaff()
   const toast = useToast()
   const options = useStaffOptions()
+  const usesDevice = staff.profile.uses_attendance_device ?? true
+  // Switched off, attendance no longer cuts their pay: nobody does that for themselves, except the super admin.
+  const ownPay = staff.id === me.id && !me.is_super_admin
   const [form, setForm] = useState({
     name: staff.name,
     email: staff.email ?? '',
@@ -87,6 +91,7 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
     payout_method: staff.profile.payout_method ?? '',
     payout_account: staff.profile.payout_account ?? '',
     salary_basis: staff.profile.salary_basis,
+    uses_attendance_device: usesDevice,
   })
   const save = useStaffAction(staff.id, staffActions.update(staff.id))
   const fieldError = (name: string) => (save.error instanceof ApiError ? save.error.field(name) : undefined)
@@ -112,6 +117,8 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
         payout_method: (blankToNull(form.payout_method) as PayoutMethod | null),
         payout_account: blankToNull(form.payout_account),
         salary_basis: form.salary_basis,
+        // Sent only when switched, so saving your own record never touches it.
+        ...(form.uses_attendance_device !== usesDevice ? { uses_attendance_device: form.uses_attendance_device } : {}),
       },
       { onSuccess: () => toast(t('staff.saved')) },
     )
@@ -146,6 +153,10 @@ function RecordForm({ staff }: { staff: StaffDetail }) {
           <TextInput label={t('staff.joinedOn')} type="date" value={form.joined_on} onChange={set('joined_on')} error={fieldError('joined_on')} />
           <TextInput label={t('staff.leftOn')} type="date" value={form.left_on} onChange={set('left_on')} error={fieldError('left_on')} hint={t('staff.leftOnHint')} />
         </Pair>
+        {/* Someone who doesn't punch in (works away from the office, say): left out of attendance, and paid without attendance cuts (client, 2026-10-03). */}
+        <fieldset disabled={ownPay} className="m-0 border-0 p-0">
+          <Switch label={t('staff.usesDevice')} hint={ownPay ? t('staff.usesDeviceOwn') : t('staff.usesDeviceHint')} checked={form.uses_attendance_device} onChange={set('uses_attendance_device')} />
+        </fieldset>
         <TextInput label={t('staff.nid')} value={form.nid_number} onChange={set('nid_number')} error={fieldError('nid_number')} hint={t('staff.nidHint')} inputMode="numeric" maxLength={17} autoComplete="off" />
         <TextArea label={t('staff.address')} value={form.address} onChange={set('address')} error={fieldError('address')} rows={2} maxLength={300} />
         <Pair>

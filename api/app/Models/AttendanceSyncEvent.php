@@ -6,7 +6,7 @@ use App\Models\Concerns\AppendOnly;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** The device card's sync log: each report, batch of punches and command, as it happened. Append-only. */
+/** The device card's sync log: each report, batch of punches, command and setting, as it happened. Append-only. */
 class AttendanceSyncEvent extends Model
 {
     use AppendOnly;
@@ -20,6 +20,9 @@ class AttendanceSyncEvent extends Model
     public const COMMAND = 'command';
 
     public const TOKEN = 'token';
+
+    /** A setting the agent is handed at check-in, changed on the card: the device's address (status address_set). */
+    public const CONFIG = 'config';
 
     protected $fillable = ['attendance_device_id', 'kind', 'status', 'received', 'stored', 'duplicates', 'rejected', 'detail', 'ip'];
 

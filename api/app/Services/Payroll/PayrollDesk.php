@@ -32,6 +32,10 @@ use Illuminate\Support\Facades\DB;
  * person's figures, their days and the rules used. Paying one records a cash-out under Salaries in the company books;
  * reversing that cash-out in the cash book leaves the month unpaid again.
  *
+ * Someone who doesn't use the fingerprint device (Staff::usesAttendanceDevice; client, 2026-10-03) is on the payroll
+ * with no attendance cuts: no absent or late-or-early days, only the working days they weren't employed. Their row says
+ * attendance_tracked false and carries no attendance counts (deductionDays).
+ *
  * Nobody sets their own salary, adjusts their own pay or marks it paid: someone else with payroll.manage does, or the
  * super admin. People employed in a month without a base salary (the proprietor, say) aren't on its payroll.
  */
@@ -39,6 +43,9 @@ final class PayrollDesk
 {
     /** What each frozen day keeps: enough to show the month again, not the raw punches. */
     private const FROZEN_DAY_KEYS = ['date', 'kind', 'status', 'in', 'out', 'corrected', 'leave', 'minutes'];
+
+    /** What a frozen item's totals keep for someone the device didn't track, beside attendance_tracked: false. */
+    private const UNTRACKED_TOTALS_KEYS = ['working_days', 'not_employed_working_days'];
 
     public function __construct(
         private readonly DailyAttendance $attendance,
@@ -63,11 +70,12 @@ final class PayrollDesk
 
         $live = $this->live($month, $run);
 
-        return ['run' => $run, 'rules' => RuleBook::snapshot($live['rules']), 'rows' => array_map(fn (array $row) => Arr::except($row, 'days'), $live['rows'])];
+        return ['run' => $run, 'rules' => RuleBook::snapshot($live['rules']), 'rows' => array_map(fn (array $row) => Arr::except($row, 'frozen'), $live['rows'])];
     }
 
     /**
      * @param  array<string, int|float>  $totals  DailyAttendance totals
+     * @param  string  $basis  'fixed' for a fixed monthly salary, or for someone the fingerprint device doesn't track
      * @return array{day_rate: float, deduction_days: float, deductions: float, adjustments: float, payable: int}
      */
     public static function figures(float $base, int $workingDays, int $latePayPercent, array $totals, float $adjustments, string $basis = 'attendance'): array
@@ -173,8 +181,8 @@ final class PayrollDesk
                     'staff_id' => $row['staff']['id'],
                     'base' => $row['base'],
                     'day_rate' => $row['figures']['day_rate'],
-                    'totals' => $row['totals'],
-                    'days' => array_map(fn (array $day) => Arr::only($day, self::FROZEN_DAY_KEYS), $row['days']),
+                    'totals' => $row['frozen']['totals'],
+                    'days' => $row['frozen']['days'],
                     'deductions' => $row['figures']['deductions'],
                     'adjustments' => $row['figures']['adjustments'],
                     'payable' => $row['figures']['payable'],
@@ -277,7 +285,13 @@ final class PayrollDesk
         ];
     }
 
-    /** @param array<string, int|float> $totals */
+    /**
+     * The working days a month's pay is cut by. On a fixed monthly salary — chosen for the person, or because the
+     * fingerprint device doesn't track them — only working days outside their employment. On the attendance basis also
+     * absent days, unpaid leave and the unpaid share of late-or-early days.
+     *
+     * @param  array<string, int|float>  $totals
+     */
     private static function deductionDays(array $totals, int $latePayPercent, string $basis = 'attendance'): float
     {
         // A fixed monthly salary (docs/staff-without-access.md) is cut only for working days outside employment.
@@ -290,7 +304,9 @@ final class PayrollDesk
     }
 
     /**
-     * Everyone employed in the month, figured from attendance as it stands, with their computed days under 'days'.
+     * Everyone employed in the month (invited staff too), figured from attendance as it stands — or, for someone who
+     * doesn't use the fingerprint device, from their employment dates alone. Under 'frozen', never shown on the sheet:
+     * the totals and days finalising keeps.
      *
      * @return array{rules: AttendanceRule, rows: list<array<string, mixed>>}
      */
@@ -307,14 +323,19 @@ final class PayrollDesk
             'rows' => $staff->map(function (Staff $person) use ($rules, $computed, $salaries, $adjustments) {
                 $base = $salaries[$person->id] ?? null;
                 $own = $adjustments->get($person->id, collect());
+                $tracked = $person->usesAttendanceDevice();
+                // Nothing to figure attendance cuts from: someone the device doesn't track is on the fixed basis.
+                $basis = $tracked ? ($person->profile?->salary_basis ?? 'attendance') : 'fixed';
+                $totals = $computed[$person->id]['totals'];
 
                 return [
                     'staff' => AttendanceController::person($person),
-                    'totals' => $computed[$person->id]['totals'],
-                    'days' => $computed[$person->id]['days'],
+                    'attendance_tracked' => $tracked,
+                    // Their days on the device count for nothing, so none are shown.
+                    'totals' => $tracked ? $totals : null,
                     'base' => $base,
-                    'salary_basis' => $person->profile?->salary_basis ?? 'attendance',
-                    'figures' => $base === null ? null : self::figures($base, $rules->working_days_per_month, $rules->late_early_pay_percent, $computed[$person->id]['totals'], (float) $own->sum('amount'), $person->profile?->salary_basis ?? 'attendance'),
+                    'salary_basis' => $basis,
+                    'figures' => $base === null ? null : self::figures($base, $rules->working_days_per_month, $rules->late_early_pay_percent, $totals, (float) $own->sum('amount'), $basis),
                     'adjustments' => $own->map(fn (PayrollAdjustment $adjustment) => self::adjustmentRow($adjustment))->values()->all(),
                     'item_id' => null,
                     'paid_at' => null,
@@ -322,6 +343,9 @@ final class PayrollDesk
                     'transaction_id' => null,
                     'method' => null,
                     'reference' => null,
+                    'frozen' => $tracked
+                        ? ['totals' => $totals, 'days' => array_map(fn (array $day) => Arr::only($day, self::FROZEN_DAY_KEYS), $computed[$person->id]['days'])]
+                        : ['totals' => ['attendance_tracked' => false] + Arr::only($totals, self::UNTRACKED_TOTALS_KEYS), 'days' => []],
                 ];
             })->values()->all(),
         ];
@@ -334,9 +358,13 @@ final class PayrollDesk
      */
     private function frozenRow(PayrollItem $item, array $rules, Collection $adjustments): array
     {
+        // As it was when finalised, whatever the person's HR record says now. Items from before 2026-10-03 were all tracked.
+        $tracked = ($item->totals['attendance_tracked'] ?? true) !== false;
+
         return [
             'staff' => AttendanceController::person($item->staff),
-            'totals' => $item->totals,
+            'attendance_tracked' => $tracked,
+            'totals' => $tracked ? $item->totals : null,
             'salary_basis' => $item->staff->profile?->salary_basis ?? 'attendance',
             'base' => (float) $item->base,
             'figures' => [

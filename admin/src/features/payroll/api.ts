@@ -13,7 +13,12 @@ export type Adjustment = { id: number; amount: number; reason: string; by: strin
 
 export type PayrollRow = {
   staff: Person
-  totals: Totals
+  /**
+   * false: they don't use the fingerprint device (staff record), so attendance has no counts for them (totals null) and
+   * cuts nothing from their pay (client, 2026-10-03).
+   */
+  attendance_tracked: boolean
+  totals: Totals | null
   /** null: no base salary for the month, so not on its payroll. */
   base: number | null
   figures: Figures | null

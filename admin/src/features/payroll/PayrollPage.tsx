@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 
@@ -8,7 +8,7 @@ import { buttonClass } from '../../components/ui/button'
 import { ErrorNotice, useConfirm, useToast } from '../../components/ui/feedback'
 import { Badge, Card, CardTitle, EmptyState, Loading, PageHeader } from '../../components/ui/layout'
 import { todayInDhaka, useFormat } from '../../lib/useFormat'
-import { shiftMonth } from '../attendance/api'
+import { shiftMonth, type Totals } from '../attendance/api'
 import { MonthSwitch } from '../attendance/AttendanceStaffPage'
 import { roleLabel } from '../staff/api'
 import { payrollActions, payslipPath, useOpenPayslip, usePayrollChange, usePayrollSheet, type PayrollRow, type PayrollSheet } from './api'
@@ -53,8 +53,21 @@ function Sheet({ sheet }: { sheet: PayrollSheet }) {
   const onPayroll = sheet.rows.filter((row) => row.base !== null)
   const adjustments = sheet.rows.flatMap((row) => row.adjustments.map((adjustment) => ({ row, adjustment })))
 
+  /**
+   * The attendance columns: a count from the row's totals, or — for someone who doesn't use the fingerprint device
+   * (client, 2026-10-03) — "Not tracked" in the first of them and a dash in the rest, as attendance cuts nothing there.
+   */
+  const counted = (row: PayrollRow, first: boolean, show: (totals: Totals) => ReactNode) =>
+    row.attendance_tracked === false || row.totals === null ? (
+      first ? <span className="text-12 whitespace-nowrap text-app-muted">{t('payroll.notTracked')}</span> : <span className="text-app-muted">—</span>
+    ) : (
+      show(row.totals)
+    )
+
   const actionsFor = (row: PayrollRow): RowAction[] => [
-    ...(seeDays ? [{ key: 'days', icon: '◉', label: t('payroll.days'), tone: 'muted' as const, to: `/attendance/staff/${row.staff.id}?month=${sheet.month}` }] : []),
+    ...(seeDays
+      ? [{ key: 'days', icon: '◉', label: t('payroll.days'), tone: 'muted' as const, disabledReason: row.attendance_tracked === false ? t('payroll.notTrackedDays') : undefined, to: `/attendance/staff/${row.staff.id}?month=${sheet.month}` }]
+      : []),
     { key: 'salary', icon: '$', label: t('payroll.salary'), tone: 'blue', onSelect: () => setOpen({ kind: 'salary', row }) },
     ...(!finalised && can('payroll.manage')
       ? [
@@ -89,7 +102,15 @@ function Sheet({ sheet }: { sheet: PayrollSheet }) {
       header: t('attendance.columns.staff'),
       cell: (row) => (
         <span className="flex flex-col">
-          <span className="font-medium">{row.staff.name}</span>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium">{row.staff.name}</span>
+            {/* Suspended or never signed in, yet still on the sheet: a fixed salary is paid whatever their attendance. */}
+            {row.staff.status !== 'active' ? (
+              <span title={t('payroll.statusHint')}>
+                <Badge tone="orange">{t(`staff.status.${row.staff.status}`)}</Badge>
+              </span>
+            ) : null}
+          </span>
           <span className="text-12 text-app-muted">
             {row.staff.role ? `${roleLabel(row.staff.role, locale)} · ` : null}
             {row.staff.employee_code}
@@ -98,11 +119,11 @@ function Sheet({ sheet }: { sheet: PayrollSheet }) {
         </span>
       ),
     },
-    { key: 'full', header: t('attendance.columns.full'), align: 'right', cell: (row) => <span className="font-display text-green">{number(row.totals.full)}</span> },
-    { key: 'late', header: t('attendance.columns.late'), align: 'right', cell: (row) => <span className={`font-display ${row.totals.late + row.totals.late_early ? 'text-amber' : 'text-app-muted'}`}>{number(row.totals.late + row.totals.late_early)}</span> },
-    { key: 'early', header: t('attendance.columns.early'), align: 'right', cell: (row) => <span className={`font-display ${row.totals.early ? 'text-amber' : 'text-app-muted'}`}>{number(row.totals.early)}</span> },
-    { key: 'leave', header: t('attendance.columns.leave'), align: 'right', cell: (row) => <span className="font-display text-app-muted">{number(row.totals.leave_paid + row.totals.leave_unpaid)}</span> },
-    { key: 'absent', header: t('attendance.columns.absent'), align: 'right', cell: (row) => <span className={`font-display ${row.totals.absent_days ? 'text-red' : 'text-app-muted'}`}>{number(row.totals.absent_days)}</span> },
+    { key: 'full', header: t('attendance.columns.full'), align: 'right', cell: (row) => counted(row, true, (totals) => <span className="font-display text-green">{number(totals.full)}</span>) },
+    { key: 'late', header: t('attendance.columns.late'), align: 'right', cell: (row) => counted(row, false, (totals) => <span className={`font-display ${totals.late + totals.late_early ? 'text-amber' : 'text-app-muted'}`}>{number(totals.late + totals.late_early)}</span>) },
+    { key: 'early', header: t('attendance.columns.early'), align: 'right', cell: (row) => counted(row, false, (totals) => <span className={`font-display ${totals.early ? 'text-amber' : 'text-app-muted'}`}>{number(totals.early)}</span>) },
+    { key: 'leave', header: t('attendance.columns.leave'), align: 'right', cell: (row) => counted(row, false, (totals) => <span className="font-display text-app-muted">{number(totals.leave_paid + totals.leave_unpaid)}</span>) },
+    { key: 'absent', header: t('attendance.columns.absent'), align: 'right', cell: (row) => counted(row, false, (totals) => <span className={`font-display ${totals.absent_days ? 'text-red' : 'text-app-muted'}`}>{number(totals.absent_days)}</span>) },
     { key: 'base', header: t('payroll.columns.base'), align: 'right', cell: (row) => (row.base === null ? <Badge tone="orange">{t('payroll.noSalary')}</Badge> : <span className="font-display text-app-muted">{bdt(row.base)}</span>) },
     {
       key: 'payable',

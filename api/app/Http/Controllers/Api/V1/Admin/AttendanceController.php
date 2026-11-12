@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\StaffStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceCorrection;
 use App\Models\AttendanceRule;
@@ -27,10 +26,11 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AttendanceController extends Controller
 {
+    /** The monthly table and its KPIs: the people the fingerprint device tracks (trackedIn). */
     public function month(Request $request, DailyAttendance $attendance): JsonResponse
     {
         $month = $this->monthFrom($request);
-        $staff = self::employedIn($month)->with(['roles', 'profile'])->orderBy('name')->get();
+        $staff = self::trackedIn($month)->with(['roles', 'profile'])->orderBy('name')->get();
         $computed = $attendance->month($month, $staff);
         $rules = AttendanceRule::forMonth($month);
 
@@ -142,17 +142,30 @@ class AttendanceController extends Controller
         return response()->json(['data' => self::detail($person, $correction->work_date->format('Y-m'), $attendance)]);
     }
 
-    /** Staff who can have attendance in a month: signed up (not just invited) and employed on some day of it. */
+    /**
+     * Staff employed on some day of a month: the month's payroll (PayrollDesk). Invited staff count (client, 2026-10-03):
+     * someone without a login yet still works, punches and is paid.
+     */
     public static function employedIn(string $month): Builder
     {
         $start = "{$month}-01";
         $end = CarbonImmutable::parse($start)->endOfMonth()->toDateString();
 
-        return Staff::query()->where('status', '!=', StaffStatus::Invited->value)
+        return Staff::query()
             ->where(fn (Builder $query) => $query->whereDoesntHave('profile')
                 ->orWhereHas('profile', fn (Builder $profile) => $profile
                     ->where(fn (Builder $joined) => $joined->whereNull('joined_on')->orWhere('joined_on', '<=', $end))
                     ->where(fn (Builder $left) => $left->whereNull('left_on')->orWhere('left_on', '>=', $start))));
+    }
+
+    /**
+     * Of those, the people whose attendance counts: everyone, unless their HR record says they don't use the fingerprint
+     * device (Staff::usesAttendanceDevice). The attendance month and its KPIs; the payroll keeps the others, uncut.
+     */
+    public static function trackedIn(string $month): Builder
+    {
+        return self::employedIn($month)->where(fn (Builder $query) => $query->whereDoesntHave('profile')
+            ->orWhereHas('profile', fn (Builder $profile) => $profile->where('uses_attendance_device', true)));
     }
 
     /** @return array<string, mixed> */
@@ -165,6 +178,9 @@ class AttendanceController extends Controller
         return [
             'staff' => self::person($person),
             'month' => $month,
+            // False: they don't use the fingerprint device, so these days count for nothing (not in the month's table,
+            // no attendance cuts on the payroll).
+            'attendance_tracked' => $person->usesAttendanceDevice(),
             'rules' => RuleBook::snapshot(AttendanceRule::forMonth($month)),
             'days' => $computed['days'],
             'totals' => $computed['totals'],

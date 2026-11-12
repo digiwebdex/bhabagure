@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 /** An HrRefused as the API answers it: 403 for rules about who may act, 422 on a field, 409 for the record's state. */
 trait AnswersHrRefusals
 {
-    private const HR_FORBIDDEN = ['super_admin_only', 'own_role', 'own_account', 'email_locked'];
+    private const HR_FORBIDDEN = ['super_admin_only', 'own_role', 'own_account', 'email_locked', 'own_attendance_device'];
 
     private const HR_FIELDS = [
         'nid_on_another_record' => 'nid_number',

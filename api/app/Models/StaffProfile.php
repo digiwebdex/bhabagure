@@ -8,13 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * A staff member's HR record (docs/phase-7-hr-attendance-bonus-wallet.md §4.1), one per staff member. The NID and the
  * salary account are encrypted like passport numbers; `staff.manage` sees them, and each person sees their own.
+ *
+ * `uses_attendance_device` (on by default, and for anyone without a record): off leaves the person out of attendance,
+ * and keeps them on the payroll with no attendance cuts (client, 2026-10-03).
  */
 class StaffProfile extends Model
 {
     public const PAYOUT_METHODS = ['bank', 'bkash', 'nagad', 'rocket', 'cash'];
 
     protected $fillable = [
-        'staff_id', 'designation', 'joined_on', 'left_on', 'date_of_birth', 'nid_number', 'address',
+        'staff_id', 'designation', 'joined_on', 'left_on', 'uses_attendance_device', 'date_of_birth', 'nid_number', 'address',
         'emergency_contact_name', 'emergency_contact_phone', 'payout_method', 'payout_account', 'salary_basis', 'updated_by_staff_id',
     ];
 
@@ -28,6 +31,7 @@ class StaffProfile extends Model
         return [
             'joined_on' => 'date',
             'left_on' => 'date',
+            'uses_attendance_device' => 'boolean',
             'date_of_birth' => 'date',
             // AES-256 with APP_KEY. Losing APP_KEY makes these unrecoverable — back it up outside the server and git.
             'nid_number' => 'encrypted',

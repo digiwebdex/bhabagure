@@ -14,7 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * /api/v1/attendance-agent/* — the office agent's three calls (docs/phase-7-hr-attendance-bonus-wallet.md §5.2). Replies
- * carry counts and commands only, never staff data: a stolen token can post punches for one device and learn nothing.
+ * carry counts, commands and the device's LAN address only, never staff data: a stolen token can post punches for one
+ * device and learn nothing. Messages are in English, whatever the agent asks for (SetRequestLocale).
  */
 class AttendanceAgentController extends Controller
 {
@@ -33,7 +34,7 @@ class AttendanceAgentController extends Controller
     public function report(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'status' => ['required', Rule::in([AttendanceDevice::STATUS_OK, AttendanceDevice::STATUS_UNREACHABLE, AttendanceDevice::STATUS_ERROR])],
+            'status' => ['required', Rule::in(AttendanceDevice::REPORT_STATUSES)],
             'serial' => ['nullable', 'required_if:status,ok', 'string', 'max:40'],
             'model' => ['nullable', 'string', 'max:40'],
             'firmware' => ['nullable', 'string', 'max:60'],

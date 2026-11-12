@@ -23,6 +23,7 @@ class MyRecordController extends Controller
             'employee_code' => $staff->employee_code,
             'designation' => $profile?->designation,
             'joined_on' => $profile?->joined_on?->toDateString(),
+            'uses_attendance_device' => $profile?->uses_attendance_device ?? true,
             'date_of_birth' => $profile?->date_of_birth?->toDateString(),
             'nid_number' => $profile?->nid_number,
             'address' => $profile?->address,

@@ -136,6 +136,8 @@ class StaffController extends Controller
             'designation' => ['sometimes', 'nullable', 'string', 'max:80'],
             'joined_on' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'left_on' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            // Off: left out of attendance, and on the payroll with no attendance cuts (2026-10-03).
+            'uses_attendance_device' => ['sometimes', 'required', 'boolean'],
             'date_of_birth' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before:today'],
             // Bangladeshi NIDs: 10 digits (smart card), 13, or 17 with the birth year in front.
             'nid_number' => ['sometimes', 'nullable', 'regex:/^(\d{10}|\d{13}|\d{17})$/'],
@@ -267,6 +269,7 @@ class StaffController extends Controller
             'is_super_admin' => $role?->name === StaffRole::SuperAdmin->value,
             'designation' => $staff->profile?->designation,
             'joined_on' => $staff->profile?->joined_on?->toDateString(),
+            'uses_attendance_device' => $staff->usesAttendanceDevice(),
             'last_login_at' => $staff->last_login_at?->toIso8601String(),
             'invitation_expires_at' => $invitation?->expires_at?->toIso8601String(),
             // Bookings they own, confirmed this month in Dhaka and not cancelled since.
@@ -303,6 +306,7 @@ class StaffController extends Controller
                     'designation' => $profile?->designation,
                     'joined_on' => $profile?->joined_on?->toDateString(),
                     'left_on' => $profile?->left_on?->toDateString(),
+                    'uses_attendance_device' => $staff->usesAttendanceDevice(),
                     'date_of_birth' => $profile?->date_of_birth?->toDateString(),
                     'nid_number' => $profile?->nid_number,
                     'address' => $profile?->address,

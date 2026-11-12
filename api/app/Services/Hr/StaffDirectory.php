@@ -22,7 +22,7 @@ use Spatie\Permission\Models\Role;
 final class StaffDirectory
 {
     public const PROFILE_FIELDS = [
-        'designation', 'joined_on', 'left_on', 'date_of_birth', 'nid_number', 'address',
+        'designation', 'joined_on', 'left_on', 'uses_attendance_device', 'date_of_birth', 'nid_number', 'address',
         'emergency_contact_name', 'emergency_contact_phone', 'payout_method', 'payout_account', 'salary_basis',
     ];
 
@@ -124,6 +124,11 @@ final class StaffDirectory
             ->where('staff_id', '!=', $staff->id)->exists()) {
             throw new HrRefused('nid_on_another_record');
         }
+        // Switched off, attendance no longer cuts pay (§6): like your own pay, someone else decides it for you.
+        if (array_key_exists('uses_attendance_device', $data) && (bool) $data['uses_attendance_device'] !== $staff->usesAttendanceDevice()
+            && $staff->is($by) && ! $by->isSuperAdmin()) {
+            throw new HrRefused('own_attendance_device');
+        }
 
         return DB::transaction(function () use ($staff, $data, $by) {
             $account = array_intersect_key($data, array_flip(['name', 'email', 'phone', 'locale']));
@@ -143,7 +148,8 @@ final class StaffDirectory
                 }
             }
             $profile->fill($fields + ['updated_by_staff_id' => $by->id]);
-            $changed = [...$changed, ...array_values(array_diff(array_keys($profile->getDirty()), ['updated_by_staff_id', 'nid_number_hash']))];
+            // A record made here (someone without one yet) is dirty on staff_id too: the audit names HR fields only.
+            $changed = [...$changed, ...array_values(array_diff(array_keys($profile->getDirty()), ['staff_id', 'updated_by_staff_id', 'nid_number_hash']))];
             $profile->save();
 
             if ($changed !== []) {

@@ -42,6 +42,11 @@ export function AttendanceStaffPage() {
         subtitle={`${roleLabel(person.staff.role, locale)} · ${person.staff.employee_code}`}
         actions={<MonthSwitch month={month} onChange={(value) => setParams({ month: value }, { replace: true })} />}
       />
+      {person.attendance_tracked === false ? (
+        <p role="note" className="m-0 rounded-10 bg-app-surface-2 px-3 py-2.5 text-13 text-app-muted">
+          {t('attendance.notTrackedNote')}
+        </p>
+      ) : null}
       <TotalsStrip totals={person.totals} />
       <div className="grid items-start gap-4.5 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
         <Card padded={false} className="overflow-hidden">

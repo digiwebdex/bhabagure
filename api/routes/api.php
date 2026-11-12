@@ -378,8 +378,12 @@ Route::prefix('v1')->group(function () {
                 Route::post('attendance/devices/{id}/revoke', 'revoke')->whereNumber('id');
                 Route::post('attendance/devices/{id}/commands', 'command')->whereNumber('id');
                 Route::post('attendance/devices/{id}/allow-replacement', 'allowReplacement')->whereNumber('id');
+                // The device's LAN address, handed to the agent at its next check-in (2026-10-03).
+                Route::put('attendance/devices/{id}/address', 'address')->whereNumber('id');
                 Route::get('attendance/devices/{id}/users', 'users')->whereNumber('id');
                 Route::put('attendance/device-users/{userId}', 'mapUser')->whereNumber('userId');
+                // The agent's install zip, downloaded on the office PC (attendance.manage, checked in the controller).
+                Route::get('attendance/agent-package', 'agentPackage');
             });
             Route::controller(AttendanceController::class)->group(function () {
                 Route::get('attendance/month', 'month');

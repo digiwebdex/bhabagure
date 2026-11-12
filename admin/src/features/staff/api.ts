@@ -23,6 +23,8 @@ export type StaffRow = {
   is_super_admin: boolean
   designation: string | null
   joined_on: string | null
+  /** As on their HR record (StaffProfile). */
+  uses_attendance_device: boolean
   last_login_at: string | null
   invitation_expires_at: string | null
   closed_sales_month: number
@@ -46,6 +48,8 @@ export type StaffProfile = {
   payout_method: PayoutMethod | null
   payout_account: string | null
   salary_basis: SalaryBasis
+  /** Off: left out of attendance, and paid on the fixed basis since there are no attendance cuts (client, 2026-10-03). On by default. */
+  uses_attendance_device: boolean
 }
 
 /** attendance: absences, unpaid leave and late days come off · fixed: the month's amount whatever the attendance. */
@@ -137,6 +141,10 @@ export function useStaffAction<TVariables, TResponse extends Data<StaffDetail> =
       client.setQueryData(['staff-member', id], { data: response.data })
       void client.invalidateQueries({ queryKey: ['staff'] })
       void client.invalidateQueries({ queryKey: ['assignable-staff'] })
+      // The fingerprint-device switch and the salary basis change what Attendance and Salary show for this person.
+      void client.invalidateQueries({ queryKey: ['payroll'] })
+      void client.invalidateQueries({ queryKey: ['attendance-month'] })
+      void client.invalidateQueries({ queryKey: ['attendance-person'] })
     },
   })
 }

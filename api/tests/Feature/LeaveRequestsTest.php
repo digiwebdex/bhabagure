@@ -122,4 +122,43 @@ class LeaveRequestsTest extends TestCase
         $this->artisan('attendance:watch-devices')->assertSuccessful();
         $this->assertSame(2, NotificationMessage::query()->where('event', 'attendance_device_offline_alert')->where('channel', 'email')->count());
     }
+
+    #[Test]
+    public function an_installed_agent_that_never_reads_the_device_alerts_once_and_one_never_installed_does_not(): void
+    {
+        $this->sendNotifications();
+        $admin = $this->staff('admin');
+        $device = function (string $name, array $state): AttendanceDevice {
+            $device = new AttendanceDevice(['name' => $name]);
+            $device->forceFill(['token_hash' => hash('sha256', $name), 'created_at' => now()->subDays(3)] + $state)->save();
+
+            return $device;
+        };
+        // Added on the card, the agent never installed: the card says so, and there is no alert.
+        $never = $device('Never installed', []);
+        // Installed half an hour ago and still trying: not an outage yet.
+        $fresh = $device('Just installed', ['first_check_in_at' => now()->subMinutes(30), 'last_check_in_at' => now()->subMinute(), 'last_status' => 'no_address']);
+        // Installed two hours ago, checking in every minute, never able to read the device: no address set.
+        $noAddress = $device('No address', ['first_check_in_at' => now()->subHours(2), 'last_check_in_at' => now()->subMinute(), 'last_status' => 'no_address']);
+        // Installed two hours ago, and the PC went quiet before it ever read the device.
+        $quiet = $device('PC off', ['first_check_in_at' => now()->subHours(2), 'last_check_in_at' => now()->subMinutes(90), 'last_status' => 'device_unreachable']);
+
+        $this->artisan('attendance:watch-devices')->assertSuccessful();
+        $this->artisan('attendance:watch-devices')->assertSuccessful();
+        $alerts = NotificationMessage::query()->where('event', 'attendance_device_offline_alert')->where('channel', 'email')->get();
+        $this->assertSame([$noAddress->id, $quiet->id], $alerts->pluck('related_id')->sort()->values()->all(), 'once each, for the two installed over an hour ago');
+        $this->assertSame([$admin->email, $admin->email], $alerts->pluck('to_address')->all());
+        // No address: the fix is on the Attendance screen, so the alert says that rather than "check the cable".
+        $this->assertStringContainsString('হাজিরা স্ক্রিনে দিন', $alerts->firstWhere('related_id', $noAddress->id)->body);
+        $this->assertStringNotContainsString('ক্যাবল', $alerts->firstWhere('related_id', $noAddress->id)->body);
+        $this->assertStringContainsString('সাড়া দিচ্ছে না', $alerts->firstWhere('related_id', $quiet->id)->body);
+        $this->assertSame([null, null], [$never->fresh()->offline_alerted_at, $fresh->fresh()->offline_alerted_at]);
+
+        // Half an hour on, the one installed an hour ago is an outage too; the never-installed one still isn't.
+        $this->travel(31)->minutes();
+        $fresh->forceFill(['last_check_in_at' => now()->subMinute()])->save();
+        $this->artisan('attendance:watch-devices')->assertSuccessful();
+        $this->assertSame(3, NotificationMessage::query()->where('event', 'attendance_device_offline_alert')->where('channel', 'email')->count());
+        $this->assertNull($never->fresh()->offline_alerted_at);
+    }
 }

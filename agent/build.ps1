@@ -5,9 +5,10 @@
 .DESCRIPTION
   Needs 64-bit Python 3.12 or newer (the "py" launcher) and internet access for pip. It makes .venv-build, installs pyzk
   by hash and PyInstaller, runs the tests, builds a one-folder agent.exe (a folder starts faster than a single file,
-  which matters when it runs every minute) and zips it with install.ps1, the README and pyzk's licence.
+  which matters when it runs every minute) and zips it with install.cmd, install.ps1, the README and pyzk's licence.
 
-  The build isn't committed: the repository is public, and the zip is carried to the office PC by hand.
+  The build isn't committed: the repository is public. deploy/upload-agent-package.sh puts the zip on the server, and
+  admins download it from the Attendance screen on the office PC.
 #>
 param([string]$PythonVersion = '3')
 
@@ -33,8 +34,12 @@ Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 & $python -m PyInstaller --noconfirm --clean --onedir --console --name agent --distpath dist --workpath build --hidden-import zk agent_main.py
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed.' }
 
-$out = 'dist\agent'
-Copy-Item install.ps1, README.md $out
+# One folder in the zip, named with the version: unzipped anywhere (Downloads, the desktop), it stays together, and
+# install.ps1 copies only what is in it (its $Package list), never the files around it.
+$out = "dist\BhabaghureAttendanceAgent-$version"
+Rename-Item 'dist\agent' (Split-Path $out -Leaf)
+# install.cmd is what gets double-clicked: it asks for administrator rights and runs install.ps1.
+Copy-Item install.cmd, install.ps1, README.md $out
 # pyzk is GPL-2.0 and is bundled in agent.exe: its licence travels with it.
 $license = Get-ChildItem '.venv-build\Lib\site-packages' -Recurse -File -Include 'LICENSE*', 'COPYING*' |
     Where-Object { $_.FullName -match 'pyzk' } | Select-Object -First 1
@@ -45,5 +50,6 @@ if ($license) {
 }
 
 $zip = "dist\BhabaghureAttendanceAgent-$version.zip"
-Compress-Archive -Path "$out\*" -DestinationPath $zip -Force
+Compress-Archive -Path $out -DestinationPath $zip -Force
 Write-Host "Built $zip"
+Write-Host 'To offer it on the Attendance screen, run deploy/upload-agent-package.sh in Git Bash.'

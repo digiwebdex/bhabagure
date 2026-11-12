@@ -7,7 +7,6 @@ use App\Models\AttendanceDeviceUser;
 use App\Models\AttendancePunch;
 use App\Models\AttendanceRule;
 use App\Models\Holiday;
-use App\Models\LeaveRequest;
 use App\Models\Staff;
 use App\Models\StaffProfile;
 use Carbon\CarbonImmutable;
@@ -18,7 +17,7 @@ use Tests\TestCase;
 /**
  * docs/phase-7-hr-attendance-bonus-wallet.md §5.1, §6: days computed from punches in office time under the rules in force
  * — duty 11:00–19:00, no grace, Friday off by default — with corrections, leave, holidays and employment dates, through
- * the device-user mapping only.
+ * the device-user mapping only. Invited staff count; someone whose record says they don't use the device doesn't.
  */
 class AttendanceDaysTest extends TestCase
 {
@@ -151,6 +150,57 @@ class AttendanceDaysTest extends TestCase
         $this->actingAsApi($admin)->putJson("/api/v1/admin/attendance/device-users/{$user->id}", ['staff_id' => null, 'ignored' => true])->assertOk()
             ->assertJsonPath('data.users.0.ignored', true);
         $this->assertSame('absent', $this->days($admin, $tania)['2026-09-14']['status']);
+    }
+
+    #[Test]
+    public function invited_staff_without_a_login_yet_are_matched_on_the_device_and_counted(): void
+    {
+        $admin = $this->staff('admin');
+        // Added by HR, invitation not accepted yet: works and punches all the same (client, 2026-10-03).
+        $rumana = $this->staff('sales_agent', ['name' => 'Rumana Akter', 'status' => 'invited']);
+        StaffProfile::query()->create(['staff_id' => $rumana->id, 'joined_on' => '2026-09-01']);
+        $user = AttendanceDeviceUser::query()->create(['attendance_device_id' => $this->device->id, 'device_user_id' => '5', 'name_on_device' => 'Rumana']);
+        $this->punch('5', '2026-09-14', '10:55:00', '19:05:00');
+
+        // Offered as a match, marked invited so the admin can say so.
+        $choices = collect($this->actingAsApi($admin)->getJson("/api/v1/admin/attendance/devices/{$this->device->id}/users")->assertOk()->json('data.staff'));
+        $this->assertSame('invited', $choices->firstWhere('id', $rumana->id)['status'] ?? null);
+        $this->putJson("/api/v1/admin/attendance/device-users/{$user->id}", ['staff_id' => $rumana->id, 'ignored' => false])->assertOk()
+            ->assertJsonPath('data.users.0.staff.id', $rumana->id);
+
+        $this->assertSame('full', $this->days($admin, $rumana)['2026-09-14']['status']);
+        $row = collect($this->actingAsApi($admin)->getJson('/api/v1/admin/attendance/month?month=2026-09')->assertOk()->json('data.rows'))->firstWhere('staff.id', $rumana->id);
+        // September 2026: 26 working days, one of them worked.
+        $this->assertSame(['invited', 1, 25], [$row['staff']['status'] ?? null, $row['totals']['full'] ?? null, $row['totals']['absent'] ?? null]);
+    }
+
+    #[Test]
+    public function someone_who_doesnt_use_the_device_is_left_out_of_the_month_and_its_kpis(): void
+    {
+        $admin = $this->staff('admin');
+        $imran = $this->person('9', '2026-01-01');
+        $driver = $this->person('20', '2026-01-01', 'tour_operator');
+        $this->punch('9', '2026-09-14', '10:50:00', '19:05:00');
+        $month = fn () => $this->actingAsApi($admin)->getJson('/api/v1/admin/attendance/month?month=2026-09')->assertOk();
+
+        $before = $month();
+        $this->assertContains($driver->id, array_column(array_column($before->json('data.rows'), 'staff'), 'id'));
+
+        // The driver never punches: switched off on his staff record.
+        $this->putJson("/api/v1/admin/staff/{$driver->id}", ['uses_attendance_device' => false])->assertOk()->assertJsonPath('data.profile.uses_attendance_device', false);
+        $after = $month();
+        $ids = array_column(array_column($after->json('data.rows'), 'staff'), 'id');
+        $this->assertNotContains($driver->id, $ids);
+        // Someone without an HR record counts as on the device: the admin is still there.
+        $this->assertSame([true, true], [in_array($imran->id, $ids, true), in_array($admin->id, $ids, true)]);
+        // September 2026 has 26 working days: the driver's 26 absences leave the KPIs with him.
+        $this->assertSame(26, $before->json('data.kpis.absent_days') - $after->json('data.kpis.absent_days'));
+        $this->assertSame($before->json('data.kpis.full_days'), $after->json('data.kpis.full_days'));
+        $this->assertSame(false, $this->getJson("/api/v1/admin/attendance/staff/{$driver->id}?month=2026-09")->assertOk()->json('data.attendance_tracked'));
+        $this->assertSame(true, $this->getJson("/api/v1/admin/attendance/staff/{$imran->id}?month=2026-09")->json('data.attendance_tracked'));
+
+        $this->putJson("/api/v1/admin/staff/{$driver->id}", ['uses_attendance_device' => true])->assertOk();
+        $this->assertContains($driver->id, array_column(array_column($month()->json('data.rows'), 'staff'), 'id'));
     }
 
     #[Test]

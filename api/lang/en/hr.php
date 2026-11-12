@@ -7,6 +7,7 @@ return [
     'nid_on_another_record' => 'This NID number is already on another staff record.',
     'own_role' => 'You can’t change your own role.',
     'own_account' => 'You can’t do this to your own account.',
+    'own_attendance_device' => 'Someone else decides whether you use the fingerprint device.',
     'already_suspended' => 'This account is already suspended.',
     'not_suspended' => 'This account isn’t suspended.',
     'not_invited' => 'This person has already set a password. Send a password reset instead.',

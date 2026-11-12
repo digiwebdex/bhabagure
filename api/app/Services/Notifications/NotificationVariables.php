@@ -183,7 +183,8 @@ final class NotificationVariables
     }
 
     /**
-     * @param  string  $reason  pc_silent: the office PC stopped checking in; device_unreachable: it can't reach the device
+     * @param  string  $reason  pc_silent: the office PC stopped checking in; device_unreachable: it can't reach the device;
+     *                          no_address: it has no address for the device (none set on the Attendance screen)
      * @return array<string, string>
      */
     private function attendanceDevice(AttendanceDevice $device, string $locale, string $reason): array
@@ -194,9 +195,11 @@ final class NotificationVariables
         return [
             'device' => $device->name,
             'since' => $since === null ? ($en ? 'never' : 'কখনও নয়') : Numerals::date($since->toDateString(), $locale).', '.Numerals::localizeDigits($since->format('H:i'), $locale),
-            'reason' => $reason === 'pc_silent'
-                ? ($en ? 'the office PC that reads it has stopped checking in (is it switched on and online?)' : 'যে অফিস পিসি এটি পড়ে সেটি সাড়া দিচ্ছে না (পিসি চালু ও ইন্টারনেটে আছে কি?)')
-                : ($en ? 'the office PC can’t reach the device (power, cable or network)' : 'অফিস পিসি ডিভাইসে পৌঁছাতে পারছে না (বিদ্যুৎ, ক্যাবল বা নেটওয়ার্ক)'),
+            'reason' => match ($reason) {
+                'pc_silent' => $en ? 'the office PC that reads it has stopped checking in (is it switched on and online?)' : 'যে অফিস পিসি এটি পড়ে সেটি সাড়া দিচ্ছে না (পিসি চালু ও ইন্টারনেটে আছে কি?)',
+                'no_address' => $en ? 'it has no address on the office network yet (set it on the Attendance screen)' : 'অফিস নেটওয়ার্কে এর ঠিকানা এখনও দেওয়া হয়নি (হাজিরা স্ক্রিনে দিন)',
+                default => $en ? 'the office PC can’t reach the device (power, cable or network)' : 'অফিস পিসি ডিভাইসে পৌঁছাতে পারছে না (বিদ্যুৎ, ক্যাবল বা নেটওয়ার্ক)',
+            },
             'link' => rtrim((string) config('bhabaghure.admin_url'), '/').'/attendance',
         ];
     }

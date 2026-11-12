@@ -1,14 +1,14 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
-use App\Models\AttendanceDevice;
-use App\Models\AttendanceRule;
-use App\Models\Holiday;
 use App\Enums\NotificationStatus;
 use App\Enums\PaymentAttemptStatus;
+use App\Http\Controllers\Api\V1\Admin\AttendanceDeviceController;
 use App\Jobs\DeliverNotification;
+use App\Models\AttendanceDevice;
+use App\Models\AttendanceRule;
 use App\Models\Booking;
+use App\Models\Holiday;
 use App\Models\NotificationMessage;
 use App\Models\PaymentAttempt;
 use App\Models\Quotation;
@@ -151,6 +151,9 @@ Schedule::command('commission:volume-bonus')->monthlyOn(1, '00:30')->timezone('A
 // docs/phase-7-hr-attendance-bonus-wallet.md §5.1: an attendance device with no good pull for an hour, during duty hours on
 // a working day, alerts once per outage — saying whether the office PC went quiet or can't reach the device. A good pull
 // clears the flag (AgentGateway::report), so the next outage alerts again. Outside duty hours a silent PC is normal.
+// A device not bound yet (no serial: never read) alerts too once its agent has checked in, an hour after that first
+// check-in (2026-10-03): an installed agent that can never read the device — no address, a wrong one — is an outage.
+// One whose agent never checked in doesn't: its card already says the agent isn't installed.
 Artisan::command('attendance:watch-devices', function (NotificationPlanner $planner) {
     $now = now('Asia/Dhaka');
     $rules = AttendanceRule::forMonth($now->format('Y-m'));
@@ -163,12 +166,15 @@ Artisan::command('attendance:watch-devices', function (NotificationPlanner $plan
     }
 
     $count = 0;
-    AttendanceDevice::query()->active()->whereNotNull('serial_number')->whereNull('offline_alerted_at')
-        ->where(fn ($query) => $query->whereNull('last_pull_ok_at')->orWhere('last_pull_ok_at', '<', now()->subHour()))
+    $hourAgo = now()->subHour();
+    AttendanceDevice::query()->active()->whereNull('offline_alerted_at')
+        ->where(fn ($query) => $query->whereNotNull('serial_number')->orWhere('first_check_in_at', '<', $hourAgo))
+        ->where(fn ($query) => $query->whereNull('last_pull_ok_at')->orWhere('last_pull_ok_at', '<', $hourAgo))
         ->each(function (AttendanceDevice $device) use ($planner, &$count) {
             $silent = $device->last_check_in_at === null || $device->last_check_in_at->lt(now()->subMinutes(AttendanceDeviceController::SILENT_MINUTES));
             $device->forceFill(['offline_alerted_at' => now()])->save();
-            $planner->attendanceDeviceOffline($device, $silent ? 'pc_silent' : 'device_unreachable');
+            // Checking in but without a device address, the fix is on the Attendance screen, not the cable.
+            $planner->attendanceDeviceOffline($device, $silent ? 'pc_silent' : ($device->last_status === 'no_address' ? 'no_address' : 'device_unreachable'));
             $count++;
         });
     $this->info("Alerted about {$count} silent attendance device(s).");

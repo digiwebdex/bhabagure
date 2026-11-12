@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The admin's side of the devices (docs/phase-7-hr-attendance-bonus-wallet.md §5.1): adding one and its token (shown once,
- * stored as a hash), rotating or revoking the token, commands for the agent's next check-in, confirming a replaced
- * device, and matching device users to staff. Every step is audited.
+ * stored as a hash), rotating or revoking the token, the device's network address and commands for the agent's next
+ * check-in, confirming a replaced device, and matching device users to staff. Every step is audited.
  */
 final class DeviceRegistry
 {
@@ -74,6 +74,29 @@ final class DeviceRegistry
             $device->forceFill(['pending_command' => $command, 'command_requested_at' => now(), 'command_sent_at' => null, 'command_requested_by_staff_id' => $by->id])->save();
             AttendanceSyncEvent::query()->create(['attendance_device_id' => $device->id, 'kind' => AttendanceSyncEvent::COMMAND, 'status' => 'requested', 'detail' => ['command' => $command, 'by' => $by->name]]);
             $this->audit->record('attendance.device_command', $by, $device, ['command' => $command]);
+        });
+    }
+
+    /**
+     * Where the agent finds the device on the office LAN (client, 2026-10-03): handed to it at its next check-in, within a
+     * minute. Null clears it, and the agent falls back to the address in its own agent.ini. The caller has checked that
+     * the address is a private IPv4 one. Saving what is already set records nothing.
+     */
+    public function setAddress(AttendanceDevice $device, ?string $address, int $port, Staff $by): AttendanceDevice
+    {
+        return DB::transaction(function () use ($device, $address, $port, $by) {
+            $locked = AttendanceDevice::query()->whereKey($device->id)->lockForUpdate()->firstOrFail();
+            $from = $locked->addressLabel();
+            $locked->forceFill(['device_address' => $address, 'device_port' => $port]);
+            if (! $locked->isDirty(['device_address', 'device_port'])) {
+                return $locked;
+            }
+            $locked->save();
+            $change = ['from' => $from, 'to' => $locked->addressLabel()];
+            AttendanceSyncEvent::query()->create(['attendance_device_id' => $locked->id, 'kind' => AttendanceSyncEvent::CONFIG, 'status' => 'address_set', 'detail' => $change]);
+            $this->audit->record('attendance.device_address_set', $by, $locked, $change);
+
+            return $locked;
         });
     }
 
